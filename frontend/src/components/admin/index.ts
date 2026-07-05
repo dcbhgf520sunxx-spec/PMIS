@@ -54,3 +54,4 @@ export * from './ExpandToggleButton';
 export * from './TableActions';
 export * from './OperationColumnActions';
 export * from './DetailLinkCell';
+export * from './AdminMessageCenter';

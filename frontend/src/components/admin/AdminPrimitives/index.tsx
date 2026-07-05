@@ -29,11 +29,15 @@ import {
 } from 'antd';
 import './index.css';
 
-export const AdminButton = forwardRef<ComponentRef<typeof Button>, ComponentProps<typeof Button>>(function AdminButton(
-  { className, ...props },
+type AdminButtonProps = ComponentProps<typeof Button> & {
+  adminVariant?: 'subtle';
+};
+
+export const AdminButton = forwardRef<ComponentRef<typeof Button>, AdminButtonProps>(function AdminButton(
+  { adminVariant, className, ...props },
   ref
 ) {
-  return <Button {...props} className={['admin-button', className].filter(Boolean).join(' ')} />;
+  return <Button {...props} className={['admin-button', adminVariant ? `is-${adminVariant}` : '', className].filter(Boolean).join(' ')} />;
 });
 
 export function AdminCard({ className, ...props }: ComponentProps<typeof Card>) {
@@ -156,6 +160,14 @@ export function AdminListItemMeta(props: ComponentProps<typeof List.Item.Meta>) 
   return <List.Item.Meta {...props} />;
 }
 
-export function AdminSegmented<T extends string | number = string>(props: ComponentProps<typeof Segmented<T>>) {
-  return <Segmented<T> {...props} />;
+type AdminSegmentedProps<T extends string | number = string> = ComponentProps<typeof Segmented<T>> & {
+  adminVariant?: 'filter';
+};
+
+export function AdminSegmented<T extends string | number = string>({
+  adminVariant,
+  className,
+  ...props
+}: AdminSegmentedProps<T>) {
+  return <Segmented<T> {...props} className={['admin-segmented', adminVariant ? `is-${adminVariant}` : '', className].filter(Boolean).join(' ')} />;
 }

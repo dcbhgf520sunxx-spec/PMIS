@@ -13,6 +13,71 @@
 
 业务页面只负责传字段、传数据、处理接口和业务动作，不负责重新定义通用视觉、交互节奏、空状态、错误态、按钮样式和下拉样式。
 
+## 新业务接入样板
+
+新增后台业务模块默认遵循当前架构：React / Vite 前端、Express REST API、PostgreSQL 数据库。常规目录如下：
+
+```text
+frontend/src/modules/<module>/pages/<Module>ListPage.tsx
+frontend/src/modules/<module>/pages/<Module>FormPage.tsx
+frontend/src/modules/<module>/pages/<Module>DetailPage.tsx
+frontend/src/modules/<module>/types.ts
+frontend/src/api/<module>Api.ts
+backend/src/controllers/<module>Controller.js
+backend/src/routes/<module>.js
+```
+
+API 接入保持统一：
+
+- 前端通过 `request` 和 `unwrap` 调接口，接口返回统一为 `{ code, message, data }`。
+- 后端字段使用数据库命名，前端 API 层负责转成页面需要的 record。
+- 前端 `id` 统一转成字符串，后端写入时再转成数字。
+- 新模块路由统一注册到 `frontend/src/app/routes.tsx`。
+- 数据库物理表名必须使用 `pms_` 前缀。
+
+## 核心页面模板入口
+
+后续新增或改造业务模块时，列表、新增编辑、详情三类页面必须从页面级模板入口开始，不直接在业务页拼 `PageShell`、`DataListPage`、`FormPage`、`TablePagination` 或详情页外层布局。
+
+业务页面只保留业务字段、接口调用、筛选状态、列配置和业务动作。页面结构、页头、操作区、列表底部、表单分组、详情分组、主区/侧区等由模板入口承接。
+
+### 列表页
+
+列表页统一使用 `TemplateListPage` 和 `useTemplateListPageData`。
+
+必须保持以下规则：
+
+- 第一列业务值进入详情，操作列不放“详情”。
+- 操作列使用 `OperationColumnActions`，默认文字操作；删除、停用等危险动作使用 `ConfirmAction`。
+- 序号使用 `renderIndex(index)`，按过滤后的全量数据位置计算。
+- 排序交给 `useTemplateListPageData`，先排序过滤后的全量数据，再分页。
+- 分页配置通过 `TemplateListPage.pagination` 传入，不在业务页直接放 `TablePagination`。
+- 普通列表不传选择列、批量操作和已选数量，分页保持在右侧。
+- 批量列表必须显式声明 `mode="batch"`，并通过 `batch` 传入已选数量和批量操作。
+- 筛选区使用 `CompactFilterBar`，表格区和底部分页区由模板承接。
+
+### 新增编辑页
+
+新增编辑页统一使用 `TemplateFormPage` 和 `TemplateFormSection`。
+
+必须保持以下规则：
+
+- 表单页标题、返回、取消、提交、加载态由模板承接。
+- 业务页只传 `formId`、初始值、提交回调和业务字段。
+- 字段布局优先使用模板内置 grid class，不在业务页另起一套表单布局。
+- 表单控件优先使用 `AdminProForm*` 或项目已沉淀表单组件。
+
+### 详情页
+
+详情页统一使用 `TemplateDetailPage` 和 `TemplateDetailSection`。
+
+必须保持以下规则：
+
+- 详情页标题、操作区、主区/侧区和加载态由模板承接。
+- 基础信息、单据信息、历史记录等使用详情分组和 `DetailMetaList`。
+- 详情页返回、编辑等动作通过 `ActionBar` 和现有按钮组件组合。
+- 不在业务页临时重做详情卡片、字段栅格、状态展示和历史记录样式。
+
 ## 禁止绕开组件
 
 业务模块中不得直接使用下列原生控件实现通用能力：

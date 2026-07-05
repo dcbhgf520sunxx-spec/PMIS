@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import {
   BellOutlined,
   ColumnHeightOutlined,
@@ -18,13 +18,15 @@ import {
   AdminDeleteIconAction,
   AdminEditIconAction,
   AdminIconAction,
+  AdminSegmented,
   AdminSpace,
   AdminTextAction,
   AdminToggleStatusIconAction,
   ExpandToggleButton,
   OverdueTag,
   PriorityTag,
-  StatusTag
+  StatusTag,
+  ViewTabs
 } from '../../../../components/admin';
 
 type SpecItem = {
@@ -40,6 +42,9 @@ const baseComponentSpecs: SpecItem[] = [
 ];
 
 export function BaseSection() {
+  const [viewTab, setViewTab] = useState<'all' | 'mine'>('all');
+  const [filterTab, setFilterTab] = useState<'all' | 'notification' | 'system'>('all');
+
   return (
     <div className="design-system-page__base">
       <AdminCard title="基础组件规范">
@@ -227,6 +232,41 @@ export function BaseSection() {
                 successMessage={false}
               />
             </AdminSpace>
+          </section>
+
+          <section className="design-system-page__base-panel is-wide">
+            <div className="design-system-page__base-panel-head">
+              <h3>切换组件</h3>
+              <p>页面标题区用 ViewTabs 做视图范围切换；抽屉和局部区域用 AdminSegmented filter 变体做轻量分类切换。</p>
+            </div>
+            <div className="design-system-page__switch-demo-grid">
+              <div className="design-system-page__button-demo">
+                <h4>页面视图切换</h4>
+                <ComponentEntry name="ViewTabs" />
+                <ViewTabs
+                  value={viewTab}
+                  onChange={setViewTab}
+                  items={[
+                    { label: '全部', value: 'all', count: 66 },
+                    { label: '我的工单', value: 'mine', count: 18 }
+                  ]}
+                />
+              </div>
+              <div className="design-system-page__button-demo">
+                <h4>局部分类切换</h4>
+                <ComponentEntry name="AdminSegmented adminVariant=&quot;filter&quot;" />
+                <AdminSegmented
+                  adminVariant="filter"
+                  options={[
+                    { label: '全部', value: 'all' },
+                    { label: '通知', value: 'notification' },
+                    { label: '系统', value: 'system' }
+                  ]}
+                  value={filterTab}
+                  onChange={setFilterTab}
+                />
+              </div>
+            </div>
           </section>
 
         </div>

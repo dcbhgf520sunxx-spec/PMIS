@@ -15,6 +15,8 @@ import type { MenuProps } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { heartbeatAccessSession, logoutAccessSession } from '../../api/accessLogApi';
+import { getMessages, markAllMessagesRead, markMessageRead, type MessageRecord } from '../../api/messageApi';
+import { AdminMessageCenter } from '../../components/admin';
 import { AccountDrawers } from '../../modules/account/components/AccountDrawers';
 import { designCategoryNavItems, isDesignCategory } from '../../modules/design-system/categories';
 import { useAuthStore } from '../../stores/authStore';
@@ -26,27 +28,6 @@ const SESSION_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 const SESSION_IDLE_CHECK_MS = 30 * 1000;
 const SESSION_HEARTBEAT_THROTTLE_MS = 60 * 1000;
 const SESSION_ACTIVITY_EVENTS = ['mousedown', 'keydown', 'scroll', 'touchstart'] as const;
-
-function MessageBellIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="admin-layout__message-icon"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M18.2 16.4H5.8c1.25-1.05 1.7-2.35 1.7-4.7 0-3.4 1.82-5.7 4.5-5.7s4.5 2.3 4.5 5.7c0 2.35.45 3.65 1.7 4.7Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path d="M9.7 18.4c.42 1.05 1.2 1.6 2.3 1.6s1.88-.55 2.3-1.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M12 4.8V3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
 
 type AdminMenuItems = NonNullable<MenuProps['items']>;
 
@@ -258,6 +239,8 @@ export function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [openKeys, setOpenKeys] = useState<string[]>([]);
   const [accountDrawer, setAccountDrawer] = useState<'profile' | 'preferences' | 'password' | null>(null);
+  const [messageItems, setMessageItems] = useState<MessageRecord[]>([]);
+  const [messageLoading, setMessageLoading] = useState(false);
   const lastActivityAtRef = useRef(Date.now());
   const lastHeartbeatAtRef = useRef(0);
   const idleLoggedOutRef = useRef(false);
@@ -354,6 +337,55 @@ export function AdminLayout() {
     };
   }, [accessSessionId, clearAuth, navigate, token]);
 
+  useEffect(() => {
+    if (!token) {
+      setMessageItems([]);
+      return;
+    }
+
+    let ignore = false;
+    setMessageLoading(true);
+    getMessages()
+      .then((rows) => {
+        if (!ignore) setMessageItems(rows);
+      })
+      .catch((error) => {
+        if (!ignore) message.error(error instanceof Error ? error.message : '获取消息失败');
+      })
+      .finally(() => {
+        if (!ignore) setMessageLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [token]);
+
+  const reloadMessages = async () => {
+    const rows = await getMessages();
+    setMessageItems(rows);
+  };
+
+  const handleMessageRead = async (id: string) => {
+    setMessageItems((current) => current.map((item) => item.id === id ? { ...item, unread: false } : item));
+    try {
+      await markMessageRead(id);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '消息已读失败');
+      await reloadMessages().catch(() => undefined);
+    }
+  };
+
+  const handleAllMessagesRead = async () => {
+    setMessageItems((current) => current.map((item) => ({ ...item, unread: false })));
+    try {
+      await markAllMessagesRead();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '全部已读失败');
+      await reloadMessages().catch(() => undefined);
+    }
+  };
+
   if (shouldRedirectAdminOnlyPage || shouldRedirectUnauthorizedPage) {
     return <Navigate to={fallbackMenuPath} replace />;
   }
@@ -409,10 +441,13 @@ export function AdminLayout() {
             ) : null}
           </div>
           <Space className="admin-layout__header-actions" size={4}>
-            <Button aria-label="消息" className="admin-layout__message-button" type="text">
-              <MessageBellIcon />
-              <span className="admin-layout__message-dot" />
-            </Button>
+            <AdminMessageCenter
+              loading={messageLoading}
+              messages={messageItems}
+              onMarkAllRead={handleAllMessagesRead}
+              onMarkRead={handleMessageRead}
+              onNavigate={navigate}
+            />
             <Dropdown
               trigger={['click']}
               menu={{

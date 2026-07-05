@@ -737,7 +737,8 @@
 }
 
 .design-system-page__text-action-demo,
-.design-system-page__status-demo {
+.design-system-page__status-demo,
+.design-system-page__switch-demo-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px 12px;
@@ -2481,6 +2482,7 @@
   .design-system-page__button-demo-grid,
   .design-system-page__text-action-demo,
   .design-system-page__status-demo,
+  .design-system-page__switch-demo-grid,
   .design-system-page__grid,
   .design-system-page__layout-patterns,
   .design-system-page__spec-grid,

@@ -7,8 +7,53 @@
   border-radius: 6px;
 }
 
+.admin-button.is-subtle.ant-btn {
+  height: 26px;
+  padding: 0 10px;
+  border-color: #c7d7ee;
+  color: #24538f;
+  background: #ffffff;
+  font-size: 12px;
+}
+
+.admin-button.is-subtle.ant-btn:not(:disabled):not(.ant-btn-disabled):hover,
+.admin-button.is-subtle.ant-btn:not(:disabled):not(.ant-btn-disabled):focus-visible {
+  border-color: var(--app-primary);
+  color: var(--app-primary);
+  background: #f5f9ff;
+}
+
+.admin-button.is-subtle.ant-btn:not(:disabled):not(.ant-btn-disabled):hover > span,
+.admin-button.is-subtle.ant-btn:not(:disabled):not(.ant-btn-disabled):focus-visible > span {
+  color: var(--app-primary);
+}
+
 .admin-switch.ant-switch {
   min-width: 48px;
+}
+
+.admin-segmented.is-filter.ant-segmented {
+  padding: 3px;
+  border: 1px solid #d8e4f3;
+  border-radius: 8px;
+  background: #f3f7fc;
+}
+
+.admin-segmented.is-filter.ant-segmented:not(.ant-segmented-block) {
+  width: fit-content;
+  max-width: 100%;
+}
+
+.admin-segmented.is-filter.ant-segmented .ant-segmented-item {
+  border-radius: 6px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.admin-segmented.is-filter.ant-segmented .ant-segmented-item-selected {
+  color: var(--app-primary);
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(31, 111, 255, 0.16);
 }
 
 .admin-color-picker.ant-color-picker-trigger {
