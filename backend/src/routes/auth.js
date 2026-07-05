@@ -6,6 +6,8 @@ const jwt = require('jsonwebtoken')
 const dotenv = require('dotenv')
 const { requestTicket } = require('../services/ssoService')
 const { verifyToken } = require('../middleware/auth')
+const accessLogService = require('../services/accessLogService')
+const accountService = require('../services/accountService')
 dotenv.config()
 
 // Simple in-memory rate limiter for login
@@ -22,6 +24,23 @@ setInterval(() => {
   }
 }, CLEANUP_MS)
 
+async function safeRecordLoginFailure(payload) {
+  try {
+    await accessLogService.recordLoginFailure(payload)
+  } catch (err) {
+    console.error('access log write failed:', err.message)
+  }
+}
+
+async function safeRecordLoginSuccess(payload) {
+  try {
+    return await accessLogService.recordLoginSuccess(payload)
+  } catch (err) {
+    console.error('access log write failed:', err.message)
+    return null
+  }
+}
+
 // Login
 router.post('/login', async (req, res) => {
   try {
@@ -37,18 +56,20 @@ router.post('/login', async (req, res) => {
       const elapsed = Date.now() - attempts.lastAttempt
       if (elapsed < LOCKOUT_MS) {
         const remaining = Math.ceil((LOCKOUT_MS - elapsed) / 1000)
+        await safeRecordLoginFailure({ account, failReason: '登录频率限制', result: 'locked', req })
         return res.status(429).json({ code: 429, message: `登录尝试次数过多，请${remaining}秒后重试`, data: null })
       }
       loginAttempts.delete(clientIp)
     }
 
     const row = await db.prepare(
-      'SELECT id, employee_no, real_name, phone, password, status, first_login FROM pms_user WHERE (employee_no = ? OR phone = ? OR real_name = ?) AND is_deleted = 0'
+      'SELECT id, employee_no, real_name, phone, avatar_url, password, status, first_login FROM pms_user WHERE (employee_no = ? OR phone = ? OR real_name = ?) AND is_deleted = 0'
     ).get(account, account, account)
     if (!row) {
       attempts.count++
       attempts.lastAttempt = Date.now()
       loginAttempts.set(clientIp, attempts)
+      await safeRecordLoginFailure({ account, failReason: '用户不存在', req })
       return res.status(401).json({ code: 401, message: '用户不存在', data: null })
     }
 
@@ -57,10 +78,12 @@ router.post('/login', async (req, res) => {
       attempts.count++
       attempts.lastAttempt = Date.now()
       loginAttempts.set(clientIp, attempts)
+      await safeRecordLoginFailure({ account, failReason: '密码错误', req, user: row })
       return res.status(401).json({ code: 401, message: '密码错误', data: null })
     }
 
     if (row.status !== 1) {
+      await safeRecordLoginFailure({ account, failReason: '账号已停用', req, user: row })
       return res.status(403).json({ code: 403, message: '账号已停用', data: null })
     }
 
@@ -93,7 +116,7 @@ router.post('/login', async (req, res) => {
     const toProcess = [...allMenuIds]
     while (toProcess.length > 0) {
       const id = toProcess.pop()
-      const parentId = menuMap[id]
+      const parentId = menuMap[id]?.parent_id
       if (parentId && parentId !== 0 && !allMenuIds.has(parentId)) {
         const parent = menuMap[parentId]
         if (parent) {
@@ -104,59 +127,139 @@ router.post('/login', async (req, res) => {
       }
     }
 
-    res.json({ code: 0, message: '登录成功', data: { token, first_login: row.first_login, user: { id: row.id, employee_no: row.employee_no, real_name: row.real_name, phone: row.phone }, menus } })
+    const accessSessionId = await safeRecordLoginSuccess({ user: row, account, req })
+
+    res.json({ code: 0, message: '登录成功', data: { token, first_login: row.first_login, access_session_id: accessSessionId, user: { id: row.id, employee_no: row.employee_no, real_name: row.real_name, phone: row.phone, avatar_url: row.avatar_url }, menus } })
   } catch (err) {
     console.error(err)
     res.status(500).json({ code: 500, message: '登录失败', data: null })
   }
 })
 
-// Change password
-router.put('/password', async (req, res) => {
+router.post('/heartbeat', verifyToken, async (req, res) => {
   try {
-    const { id, old_password, new_password } = req.body
-    if (!id || !old_password || !new_password) {
-      return res.status(400).json({ code: 400, message: '参数不完整', data: null })
-    }
-    const row = await db.prepare('SELECT password FROM pms_user WHERE id = ? AND is_deleted = 0').get(id)
-    if (!row) {
-      return res.status(404).json({ code: 404, message: '用户不存在', data: null })
-    }
-    const valid = await bcrypt.compare(old_password, row.password)
-    if (!valid) {
-      return res.status(401).json({ code: 401, message: '原密码错误', data: null })
-    }
-    const hashed = await bcrypt.hash(new_password, 10)
-    await db.prepare('UPDATE pms_user SET password = ?, first_login = 0, updated_at = NOW() WHERE id = ?').run(hashed, id)
-    await db.writeLog(id, '更改密码', '用户', id, 'password', '***', '***', req.ip)
-    res.json({ code: 0, message: '密码修改成功', data: null })
+    const result = await accessLogService.touchSession({
+      userId: req.user.id,
+      sessionId: req.body.session_id
+    })
+    res.json({ code: 0, message: 'success', data: result })
   } catch (err) {
     console.error(err)
-    res.status(500).json({ code: 500, message: '修改失败', data: null })
+    res.status(500).json({ code: 500, message: '更新访问状态失败', data: null })
   }
 })
 
-// Get current user info
-router.get('/me', async (req, res) => {
+router.post('/logout', verifyToken, async (req, res) => {
   try {
-    const { id } = req.query
-    if (!id) {
-      return res.status(400).json({ code: 400, message: '参数不完整', data: null })
-    }
-    const sql = `SELECT pms_user.id, pms_user.employee_no, pms_user.real_name, pms_user.phone, pms_user.status, pms_user.created_at,
-      u1.real_name as creator_name, u2.real_name as updater_name, pms_user.updated_at
-      FROM pms_user
-      LEFT JOIN pms_user u1 ON pms_user.creator_id = u1.id
-      LEFT JOIN pms_user u2 ON pms_user.updater_id = u2.id
-      WHERE pms_user.id = ? AND pms_user.is_deleted = 0`
-    const row = await db.prepare(sql).get(id)
-    if (!row) {
-      return res.status(404).json({ code: 404, message: '用户不存在', data: null })
-    }
+    const result = await accessLogService.endSession({
+      userId: req.user.id,
+      sessionId: req.body.session_id,
+      preserveLastActive: req.body.preserve_last_active === 1 || req.body.preserve_last_active === true
+    })
+    res.json({ code: 0, message: 'success', data: result })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ code: 500, message: '退出记录失败', data: null })
+  }
+})
+
+// Current user profile
+router.get('/me', verifyToken, async (req, res) => {
+  try {
+    const row = await accountService.getCurrentUser(req.user.id)
+    if (!row) return res.status(404).json({ code: 404, message: '用户不存在', data: null })
     res.json({ code: 0, message: 'success', data: row })
   } catch (err) {
     console.error(err)
     res.status(500).json({ code: 500, message: '查询失败', data: null })
+  }
+})
+
+router.put('/me/profile', verifyToken, async (req, res) => {
+  try {
+    const row = await accountService.updateProfile(req.user.id, req.body)
+    res.json({ code: 0, message: 'success', data: row })
+  } catch (err) {
+    console.error(err)
+    res.status(err.statusCode || 500).json({ code: err.statusCode || 500, message: err.message || '保存失败', data: null })
+  }
+})
+
+router.put('/me/phone', verifyToken, async (req, res) => {
+  try {
+    const row = await accountService.changePhone(req.user.id, req.body)
+    res.json({ code: 0, message: 'success', data: row })
+  } catch (err) {
+    console.error(err)
+    res.status(err.statusCode || 400).json({ code: err.statusCode || 400, message: err.message || '手机号修改失败', data: null })
+  }
+})
+
+router.post('/me/avatar', verifyToken, async (req, res) => {
+  try {
+    const result = await accountService.saveAvatar(req.user.id, req.body)
+    res.json({ code: 0, message: 'success', data: result })
+  } catch (err) {
+    console.error(err)
+    res.status(400).json({ code: 400, message: err.message || '头像上传失败', data: null })
+  }
+})
+
+router.delete('/me/avatar', verifyToken, async (req, res) => {
+  try {
+    const result = await accountService.resetAvatar(req.user.id)
+    res.json({ code: 0, message: 'success', data: result })
+  } catch (err) {
+    console.error(err)
+    res.status(400).json({ code: 400, message: err.message || '头像重置失败', data: null })
+  }
+})
+
+router.get('/preferences', verifyToken, async (req, res) => {
+  try {
+    const preference = await accountService.getPreference(req.user.id)
+    res.json({ code: 0, message: 'success', data: preference })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ code: 500, message: '查询失败', data: null })
+  }
+})
+
+router.put('/preferences', verifyToken, async (req, res) => {
+  try {
+    const preference = await accountService.savePreference(req.user.id, req.body)
+    res.json({ code: 0, message: 'success', data: preference })
+  } catch (err) {
+    console.error(err)
+    res.status(400).json({ code: 400, message: err.message || '保存失败', data: null })
+  }
+})
+
+// Change password
+router.put('/password', verifyToken, async (req, res) => {
+  try {
+    const { old_password, new_password } = req.body
+    const userId = req.user.id
+    const passwordPayload = accountService.validatePasswordChangePayload({
+      oldPassword: old_password,
+      newPassword: new_password
+    })
+    const row = await db.prepare('SELECT password FROM pms_user WHERE id = ? AND is_deleted = 0').get(userId)
+    if (!row) {
+      return res.status(404).json({ code: 404, message: '用户不存在', data: null })
+    }
+    const valid = await bcrypt.compare(passwordPayload.oldPassword, row.password)
+    if (!valid) {
+      return res.status(401).json({ code: 401, message: '原密码错误', data: null })
+    }
+    const hashed = await bcrypt.hash(passwordPayload.newPassword, 10)
+    await db.prepare('UPDATE pms_user SET password = ?, first_login = 0, updated_at = NOW() WHERE id = ?').run(hashed, userId)
+    await db.writeLog(userId, '更改密码', '用户', userId, 'password', '***', '***', req.ip)
+    res.json({ code: 0, message: '密码修改成功', data: null })
+  } catch (err) {
+    console.error(err)
+    const statusCode = err.statusCode || 500
+    res.status(statusCode).json({ code: statusCode, message: err.message || '修改失败', data: null })
   }
 })
 

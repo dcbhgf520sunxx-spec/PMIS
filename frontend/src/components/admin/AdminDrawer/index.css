@@ -1,0 +1,23 @@
+.admin-drawer .ant-drawer-header {
+  border-bottom-color: var(--app-border);
+  padding: 14px 18px;
+}
+
+.admin-drawer .ant-drawer-title {
+  color: var(--app-text);
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.admin-drawer .ant-drawer-body {
+  color: var(--app-text);
+  font-size: 13px;
+  padding: 16px 18px;
+}
+
+.admin-drawer .ant-drawer-footer {
+  border-top-color: var(--app-border);
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 18px;
+}

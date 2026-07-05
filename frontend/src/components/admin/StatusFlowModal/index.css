@@ -1,0 +1,27 @@
+.admin-status-flow-modal {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-status-flow-modal__form {
+  display: grid;
+}
+
+.admin-status-flow-modal__form .ant-form-item {
+  margin-bottom: 12px;
+}
+
+.admin-status-flow-modal__form .ant-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.admin-status-flow-modal__form .ant-form-item-label {
+  padding-bottom: 6px;
+}
+
+.admin-status-flow-modal__form .ant-form-item-label > label {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+}

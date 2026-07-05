@@ -1,0 +1,74 @@
+.admin-rich-description {
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+}
+
+.admin-rich-description.is-focused {
+  border-color: var(--app-primary);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08);
+}
+
+.admin-rich-description__toolbar {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--app-border);
+  background: #f8fafc;
+}
+
+.admin-rich-description__body {
+  position: relative;
+}
+
+.admin-rich-description__editor {
+  min-height: 120px;
+  padding: 10px 12px;
+  outline: none;
+  color: var(--app-text);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.admin-rich-description__editor img {
+  max-width: 100%;
+  max-height: 240px;
+  margin: 6px 0;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  cursor: default;
+  vertical-align: top;
+}
+
+.admin-rich-description__editor img.is-selected {
+  border-color: var(--app-primary);
+  box-shadow: 0 0 0 2px rgba(31, 111, 255, 0.14);
+}
+
+.admin-rich-description__resize-handle {
+  position: absolute;
+  z-index: 2;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 3px;
+  background: var(--app-primary);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+  cursor: nwse-resize;
+}
+
+.admin-rich-description__placeholder {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  pointer-events: none;
+  color: var(--app-muted);
+  font-size: 14px;
+}
+
+.admin-rich-description__tip {
+  padding: 6px 10px;
+  border-top: 1px solid var(--app-border);
+  color: var(--app-muted);
+  font-size: 12px;
+  line-height: 18px;
+}

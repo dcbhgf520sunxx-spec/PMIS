@@ -1,0 +1,93 @@
+.admin-metric-card {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  color: inherit;
+  text-align: left;
+}
+
+.admin-metric-card--button {
+  cursor: pointer;
+}
+
+.admin-metric-card--button:hover {
+  border-color: rgba(37, 99, 235, 0.35);
+}
+
+.admin-metric-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--app-muted);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.admin-metric-card__overdue {
+  color: #dc2626;
+  font-size: 12px;
+}
+
+.admin-metric-card__value {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.admin-metric-card__value strong {
+  color: var(--app-text);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 34px;
+}
+
+.admin-metric-card__value span {
+  color: var(--app-muted);
+  font-size: 12px;
+}
+
+.admin-metric-card__items {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.admin-metric-card__item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 26px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+}
+
+.admin-metric-card__item strong {
+  color: var(--app-text);
+}
+
+.admin-metric-card__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #94a3b8;
+}
+
+.admin-metric-card__dot--blue { background: #2563eb; }
+.admin-metric-card__dot--cyan { background: #0891b2; }
+.admin-metric-card__dot--green { background: #16a34a; }
+.admin-metric-card__dot--orange { background: #f97316; }
+.admin-metric-card__dot--red { background: #dc2626; }
+.admin-metric-card__dot--purple { background: #7c3aed; }
+.admin-metric-card__dot--gray { background: #94a3b8; }

@@ -1,0 +1,17 @@
+.admin-status-flow {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-status-flow__current {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--app-muted);
+  font-size: 13px;
+}
+
+.admin-status-flow__arrow {
+  color: var(--app-muted);
+  font-size: 13px;
+}

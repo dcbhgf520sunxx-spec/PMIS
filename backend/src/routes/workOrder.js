@@ -4,6 +4,8 @@ const ctrl = require('../controllers/workOrderController')
 
 router.get('/', ctrl.list)
 router.get('/neighbors', ctrl.getNeighbors)
+router.post('/refresh-overdue', ctrl.refreshOverdue)
+router.put('/batch-assign', ctrl.batchAssign)
 router.get('/:id', ctrl.getById)
 router.post('/', ctrl.create)
 router.put('/:id', ctrl.update)

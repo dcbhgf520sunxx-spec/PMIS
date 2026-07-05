@@ -1,0 +1,56 @@
+:root {
+  --app-bg: #f4f8fd;
+  --app-bg-strong: #edf4ff;
+  --app-surface: #ffffff;
+  --app-surface-subtle: #f6f9fd;
+  --app-surface-tech: #f7fbff;
+  --app-border: #dce8f7;
+  --app-border-strong: #b9cce6;
+  --app-text: #12213a;
+  --app-muted: #64748b;
+  --app-primary: #1f6fff;
+  --app-primary-hover: #2563eb;
+  --app-primary-deep: #1559d6;
+  --app-cyan: #0ea5e9;
+  --app-purple: #7c3aed;
+  --app-steel: #475569;
+  --app-header-bg: rgba(255, 255, 255, 0.94);
+  --app-soft-primary-bg: rgba(37, 99, 235, 0.08);
+  --app-glow: rgba(22, 119, 255, 0.14);
+  --app-radius: 6px;
+  --app-shadow: 0 8px 24px rgba(30, 82, 142, 0.05);
+  --app-font-size: 13px;
+  --app-font-size-sm: 12px;
+  --app-line-height: 20px;
+  --app-control-height: 32px;
+  --app-control-height-sm: 28px;
+  --app-control-height-lg: 36px;
+  --app-page-gap: 8px;
+  --app-section-gap: 12px;
+  --app-card-padding: 16px;
+  --app-table-cell-padding-x: 10px;
+  --app-table-cell-padding-y: 8px;
+  --app-footer-height: 40px;
+}
+
+:root[data-appearance='dark'] {
+  --app-bg: #101827;
+  --app-bg-strong: #162238;
+  --app-surface: #182235;
+  --app-surface-subtle: #1f2b3d;
+  --app-surface-tech: #182235;
+  --app-border: #334155;
+  --app-border-strong: #475569;
+  --app-text: #e5edf7;
+  --app-muted: #9fb0c7;
+  --app-primary: #5b8cff;
+  --app-primary-hover: #77a1ff;
+  --app-primary-deep: #3f73e8;
+  --app-cyan: #38bdf8;
+  --app-purple: #a78bfa;
+  --app-steel: #94a3b8;
+  --app-header-bg: rgba(24, 34, 53, 0.94);
+  --app-soft-primary-bg: rgba(91, 140, 255, 0.16);
+  --app-glow: rgba(91, 140, 255, 0.2);
+  --app-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}

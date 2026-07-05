@@ -1,0 +1,91 @@
+.admin-input.ant-input,
+.admin-input.ant-input-affix-wrapper,
+.admin-input.ant-input-number,
+.admin-input.ant-select,
+.admin-date-picker.ant-picker {
+  width: 100%;
+  min-height: 32px;
+  border-color: #dce8f7 !important;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.admin-input.ant-input:not(textarea),
+.admin-input.ant-input-affix-wrapper,
+.admin-input.ant-input-number,
+.admin-input.ant-select,
+.admin-date-picker.ant-picker {
+  height: 32px;
+}
+
+.admin-input.ant-input:not(textarea) {
+  line-height: 20px;
+}
+
+.admin-input.ant-input-affix-wrapper {
+  display: inline-flex;
+  align-items: center;
+  padding-block: 0;
+}
+
+.admin-input.ant-input-affix-wrapper > input.ant-input {
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  border: 0 !important;
+  line-height: 30px;
+  box-shadow: none !important;
+}
+
+.admin-input.ant-input-number .ant-input-number-input {
+  height: 30px;
+  font-size: 13px;
+  line-height: 30px;
+}
+
+.admin-auto-complete.ant-select .ant-select-selector {
+  min-height: 32px;
+  border-color: #dce8f7 !important;
+  border-radius: 6px;
+}
+
+.admin-auto-complete.ant-select-single .ant-select-selector,
+.admin-auto-complete.ant-select-single .ant-select-selection-search-input {
+  height: 32px !important;
+}
+
+.admin-date-picker.ant-picker .ant-picker-input {
+  height: 30px;
+}
+
+.admin-date-picker.ant-picker .ant-picker-input > input {
+  height: 30px;
+  font-size: 13px;
+  line-height: 22px;
+}
+
+.admin-textarea.ant-input {
+  min-height: 88px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+  resize: vertical;
+}
+
+.admin-input.ant-input:hover,
+.admin-input.ant-input-affix-wrapper:hover,
+.admin-input.ant-input-number:hover,
+.admin-auto-complete.ant-select:hover .ant-select-selector,
+.admin-date-picker.ant-picker:hover {
+  border-color: #1f6fff !important;
+}
+
+.admin-input.ant-input:focus,
+.admin-input.ant-input-focused,
+.admin-input.ant-input-affix-wrapper-focused,
+.admin-input.ant-input-affix-wrapper:focus-within,
+.admin-input.ant-input-number-focused,
+.admin-auto-complete.ant-select-focused .ant-select-selector,
+.admin-date-picker.ant-picker-focused {
+  border-color: #1f6fff !important;
+  box-shadow: 0 0 0 2px rgba(31, 111, 255, 0.1) !important;
+}

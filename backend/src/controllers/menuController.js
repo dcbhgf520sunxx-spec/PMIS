@@ -4,7 +4,6 @@ exports.saveRoleMenus = async (req, res) => {
   try {
     const roleId = req.params.roleId
     const { menuIds, updater_id } = req.body
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ')
 
     // Get old menu ids (sorted for comparison)
     const oldRows = await db.prepare('SELECT menu_id FROM pms_role_menu WHERE role_id = ?').all(roleId)
@@ -13,26 +12,21 @@ exports.saveRoleMenus = async (req, res) => {
     // New menu ids - only store what user checked, don't auto-include parents
     const newMenuIds = (menuIds || []).sort()
 
-    // Get menu names for log
-    const allMenuData = await db.prepare('SELECT id, name FROM pms_menu WHERE is_deleted = 0').all()
-    const nameMap = {}
-    allMenuData.forEach(m => { nameMap[m.id] = m.name })
-
     // Check if menus actually changed (both sorted)
     const hasChanged = JSON.stringify(oldMenuIds) !== JSON.stringify(newMenuIds)
 
     await db.transaction(async (conn) => {
-      await db.prepare('DELETE FROM pms_role_menu WHERE role_id = ?').run(roleId)
-      const stmt = db.prepare('INSERT INTO pms_role_menu (role_id, menu_id, created_at) VALUES (?, ?, ?)')
+      await conn.prepare('DELETE FROM pms_role_menu WHERE role_id = ?').run(roleId)
+      const stmt = conn.prepare('INSERT INTO pms_role_menu (role_id, menu_id, created_at) VALUES (?, ?, NOW())')
       for (const menuId of newMenuIds) {
-        await stmt.run(roleId, menuId, now)
+        await stmt.run(roleId, menuId)
       }
 
       // Only write log if menus actually changed
       if (hasChanged && updater_id) {
-        const oldNames = oldMenuIds.map(id => nameMap[id] || id).join('、') || '无'
-        const newNames = newMenuIds.map(id => nameMap[id] || id).join('、') || '无'
-        await db.writeLog(updater_id, '分配权限', '角色', roleId, 'menu_ids', oldNames, newNames, req.ip)
+        const oldValue = oldMenuIds.join('、') || '无'
+        const newValue = newMenuIds.join('、') || '无'
+        await db.writeLog(updater_id, '分配权限', '角色', roleId, 'menu_ids', oldValue, newValue, req.ip)
       }
     })
     res.json({ code: 0, message: 'success', data: null })

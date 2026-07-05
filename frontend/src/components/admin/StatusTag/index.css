@@ -1,0 +1,62 @@
+.admin-status-tag.ant-tag {
+  align-items: center;
+  border-color: transparent;
+  border-radius: 4px;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 400;
+  height: 24px;
+  line-height: 22px;
+  margin-inline-end: 0;
+  padding: 0 7px;
+}
+
+.admin-status-tag .anticon {
+  font-size: 14px;
+  margin-inline-end: 4px;
+}
+
+.admin-status-tag--positive.ant-tag {
+  background: color-mix(in srgb, #16a34a 8%, #fff);
+  color: #16a34a;
+}
+
+.admin-status-tag--positive .anticon {
+  color: #16a34a;
+}
+
+.admin-status-tag--processing.ant-tag {
+  background: color-mix(in srgb, var(--app-primary) 8%, #fff);
+  color: var(--app-primary);
+}
+
+.admin-status-tag--processing .anticon {
+  color: var(--app-primary);
+}
+
+.admin-status-tag--pending.ant-tag {
+  background: color-mix(in srgb, #64748b 8%, #fff);
+  color: #64748b;
+}
+
+.admin-status-tag--pending .anticon {
+  color: #64748b;
+}
+
+.admin-status-tag--neutral.ant-tag {
+  background: color-mix(in srgb, #64748b 8%, #fff);
+  color: #64748b;
+}
+
+.admin-status-tag--neutral .anticon {
+  color: #64748b;
+}
+
+.admin-status-tag--danger.ant-tag {
+  background: color-mix(in srgb, #dc2626 8%, #fff);
+  color: #dc2626;
+}
+
+.admin-status-tag--danger .anticon {
+  color: #dc2626;
+}

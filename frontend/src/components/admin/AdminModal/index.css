@@ -1,0 +1,31 @@
+.admin-modal .ant-modal-content {
+  padding: 16px 18px 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  box-shadow: 0 18px 48px rgba(15, 35, 64, 0.14);
+}
+
+.admin-modal .ant-modal-header {
+  margin-bottom: 14px;
+}
+
+.admin-modal .ant-modal-title {
+  color: var(--app-text);
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.admin-modal__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-modal__title .anticon {
+  color: #2b6ff6;
+  font-size: 17px;
+}
+
+.admin-modal .ant-modal-footer {
+  margin-top: 16px;
+}

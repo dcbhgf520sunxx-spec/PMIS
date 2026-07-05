@@ -1,0 +1,77 @@
+.admin-table-footer-bar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-shrink: 0;
+  height: 40px;
+  align-items: center;
+  padding: 6px 12px;
+  border: 0;
+  background: #fff;
+  box-shadow: 0 -5px 12px rgba(37, 99, 235, 0.04);
+  justify-content: space-between;
+  gap: 12px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.admin-table-footer-bar::before {
+  position: absolute;
+  top: 0;
+  right: 12px;
+  left: 12px;
+  height: 1px;
+  background: transparent;
+  content: '';
+}
+
+.admin-table-footer-bar > * {
+  pointer-events: auto;
+}
+
+.admin-table-footer-bar__actions {
+  display: inline-flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.admin-table-footer-bar .ant-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 12px;
+  font-size: 12px;
+}
+
+.admin-table-footer-bar__selected-count {
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 30px;
+  align-items: center;
+  color: #64748b;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.admin-table-footer-bar__extra {
+  display: inline-flex;
+  height: 32px;
+  flex: 0 0 auto;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+:fullscreen .admin-table-footer-bar {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  left: auto;
+}

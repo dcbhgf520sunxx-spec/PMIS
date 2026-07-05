@@ -1,0 +1,9 @@
+.admin-confirm-action__description {
+  color: #475569;
+  font-size: 13px;
+  line-height: 22px;
+}
+
+.admin-confirm-action__error {
+  margin-top: 14px;
+}

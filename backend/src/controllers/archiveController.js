@@ -8,14 +8,34 @@ function withJoins(sql) {
     LEFT JOIN pms_user u2 ON a.updater_id = u2.id`
 }
 
-/** Generate next archive code: prefix + 3-digit sequence */
+/** Generate next pms_archive code: prefix + 3-digit sequence */
 async function generateCode(archiveTypeId) {
   const typeInfo = await db.prepare('SELECT code_prefix FROM pms_archive_type WHERE id = ?').get(archiveTypeId)
   if (!typeInfo) return null
   const prefix = typeInfo.code_prefix
-  const maxCode = await db.prepare('SELECT MAX(CAST(SUBSTRING(code, ?) AS UNSIGNED)) as max_seq FROM pms_archive WHERE archive_type_id = ? AND is_deleted = 0').get(prefix.length + 1, archiveTypeId)
+  const maxCode = await db.prepare(
+    'SELECT MAX(CAST(SUBSTRING(code FROM ? FOR 20) AS INTEGER)) as max_seq FROM pms_archive WHERE archive_type_id = ? AND code LIKE ?'
+  ).get(prefix.length + 1, archiveTypeId, `${prefix}%`)
   const nextSeq = (maxCode?.max_seq || 0) + 1
   return prefix + String(nextSeq).padStart(3, '0')
+}
+
+async function getArchiveReferenceMessage(archiveId) {
+  const workOrderRefs = await db.prepare(
+    `SELECT
+      SUM(CASE WHEN system_id = ? THEN 1 ELSE 0 END) as system_count,
+      SUM(CASE WHEN problem_type = ? THEN 1 ELSE 0 END) as problem_type_count
+    FROM pms_work_order
+    WHERE is_deleted = 0
+      AND (system_id = ? OR problem_type = ?)`
+  ).get(archiveId, archiveId, archiveId, archiveId)
+
+  const referencedFields = []
+  if (Number(workOrderRefs?.system_count || 0) > 0) referencedFields.push('所属系统')
+  if (Number(workOrderRefs?.problem_type_count || 0) > 0) referencedFields.push('问题类型')
+
+  if (referencedFields.length === 0) return ''
+  return `该档案已被运维工单的${referencedFields.join('、')}引用，不能删除`
 }
 
 exports.list = async (req, res) => {
@@ -54,7 +74,7 @@ exports.create = async (req, res) => {
     res.json({ code: 0, message: 'success', data: { id: result.lastInsertRowid, code } })
   } catch (err) {
     console.error(err)
-    if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ code: 400, message: '档案编码已存在', data: null })
+    if (err.code === 'ER_DUP_ENTRY' || err.code === '23505') return res.status(400).json({ code: 400, message: '档案编码已存在', data: null })
     res.status(500).json({ code: 500, message: '创建失败', data: null })
   }
 }
@@ -97,9 +117,15 @@ exports.toggleStatus = async (req, res) => {
 exports.remove = async (req, res) => {
   try {
     const { updater_id } = req.body
+    const archiveId = Number(req.params.id)
+    const archive = await db.prepare('SELECT id FROM pms_archive WHERE id = ? AND is_deleted = 0').get(archiveId)
+    if (!archive) return res.status(404).json({ code: 404, message: '档案不存在或已删除', data: null })
 
-    await db.prepare('UPDATE pms_archive SET is_deleted = 1, updater_id = ? WHERE id = ?').run(updater_id || null, req.params.id)
-    if (updater_id) await db.writeLog(updater_id, '删除', '档案', req.params.id, 'is_deleted', '0', '1', req.ip)
+    const referenceMessage = await getArchiveReferenceMessage(archiveId)
+    if (referenceMessage) return res.status(400).json({ code: 400, message: referenceMessage, data: null })
+
+    await db.prepare('UPDATE pms_archive SET is_deleted = 1, updater_id = ? WHERE id = ?').run(updater_id || null, archiveId)
+    if (updater_id) await db.writeLog(updater_id, '删除', '档案', archiveId, 'is_deleted', '0', '1', req.ip)
     res.json({ code: 0, message: 'success', data: null })
   } catch (err) {
     console.error(err)
@@ -110,10 +136,33 @@ exports.remove = async (req, res) => {
 /** Update sort orders in batch (for drag-and-drop reorder) */
 exports.batchUpdateSort = async (req, res) => {
   try {
-    const { items } = req.body // [{ id, sort_order }, ...]
+    const { items, updater_id } = req.body // [{ id, sort_order }, ...]
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ code: 400, message: '缺少排序数据', data: null })
+    }
+    const ids = items.map((item) => Number(item.id)).filter(Boolean)
+    if (ids.length === 0) {
+      return res.status(400).json({ code: 400, message: '排序数据无效', data: null })
+    }
+
     await db.transaction(async (conn) => {
+      const oldRows = await conn.prepare(
+        `SELECT id, name, sort_order FROM pms_archive WHERE id IN (${ids.map(() => '?').join(',')}) AND is_deleted = 0`
+      ).all(...ids)
+      const oldMap = new Map(oldRows.map((row) => [Number(row.id), row]))
+
       for (const item of items) {
-        await conn.execute('UPDATE pms_archive SET sort_order = ?, updated_at = NOW() WHERE id = ?', [item.sort_order, item.id])
+        const archiveId = Number(item.id)
+        const nextSortOrder = Number(item.sort_order)
+        const old = oldMap.get(archiveId)
+        if (!old || Number(old.sort_order) === nextSortOrder) continue
+
+        await conn.prepare('UPDATE pms_archive SET sort_order = ?, updater_id = ?, updated_at = NOW() WHERE id = ?').run(nextSortOrder, updater_id || null, archiveId)
+        if (updater_id) {
+          await conn.prepare(
+            'INSERT INTO pms_op_log (user_id, action, module, target_id, field_name, old_value, new_value, ip, target_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+          ).run(updater_id, '排序', '档案', archiveId, 'sort_order', old.sort_order, nextSortOrder, req.ip, old.name)
+        }
       }
     })
     res.json({ code: 0, message: 'success', data: null })
@@ -123,7 +172,7 @@ exports.batchUpdateSort = async (req, res) => {
   }
 }
 
-/** Get archives by archive type name (for dropdown reference) */
+/** Get archives by pms_archive type name (for dropdown reference) */
 exports.getByTypeName = async (req, res) => {
   try {
     const { type_name } = req.query

@@ -1,0 +1,22 @@
+.admin-status-confirm-action__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-status-confirm-action__title .anticon {
+  font-size: 18px;
+}
+
+.admin-status-confirm-action__title.is-enable .anticon {
+  color: #16a34a;
+}
+
+.admin-status-confirm-action__title.is-disable .anticon {
+  color: #f59e0b;
+}
+
+.admin-confirm-action__description strong {
+  color: #0f172a;
+  font-weight: 650;
+}

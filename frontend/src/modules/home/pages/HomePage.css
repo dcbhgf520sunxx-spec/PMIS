@@ -1,0 +1,184 @@
+.home-page {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(420px, 0.9fr) minmax(400px, 1.1fr);
+  align-items: center;
+  height: 100%;
+  min-height: 420px;
+  overflow: hidden;
+  padding: 58px 64px 54px 118px;
+  border: 1px solid rgba(196, 211, 232, 0.82);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 78% 48%, rgba(96, 174, 255, 0.18) 0 18%, transparent 42%),
+    radial-gradient(circle at 91% 82%, rgba(113, 101, 255, 0.12) 0 14%, transparent 36%),
+    linear-gradient(120deg, #f7fbff 0%, #ffffff 42%, #eef6ff 100%);
+}
+
+.home-page::before,
+.home-page::after {
+  position: absolute;
+  content: '';
+  pointer-events: none;
+}
+
+.home-page::before {
+  inset: 0;
+  background:
+    linear-gradient(121deg, transparent 0 44%, rgba(43, 111, 242, 0.07) 44.2% 44.8%, transparent 45% 100%) 2% 8% / 300px 34% no-repeat,
+    linear-gradient(74deg, transparent 0 59%, rgba(62, 151, 225, 0.06) 59.2% 59.8%, transparent 60% 100%) 22% 80% / 260px 26% no-repeat,
+    linear-gradient(104deg, transparent 0 55%, rgba(62, 151, 225, 0.08) 55.2% 55.7%, transparent 56% 100%) 67% 3% / 340px 42% no-repeat,
+    linear-gradient(138deg, transparent 0 47%, rgba(43, 111, 242, 0.055) 47.2% 47.8%, transparent 48% 100%) 88% 20% / 220px 34% no-repeat,
+    linear-gradient(96deg, transparent 0 62%, rgba(96, 174, 255, 0.06) 62.2% 62.9%, transparent 63% 100%) 73% 74% / 360px 28% no-repeat,
+    linear-gradient(151deg, transparent 0 37%, rgba(43, 111, 242, 0.048) 37.2% 37.8%, transparent 38% 100%) 39% 13% / 210px 30% no-repeat,
+    linear-gradient(83deg, transparent 0 69%, rgba(62, 151, 225, 0.048) 69.2% 69.9%, transparent 70% 100%) 95% 78% / 220px 28% no-repeat,
+    linear-gradient(126deg, transparent 0 51%, rgba(43, 111, 242, 0.045) 51.2% 51.7%, transparent 52% 100%) 49% 88% / 280px 22% no-repeat;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 18%, #000 88%, transparent 100%);
+  animation: home-page-lines 18s ease-in-out infinite alternate;
+}
+
+.home-page::after {
+  display: none;
+}
+
+.home-page__welcome {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  max-width: 560px;
+  transform: translateY(-18px);
+}
+
+.home-page__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  color: #ffffff;
+  background: #2b6ff2;
+  box-shadow: 0 12px 24px rgba(43, 111, 242, 0.2);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.home-page__welcome h1 {
+  margin: 0;
+  color: #0a1730;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 48px;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.home-page__welcome p {
+  margin: 16px 0 0;
+  color: #58708f;
+  font-size: 17px;
+  line-height: 28px;
+}
+
+.home-page__visual {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  align-self: stretch;
+  transform: translateY(-18px);
+}
+
+.home-page__image {
+  position: relative;
+  display: block;
+  width: min(620px, 108%);
+  max-height: 70vh;
+  object-fit: contain;
+  opacity: 0.92;
+  filter: saturate(0.98) drop-shadow(0 26px 34px rgba(54, 105, 166, 0.12));
+  transform: translate(22px, 0);
+  mask-image:
+    linear-gradient(90deg, transparent 0%, #000 13%, #000 87%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, #000 12%, #000 88%, transparent 100%);
+  mask-composite: intersect;
+  -webkit-mask-image:
+    linear-gradient(90deg, transparent 0%, #000 13%, #000 87%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, #000 12%, #000 88%, transparent 100%);
+  -webkit-mask-composite: source-in;
+}
+
+@keyframes home-page-lines {
+  from {
+    background-position: 2% 8%, 22% 80%, 67% 3%, 88% 20%, 73% 74%, 39% 13%, 95% 78%, 49% 88%;
+  }
+
+  to {
+    background-position: 8% 14%, 16% 74%, 72% 9%, 82% 26%, 79% 68%, 33% 19%, 89% 84%, 55% 82%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-page::before {
+    animation: none;
+  }
+}
+
+@media (max-width: 980px) {
+  .home-page {
+    grid-template-columns: 1fr;
+    align-content: center;
+    gap: 18px;
+    padding: 44px 32px;
+  }
+
+  .home-page__welcome {
+    max-width: none;
+    text-align: center;
+  }
+
+  .home-page__visual {
+    justify-content: center;
+  }
+
+  .home-page__image {
+    width: min(480px, 88%);
+    max-height: 42vh;
+    transform: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .home-page {
+    min-height: 360px;
+    padding: 32px 22px;
+  }
+
+  .home-page__mark {
+    width: 38px;
+    height: 38px;
+    margin-bottom: 16px;
+    font-size: 18px;
+  }
+
+  .home-page__welcome h1 {
+    font-size: 26px;
+    line-height: 36px;
+    white-space: normal;
+  }
+
+  .home-page__welcome p {
+    margin-top: 10px;
+    font-size: 14px;
+    line-height: 22px;
+  }
+
+  .home-page__image {
+    width: min(340px, 92%);
+    max-height: 38vh;
+  }
+}

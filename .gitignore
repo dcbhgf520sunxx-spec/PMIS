@@ -3,6 +3,7 @@ node_modules/
 *.lock~
 .~*
 backend/.env
+backend/uploads/
 .env
 .env.*
 !.env.example

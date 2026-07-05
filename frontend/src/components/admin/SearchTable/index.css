@@ -1,0 +1,109 @@
+.admin-table-settings-popover {
+  min-width: 132px;
+  justify-content: center;
+}
+
+.admin-table-settings-popover__item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+}
+
+.admin-table-settings-popover__reset {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  color: #25415f;
+}
+
+.admin-table-settings-popover__reset:not(:disabled):hover {
+  color: var(--app-primary-hover);
+  background: rgba(31, 111, 255, 0.08);
+}
+
+.admin-table-settings-trigger {
+  width: 28px;
+  height: 28px;
+  color: #1f63d6;
+}
+
+.admin-table-settings-trigger:hover {
+  color: var(--app-primary-hover);
+  background: rgba(24, 144, 255, 0.08);
+}
+
+.admin-table-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+.admin-search-table .ant-table-thead > tr > th {
+  position: relative;
+}
+
+.admin-search-table .ant-table-cell-fix-left-last {
+  box-shadow: inset -10px 0 12px -14px rgba(37, 65, 95, 0.32);
+}
+
+.admin-search-table .ant-table-cell-fix-right-first {
+  box-shadow: inset 10px 0 12px -14px rgba(37, 65, 95, 0.32);
+}
+
+.admin-table-resize-handle {
+  position: absolute;
+  z-index: 3;
+  top: 6px;
+  right: -6px;
+  bottom: 6px;
+  width: 12px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.admin-table-resize-handle::after {
+  position: absolute;
+  top: 0;
+  right: 5px;
+  bottom: 0;
+  width: 1px;
+  background: transparent;
+  content: '';
+}
+
+.admin-table-resize-handle:hover::after,
+.admin-table-resizing .admin-table-resize-handle::after {
+  background: var(--app-primary-hover);
+}
+
+.admin-search-table .ant-pro-card-body {
+  position: relative;
+}
+
+.admin-search-table .ant-spin-container {
+  position: relative;
+}
+
+.admin-search-table .ant-table-pagination.ant-pagination {
+  background: transparent;
+  box-shadow: none;
+}
+
+.admin-search-table .ant-table-pagination.ant-pagination,
+.admin-table-footer-bar {
+  position: relative;
+  z-index: 1;
+}
+
+.admin-search-table:fullscreen .ant-table-pagination.ant-pagination,
+:fullscreen .admin-search-table .ant-table-pagination.ant-pagination {
+  position: fixed;
+  right: 16px;
+  bottom: 14px;
+  width: auto;
+  min-height: 32px;
+  margin: 0;
+  line-height: 32px;
+}

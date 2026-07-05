@@ -1,0 +1,16 @@
+@import '../AdminSelect/index.css';
+
+.admin-tree-select-popup.ant-select-dropdown {
+  padding: 4px;
+}
+
+.admin-tree-select-popup .ant-select-empty,
+.admin-tree-select-popup .ant-select-tree-empty {
+  min-height: 32px;
+  padding: 5px 12px;
+  color: rgba(0, 0, 0, 0.25);
+  font-size: 14px;
+  line-height: 22px;
+  display: flex;
+  align-items: center;
+}

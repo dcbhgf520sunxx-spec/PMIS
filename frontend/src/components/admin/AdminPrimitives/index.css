@@ -1,0 +1,17 @@
+.admin-card.ant-card {
+  border-color: rgba(185, 204, 230, 0.72);
+  border-radius: 8px;
+}
+
+.admin-button.ant-btn {
+  border-radius: 6px;
+}
+
+.admin-switch.ant-switch {
+  min-width: 48px;
+}
+
+.admin-color-picker.ant-color-picker-trigger {
+  border-color: #dce8f7;
+  border-radius: 6px;
+}

@@ -1,0 +1,47 @@
+.admin-milestone-timeline {
+  margin-top: 4px;
+}
+
+.admin-milestone-timeline__dot {
+  display: inline-flex;
+  font-size: 15px;
+}
+
+.admin-milestone-timeline__content {
+  padding-bottom: 4px;
+}
+
+.admin-milestone-timeline__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--app-text);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.admin-milestone-timeline__title span {
+  font-size: 12px;
+}
+
+.admin-milestone-timeline__title em {
+  font-style: normal;
+  color: #dc2626;
+  font-size: 12px;
+}
+
+.admin-milestone-timeline__dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 3px;
+  color: var(--app-muted);
+  font-size: 12px;
+}
+
+.admin-milestone-timeline__desc {
+  margin-top: 4px;
+  color: var(--app-muted);
+  font-size: 12px;
+  line-height: 18px;
+}

@@ -1,0 +1,126 @@
+.page-shell {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.page-shell.is-compact {
+  gap: 8px;
+}
+
+.page-shell__header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 2px 2px;
+}
+
+.page-shell__title-area {
+  min-width: 0;
+}
+
+.page-shell__title-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 18px;
+}
+
+.page-shell__title-extra {
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.page-shell__header h1 {
+  flex-shrink: 0;
+  margin: 6px 0 0;
+  font-size: 21px;
+  line-height: 28px;
+  color: #0a1730;
+  letter-spacing: 0;
+}
+
+.page-shell__header p {
+  margin: 4px 0 0;
+  color: var(--app-muted);
+  font-size: 13px;
+}
+
+.page-shell__body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.page-shell__body > .ant-spin-nested-loading,
+.page-shell__body > .ant-spin-nested-loading > .ant-spin-container {
+  height: 100%;
+  min-height: 0;
+}
+
+.page-shell__actions {
+  flex-shrink: 0;
+}
+
+.page-shell.is-compact .page-shell__header {
+  align-items: center;
+  padding: 0 2px;
+}
+
+.page-shell.is-compact .page-shell__title-area {
+  flex: 0 1 auto;
+  max-width: calc(100% - 120px);
+}
+
+.page-shell.is-compact .ant-breadcrumb {
+  display: none;
+}
+
+.page-shell.is-compact .page-shell__header h1 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 26px;
+}
+
+.page-shell.is-compact .page-shell__title-extra .admin-view-tabs {
+  position: relative;
+  top: -2px;
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  height: 26px;
+  overflow: visible;
+  border-bottom: 0;
+  scrollbar-width: none;
+}
+
+.page-shell.is-compact .page-shell__title-extra .admin-view-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.page-shell.is-compact .page-shell__title-extra .admin-view-tabs__item {
+  min-height: 26px;
+  padding-inline: 8px;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.page-shell.is-compact .page-shell__title-extra .admin-view-tabs__item::after {
+  right: 8px;
+  left: 8px;
+}
+
+.page-shell.is-compact .page-shell__header p {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.page-shell.is-compact .page-shell__actions {
+  position: relative;
+  top: -2px;
+}

@@ -1,12 +1,16 @@
 const db = require('../db')
 const { calcOverdue } = require('../utils/calcOverdue')
+const { refreshOverdueStatus } = require('../services/overdueCron')
 
 function withJoins(sql) {
-  return `SELECT ${sql}, u1.real_name as creator_name, u2.real_name as updater_name, u3.real_name as follower_name
+  return `SELECT ${sql}, u1.real_name as creator_name, u2.real_name as updater_name, u3.real_name as follower_name,
+      sys.name as system_name, pt.name as problem_type_name
     FROM pms_work_order w
     LEFT JOIN pms_user u1 ON w.creator_id = u1.id
     LEFT JOIN pms_user u2 ON w.updater_id = u2.id
-    LEFT JOIN pms_user u3 ON w.follower_id = u3.id`
+    LEFT JOIN pms_user u3 ON w.follower_id = u3.id
+    LEFT JOIN pms_archive sys ON w.system_id = sys.id
+    LEFT JOIN pms_archive pt ON w.problem_type = pt.id`
 }
 
 /** Build WHERE clause and params for work order filtering (shared by list and neighbors) */
@@ -14,6 +18,7 @@ function buildWhereClause(q) {
   let sql = ' WHERE w.is_deleted = 0'
   const params = []
   if (q.problem_desc) { sql += ' AND w.problem_desc LIKE ?'; params.push(`%${q.problem_desc}%`) }
+  if (q.system_id) { sql += ' AND w.system_id = ?'; params.push(q.system_id) }
   if (q.problem_type !== undefined && q.problem_type !== '') { sql += ' AND w.problem_type = ?'; params.push(q.problem_type) }
   if (q.urgency !== undefined && q.urgency !== '') { sql += ' AND w.urgency = ?'; params.push(q.urgency) }
   if (q.status !== undefined && q.status !== '') { sql += ' AND w.status = ?'; params.push(q.status) }
@@ -30,13 +35,13 @@ function buildWhereClause(q) {
 exports.list = async (req, res) => {
   try {
     const q = { ...req.query }
-    let sql = withJoins('w.id, w.problem_type, w.problem_desc, w.follower_id, w.urgency, w.status, w.is_overdue, w.expected_resolve_date, w.resolve_date, w.close_date, w.submitter_name, w.submitter_dept, w.submit_time, w.created_at')
+    let sql = withJoins('w.id, w.system_id, w.problem_type, w.problem_desc, w.result_desc, w.follower_id, w.urgency, w.status, w.is_overdue, w.expected_resolve_date, w.resolve_date, w.close_date, w.submitter_name, w.submitter_dept, w.submit_time, w.created_at')
     const { sql: whereSql, params } = buildWhereClause(q)
     sql += whereSql
 
     // 支持排序参数（与 neighbors 逻辑一致）
     const sortMap = {
-      problem_desc: 'w.problem_desc', problem_type: 'w.problem_type', urgency: 'w.urgency', status: 'w.status',
+      problem_desc: 'w.problem_desc', system_id: 'sys.name', problem_type: 'pt.name', urgency: 'w.urgency', status: 'w.status',
       is_overdue: 'w.is_overdue', follower_name: 'w.follower_id', follower_id: 'w.follower_id',
       submitter_name: 'w.submitter_name', submitter_dept: 'w.submitter_dept',
       submit_time: 'w.submit_time', expected_resolve_date: 'w.expected_resolve_date',
@@ -61,9 +66,19 @@ exports.list = async (req, res) => {
   }
 }
 
+exports.refreshOverdue = async (req, res) => {
+  try {
+    const result = await refreshOverdueStatus()
+    res.json({ code: 0, message: 'success', data: result })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ code: 500, message: '逾期检查失败', data: null })
+  }
+}
+
 exports.getById = async (req, res) => {
   try {
-    const sql = withJoins('w.id, w.problem_type, w.problem_desc, w.result_desc, w.follower_id, w.urgency, w.status, w.is_overdue, w.expected_resolve_date, w.resolve_date, w.close_date, w.submitter_name, w.submitter_dept, w.submit_time, w.creator_id, w.updater_id, w.created_at, w.updated_at')
+    const sql = withJoins('w.id, w.system_id, w.problem_type, w.problem_desc, w.result_desc, w.follower_id, w.urgency, w.status, w.is_overdue, w.expected_resolve_date, w.resolve_date, w.close_date, w.submitter_name, w.submitter_dept, w.submit_time, w.creator_id, w.updater_id, w.created_at, w.updated_at')
     const row = await db.prepare(sql + ' WHERE w.id = ? AND w.is_deleted = 0').get(req.params.id)
     if (!row) return res.status(404).json({ code: 404, message: '工单不存在', data: null })
     res.json({ code: 0, message: 'success', data: row })
@@ -75,7 +90,7 @@ exports.getById = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const { problem_type, problem_desc, follower_id, urgency, status, expected_resolve_date, submitter_name, submitter_dept, submit_time, creator_id } = req.body
+    const { system_id, problem_type, problem_desc, follower_id, urgency, status, expected_resolve_date, submitter_name, submitter_dept, submit_time, creator_id } = req.body
 
     // Validate problem_desc uniqueness
     if (problem_desc) {
@@ -87,10 +102,10 @@ exports.create = async (req, res) => {
     const is_overdue = calcOverdue(expected_resolve_date, finalStatus)
 
     const result = await db.prepare(
-      'INSERT INTO pms_work_order (problem_type, problem_desc, follower_id, urgency, status, is_overdue, expected_resolve_date, submitter_name, submitter_dept, submit_time, creator_id, updater_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(problem_type ?? 1, problem_desc || null, follower_id || null, urgency ?? 1, finalStatus, is_overdue, expected_resolve_date || null, submitter_name || null, submitter_dept || null, submit_time || null, creator_id || null, creator_id || null)
+      'INSERT INTO pms_work_order (system_id, problem_type, problem_desc, follower_id, urgency, status, is_overdue, expected_resolve_date, submitter_name, submitter_dept, submit_time, creator_id, updater_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(system_id || null, problem_type || null, problem_desc || null, follower_id || null, urgency ?? 1, finalStatus, is_overdue, expected_resolve_date || null, submitter_name || null, submitter_dept || null, submit_time || null, creator_id || null, creator_id || null)
 
-    await db.writeLog(creator_id, '新增', '运维工单', result.lastInsertRowid, null, null, JSON.stringify({ problem_type, follower_id, urgency }), req.ip)
+    await db.writeLog(creator_id, '新增', '运维工单', result.lastInsertRowid, null, null, JSON.stringify({ system_id, problem_type, follower_id, urgency }), req.ip)
     res.json({ code: 0, message: 'success', data: { id: result.lastInsertRowid } })
   } catch (err) {
     console.error(err)
@@ -100,12 +115,12 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    const { problem_type, problem_desc, result_desc, follower_id, urgency, status, expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time, updater_id } = req.body
+    const { system_id, problem_type, problem_desc, result_desc, follower_id, urgency, status, expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time, updater_id } = req.body
 
-    const old = await db.prepare('SELECT problem_type, problem_desc, result_desc, follower_id, urgency, status, expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time FROM pms_work_order WHERE id = ?').get(req.params.id)
+    const old = await db.prepare('SELECT system_id, problem_type, problem_desc, result_desc, follower_id, urgency, status, expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time FROM pms_work_order WHERE id = ?').get(req.params.id)
 
     const changes = []
-    const trackedFields = ['problem_desc', 'problem_type', 'urgency', 'status', 'is_overdue', 'follower_id', 'submitter_name', 'submitter_dept', 'submit_time', 'expected_resolve_date', 'resolve_date', 'close_date', 'result_desc']
+    const trackedFields = ['problem_desc', 'system_id', 'problem_type', 'urgency', 'status', 'is_overdue', 'follower_id', 'submitter_name', 'submitter_dept', 'submit_time', 'expected_resolve_date', 'resolve_date', 'close_date', 'result_desc']
     // Date fields that may come as YYYY-MM-DD from frontend but stored as YYYY-MM-DD 00:00:00 in DB
     const dateFields = new Set(['expected_resolve_date', 'resolve_date', 'close_date', 'submit_time'])
     for (const key of trackedFields) {
@@ -126,7 +141,7 @@ exports.update = async (req, res) => {
     const params = []
 
     const fieldMap = {
-      problem_type, problem_desc, result_desc, follower_id, urgency,
+      system_id, problem_type, problem_desc, result_desc, follower_id, urgency,
       expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time,
     }
 
@@ -175,56 +190,64 @@ exports.update = async (req, res) => {
 exports.toggleStatus = async (req, res) => {
   try {
     const { status, updater_id, resolve_date, close_date, result_desc } = req.body
-    const statusMap = { 0: '待处理', 1: '处理中', 2: '已完成', 3: '已关闭' }
     const old = await db.prepare('SELECT status, is_overdue, expected_resolve_date, resolve_date, close_date, result_desc FROM pms_work_order WHERE id = ?').get(req.params.id)
     const changes = []
-    changes.push({ field: 'status', oldVal: old?.status, newVal: status })
+
+    const statusDateFields = new Set(['resolve_date', 'close_date'])
+    const normalizeChangeValue = (field, value) => {
+      if (value === null || value === undefined) return ''
+      if (statusDateFields.has(field)) return String(value).replace('T', ' ').slice(0, 10)
+      return String(value)
+    }
+    const sameValue = (field, a, b) => normalizeChangeValue(field, a) === normalizeChangeValue(field, b)
+    const addChange = (field, oldVal, newVal) => {
+      if (!sameValue(field, oldVal, newVal)) {
+        changes.push({ field, oldVal, newVal })
+      }
+    }
+
+    addChange('status', old?.status, status)
 
     // Recalculate is_overdue
     const is_overdue = calcOverdue(old?.expected_resolve_date, status)
-    if (old?.is_overdue !== is_overdue) {
-      changes.push({ field: 'is_overdue', oldVal: old?.is_overdue, newVal: is_overdue })
-    }
+    addChange('is_overdue', old?.is_overdue, is_overdue)
 
-    // Handle resolve_date: set for completed, clear when leaving completed
+    // 已关闭恢复到非已完成：关闭时间、实际修复时间、处置结果都清空。
+    // 已关闭恢复到已完成：关闭时间清空，实际修复时间和处置结果以弹窗提交值为准。
+    // 已完成变已关闭：保留实际修复时间和处置结果，只更新关闭时间。
     let finalResolveDate
-    if (old?.status === 2 && status !== 2) {
+    if (old?.status === 3 && status !== 2 && status !== 3) {
       finalResolveDate = null
-      if (old?.resolve_date) changes.push({ field: 'resolve_date', oldVal: old.resolve_date, newVal: null })
+    } else if (old?.status === 2 && status !== 2 && status !== 3) {
+      finalResolveDate = null
     } else if (status === 2 && resolve_date !== undefined) {
       finalResolveDate = resolve_date || null
-      changes.push({ field: 'resolve_date', oldVal: old?.resolve_date, newVal: resolve_date })
     } else {
       finalResolveDate = old?.resolve_date || null
     }
+    addChange('resolve_date', old?.resolve_date, finalResolveDate)
 
-    // Handle close_date: set for closed, clear when leaving closed
     let finalCloseDate
     if (old?.status === 3 && status !== 3) {
       finalCloseDate = null
-      if (old?.close_date) changes.push({ field: 'close_date', oldVal: old.close_date, newVal: null })
     } else if (status === 3 && close_date !== undefined) {
       finalCloseDate = close_date || null
-      changes.push({ field: 'close_date', oldVal: old?.close_date, newVal: close_date })
     } else {
       finalCloseDate = old?.close_date || null
     }
+    addChange('close_date', old?.close_date, finalCloseDate)
 
-    // Handle result_desc: clear when leaving completed status
     let finalResultDesc
-    if (old?.status === 2 && status !== 2) {
+    if (old?.status === 3 && status !== 2 && status !== 3) {
       finalResultDesc = null
-      if (old?.result_desc) {
-        changes.push({ field: 'result_desc', oldVal: old.result_desc, newVal: null })
-      }
+    } else if (old?.status === 2 && status !== 2 && status !== 3) {
+      finalResultDesc = null
     } else if (result_desc !== undefined) {
       finalResultDesc = result_desc || null
-      if (String(old?.result_desc ?? '') !== String(finalResultDesc ?? '')) {
-        changes.push({ field: 'result_desc', oldVal: old?.result_desc, newVal: finalResultDesc })
-      }
     } else {
       finalResultDesc = old?.result_desc || null
     }
+    addChange('result_desc', old?.result_desc, finalResultDesc)
 
     await db.prepare(
       'UPDATE pms_work_order SET status = ?, is_overdue = ?, resolve_date = ?, close_date = ?, result_desc = ?, updater_id = ? WHERE id = ?'
@@ -239,6 +262,55 @@ exports.toggleStatus = async (req, res) => {
   } catch (err) {
     console.error(err)
     res.status(500).json({ code: 500, message: '操作失败', data: null })
+  }
+}
+
+exports.batchAssign = async (req, res) => {
+  try {
+    const { ids, follower_id, updater_id } = req.body
+    const workOrderIds = Array.isArray(ids) ? ids.map((id) => Number(id)).filter(Boolean) : []
+    const followerId = Number(follower_id)
+
+    if (workOrderIds.length === 0) {
+      return res.status(400).json({ code: 400, message: '请选择要指派的工单', data: null })
+    }
+    if (!followerId) {
+      return res.status(400).json({ code: 400, message: '请选择跟进人', data: null })
+    }
+
+    const follower = await db.prepare('SELECT id, real_name FROM pms_user WHERE id = ? AND is_deleted = 0 AND status = 1').get(followerId)
+    if (!follower) {
+      return res.status(400).json({ code: 400, message: '跟进人不存在或已停用', data: null })
+    }
+
+    let updatedCount = 0
+    await db.transaction(async (conn) => {
+      const placeholders = workOrderIds.map(() => '?').join(',')
+      const rows = await conn.prepare(
+        `SELECT id, follower_id FROM pms_work_order WHERE id IN (${placeholders}) AND is_deleted = 0`
+      ).all(...workOrderIds)
+
+      if (rows.length !== workOrderIds.length) {
+        throw new Error('部分工单不存在或已删除，请刷新后重试')
+      }
+
+      for (const row of rows) {
+        if (Number(row.follower_id) === followerId) continue
+        await conn.prepare('UPDATE pms_work_order SET follower_id = ?, updater_id = ?, updated_at = NOW() WHERE id = ?')
+          .run(followerId, updater_id || null, row.id)
+        if (updater_id) {
+          await conn.prepare(
+            'INSERT INTO pms_op_log (user_id, action, module, target_id, field_name, old_value, new_value, ip) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+          ).run(updater_id, '批量指派', '运维工单', row.id, 'follower_id', row.follower_id, followerId, req.ip)
+        }
+        updatedCount += 1
+      }
+    })
+
+    res.json({ code: 0, message: 'success', data: { updated: updatedCount, requested: workOrderIds.length } })
+  } catch (err) {
+    console.error(err)
+    res.status(400).json({ code: 400, message: err.message || '批量指派失败', data: null })
   }
 }
 
@@ -274,7 +346,7 @@ exports.getNeighbors = async (req, res) => {
 
     // Map frontend sort field to DB column
     const sortMap = {
-      problem_desc: 'w.problem_desc', problem_type: 'w.problem_type', urgency: 'w.urgency', status: 'w.status',
+      problem_desc: 'w.problem_desc', system_id: 'sys.name', problem_type: 'pt.name', urgency: 'w.urgency', status: 'w.status',
       is_overdue: 'w.is_overdue', follower_name: 'w.follower_id', follower_id: 'w.follower_id',
       submitter_name: 'w.submitter_name', submitter_dept: 'w.submitter_dept',
       submit_time: 'w.submit_time', expected_resolve_date: 'w.expected_resolve_date',
@@ -309,7 +381,7 @@ exports.getNeighbors = async (req, res) => {
 
 /** Field name mapping: database field → Chinese label */
 const FIELD_LABEL = {
-  problem_type: '问题类型', problem_desc: '问题描述', result_desc: '处置结果', follower_id: '跟进人',
+  system_id: '所属系统', problem_type: '问题类型', problem_desc: '问题描述', result_desc: '处置结果', follower_id: '跟进人',
   urgency: '紧急程度', status: '状态', is_overdue: '逾期', expected_resolve_date: '预计完成时间',
   resolve_date: '实际修复时间', close_date: '关闭时间', submitter_name: '提出人', submitter_dept: '提出组织',
   submit_time: '提出时间',
@@ -317,22 +389,29 @@ const FIELD_LABEL = {
 
 /** Sort order for display (matches detail page field order) */
 const FIELD_SORT_ORDER = [
-  '问题描述', '问题类型', '紧急程度', '状态',
+  '问题描述', '所属系统', '问题类型', '紧急程度', '状态',
   '逾期', '跟进人', '提出人', '提出组织', '提出时间',
   '预计完成时间', '实际修复时间', '处置结果', '关闭时间',
 ]
+const HISTORY_DATE_FIELDS = new Set(['expected_resolve_date', 'resolve_date', 'close_date', 'submit_time'])
+
+function formatHistoryDate(value) {
+  return String(value || '').replace('T', ' ').slice(0, 10)
+}
 
 /** Resolve a raw value to a display name based on field */
 async function resolveValue(field, value) {
   if (value === '空' || value === undefined) return ''
   if (field === 'is_overdue') return value === null || value === '' ? '-' : (Number(value) === 1 ? '逾期' : '未逾期')
   if (value === null) return ''
+  if (HISTORY_DATE_FIELDS.has(field)) return formatHistoryDate(value)
   if (field === 'follower_id') {
     const r = await db.prepare('SELECT real_name FROM pms_user WHERE id = ?').get(value)
     return r?.real_name || value
   }
-  if (field === 'problem_type') {
-    return { 1: '日常操作', 2: '系统优化', 3: '故障报障', 4: '后台维护', 5: '其他' }[String(value)] || value
+  if (field === 'system_id' || field === 'problem_type') {
+    const r = await db.prepare('SELECT name FROM pms_archive WHERE id = ?').get(value)
+    return r?.name || value
   }
   if (field === 'urgency') {
     return { 0: '低', 1: '中', 2: '高' }[String(value)] || value
@@ -346,25 +425,30 @@ async function resolveValue(field, value) {
   return String(value)
 }
 
+function historyTimeKey(value) {
+  return String(value || '').replace('T', ' ').slice(0, 19)
+}
+
 exports.getHistory = async (req, res) => {
   try {
     const orderId = req.params.id
     const logs = await db.prepare(
-      `SELECT l.*, u.real_name FROM pms_operation_log l
+      `SELECT l.*, u.real_name FROM pms_op_log l
        LEFT JOIN pms_user u ON l.user_id = u.id
        WHERE l.module = '运维工单' AND l.target_id = ?
        ORDER BY l.created_at DESC`
     ).all(orderId)
 
     const grouped = []
-    const keySet = new Set()
+    const groupMap = new Map()
     for (const log of logs) {
-      const key = `${log.user_id}_${log.action}_${log.created_at}`
-      if (!keySet.has(key)) {
-        grouped.push({ user: log.real_name, action: log.action, time: log.created_at, changes: [] })
-        keySet.add(key)
+      const key = `${log.user_id}_${log.action}_${historyTimeKey(log.created_at)}`
+      if (!groupMap.has(key)) {
+        const group = { user: log.real_name, action: log.action, time: log.created_at, changes: [] }
+        grouped.push(group)
+        groupMap.set(key, group)
       }
-      grouped[grouped.length - 1].changes.push(log)
+      groupMap.get(key).changes.push(log)
     }
 
     const entries = []

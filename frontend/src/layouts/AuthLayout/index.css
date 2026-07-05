@@ -1,0 +1,244 @@
+.auth-layout {
+  position: relative;
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 32px clamp(28px, 7vw, 96px);
+  overflow: auto;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(31, 111, 255, 0.13), transparent 30%),
+    radial-gradient(circle at 82% 74%, rgba(14, 165, 233, 0.12), transparent 32%),
+    linear-gradient(135deg, #f7fbff 0%, #eef5ff 48%, #f8fbff 100%);
+  background-size:
+    120% 120%,
+    130% 130%,
+    100% 100%;
+  animation: auth-bg-flow 18s ease-in-out infinite alternate;
+}
+
+.auth-layout::before,
+.auth-layout::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.auth-layout::before {
+  opacity: 0.62;
+  background:
+    linear-gradient(90deg, rgba(31, 111, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(31, 111, 255, 0.05) 1px, transparent 1px);
+  background-size: 56px 56px;
+  background-position: 0 0;
+  mask-image: linear-gradient(90deg, #000 0 58%, transparent 86%);
+  animation: auth-grid-flow 24s linear infinite;
+}
+
+.auth-layout::after {
+  opacity: 0.72;
+  background:
+    linear-gradient(120deg, transparent 0 14%, rgba(31, 111, 255, 0.12) 14.2% 14.45%, transparent 14.7% 100%),
+    linear-gradient(30deg, transparent 0 68%, rgba(14, 165, 233, 0.12) 68.2% 68.5%, transparent 68.8% 100%);
+  background-size:
+    140% 140%,
+    160% 160%;
+  animation: auth-line-flow 16s ease-in-out infinite alternate;
+}
+
+.auth-layout > * {
+  position: relative;
+  z-index: 1;
+}
+
+.auth-ambient {
+  position: fixed;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 999px;
+}
+
+.auth-ambient--one {
+  left: 6vw;
+  top: 18vh;
+  width: 260px;
+  height: 260px;
+  background:
+    radial-gradient(circle, rgba(31, 111, 255, 0.2), rgba(31, 111, 255, 0.045) 52%, transparent 72%);
+  animation: auth-float-one 14s ease-in-out infinite alternate;
+}
+
+.auth-ambient--two {
+  right: 12vw;
+  top: 16vh;
+  width: 360px;
+  height: 360px;
+  background:
+    radial-gradient(circle, rgba(14, 165, 233, 0.17), rgba(14, 165, 233, 0.04) 58%, transparent 74%);
+  animation: auth-float-two 17s ease-in-out infinite alternate;
+}
+
+.auth-ambient--three {
+  left: 34vw;
+  bottom: 10vh;
+  width: 220px;
+  height: 220px;
+  background:
+    radial-gradient(circle, rgba(124, 58, 237, 0.12), rgba(31, 111, 255, 0.035) 58%, transparent 74%);
+  animation: auth-float-three 20s ease-in-out infinite alternate;
+}
+
+.auth-line {
+  position: fixed;
+  z-index: 0;
+  pointer-events: none;
+  height: 1px;
+  overflow: hidden;
+  background: linear-gradient(90deg, transparent, rgba(31, 111, 255, 0.34), rgba(14, 165, 233, 0.28), transparent);
+  transform-origin: left center;
+}
+
+.auth-line::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 82px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.92), rgba(31, 111, 255, 0.36), transparent);
+  animation: auth-line-scan 5.8s ease-in-out infinite;
+}
+
+.auth-line--one {
+  left: 5vw;
+  top: 31vh;
+  width: 520px;
+  transform: rotate(-14deg);
+}
+
+.auth-line--two {
+  right: 8vw;
+  top: 30vh;
+  width: 440px;
+  transform: rotate(18deg);
+}
+
+.auth-line--three {
+  left: 28vw;
+  bottom: 21vh;
+  width: 380px;
+  transform: rotate(7deg);
+  opacity: 0.84;
+}
+
+@media (max-width: 720px) {
+  .auth-layout {
+    padding: 20px;
+  }
+
+  .auth-ambient,
+  .auth-line {
+    display: none;
+  }
+}
+
+@keyframes auth-bg-flow {
+  from {
+    background-position:
+      0% 0%,
+      100% 100%,
+      0 0;
+  }
+
+  to {
+    background-position:
+      14% 8%,
+      84% 92%,
+      0 0;
+  }
+}
+
+@keyframes auth-grid-flow {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 56px 56px;
+  }
+}
+
+@keyframes auth-line-flow {
+  from {
+    background-position:
+      0% 0%,
+      100% 100%;
+  }
+
+  to {
+    background-position:
+      12% 4%,
+      86% 94%;
+  }
+}
+
+@keyframes auth-float-one {
+  from {
+    opacity: 0.45;
+    transform: translate3d(-10px, 8px, 0) scale(0.96);
+  }
+
+  to {
+    opacity: 0.72;
+    transform: translate3d(24px, -18px, 0) scale(1.08);
+  }
+}
+
+@keyframes auth-float-two {
+  from {
+    opacity: 0.36;
+    transform: translate3d(14px, -10px, 0) scale(1);
+  }
+
+  to {
+    opacity: 0.58;
+    transform: translate3d(-28px, 22px, 0) scale(1.06);
+  }
+}
+
+@keyframes auth-float-three {
+  from {
+    opacity: 0.32;
+    transform: translate3d(0, 16px, 0) scale(0.94);
+  }
+
+  to {
+    opacity: 0.52;
+    transform: translate3d(18px, -12px, 0) scale(1.08);
+  }
+}
+
+@keyframes auth-line-scan {
+  0% {
+    opacity: 0;
+    transform: translateX(-82px);
+  }
+
+  18%,
+  72% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(430px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-layout,
+  .auth-layout::before,
+  .auth-layout::after,
+  .auth-ambient,
+  .auth-line::before {
+    animation: none;
+  }
+}

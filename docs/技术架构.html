@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>project-template 技术架构图</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: #f5f7fa;
+      }
+
+      body {
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+
+      .wrap {
+        width: min(1400px, 100%);
+        overflow: auto;
+        border-radius: 20px;
+        box-shadow: 0 24px 70px rgba(15, 23, 42, 0.14);
+      }
+
+      svg {
+        display: block;
+        width: 1400px;
+        height: 1040px;
+        background: #f5f7fa;
+      }
+
+      .title {
+        font: 700 30px "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+        fill: #132238;
+      }
+
+      .subtitle {
+        font: 400 15px "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+        fill: #667085;
+      }
+
+      .layer-title {
+        font: 700 19px "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+        fill: #132238;
+      }
+
+      .box-title {
+        font: 700 15px "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+        fill: #182230;
+      }
+
+      .box-code {
+        font: 600 12.5px "SFMono-Regular", Consolas, monospace;
+        fill: #31506f;
+      }
+
+      .box-text {
+        font: 400 12.5px "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+        fill: #526071;
+      }
+
+      .note {
+        font: 400 12.5px "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+        fill: #667085;
+      }
+
+      .layer {
+        fill: #ffffff;
+        stroke: #d8e0ea;
+        stroke-width: 1.2;
+        rx: 20;
+      }
+
+      .svc {
+        fill: #f8fbff;
+        stroke: #afc7f5;
+        stroke-width: 1.2;
+        rx: 12;
+      }
+
+      .frontend {
+        fill: #f8fbff;
+        stroke: #7fb0ff;
+        stroke-width: 1.3;
+        rx: 12;
+      }
+
+      .api {
+        fill: #edf8ff;
+        stroke: #57a9d8;
+        stroke-width: 1.3;
+        rx: 12;
+      }
+
+      .data-access {
+        fill: #fff7ed;
+        stroke: #fb923c;
+        stroke-width: 1.3;
+        rx: 12;
+      }
+
+      .data {
+        fill: #fff7e8;
+        stroke: #f59e0b;
+        stroke-width: 1.3;
+        rx: 12;
+      }
+
+      .runtime {
+        fill: #edf7f2;
+        stroke: #2fa56d;
+        stroke-width: 1.3;
+        rx: 12;
+      }
+
+      .external {
+        fill: #f7f0ff;
+        stroke: #8b5cf6;
+        stroke-width: 1.3;
+        rx: 12;
+      }
+
+      .optional {
+        fill: #f8fafc;
+        stroke: #cbd5e1;
+        stroke-width: 1.2;
+        stroke-dasharray: 8 6;
+        rx: 12;
+      }
+
+      .arrow {
+        stroke: #2f6fed;
+        stroke-width: 2.1;
+        fill: none;
+        marker-end: url(#arrow);
+      }
+
+      .soft {
+        stroke: #8ba6d9;
+        stroke-width: 1.6;
+        fill: none;
+        marker-end: url(#arrow);
+      }
+
+      .flow-label {
+        font: 600 12px "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+        fill: #5b6b82;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1040" viewBox="0 0 1400 1040" role="img" aria-label="project-template 技术架构图">
+        <defs>
+          <linearGradient id="titleBg" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#eaf4ff" />
+            <stop offset="1" stop-color="#f7fafc" />
+          </linearGradient>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#2f6fed" />
+          </marker>
+        </defs>
+
+        <rect x="0" y="0" width="1400" height="1040" fill="#f5f7fa" />
+        <rect x="42" y="32" width="1316" height="92" rx="24" fill="url(#titleBg)" stroke="#d8e0ea" />
+        <text class="title" x="76" y="76">project-template 工程技术架构图</text>
+        <text class="subtitle" x="76" y="104">面向后台系统模板：React 中后台前端、Express 单体 API、PostgreSQL 数据底座</text>
+
+        <rect class="layer" x="70" y="154" width="1260" height="104" />
+        <text class="layer-title" x="100" y="191">接入层</text>
+        <rect class="svc" x="250" y="178" width="190" height="58" />
+        <text class="box-title" x="272" y="205">后台管理端</text>
+        <text class="box-code" x="272" y="226">AdminWeb</text>
+        <rect class="svc" x="530" y="178" width="190" height="58" />
+        <text class="box-title" x="552" y="205">浏览器访问</text>
+        <text class="box-code" x="552" y="226">Browser</text>
+        <rect class="svc" x="810" y="178" width="190" height="58" />
+        <text class="box-title" x="832" y="205">后端接口</text>
+        <text class="box-code" x="832" y="226">REST API</text>
+        <rect class="optional" x="1090" y="178" width="190" height="58" />
+        <text class="box-title" x="1112" y="205">外部系统接入</text>
+        <text class="box-code" x="1112" y="226">External Client</text>
+
+        <rect class="layer" x="70" y="292" width="1260" height="150" />
+        <text class="layer-title" x="100" y="329">前端应用层</text>
+        <rect class="frontend" x="170" y="350" width="154" height="58" />
+        <text class="box-title" x="194" y="376">应用入口</text>
+        <text class="box-code" x="194" y="397">React / Vite</text>
+        <rect class="frontend" x="348" y="350" width="154" height="58" />
+        <text class="box-title" x="372" y="376">路由布局</text>
+        <text class="box-code" x="372" y="397">Router/Layout</text>
+        <rect class="frontend" x="526" y="350" width="154" height="58" />
+        <text class="box-title" x="550" y="376">业务模块</text>
+        <text class="box-code" x="550" y="397">Modules</text>
+        <rect class="frontend" x="704" y="350" width="154" height="58" />
+        <text class="box-title" x="728" y="376">后台组件库</text>
+        <text class="box-code" x="728" y="397">Admin Components</text>
+        <rect class="frontend" x="882" y="350" width="154" height="58" />
+        <text class="box-title" x="906" y="376">请求状态</text>
+        <text class="box-code" x="906" y="397">Axios / Query</text>
+        <rect class="frontend" x="1060" y="350" width="154" height="58" />
+        <text class="box-title" x="1084" y="376">主题体系</text>
+        <text class="box-code" x="1084" y="397">AntD / Tokens</text>
+
+        <rect class="layer" x="70" y="476" width="1260" height="140" />
+        <text class="layer-title" x="100" y="513">后端接口层</text>
+        <rect class="api" x="142" y="536" width="150" height="58" />
+        <text class="box-title" x="166" y="562">认证接口</text>
+        <text class="box-code" x="166" y="583">AuthController</text>
+        <rect class="api" x="316" y="536" width="150" height="58" />
+        <text class="box-title" x="340" y="562">用户接口</text>
+        <text class="box-code" x="340" y="583">UserController</text>
+        <rect class="api" x="490" y="536" width="150" height="58" />
+        <text class="box-title" x="514" y="562">角色菜单</text>
+        <text class="box-code" x="514" y="583">Role/Menu</text>
+        <rect class="api" x="664" y="536" width="150" height="58" />
+        <text class="box-title" x="688" y="562">工单接口</text>
+        <text class="box-code" x="688" y="583">WorkOrder</text>
+        <rect class="api" x="838" y="536" width="150" height="58" />
+        <text class="box-title" x="862" y="562">档案接口</text>
+        <text class="box-code" x="862" y="583">Archive</text>
+        <rect class="api" x="1012" y="536" width="150" height="58" />
+        <text class="box-title" x="1036" y="562">权限中间件</text>
+        <text class="box-code" x="1036" y="583">Auth/RBAC</text>
+        <rect class="api" x="1186" y="536" width="120" height="58" />
+        <text class="box-title" x="1210" y="562">定时任务</text>
+        <text class="box-code" x="1210" y="583">Cron</text>
+
+        <rect class="layer" x="70" y="650" width="1260" height="156" />
+        <text class="layer-title" x="100" y="687">后端业务层</text>
+        <rect class="data-access" x="142" y="706" width="150" height="58" />
+        <text class="box-title" x="166" y="732">用户服务</text>
+        <text class="box-code" x="166" y="753">UserService</text>
+        <rect class="data-access" x="316" y="706" width="150" height="58" />
+        <text class="box-title" x="340" y="732">权限服务</text>
+        <text class="box-code" x="340" y="753">RBAC Service</text>
+        <rect class="data-access" x="490" y="706" width="150" height="58" />
+        <text class="box-title" x="514" y="732">工单服务</text>
+        <text class="box-code" x="514" y="753">OrderService</text>
+        <rect class="data-access" x="664" y="706" width="150" height="58" />
+        <text class="box-title" x="688" y="732">档案服务</text>
+        <text class="box-code" x="688" y="753">ArchiveService</text>
+        <rect class="data-access" x="838" y="706" width="150" height="58" />
+        <text class="box-title" x="862" y="732">日志服务</text>
+        <text class="box-code" x="862" y="753">AuditService</text>
+        <rect class="data-access" x="1012" y="706" width="150" height="58" />
+        <text class="box-title" x="1036" y="732">数据访问</text>
+        <text class="box-code" x="1036" y="753">Repository</text>
+
+        <rect class="api" x="402" y="778" width="150" height="20" />
+        <text class="box-code" x="438" y="793">Express</text>
+        <rect class="api" x="576" y="778" width="150" height="20" />
+        <text class="box-code" x="620" y="793">JWT</text>
+        <rect class="api" x="750" y="778" width="150" height="20" />
+        <text class="box-code" x="790" y="793">pg Pool</text>
+
+        <rect class="layer" x="70" y="840" width="1260" height="112" />
+        <text class="layer-title" x="100" y="877">数据库层</text>
+        <rect class="data" x="174" y="884" width="142" height="42" />
+        <text class="box-code" x="214" y="910">pms_user</text>
+        <rect class="data" x="342" y="884" width="142" height="42" />
+        <text class="box-code" x="380" y="910">pms_role</text>
+        <rect class="data" x="510" y="884" width="142" height="42" />
+        <text class="box-code" x="548" y="910">pms_menu</text>
+        <rect class="data" x="678" y="884" width="142" height="42" />
+        <text class="box-code" x="710" y="910">pms_work_order</text>
+        <rect class="data" x="846" y="884" width="142" height="42" />
+        <text class="box-code" x="884" y="910">pms_archive</text>
+        <rect class="data" x="1014" y="884" width="142" height="42" />
+        <text class="box-code" x="1054" y="910">pms_op_log</text>
+        <text class="box-title" x="1182" y="909">PostgreSQL</text>
+
+        <path class="arrow" d="M 700 258 L 700 292" />
+        <path class="arrow" d="M 700 442 L 700 476" />
+        <path class="arrow" d="M 700 616 L 700 650" />
+        <path class="arrow" d="M 700 806 L 700 840" />
+
+        <text class="flow-label" x="716" y="278">HTTP</text>
+        <text class="flow-label" x="716" y="462">REST / JSON</text>
+        <text class="flow-label" x="716" y="636">business call</text>
+        <text class="flow-label" x="716" y="826">SQL</text>
+
+        <text class="note" x="88" y="976">最终形态：前端中后台应用、后端单体 API、PostgreSQL 数据库。</text>
+      </svg>
+    </main>
+  </body>
+</html>

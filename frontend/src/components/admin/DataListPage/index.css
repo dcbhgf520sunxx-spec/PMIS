@@ -1,0 +1,205 @@
+.admin-data-list-page {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.admin-data-list-page__table {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.admin-data-list-page__table-card {
+  height: 100%;
+  min-height: 0;
+}
+
+.admin-data-list-page__table-card:fullscreen {
+  height: 100vh !important;
+  min-height: 100vh !important;
+  padding: 12px;
+  overflow: hidden !important;
+  background: #fff;
+}
+
+.ant-pro-table.admin-data-list-page__table-card:fullscreen {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-data-list-page__table-card .ant-pro-card {
+  height: 100%;
+  min-height: 0;
+}
+
+.admin-data-list-page__table-card .ant-pro-card-body {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 12px 0;
+}
+
+.admin-data-list-page__table-card .ant-pro-table-search {
+  flex-shrink: 0;
+}
+
+.admin-data-list-page__table-card .ant-pro-table-list-toolbar {
+  position: absolute;
+  z-index: 5;
+  top: 10px;
+  right: 16px;
+  height: 28px;
+  padding: 0;
+}
+
+.admin-data-list-page__table-card .ant-pro-table-list-toolbar-container {
+  height: 28px;
+  padding: 0;
+}
+
+.admin-data-list-page__table-card .ant-pro-table-list-toolbar-title {
+  display: none;
+}
+
+.admin-data-list-page__table-card .ant-pro-table-list-toolbar-right {
+  height: 28px;
+}
+
+.admin-data-list-page__table-card .ant-pro-table-list-toolbar-setting-items {
+  height: 28px;
+  padding-inline: 0;
+  border-radius: 4px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.admin-data-list-page__table-frame {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.admin-data-list-page__table-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.admin-data-list-page__table-frame > .admin-table-footer-bar {
+  flex-shrink: 0;
+}
+
+.admin-data-list-page__table-card .ant-table-wrapper {
+  height: 100%;
+  min-height: 0;
+}
+
+.admin-data-list-page__table-card .ant-spin-nested-loading,
+.admin-data-list-page__table-card .ant-spin-container {
+  height: 100%;
+  min-height: 0;
+}
+
+.admin-data-list-page__table-card .ant-table {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  padding-top: 6px;
+}
+
+.admin-data-list-page__table-card .ant-table-container {
+  display: flex;
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.admin-data-list-page__table-card .ant-table-header {
+  flex-shrink: 0;
+}
+
+.admin-data-list-page__table-card .ant-table-body {
+  flex: 1;
+  min-height: 0;
+}
+
+.admin-data-list-page__table-card .ant-table-empty,
+.admin-data-list-page__table-card .ant-table-empty .ant-table-container,
+.admin-data-list-page__table-card .ant-table-empty .ant-table-content {
+  height: 100%;
+  min-height: 0;
+}
+
+.admin-data-list-page__table-card .ant-table-thead > tr > th {
+  padding-block: 8px;
+  padding-inline: 10px;
+  white-space: nowrap;
+}
+
+.admin-data-list-page__table-card .ant-table-tbody > tr > td {
+  padding-inline: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-data-list-page__table-card .ant-table-column-sorters,
+.admin-data-list-page__table-card .ant-table-column-title {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.admin-data-list-page__table-card .ant-table-column-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-data-list-page__table-card .ant-table-cell > * {
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.admin-data-list-page__table-card .ant-table.ant-table-small .ant-table-thead > tr > th {
+  padding-block: 8px;
+}
+
+.admin-data-list-page__table-card .ant-table.ant-table-small .ant-table-tbody > tr > td {
+  padding-block: 6px;
+}
+
+.admin-data-list-page__table-card .ant-table.ant-table-middle .ant-table-thead > tr > th {
+  padding-block: 10px;
+}
+
+.admin-data-list-page__table-card .ant-table.ant-table-middle .ant-table-tbody > tr > td {
+  padding-block: 10px;
+}
+
+.admin-data-list-page__table-card .ant-table:not(.ant-table-small):not(.ant-table-middle) .ant-table-thead > tr > th {
+  padding-block: 12px;
+}
+
+.admin-data-list-page__table-card .ant-table:not(.ant-table-small):not(.ant-table-middle) .ant-table-tbody > tr > td {
+  padding-block: 13px;
+}
+
+.admin-data-list-page__table-card .ant-table-cell-fix-left,
+.admin-data-list-page__table-card .ant-table-cell-fix-right {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

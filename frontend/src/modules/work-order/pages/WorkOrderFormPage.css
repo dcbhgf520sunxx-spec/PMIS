@@ -1,0 +1,169 @@
+.work-order-form-page {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+}
+
+.work-order-form-page__title-extra {
+  position: relative;
+  top: -1px;
+}
+
+.work-order-form-page__code {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.work-order-form-page__panel {
+  flex-shrink: 0;
+  padding: 12px;
+  border: 1px solid rgba(185, 204, 230, 0.72);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 24px rgba(30, 82, 142, 0.035);
+}
+
+.work-order-form-page__panel .admin-section-title {
+  margin-bottom: 10px;
+}
+
+.work-order-form-page__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: 16px;
+  row-gap: 0;
+}
+
+.work-order-form-page__field {
+  width: 100%;
+  min-width: 0;
+}
+
+.work-order-form-page__field.is-full {
+  grid-column: 1 / -1;
+}
+
+.work-order-form-page .ant-form-item {
+  margin-bottom: 16px;
+}
+
+.work-order-form-page .ant-form-item-control,
+.work-order-form-page .ant-form-item-control-input,
+.work-order-form-page .ant-form-item-control-input-content {
+  width: 100%;
+}
+
+.work-order-form-page .ant-form-item-label > label {
+  color: #334155;
+  font-weight: 600;
+}
+
+.work-order-form-page .ant-input:not(textarea),
+.work-order-form-page .ant-input-affix-wrapper,
+.work-order-form-page .ant-select-selector,
+.work-order-form-page .ant-picker {
+  width: 100%;
+  height: 36px !important;
+  min-height: 36px;
+  border-color: rgba(185, 204, 230, 0.92) !important;
+}
+
+.work-order-form-page .ant-input:not(textarea) {
+  padding-block: 6px;
+  line-height: 22px;
+}
+
+.work-order-form-page .ant-input-affix-wrapper {
+  display: inline-flex;
+  align-items: center;
+  padding-block: 0;
+}
+
+.work-order-form-page .ant-input-affix-wrapper > input.ant-input {
+  height: 34px !important;
+  min-height: 34px;
+  padding-block: 0;
+  border: 0 !important;
+  line-height: 22px;
+  box-shadow: none !important;
+}
+
+.work-order-form-page .ant-select-single,
+.work-order-form-page .ant-picker {
+  height: 36px;
+}
+
+.work-order-form-page .ant-select-single .ant-select-selector .ant-select-selection-item,
+.work-order-form-page .ant-select-single .ant-select-selector .ant-select-selection-placeholder {
+  line-height: 34px;
+}
+
+.work-order-form-page .ant-picker .ant-picker-input {
+  height: 34px;
+}
+
+.work-order-form-page .ant-picker .ant-picker-input > input {
+  height: 34px;
+  line-height: 22px;
+}
+
+.work-order-form-page textarea.ant-input {
+  width: 100%;
+  resize: vertical;
+  border-color: rgba(185, 204, 230, 0.92);
+}
+
+.work-order-form-page .ant-input:hover,
+.work-order-form-page .ant-input-affix-wrapper:hover,
+.work-order-form-page .ant-select:hover .ant-select-selector,
+.work-order-form-page .ant-picker:hover {
+  border-color: rgba(31, 111, 255, 0.82) !important;
+}
+
+.work-order-form-page .ant-input:focus,
+.work-order-form-page .ant-input-focused,
+.work-order-form-page .ant-input-affix-wrapper-focused,
+.work-order-form-page .ant-input-affix-wrapper:focus-within,
+.work-order-form-page .ant-select-focused .ant-select-selector,
+.work-order-form-page .ant-picker-focused {
+  border-color: #1f63d6 !important;
+  box-shadow: 0 0 0 2px rgba(31, 99, 214, 0.12) !important;
+}
+
+.work-order-form-page .ant-input-status-success,
+.work-order-form-page .ant-input-affix-wrapper-status-success,
+.work-order-form-page .ant-select-status-success .ant-select-selector,
+.work-order-form-page .ant-picker-status-success {
+  border-color: rgba(185, 204, 230, 0.92) !important;
+}
+
+.work-order-form-page .ant-input-status-success:hover,
+.work-order-form-page .ant-input-affix-wrapper-status-success:hover,
+.work-order-form-page .ant-select-status-success:hover .ant-select-selector,
+.work-order-form-page .ant-picker-status-success:hover {
+  border-color: rgba(31, 111, 255, 0.82) !important;
+}
+
+.work-order-form-page .ant-input-status-success:focus,
+.work-order-form-page .ant-input-affix-wrapper-status-success.ant-input-affix-wrapper-focused,
+.work-order-form-page .ant-input-affix-wrapper-status-success:focus-within,
+.work-order-form-page .ant-select-status-success.ant-select-focused .ant-select-selector,
+.work-order-form-page .ant-picker-status-success.ant-picker-focused {
+  border-color: #1f63d6 !important;
+  box-shadow: 0 0 0 2px rgba(31, 99, 214, 0.12) !important;
+}
+
+@media (max-width: 1280px) {
+  .work-order-form-page__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .work-order-form-page__grid {
+    grid-template-columns: 1fr;
+  }
+}

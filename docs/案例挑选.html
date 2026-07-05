@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>状态标签方案预览</title>
+  <style>
+    :root {
+      --page-bg: #f4f7fb;
+      --ink: #12213a;
+      --muted: #64748b;
+      --line: #dce8f7;
+      --surface: #ffffff;
+      --surface-soft: #f6f9fd;
+      --primary: #1f6fff;
+      --success: #16a34a;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --steel: #64748b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--page-bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .page {
+      width: min(1280px, calc(100vw - 48px));
+      margin: 32px auto 56px;
+    }
+
+    .header { margin-bottom: 18px; }
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+    .header p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .option {
+      margin-top: 16px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .option-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 16px 20px;
+      border-bottom: 1px solid #e6edf6;
+      background: #fbfdff;
+    }
+
+    .option-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .option-index {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      background: rgba(31, 111, 255, 0.08);
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .option h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .option-note {
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .option-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px 34px;
+      padding: 18px 20px 22px;
+    }
+
+    .group h3 {
+      margin: 0 0 10px;
+      color: #2b3f5f;
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      min-height: 36px;
+    }
+
+    .tag {
+      --fg: var(--steel);
+      --bg: #f6f9fd;
+      --bd: #cbd5e1;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      height: 30px;
+      padding: 0 10px;
+      color: var(--fg);
+      font-size: 14px;
+      font-weight: 400;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .blue { --fg: var(--primary); --bg: rgba(31, 111, 255, 0.08); --bd: #b9cce6; }
+    .green { --fg: var(--success); --bg: #dcfce7; --bd: #86d9a2; }
+    .gray { --fg: var(--steel); --bg: #f6f9fd; --bd: #cbd5e1; }
+    .red { --fg: var(--danger); --bg: #fee2e2; --bd: #fca5a5; }
+    .orange { --fg: var(--warning); --bg: #fef3c7; --bd: #f5c76f; }
+
+    .icon {
+      display: inline-flex;
+      width: 16px;
+      height: 16px;
+      color: currentColor;
+    }
+    .icon svg {
+      display: block;
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .square {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      background: currentColor;
+    }
+
+    .o1 .tag {
+      height: 30px;
+      border: 1px solid var(--bd);
+      border-radius: 7px;
+      background: var(--bg);
+    }
+
+    .o2 .tag {
+      height: 26px;
+      padding: 0 9px;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: inset 0 -2px 0 color-mix(in srgb, currentColor 44%, transparent);
+    }
+
+    .o3 .tag {
+      height: 30px;
+      border: 1px solid #d9e4f2;
+      border-radius: 6px;
+      background: #fff;
+      padding-left: 6px;
+    }
+    .o3 .tag::before {
+      content: "";
+      width: 8px;
+      height: 18px;
+      border-radius: 4px;
+      background: currentColor;
+      opacity: 0.22;
+    }
+
+    .o4 .tag {
+      height: 30px;
+      border: 1px solid var(--bd);
+      border-radius: 4px;
+      background: linear-gradient(90deg, color-mix(in srgb, currentColor 12%, #fff), #fff 72%);
+    }
+    .o4 .tag::after {
+      content: "";
+      width: 18px;
+      height: 3px;
+      margin-left: 1px;
+      border-radius: 3px;
+      background: currentColor;
+      opacity: 0.45;
+    }
+
+    .o5 .tag {
+      height: 28px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      background: var(--bg);
+      padding: 0 11px;
+    }
+    .o5 .tag .square {
+      width: 6px;
+      height: 6px;
+      transform: rotate(45deg);
+    }
+
+    .o6 .tag {
+      height: 24px;
+      padding: 0 7px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      background: color-mix(in srgb, currentColor 8%, #fff);
+      font-size: 13px;
+    }
+    .o6 .icon,
+    .o6 .icon svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .o7 .tag {
+      height: 24px;
+      padding: 0;
+      border-radius: 0;
+      background: transparent;
+      font-size: 13px;
+    }
+    .o7 .tag::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      margin-right: 2px;
+      border: 1px solid currentColor;
+      border-radius: 50%;
+      background: color-mix(in srgb, currentColor 16%, #fff);
+    }
+
+    .o8 .tag {
+      height: 24px;
+      padding: 0 8px;
+      border: 1px solid #dce8f7;
+      border-radius: 4px;
+      background: #fff;
+      font-size: 13px;
+    }
+    .o8 .tag::before {
+      content: "";
+      width: 2px;
+      height: 13px;
+      border-radius: 2px;
+      background: currentColor;
+    }
+
+    @media (max-width: 820px) {
+      .page {
+        width: calc(100vw - 24px);
+        margin-top: 18px;
+      }
+      .option-head,
+      .option-body {
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+      .option-body { grid-template-columns: 1fr; }
+      .option-head {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .option-note { white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="header">
+      <h1>业务状态标签 5 套方案</h1>
+      <p>第 1 套保留当前样式并恢复原图标；第 2-5 套换成新的方向。颜色按现有设计规范，标签文字不加粗。</p>
+    </section>
+
+    <section class="option o1">
+      <div class="option-head">
+        <div class="option-title"><span class="option-index">1</span><h2>当前轻描边</h2></div>
+        <div class="option-note">保留当前样式，小图标恢复原来的细线图标</div>
+      </div>
+      <div class="option-body">
+        <div class="group"><h3>流程状态</h3><div class="tags">
+          <span class="tag gray"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/></svg></span>待处理</span>
+          <span class="tag blue"><span class="icon"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.3 6.4"/><path d="M3 12A9 9 0 0 1 18.3 5.6"/><path d="M18 2v4h-4"/><path d="M6 22v-4h4"/></svg></span>处理中</span>
+          <span class="tag green"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg></span>已完成</span>
+          <span class="tag gray"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6"/><path d="m15 9-6 6"/></svg></span>已关闭</span>
+        </div></div>
+        <div class="group"><h3>系统状态</h3><div class="tags">
+          <span class="tag green"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg></span>启用</span>
+          <span class="tag gray"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6"/><path d="m15 9-6 6"/></svg></span>停用</span>
+          <span class="tag red"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6"/><path d="m15 9-6 6"/></svg></span>失败</span>
+        </div></div>
+        <div class="group"><h3>紧急程度</h3><div class="tags">
+          <span class="tag red">紧急</span>
+          <span class="tag red">高</span>
+          <span class="tag orange">中</span>
+          <span class="tag blue">低</span>
+        </div></div>
+        <div class="group"><h3>逾期状态</h3><div class="tags">
+          <span class="tag green">未逾期</span>
+          <span class="tag red">逾期 3 天</span>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="option o2">
+      <div class="option-head">
+        <div class="option-title"><span class="option-index">2</span><h2>文字下划线</h2></div>
+        <div class="option-note">几乎不占空间，适合高密度表格</div>
+      </div>
+      <div class="option-body">
+        <div class="group"><h3>流程状态</h3><div class="tags">
+          <span class="tag gray">待处理</span><span class="tag blue">处理中</span><span class="tag green">已完成</span><span class="tag gray">已关闭</span>
+        </div></div>
+        <div class="group"><h3>系统状态</h3><div class="tags">
+          <span class="tag green">启用</span><span class="tag gray">停用</span><span class="tag red">失败</span>
+        </div></div>
+        <div class="group"><h3>紧急程度</h3><div class="tags">
+          <span class="tag red">紧急</span><span class="tag red">高</span><span class="tag orange">中</span><span class="tag blue">低</span>
+        </div></div>
+        <div class="group"><h3>逾期状态</h3><div class="tags">
+          <span class="tag green">未逾期</span><span class="tag red">逾期 3 天</span>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="option o3">
+      <div class="option-head">
+        <div class="option-title"><span class="option-index">3</span><h2>侧块识别</h2></div>
+        <div class="option-note">不靠图标，通过前置色块快速识别</div>
+      </div>
+      <div class="option-body">
+        <div class="group"><h3>流程状态</h3><div class="tags">
+          <span class="tag gray">待处理</span><span class="tag blue">处理中</span><span class="tag green">已完成</span><span class="tag gray">已关闭</span>
+        </div></div>
+        <div class="group"><h3>系统状态</h3><div class="tags">
+          <span class="tag green">启用</span><span class="tag gray">停用</span><span class="tag red">失败</span>
+        </div></div>
+        <div class="group"><h3>紧急程度</h3><div class="tags">
+          <span class="tag red">紧急</span><span class="tag red">高</span><span class="tag orange">中</span><span class="tag blue">低</span>
+        </div></div>
+        <div class="group"><h3>逾期状态</h3><div class="tags">
+          <span class="tag green">未逾期</span><span class="tag red">逾期 3 天</span>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="option o4">
+      <div class="option-head">
+        <div class="option-title"><span class="option-index">4</span><h2>尾线强调</h2></div>
+        <div class="option-note">标签右侧保留短色线，状态感更强</div>
+      </div>
+      <div class="option-body">
+        <div class="group"><h3>流程状态</h3><div class="tags">
+          <span class="tag gray">待处理</span><span class="tag blue">处理中</span><span class="tag green">已完成</span><span class="tag gray">已关闭</span>
+        </div></div>
+        <div class="group"><h3>系统状态</h3><div class="tags">
+          <span class="tag green">启用</span><span class="tag gray">停用</span><span class="tag red">失败</span>
+        </div></div>
+        <div class="group"><h3>紧急程度</h3><div class="tags">
+          <span class="tag red">紧急</span><span class="tag red">高</span><span class="tag orange">中</span><span class="tag blue">低</span>
+        </div></div>
+        <div class="group"><h3>逾期状态</h3><div class="tags">
+          <span class="tag green">未逾期</span><span class="tag red">逾期 3 天</span>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="option o5">
+      <div class="option-head">
+        <div class="option-title"><span class="option-index">5</span><h2>菱形点胶囊</h2></div>
+        <div class="option-note">比常规圆点更有识别度，但仍然克制</div>
+      </div>
+      <div class="option-body">
+        <div class="group"><h3>流程状态</h3><div class="tags">
+          <span class="tag gray"><span class="square"></span>待处理</span>
+          <span class="tag blue"><span class="square"></span>处理中</span>
+          <span class="tag green"><span class="square"></span>已完成</span>
+          <span class="tag gray"><span class="square"></span>已关闭</span>
+        </div></div>
+        <div class="group"><h3>系统状态</h3><div class="tags">
+          <span class="tag green"><span class="square"></span>启用</span>
+          <span class="tag gray"><span class="square"></span>停用</span>
+          <span class="tag red"><span class="square"></span>失败</span>
+        </div></div>
+        <div class="group"><h3>紧急程度</h3><div class="tags">
+          <span class="tag red"><span class="square"></span>紧急</span>
+          <span class="tag red"><span class="square"></span>高</span>
+          <span class="tag orange"><span class="square"></span>中</span>
+          <span class="tag blue"><span class="square"></span>低</span>
+        </div></div>
+        <div class="group"><h3>逾期状态</h3><div class="tags">
+          <span class="tag green"><span class="square"></span>未逾期</span>
+          <span class="tag red"><span class="square"></span>逾期 3 天</span>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="option o6">
+      <div class="option-head">
+        <div class="option-title"><span class="option-index">6</span><h2>列表紧凑点标</h2></div>
+        <div class="option-note">推荐候选：列表紧凑尺寸，流程和系统状态保留细线小图标</div>
+      </div>
+      <div class="option-body">
+        <div class="group"><h3>流程状态</h3><div class="tags">
+          <span class="tag gray"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/></svg></span>待处理</span>
+          <span class="tag blue"><span class="icon"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.3 6.4"/><path d="M3 12A9 9 0 0 1 18.3 5.6"/><path d="M18 2v4h-4"/><path d="M6 22v-4h4"/></svg></span>处理中</span>
+          <span class="tag green"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg></span>已完成</span>
+          <span class="tag gray"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6"/><path d="m15 9-6 6"/></svg></span>已关闭</span>
+        </div></div>
+        <div class="group"><h3>系统状态</h3><div class="tags">
+          <span class="tag green"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg></span>启用</span>
+          <span class="tag gray"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6"/><path d="m15 9-6 6"/></svg></span>停用</span>
+          <span class="tag red"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6"/><path d="m15 9-6 6"/></svg></span>失败</span>
+        </div></div>
+        <div class="group"><h3>紧急程度</h3><div class="tags">
+          <span class="tag red">紧急</span><span class="tag red">高</span><span class="tag orange">中</span><span class="tag blue">低</span>
+        </div></div>
+        <div class="group"><h3>逾期状态</h3><div class="tags">
+          <span class="tag green">未逾期</span><span class="tag red">逾期 3 天</span>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="option o7">
+      <div class="option-head">
+        <div class="option-title"><span class="option-index">7</span><h2>列表极简文本</h2></div>
+        <div class="option-note">最轻量，适合字段很多的列表，但状态存在感弱</div>
+      </div>
+      <div class="option-body">
+        <div class="group"><h3>流程状态</h3><div class="tags">
+          <span class="tag gray">待处理</span><span class="tag blue">处理中</span><span class="tag green">已完成</span><span class="tag gray">已关闭</span>
+        </div></div>
+        <div class="group"><h3>系统状态</h3><div class="tags">
+          <span class="tag green">启用</span><span class="tag gray">停用</span><span class="tag red">失败</span>
+        </div></div>
+        <div class="group"><h3>紧急程度</h3><div class="tags">
+          <span class="tag red">紧急</span><span class="tag red">高</span><span class="tag orange">中</span><span class="tag blue">低</span>
+        </div></div>
+        <div class="group"><h3>逾期状态</h3><div class="tags">
+          <span class="tag green">未逾期</span><span class="tag red">逾期 3 天</span>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="option o8">
+      <div class="option-head">
+        <div class="option-title"><span class="option-index">8</span><h2>列表窄边标识</h2></div>
+        <div class="option-note">推荐候选：比第 1 套更稳，适合列表和详情同时用</div>
+      </div>
+      <div class="option-body">
+        <div class="group"><h3>流程状态</h3><div class="tags">
+          <span class="tag gray">待处理</span><span class="tag blue">处理中</span><span class="tag green">已完成</span><span class="tag gray">已关闭</span>
+        </div></div>
+        <div class="group"><h3>系统状态</h3><div class="tags">
+          <span class="tag green">启用</span><span class="tag gray">停用</span><span class="tag red">失败</span>
+        </div></div>
+        <div class="group"><h3>紧急程度</h3><div class="tags">
+          <span class="tag red">紧急</span><span class="tag red">高</span><span class="tag orange">中</span><span class="tag blue">低</span>
+        </div></div>
+        <div class="group"><h3>逾期状态</h3><div class="tags">
+          <span class="tag green">未逾期</span><span class="tag red">逾期 3 天</span>
+        </div></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

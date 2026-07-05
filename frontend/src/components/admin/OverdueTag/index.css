@@ -1,0 +1,22 @@
+.admin-overdue-tag.ant-tag {
+  align-items: center;
+  border-color: transparent;
+  border-radius: 4px;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 400;
+  height: 24px;
+  line-height: 22px;
+  margin-inline-end: 0;
+  padding: 0 7px;
+}
+
+.admin-overdue-tag--normal.ant-tag {
+  background: color-mix(in srgb, #16a34a 8%, #fff);
+  color: #16a34a;
+}
+
+.admin-overdue-tag--overdue.ant-tag {
+  background: color-mix(in srgb, #dc2626 8%, #fff);
+  color: #dc2626;
+}

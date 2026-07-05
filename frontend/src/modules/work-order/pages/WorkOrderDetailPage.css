@@ -1,0 +1,110 @@
+.work-order-detail-page {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.work-order-detail-page__main,
+.work-order-detail-page__aside {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+}
+
+.work-order-detail-page__panel {
+  flex-shrink: 0;
+  padding: 12px;
+  border: 1px solid rgba(185, 204, 230, 0.72);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 24px rgba(30, 82, 142, 0.035);
+}
+
+.work-order-detail-page__title-extra {
+  position: relative;
+  top: -1px;
+}
+
+.work-order-detail-page__code {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.work-order-detail-page__issue-summary {
+  padding: 4px 10px 14px;
+}
+
+.work-order-detail-page__issue-content {
+  min-width: 0;
+}
+
+.work-order-detail-page__issue-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.work-order-detail-page__issue-title {
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.work-order-detail-page__issue-title .admin-rich-text-viewer {
+  color: inherit;
+  font: inherit;
+}
+
+.work-order-detail-page__status-card {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  background: var(--app-border);
+}
+
+.work-order-detail-page__status-row {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  background: #fff;
+}
+
+.work-order-detail-page__status-row > span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.work-order-detail-page__side-actions {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.work-order-detail-page__panel .admin-section-title {
+  margin-bottom: 10px;
+}
+
+@media (max-width: 1180px) {
+  .work-order-detail-page {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+
+  .work-order-detail-page__main,
+  .work-order-detail-page__aside {
+    overflow: visible;
+  }
+
+}

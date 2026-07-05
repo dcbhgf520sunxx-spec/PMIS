@@ -1,0 +1,33 @@
+.admin-priority-tag.ant-tag {
+  align-items: center;
+  border-color: transparent;
+  border-radius: 4px;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 400;
+  height: 24px;
+  line-height: 22px;
+  margin-inline-end: 0;
+  padding: 0 7px;
+}
+
+.admin-priority-tag--critical.ant-tag,
+.admin-priority-tag--high.ant-tag {
+  background: color-mix(in srgb, #dc2626 8%, #fff);
+  color: #dc2626;
+}
+
+.admin-priority-tag--medium.ant-tag {
+  background: color-mix(in srgb, #d97706 8%, #fff);
+  color: #d97706;
+}
+
+.admin-priority-tag--low.ant-tag {
+  background: color-mix(in srgb, var(--app-primary) 8%, #fff);
+  color: var(--app-primary);
+}
+
+.admin-priority-tag--none.ant-tag {
+  background: color-mix(in srgb, #64748b 8%, #fff);
+  color: #64748b;
+}

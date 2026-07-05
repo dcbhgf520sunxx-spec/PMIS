@@ -1,0 +1,52 @@
+.admin-table-pagination.ant-pagination {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  margin: 0;
+  line-height: 32px;
+  white-space: nowrap;
+}
+
+.admin-table-pagination .ant-pagination-options,
+.admin-table-pagination .ant-pagination-total-text {
+  display: inline-flex;
+  height: 32px;
+  flex-shrink: 0;
+  align-items: center;
+  line-height: 32px;
+}
+
+.admin-table-pagination .ant-pagination-options {
+  margin-inline-start: 6px;
+}
+
+.admin-table-pagination .ant-pagination-prev,
+.admin-table-pagination .ant-pagination-next,
+.admin-table-pagination .ant-pagination-item {
+  display: inline-flex;
+  min-width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  line-height: 30px;
+}
+
+.admin-table-pagination .ant-pagination-prev .ant-pagination-item-link,
+.admin-table-pagination .ant-pagination-next .ant-pagination-item-link {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-table-pagination .ant-pagination-options .ant-select,
+.admin-table-pagination .ant-pagination-options .ant-select-selector {
+  width: 96px !important;
+  height: 32px;
+  align-items: center;
+}
+
+.admin-table-pagination .ant-select-selection-item {
+  line-height: 30px;
+}
