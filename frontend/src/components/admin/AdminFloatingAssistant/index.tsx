@@ -37,7 +37,6 @@ const DEFAULT_BOTTOM = 122;
 const EDGE_GAP = 14;
 const AMBIENT_MOODS: AssistantMood[] = [
   'idle',
-  'patrol',
   'wave',
   'sit',
   'cheer',
