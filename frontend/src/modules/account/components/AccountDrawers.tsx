@@ -25,6 +25,9 @@ import type { CurrentUserResult } from '../../../api/authApi';
 import type { UserPreference } from '../../../stores/authStore';
 import './AccountDrawers.css';
 
+const AVATAR_MAX_SIZE_MB = 5;
+const AVATAR_MAX_SIZE_BYTES = AVATAR_MAX_SIZE_MB * 1024 * 1024;
+
 type AccountDrawersProps = {
   active: 'profile' | 'preferences' | 'password' | null;
   onClose: () => void;
@@ -137,8 +140,8 @@ export function AccountDrawers({ active, onClose }: AccountDrawersProps) {
       message.error('头像仅支持 JPG、PNG、WEBP 格式');
       return false;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      message.error('头像大小不能超过 2MB');
+    if (file.size > AVATAR_MAX_SIZE_BYTES) {
+      message.error(`头像大小不能超过 ${AVATAR_MAX_SIZE_MB}MB`);
       return false;
     }
 

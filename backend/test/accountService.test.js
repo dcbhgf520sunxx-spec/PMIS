@@ -45,6 +45,28 @@ test('validates avatar upload payload', () => {
   })
 })
 
+test('allows avatar payload up to 5MB', () => {
+  const content = Buffer.alloc(5 * 1024 * 1024).toString('base64')
+  const result = validateAvatarPayload({
+    fileName: 'me.png',
+    mimeType: 'image/png',
+    contentBase64: content
+  })
+  assert.equal(result.extension, '.png')
+  assert.equal(result.buffer.length, 5 * 1024 * 1024)
+})
+
+test('rejects avatar payload over 5MB', () => {
+  assert.throws(
+    () => validateAvatarPayload({
+      fileName: 'me.png',
+      mimeType: 'image/png',
+      contentBase64: Buffer.alloc(5 * 1024 * 1024 + 1).toString('base64')
+    }),
+    /头像大小不能超过 5MB/
+  )
+})
+
 test('rejects unsupported avatar type', () => {
   assert.throws(
     () => validateAvatarPayload({

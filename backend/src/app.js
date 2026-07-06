@@ -23,7 +23,7 @@ dotenv.config()
 
 const app = express()
 app.use(cors({ origin: process.env.ALLOWED_ORIGIN || 'http://localhost:3102', credentials: true }))
-app.use(express.json({ limit: '4mb' }))
+app.use(express.json({ limit: '8mb' }))
 app.use(express.urlencoded({ extended: true }))
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 

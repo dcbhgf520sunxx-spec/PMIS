@@ -3,7 +3,8 @@ const path = require('path')
 const bcrypt = require('bcryptjs')
 const db = require('../db')
 
-const AVATAR_MAX_BYTES = 2 * 1024 * 1024
+const AVATAR_MAX_MB = 5
+const AVATAR_MAX_BYTES = AVATAR_MAX_MB * 1024 * 1024
 const avatarTypes = {
   'image/jpeg': '.jpg',
   'image/png': '.png',
@@ -42,7 +43,7 @@ function validateAvatarPayload(payload = {}) {
 
   const buffer = Buffer.from(payload.contentBase64, 'base64')
   if (!buffer.length) throw new Error('头像文件不能为空')
-  if (buffer.length > AVATAR_MAX_BYTES) throw new Error('头像大小不能超过 2MB')
+  if (buffer.length > AVATAR_MAX_BYTES) throw new Error(`头像大小不能超过 ${AVATAR_MAX_MB}MB`)
 
   return { extension, buffer }
 }
