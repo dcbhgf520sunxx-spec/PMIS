@@ -1,19 +1,20 @@
 .home-page {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(420px, 1fr) minmax(400px, 1fr);
+  grid-template-columns: minmax(420px, 0.86fr) minmax(520px, 1.14fr);
   align-items: center;
-  column-gap: 12px;
+  column-gap: 20px;
   height: 100%;
   min-height: 420px;
   overflow: hidden;
-  padding: 58px 84px 54px 84px;
-  border: 1px solid rgba(196, 211, 232, 0.82);
+  padding: 56px 72px 52px 118px;
+  border: 1px solid rgba(188, 212, 242, 0.28);
   border-radius: 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
   background:
-    radial-gradient(circle at 78% 48%, rgba(96, 174, 255, 0.18) 0 18%, transparent 42%),
-    radial-gradient(circle at 91% 82%, rgba(113, 101, 255, 0.12) 0 14%, transparent 36%),
-    linear-gradient(120deg, #f7fbff 0%, #ffffff 42%, #eef6ff 100%);
+    radial-gradient(circle at 66% 47%, rgba(21, 143, 218, 0.26) 0 16%, rgba(54, 151, 222, 0.12) 28%, transparent 52%),
+    radial-gradient(circle at 84% 70%, rgba(63, 114, 231, 0.2) 0 24%, transparent 52%),
+    linear-gradient(118deg, #f9fdff 0%, #f7fbff 32%, #e6f4ff 62%, #d7e6ff 100%);
 }
 
 .home-page::before,
@@ -26,29 +27,33 @@
 .home-page::before {
   inset: 0;
   background:
-    linear-gradient(121deg, transparent 0 44%, rgba(43, 111, 242, 0.07) 44.2% 44.8%, transparent 45% 100%) 2% 8% / 300px 34% no-repeat,
-    linear-gradient(74deg, transparent 0 59%, rgba(62, 151, 225, 0.06) 59.2% 59.8%, transparent 60% 100%) 22% 80% / 260px 26% no-repeat,
-    linear-gradient(104deg, transparent 0 55%, rgba(62, 151, 225, 0.08) 55.2% 55.7%, transparent 56% 100%) 67% 3% / 340px 42% no-repeat,
-    linear-gradient(138deg, transparent 0 47%, rgba(43, 111, 242, 0.055) 47.2% 47.8%, transparent 48% 100%) 88% 20% / 220px 34% no-repeat,
-    linear-gradient(96deg, transparent 0 62%, rgba(96, 174, 255, 0.06) 62.2% 62.9%, transparent 63% 100%) 73% 74% / 360px 28% no-repeat,
-    linear-gradient(151deg, transparent 0 37%, rgba(43, 111, 242, 0.048) 37.2% 37.8%, transparent 38% 100%) 39% 13% / 210px 30% no-repeat,
-    linear-gradient(83deg, transparent 0 69%, rgba(62, 151, 225, 0.048) 69.2% 69.9%, transparent 70% 100%) 95% 78% / 220px 28% no-repeat,
-    linear-gradient(126deg, transparent 0 51%, rgba(43, 111, 242, 0.045) 51.2% 51.7%, transparent 52% 100%) 49% 88% / 280px 22% no-repeat;
-  mask-image: linear-gradient(90deg, transparent 0%, #000 18%, #000 88%, transparent 100%);
+    linear-gradient(121deg, transparent 0 44%, rgba(43, 111, 242, 0.052) 44.2% 44.8%, transparent 45% 100%) 2% 8% / 300px 34% no-repeat,
+    linear-gradient(74deg, transparent 0 59%, rgba(62, 151, 225, 0.044) 59.2% 59.8%, transparent 60% 100%) 22% 80% / 260px 26% no-repeat,
+    linear-gradient(104deg, transparent 0 55%, rgba(62, 151, 225, 0.058) 55.2% 55.7%, transparent 56% 100%) 67% 3% / 340px 42% no-repeat,
+    linear-gradient(138deg, transparent 0 47%, rgba(43, 111, 242, 0.04) 47.2% 47.8%, transparent 48% 100%) 88% 20% / 220px 34% no-repeat,
+    linear-gradient(96deg, transparent 0 62%, rgba(96, 174, 255, 0.042) 62.2% 62.9%, transparent 63% 100%) 73% 74% / 360px 28% no-repeat,
+    linear-gradient(151deg, transparent 0 37%, rgba(43, 111, 242, 0.036) 37.2% 37.8%, transparent 38% 100%) 39% 13% / 210px 30% no-repeat,
+    linear-gradient(83deg, transparent 0 69%, rgba(62, 151, 225, 0.036) 69.2% 69.9%, transparent 70% 100%) 95% 78% / 220px 28% no-repeat,
+    linear-gradient(126deg, transparent 0 51%, rgba(43, 111, 242, 0.034) 51.2% 51.7%, transparent 52% 100%) 49% 88% / 280px 22% no-repeat;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 20%, #000 86%, transparent 100%);
   animation: home-page-lines 18s ease-in-out infinite alternate;
 }
 
 .home-page::after {
-  display: none;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(90deg, rgba(250, 253, 255, 0.94) 0%, rgba(250, 253, 255, 0.78) 34%, rgba(250, 253, 255, 0.22) 52%, rgba(222, 239, 255, 0.18) 100%),
+    radial-gradient(ellipse at 70% 49%, rgba(27, 148, 220, 0.18) 0 22%, transparent 50%);
 }
 
 .home-page__welcome {
   position: relative;
-  z-index: 2;
-  justify-self: end;
+  z-index: 3;
+  justify-self: start;
   min-width: 0;
   max-width: 560px;
-  transform: translate(28px, -18px);
+  transform: translateY(-14px);
 }
 
 .home-page__mark {
@@ -61,7 +66,9 @@
   border-radius: 10px;
   color: #ffffff;
   background: #2b6ff2;
-  box-shadow: 0 12px 24px rgba(43, 111, 242, 0.2);
+  box-shadow:
+    0 12px 24px rgba(43, 111, 242, 0.2),
+    0 0 0 8px rgba(255, 255, 255, 0.44);
   font-size: 20px;
   font-weight: 700;
   line-height: 1;
@@ -86,29 +93,33 @@
 
 .home-page__visual {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: flex-start;
   min-width: 0;
   align-self: stretch;
-  transform: translate(-22px, -18px);
+  transform: translate(-12px, -10px);
 }
 
 .home-page__video-frame {
   position: relative;
-  width: min(600px, 96%);
+  width: min(660px, 112%);
   aspect-ratio: 1;
-  max-height: 70vh;
-  filter: drop-shadow(0 26px 34px rgba(54, 105, 166, 0.12));
+  max-height: 74vh;
+  filter:
+    drop-shadow(0 28px 48px rgba(34, 110, 178, 0.12))
+    saturate(1.04);
   transform: none;
   mask-image:
-    linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.45) 12%, #000 24%, #000 76%, rgba(0, 0, 0, 0.45) 88%, transparent 100%),
-    linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.45) 12%, #000 25%, #000 75%, rgba(0, 0, 0, 0.45) 88%, transparent 100%);
+    radial-gradient(ellipse at 52% 50%, #000 0 48%, rgba(0, 0, 0, 0.86) 64%, rgba(0, 0, 0, 0.34) 84%, transparent 96%),
+    linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.54) 10%, #000 22%, #000 80%, rgba(0, 0, 0, 0.34) 92%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.5) 10%, #000 22%, #000 78%, rgba(0, 0, 0, 0.3) 92%, transparent 100%);
   mask-composite: intersect;
   -webkit-mask-image:
-    linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.45) 12%, #000 24%, #000 76%, rgba(0, 0, 0, 0.45) 88%, transparent 100%),
-    linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.45) 12%, #000 25%, #000 75%, rgba(0, 0, 0, 0.45) 88%, transparent 100%);
+    radial-gradient(ellipse at 52% 50%, #000 0 48%, rgba(0, 0, 0, 0.86) 64%, rgba(0, 0, 0, 0.34) 84%, transparent 96%),
+    linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.54) 10%, #000 22%, #000 80%, rgba(0, 0, 0, 0.34) 92%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.5) 10%, #000 22%, #000 78%, rgba(0, 0, 0, 0.3) 92%, transparent 100%);
   -webkit-mask-composite: source-in;
 }
 
