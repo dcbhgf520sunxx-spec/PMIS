@@ -260,6 +260,9 @@ export function AdminLayout() {
   const shouldRedirectAdminOnlyPage = !isAdmin && isAdminOnlyPage;
   const shouldRedirectUnauthorizedPage = !isAdmin && allowedMenuPaths.size > 0 && !isPathAllowed(location.pathname, allowedMenuPaths);
   const userInitial = getUserInitial(user);
+  const assistantStorageKey = user
+    ? `admin_floating_assistant_position_${user.id || user.employee_no}`
+    : 'admin_floating_assistant_position_guest';
 
   const selectedKey = location.pathname.startsWith('/system/design-system')
     ? `/system/design-system?category=${selectedDesignCategory}`
@@ -496,7 +499,7 @@ export function AdminLayout() {
           <Outlet />
         </Content>
       </Layout>
-      <AdminFloatingAssistant />
+      <AdminFloatingAssistant storageKey={assistantStorageKey} />
       <AccountDrawers active={accountDrawer} onClose={() => setAccountDrawer(null)} />
     </Layout>
   );

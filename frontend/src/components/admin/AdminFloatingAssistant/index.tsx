@@ -27,9 +27,10 @@ type DragState = {
 
 type AdminFloatingAssistantProps = {
   onClick?: () => void;
+  storageKey?: string;
 };
 
-const STORAGE_KEY = 'admin_floating_assistant_position';
+const DEFAULT_STORAGE_KEY = 'admin_floating_assistant_position';
 const ASSISTANT_WIDTH = 78;
 const ASSISTANT_HEIGHT = 84;
 const DEFAULT_LEFT = 48;
@@ -60,9 +61,9 @@ function getDefaultPosition(): Position {
   });
 }
 
-function readSavedPosition(): Position {
+function readSavedPosition(storageKey: string): Position {
   try {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
+    const saved = window.localStorage.getItem(storageKey);
     if (!saved) return getDefaultPosition();
     const parsed = JSON.parse(saved) as Partial<Position>;
     if (typeof parsed.x !== 'number' || typeof parsed.y !== 'number') return getDefaultPosition();
@@ -72,7 +73,7 @@ function readSavedPosition(): Position {
   }
 }
 
-export function AdminFloatingAssistant({ onClick }: AdminFloatingAssistantProps) {
+export function AdminFloatingAssistant({ onClick, storageKey = DEFAULT_STORAGE_KEY }: AdminFloatingAssistantProps) {
   const dragRef = useRef<DragState | null>(null);
   const suppressClickRef = useRef(false);
   const [position, setPosition] = useState<Position | null>(null);
@@ -81,8 +82,8 @@ export function AdminFloatingAssistant({ onClick }: AdminFloatingAssistantProps)
   const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
-    setPosition(readSavedPosition());
-  }, []);
+    setPosition(readSavedPosition(storageKey));
+  }, [storageKey]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -105,11 +106,11 @@ export function AdminFloatingAssistant({ onClick }: AdminFloatingAssistantProps)
   useEffect(() => {
     if (!position) return;
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(position));
+      window.localStorage.setItem(storageKey, JSON.stringify(position));
     } catch {
       // Ignore storage failures; dragging still works for the current page view.
     }
-  }, [position]);
+  }, [position, storageKey]);
 
   const handlePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
     if (!position) return;
