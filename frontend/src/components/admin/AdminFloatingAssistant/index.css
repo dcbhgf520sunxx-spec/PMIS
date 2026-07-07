@@ -49,8 +49,9 @@
 }
 
 .admin-floating-assistant[data-mood='run'] .admin-floating-assistant__sprite {
+  --assistant-run-y: 0px;
   background-image: url('../../../assets/assistant/minibot-run-spritesheet.webp');
-  background-size: 576px 78px;
+  background-size: 576px 156px;
   animation: admin-floating-assistant-run 0.75s steps(8) infinite;
 }
 
@@ -85,10 +86,12 @@
 }
 
 .admin-floating-assistant[data-mood='run'][data-run-direction='right'] .admin-floating-assistant__sprite {
-  transform: translateX(-50%) scaleX(-1);
+  --assistant-run-y: 0px;
+  transform: translateX(-50%);
 }
 
 .admin-floating-assistant[data-mood='run'][data-run-direction='left'] .admin-floating-assistant__sprite {
+  --assistant-run-y: -78px;
   transform: translateX(-50%);
 }
 
@@ -114,11 +117,11 @@
 
 @keyframes admin-floating-assistant-run {
   from {
-    background-position: 0 0;
+    background-position: 0 var(--assistant-run-y);
   }
 
   to {
-    background-position: -576px 0;
+    background-position: -576px var(--assistant-run-y);
   }
 }
 
