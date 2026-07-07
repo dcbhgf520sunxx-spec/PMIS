@@ -179,7 +179,6 @@ export function AdminFloatingAssistant({ onClick, storageKey = DEFAULT_STORAGE_K
       data-run-direction={runDirection}
       type="button"
       aria-label="AI 助手入口"
-      title="AI 助手入口"
       style={{ left: position.x, top: position.y }}
       onClick={handleClick}
       onPointerDown={handlePointerDown}
