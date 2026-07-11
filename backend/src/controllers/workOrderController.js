@@ -549,8 +549,8 @@ exports.getHistory = async (req, res) => {
         title = '创建'
       } else if (g.action === '删除') {
         title = '删除'
-      } else if (g.action === '编辑') {
-        title = '编辑'
+      } else if (g.action === '编辑' || g.action === '批量指派') {
+        title = g.action
         for (const ch of g.changes) {
           const label = FIELD_LABEL[ch.field_name] || ch.field_name
           const oldVal = resolveValue(ch.field_name, ch.old_value, lookups)
