@@ -221,6 +221,24 @@ test('组件审计允许列行为完整的标准列表', () => {
   assert.equal(result.status, 0, result.stdout);
 });
 
+test('组件审计阻断标准列表只有部分业务列支持排序', () => {
+  const result = runStrictAudit(
+    `export function CustomerListPage() {
+      const columns = [
+        { title: '序号', width: 56, fixed: 'left' },
+        { title: '客户名称', dataIndex: 'name', width: 180, fixed: 'left', sorter: true },
+        { title: '负责人', dataIndex: 'ownerName', width: 120 },
+        { title: '状态', dataIndex: 'status', width: 100, sorter: true },
+        { title: '操作', valueType: 'option', width: 160, fixed: 'right' }
+      ];
+      return <TemplateListPage table={{ columns, dataSource: [], pagination: false, scroll: { x: 800 } }} pagination={{}} />;
+    }`,
+    'CustomerListPage.tsx'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /除序号列和操作列外.*sorter: true/);
+});
+
 test('组件审计阻断列表数据视图 Tab 缺少统计', () => {
   const result = runStrictAudit(
     `export function CustomerListPage() {

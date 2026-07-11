@@ -34,6 +34,7 @@ const roleSorters = createListSorters<RoleRecord>({
   name: listSorters.text((row) => row.name),
   permissions: listSorters.text((row) => row.permissions),
   description: listSorters.text((row) => row.description),
+  creatorName: listSorters.text((row) => row.creatorName),
   createdAt: listSorters.date((row) => row.createdAt)
 });
 
@@ -152,7 +153,9 @@ export function RoleListPage() {
       title: '创建人',
       dataIndex: 'creatorName',
       width: 120,
-      ellipsis: true
+      ellipsis: true,
+      sorter: true,
+      sortOrder: sortState.field === 'creatorName' ? sortState.order : null
     },
     {
       title: '创建时间',

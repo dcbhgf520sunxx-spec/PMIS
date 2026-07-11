@@ -193,7 +193,8 @@ async function listAccessLogs(query = {}) {
   const sortMap = {
     employee_no: 'l.employee_no', account: 'l.account', real_name: 'l.real_name', result: 'l.result',
     fail_reason: 'l.fail_reason', login_at: 'l.login_at', logout_at: 'l.logout_at',
-    last_active_at: 'l.last_active_at', duration_seconds: 'l.duration_seconds', ip: 'l.ip', created_at: 'l.created_at',
+    last_active_at: 'l.last_active_at', duration_seconds: 'l.duration_seconds', ip: 'l.ip',
+    user_agent: 'l.user_agent', created_at: 'l.created_at',
   }
   const sortField = sortMap[query.sort_field] || 'l.created_at'
   const sortDirection = getSortDirection(query.sort_order)

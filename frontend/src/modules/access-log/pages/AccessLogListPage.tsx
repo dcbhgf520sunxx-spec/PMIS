@@ -39,6 +39,7 @@ const accessLogSorters = createListSorters<AccessLogRecord>({
   lastActiveAt: listSorters.date((row) => row.lastActiveAt),
   durationSeconds: listSorters.number((row) => row.durationSeconds),
   ip: listSorters.text((row) => row.ip),
+  userAgent: listSorters.text((row) => row.userAgent),
   createdAt: listSorters.date((row) => row.createdAt)
 });
 
@@ -282,7 +283,9 @@ export function AccessLogListPage() {
       title: '浏览器/设备',
       dataIndex: 'userAgent',
       width: 260,
-      ellipsis: true
+      ellipsis: true,
+      sorter: true,
+      sortOrder: sortState.field === 'userAgent' ? sortState.order : null
     },
     {
       title: '记录时间',

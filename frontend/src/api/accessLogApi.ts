@@ -120,6 +120,7 @@ function toAccessLogSortField(field?: string) {
     lastActiveAt: 'last_active_at',
     durationSeconds: 'duration_seconds',
     ip: 'ip',
+    userAgent: 'user_agent',
     createdAt: 'created_at'
   };
   return field ? sortMap[field] || field : undefined;

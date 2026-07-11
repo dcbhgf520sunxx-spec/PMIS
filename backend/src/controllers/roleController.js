@@ -49,7 +49,16 @@ exports.list = async (req, res) => {
     if (code) { sql += ' AND r.code LIKE ?'; params.push(`%${code}%`) }
     if (name) { sql += ' AND r.name LIKE ?'; params.push(`%${name}%`) }
 
-    const sortMap = { code: 'r.code', name: 'r.name', creator_name: 'creator_name', created_at: 'r.created_at' }
+    const sortMap = {
+      code: 'r.code',
+      name: 'r.name',
+      permissions: `(SELECT STRING_AGG(m.name, '、' ORDER BY m.sort_order, m.id)
+        FROM pms_role_menu rm JOIN pms_menu m ON m.id = rm.menu_id
+        WHERE rm.role_id = r.id)`,
+      description: 'r.description',
+      creator_name: 'creator_name',
+      created_at: 'r.created_at'
+    }
     const sortField = sortMap[req.query.sort_field] || 'r.created_at'
     const sortDirection = getSortDirection(req.query.sort_order)
     sql += ` ORDER BY ${sortField} ${sortDirection}, r.id ${sortDirection} LIMIT ? OFFSET ?`

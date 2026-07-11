@@ -320,8 +320,11 @@ function collectListColumnContractViolations(files) {
     if (!/scroll\s*:\s*\{\s*x\s*:/.test(source)) {
       violations.push(finding(file, sourceFile, columnsArray, '标准列表必须配置 table.scroll.x，使左右固定列在横向滚动时生效'));
     }
-    if (!columns.slice(1).filter((column) => column !== action).some((column) => propertyText(column, 'sorter', sourceFile) === 'true')) {
-      violations.push(finding(file, sourceFile, firstBusiness, '标准列表至少一个业务列必须声明 sorter: true，并接入统一排序状态'));
+    const sortableColumns = columns.filter((column) => column !== action && column !== (hasSequenceColumn ? first : undefined));
+    for (const column of sortableColumns) {
+      if (propertyText(column, 'sorter', sourceFile) !== 'true') {
+        violations.push(finding(file, sourceFile, column, '标准列表除序号列和操作列外，每个可见列都必须声明 sorter: true，并接入统一排序状态'));
+      }
     }
     return violations;
   });
