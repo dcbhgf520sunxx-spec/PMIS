@@ -37,7 +37,7 @@ const npmCommandEnv = getNpmCommandEnv(process.env, npmNodeExecutable);
 const commands = [
   { cwd: '.', command: 'node', args: ['--test', 'scripts/check-delivery-contract.test.mjs'] },
   { cwd: '.', command: 'node', args: ['--test', 'scripts/delivery-change-context.test.mjs'] },
-  { cwd: 'frontend', command: 'node', args: ['--experimental-strip-types', '--test', 'test/auditComponentUsage.test.ts', 'test/responseContract.test.ts', 'test/workOrderApi.test.ts', 'test/listHelpers.test.ts', 'test/detailNeighbors.test.ts', 'test/detailNeighborNavCompact.test.mjs', 'test/workOrderDetailNeighborPlacement.test.mjs', 'test/designSystemDetailNeighborUsage.test.mjs', 'test/detailReturnLabel.test.mjs', 'test/templatePageState.test.mjs', 'test/templateDrawerTable.test.mjs', 'test/overlayTemplateDemo.test.mjs', 'test/routerFutureFlag.test.mjs', 'test/viteChunkSplitting.test.mjs'] },
+  { cwd: 'frontend', command: 'node', args: ['--experimental-strip-types', '--test', 'test/auditComponentUsage.test.ts', 'test/responseContract.test.ts', 'test/workOrderApi.test.ts', 'test/listHelpers.test.ts', 'test/detailNeighbors.test.ts', 'test/detailNeighborNavCompact.test.mjs', 'test/workOrderDetailNeighborPlacement.test.mjs', 'test/designSystemDetailNeighborUsage.test.mjs', 'test/detailReturnLabel.test.mjs', 'test/templatePageState.test.mjs', 'test/templateDrawerTable.test.mjs', 'test/overlayTemplateDemo.test.mjs', 'test/routerFutureFlag.test.mjs', 'test/viteChunkSplitting.test.mjs', 'test/formPageDateContract.test.mjs'] },
   { cwd: 'frontend', command: 'npm', args: ['run', 'audit:components'] },
   { cwd: 'frontend', command: 'npm', args: ['run', 'audit:components:strict'] },
   { cwd: 'frontend', command: 'npm', args: ['run', 'build'] },

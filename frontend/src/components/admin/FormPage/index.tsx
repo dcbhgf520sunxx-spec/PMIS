@@ -44,6 +44,7 @@ export function FormPage<T extends Record<string, unknown>>({
       id={id}
       form={formInstance}
       className="form-page"
+      dateFormatter={false}
       readonly={readonly}
       submitter={showActions ? {
         searchConfig: {
