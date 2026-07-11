@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import ts from 'typescript';
 
 const rootDir = new URL('..', import.meta.url).pathname;
 const modulesDirArgIndex = process.argv.indexOf('--modules-dir');
@@ -119,6 +120,107 @@ function collectPageTemplateViolations(files) {
   });
 }
 
+function jsxTagName(node, sourceFile) {
+  if (ts.isJsxElement(node)) return node.openingElement.tagName.getText(sourceFile);
+  if (ts.isJsxSelfClosingElement(node)) return node.tagName.getText(sourceFile);
+  return '';
+}
+
+function jsxAttributes(node) {
+  if (ts.isJsxElement(node)) return node.openingElement.attributes.properties;
+  if (ts.isJsxSelfClosingElement(node)) return node.attributes.properties;
+  return [];
+}
+
+function attribute(node, name) {
+  return jsxAttributes(node).find((item) => ts.isJsxAttribute(item) && item.name.getText() === name);
+}
+
+function attributeText(node, name, sourceFile) {
+  return attribute(node, name)?.initializer?.getText(sourceFile) || '';
+}
+
+function finding(file, sourceFile, node, reason, token = jsxTagName(node, sourceFile)) {
+  return {
+    level: 'BLOCK',
+    file: relative(rootDir, file),
+    line: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1,
+    token,
+    reason
+  };
+}
+
+function collectSemanticViolations(files) {
+  const allowedOperationActions = new Set([
+    'AdminTextAction',
+    'StatusConfirmAction',
+    'StatusChangeAction',
+    'DeleteConfirmAction',
+    'ConfirmAction',
+    'AdminActionDropdown'
+  ]);
+  const textVariantActions = new Set([
+    'StatusConfirmAction',
+    'StatusChangeAction',
+    'DeleteConfirmAction',
+    'ConfirmAction'
+  ]);
+
+  return files.flatMap((file) => {
+    const source = readFileSync(file, 'utf8');
+    const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const violations = [];
+
+    const inspectOperationChildren = (container) => {
+      const inspect = (node) => {
+        if (!ts.isJsxElement(node) && !ts.isJsxSelfClosingElement(node)) return;
+        const name = jsxTagName(node, sourceFile);
+        if (name && name !== 'OperationColumnActions') {
+          if (!allowedOperationActions.has(name)) {
+            violations.push(finding(file, sourceFile, node, '操作列只允许统一文字操作组件，普通按钮应改为文字操作'));
+          } else if (textVariantActions.has(name) && attributeText(node, 'variant', sourceFile) !== '"text"') {
+            violations.push(finding(file, sourceFile, node, `${name} 在操作列中必须声明 variant="text"`));
+          }
+          if (name === 'ConfirmAction' && (/删除/.test(node.getText(sourceFile)) || attribute(node, 'danger'))) {
+            violations.push(finding(file, sourceFile, node, '删除操作必须使用 DeleteConfirmAction'));
+          }
+          return;
+        }
+        ts.forEachChild(node, inspect);
+      };
+      ts.forEachChild(container, inspect);
+    };
+
+    const visit = (node) => {
+      if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
+        const name = jsxTagName(node, sourceFile);
+        if (name === 'StatusFlowModal') {
+          violations.push(finding(file, sourceFile, node, '业务页面不得直接使用 StatusFlowModal，应通过 StatusChangeAction 承接'));
+        }
+        if (name === 'StatusFlowAction') {
+          violations.push(finding(file, sourceFile, node, 'StatusFlowAction 已废弃，必须使用 StatusChangeAction'));
+        }
+        if (name === 'OperationColumnActions') inspectOperationChildren(node);
+        if (name === 'TemplateDetailPage' && attribute(node, 'statusSection')) {
+          if (!attribute(node, 'titleTags')) {
+            violations.push(finding(file, sourceFile, node, '有状态详情必须通过 TemplateDetailPage.titleTags 展示标题状态标签'));
+          }
+          if (!attribute(node, 'statusAction')) {
+            violations.push(finding(file, sourceFile, node, '有状态详情必须通过 TemplateDetailPage.statusAction 承接状态操作'));
+          }
+          const actionsSource = attributeText(node, 'actions', sourceFile);
+          if (/Status(?:Confirm|Change)Action|StatusFlowModal/.test(actionsSource)) {
+            violations.push(finding(file, sourceFile, node, '详情状态操作不得放在右上角 actions，必须放入 statusAction'));
+          }
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(sourceFile);
+    return violations;
+  });
+}
+
 const files = walk(modulesDir).filter((file) => {
   const normalized = relative(modulesDir, file).split('/');
   return !excludedPathParts.includes(normalized[0]);
@@ -127,17 +229,18 @@ const files = walk(modulesDir).filter((file) => {
 const blocking = collectMatches(files, blockingRules, 'BLOCK');
 const listTemplateBlocking = collectMatches(files, listTemplateRules, 'BLOCK');
 const pageTemplateBlocking = collectPageTemplateViolations(files);
+const semanticBlocking = collectSemanticViolations(files);
 const warnings = collectMatches(files, warningRules, 'WARN');
 
 console.log('组件接入审计');
 console.log(`扫描文件：${files.length}`);
-console.log(`阻断项：${blocking.length + listTemplateBlocking.length + pageTemplateBlocking.length}`);
+console.log(`阻断项：${blocking.length + listTemplateBlocking.length + pageTemplateBlocking.length + semanticBlocking.length}`);
 console.log(`提醒项：${warnings.length}`);
 
-for (const item of [...blocking, ...listTemplateBlocking, ...pageTemplateBlocking, ...warnings]) {
+for (const item of [...blocking, ...listTemplateBlocking, ...pageTemplateBlocking, ...semanticBlocking, ...warnings]) {
   console.log(`${item.level} ${item.file}:${item.line} ${item.token} ${item.reason}`);
 }
 
-if (strict && (blocking.length > 0 || listTemplateBlocking.length > 0 || pageTemplateBlocking.length > 0)) {
+if (strict && (blocking.length > 0 || listTemplateBlocking.length > 0 || pageTemplateBlocking.length > 0 || semanticBlocking.length > 0)) {
   process.exitCode = 1;
 }
