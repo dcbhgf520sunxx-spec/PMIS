@@ -43,6 +43,21 @@ const businessMenuItems: AdminMenuItems = [
     label: '运维工单'
   },
   {
+    key: 'base_settings',
+    icon: <SettingOutlined />,
+    label: '基础设置',
+    children: [
+      {
+        key: '/archive',
+        label: '基础档案'
+      },
+      {
+        key: '/access-logs',
+        label: '访问日志'
+      }
+    ]
+  },
+  {
     key: 'user_auth',
     icon: <UserOutlined />,
     label: '用户权限',
@@ -58,25 +73,7 @@ const businessMenuItems: AdminMenuItems = [
     ]
   },
   {
-    key: 'base_settings',
-    icon: <SettingOutlined />,
-    label: '基础设置',
-    children: [
-      {
-        key: '/archive',
-        label: '基础档案'
-      },
-      {
-        key: '/access-logs',
-        label: '访问日志'
-      }
-    ]
-  }
-];
-
-const adminOnlyMenuItems: AdminMenuItems = [
-  {
-    key: '/system/design-system',
+    key: 'design_system',
     icon: <ExperimentOutlined />,
     label: '组件工作台',
     children: [
@@ -96,7 +93,7 @@ const adminOnlyMenuItems: AdminMenuItems = [
   }
 ];
 
-const menuItems = [...businessMenuItems, ...adminOnlyMenuItems];
+const menuItems = businessMenuItems;
 
 function collectAllowedMenuKeys(items: UserMenuItem[]): Set<string> {
   const keys = new Set<string>(['home', '/home']);
@@ -136,8 +133,20 @@ function getFirstMenuPath(items: AdminMenuItems): string {
   return '/home';
 }
 
-function isPathAllowed(pathname: string, allowedPaths: Set<string>): boolean {
-  return Array.from(allowedPaths).some((path) => pathname === path || pathname.startsWith(`${path}/`));
+function getPermissionLocationKey(pathname: string, search: string) {
+  if (pathname === '/system/design-system') {
+    const category = new URLSearchParams(search).get('category');
+    const selectedCategory = isDesignCategory(category) ? category : 'overview';
+    return `/system/design-system?category=${selectedCategory}`;
+  }
+  return pathname;
+}
+
+function isPathAllowed(locationKey: string, allowedPaths: Set<string>): boolean {
+  return Array.from(allowedPaths).some((path) => {
+    if (path.includes('?') || locationKey.includes('?')) return locationKey === path;
+    return locationKey === path || locationKey.startsWith(`${path}/`);
+  });
 }
 
 function filterMenuItemsByPermissions(items: AdminMenuItems, allowedKeys: Set<string>): AdminMenuItems {
@@ -248,17 +257,12 @@ export function AdminLayout() {
   const selectedDesignCategory = isDesignCategory(category) ? category : 'overview';
   const isAdmin = user?.roles?.includes('admin') ?? false;
   const visibleMenuItems = useMemo(() => {
-    const permittedBusinessMenuItems = isAdmin
-      ? businessMenuItems
-      : filterMenuItemsByPermissions(businessMenuItems, collectAllowedMenuKeys(userMenus));
-
-    return isAdmin ? [...permittedBusinessMenuItems, ...adminOnlyMenuItems] : permittedBusinessMenuItems;
+    return isAdmin ? menuItems : filterMenuItemsByPermissions(menuItems, collectAllowedMenuKeys(userMenus));
   }, [isAdmin, userMenus]);
   const allowedMenuPaths = useMemo(() => collectAllowedMenuPaths(userMenus), [userMenus]);
   const fallbackMenuPath = useMemo(() => getFirstMenuPath(visibleMenuItems), [visibleMenuItems]);
-  const isAdminOnlyPage = location.pathname.startsWith('/system/design-system') || location.pathname.startsWith('/samples/work-order');
-  const shouldRedirectAdminOnlyPage = !isAdmin && isAdminOnlyPage;
-  const shouldRedirectUnauthorizedPage = !isAdmin && allowedMenuPaths.size > 0 && !isPathAllowed(location.pathname, allowedMenuPaths);
+  const permissionLocationKey = getPermissionLocationKey(location.pathname, location.search);
+  const shouldRedirectUnauthorizedPage = !isAdmin && allowedMenuPaths.size > 0 && !isPathAllowed(permissionLocationKey, allowedMenuPaths);
   const userInitial = getUserInitial(user);
   const assistantStorageKey = user
     ? `admin_floating_assistant_position_${user.id || user.employee_no}`
@@ -379,7 +383,7 @@ export function AdminLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  if (shouldRedirectAdminOnlyPage || shouldRedirectUnauthorizedPage) {
+  if (shouldRedirectUnauthorizedPage) {
     return <Navigate to={fallbackMenuPath} replace />;
   }
 

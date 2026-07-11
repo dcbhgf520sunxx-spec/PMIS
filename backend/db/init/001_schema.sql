@@ -201,12 +201,21 @@ INSERT INTO pms_menu (id, parent_id, name, code, type, path, icon, sort_order, c
 VALUES
   (8, 0, '首页', 'home', 2, '/home', 'HomeOutlined', 5, 1, 1),
   (1, 0, '运维工单', 'work_order', 2, '/work-orders', 'ToolOutlined', 10, 1, 1),
-  (2, 0, '基础设置', 'base_settings', 1, NULL, 'SettingOutlined', 30, 1, 1),
-  (3, 2, '基础档案', 'archive', 2, '/archive', NULL, 31, 1, 1),
-  (4, 0, '用户权限', 'user_auth', 1, NULL, 'UserOutlined', 20, 1, 1),
-  (5, 4, '角色管理', 'role', 2, '/roles', NULL, 22, 1, 1),
-  (6, 4, '用户管理', 'user', 2, '/users', NULL, 21, 1, 1),
-  (7, 2, '访问日志', 'access_log', 2, '/access-logs', NULL, 32, 1, 1)
+  (2, 0, '基础设置', 'base_settings', 1, NULL, 'SettingOutlined', 20, 1, 1),
+  (3, 2, '基础档案', 'archive', 2, '/archive', NULL, 21, 1, 1),
+  (4, 0, '用户权限', 'user_auth', 1, NULL, 'UserOutlined', 30, 1, 1),
+  (5, 4, '角色管理', 'role', 2, '/roles', NULL, 32, 1, 1),
+  (6, 4, '用户管理', 'user', 2, '/users', NULL, 31, 1, 1),
+  (7, 2, '访问日志', 'access_log', 2, '/access-logs', NULL, 22, 1, 1),
+  (9, 0, '组件工作台', 'design_system', 1, NULL, 'ExperimentOutlined', 40, 1, 1),
+  (10, 9, '总览', 'design_system_overview', 2, '/system/design-system?category=overview', NULL, 41, 1, 1),
+  (11, 9, '页面样板', 'design_system_samples', 2, '/samples/work-order', NULL, 42, 1, 1),
+  (12, 9, '设计基础', 'design_system_foundation', 2, '/system/design-system?category=foundation', NULL, 43, 1, 1),
+  (13, 9, '页面模式', 'design_system_layout', 2, '/system/design-system?category=layout', NULL, 44, 1, 1),
+  (14, 9, '基础组件', 'design_system_base', 2, '/system/design-system?category=base', NULL, 45, 1, 1),
+  (15, 9, '输入组件', 'design_system_input', 2, '/system/design-system?category=input', NULL, 46, 1, 1),
+  (16, 9, '反馈组件', 'design_system_feedback', 2, '/system/design-system?category=feedback', NULL, 47, 1, 1),
+  (17, 9, '数据展示', 'design_system_display', 2, '/system/design-system?category=display', NULL, 48, 1, 1)
 ON CONFLICT (code) DO UPDATE SET
   parent_id = EXCLUDED.parent_id,
   name = EXCLUDED.name,

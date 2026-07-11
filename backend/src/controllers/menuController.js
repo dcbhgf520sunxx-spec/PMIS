@@ -1,4 +1,5 @@
 const db = require('../db')
+const { includeParentMenus } = require('../services/menuHierarchy')
 
 exports.saveRoleMenus = async (req, res) => {
   try {
@@ -52,27 +53,8 @@ exports.getUserMenus = async (req, res) => {
       ORDER BY m.sort_order, m.id
     `).all(userId)
 
-    // Auto-include parent menus for tree rendering
-    const allMenuIds = new Set(rows.map(r => r.id))
     const allMenus = await db.prepare('SELECT * FROM pms_menu WHERE is_deleted = 0').all()
-    const menuMap = {}
-    allMenus.forEach(m => { menuMap[m.id] = m })
-
-    const toProcess = [...allMenuIds]
-    while (toProcess.length > 0) {
-      const id = toProcess.pop()
-      const parentId = menuMap[id]
-      if (parentId && parentId !== 0 && !allMenuIds.has(parentId)) {
-        const parent = menuMap[parentId]
-        if (parent) {
-          rows.push(parent)
-          allMenuIds.add(parentId)
-          toProcess.push(parentId)
-        }
-      }
-    }
-
-    res.json({ code: 0, message: 'success', data: rows })
+    res.json({ code: 0, message: 'success', data: includeParentMenus(rows, allMenus) })
   } catch (err) {
     console.error(err)
     res.status(500).json({ code: 500, message: '查询失败', data: null })

@@ -8,6 +8,7 @@ const { verifyToken } = require('../middleware/auth')
 const accessLogService = require('../services/accessLogService')
 const accountService = require('../services/accountService')
 const { ok, fail } = require('../utils/response')
+const { includeParentMenus } = require('../services/menuHierarchy')
 
 // Simple in-memory rate limiter for login
 const loginAttempts = new Map()
@@ -107,25 +108,8 @@ router.post('/login', async (req, res) => {
       menus.sort((a, b) => (a.sort_order - b.sort_order) || (a.id - b.id))
     }
 
-    // Auto-include parent menus for tree rendering
-    const allMenuIds = new Set(menus.map(r => r.id))
     const allMenus = await db.prepare('SELECT * FROM pms_menu WHERE is_deleted = 0').all()
-    const menuMap = {}
-    allMenus.forEach(m => { menuMap[m.id] = m })
-
-    const toProcess = [...allMenuIds]
-    while (toProcess.length > 0) {
-      const id = toProcess.pop()
-      const parentId = menuMap[id]?.parent_id
-      if (parentId && parentId !== 0 && !allMenuIds.has(parentId)) {
-        const parent = menuMap[parentId]
-        if (parent) {
-          menus.push(parent)
-          allMenuIds.add(parentId)
-          toProcess.push(parentId)
-        }
-      }
-    }
+    const resolvedMenus = includeParentMenus(menus, allMenus)
 
     const accessSessionId = await safeRecordLoginSuccess({ user: row, account, req })
     if (!accessSessionId) throw new Error('登录会话创建失败')
@@ -140,7 +124,7 @@ router.post('/login', async (req, res) => {
       { expiresIn: '24h' }
     )
 
-    ok(res, { token, first_login: row.first_login, access_session_id: accessSessionId, user: { id: row.id, employee_no: row.employee_no, real_name: row.real_name, phone: row.phone, avatar_url: row.avatar_url, roles: roles.map(item => item.code) }, menus }, '登录成功')
+    ok(res, { token, first_login: row.first_login, access_session_id: accessSessionId, user: { id: row.id, employee_no: row.employee_no, real_name: row.real_name, phone: row.phone, avatar_url: row.avatar_url, roles: roles.map(item => item.code) }, menus: resolvedMenus }, '登录成功')
   } catch (err) {
     console.error(err)
     res.status(500).json({ code: 500, message: '登录失败', data: null })
