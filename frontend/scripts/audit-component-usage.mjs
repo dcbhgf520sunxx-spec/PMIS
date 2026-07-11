@@ -307,8 +307,11 @@ function collectListColumnContractViolations(files) {
     for (const column of columns) {
       if (!hasNumericWidth(column)) violations.push(finding(file, sourceFile, column, '标准列表每个可见列必须声明数值型 width，确保列宽可拖拽'));
     }
-    if (!fixed(first, 'left') || !fixed(firstBusiness, 'left')) {
-      violations.push(finding(file, sourceFile, firstBusiness, '标准列表的序号列和第一业务列必须声明 fixed="left"'));
+    if (fixed(first, 'left')) {
+      violations.push(finding(file, sourceFile, first, '标准列表序号列不固定，避免占用左侧固定区域'));
+    }
+    if (!fixed(firstBusiness, 'left')) {
+      violations.push(finding(file, sourceFile, firstBusiness, '标准列表第一业务列必须声明 fixed="left"'));
     }
     if (action && !fixed(action, 'right')) {
       violations.push(finding(file, sourceFile, action, '标准列表操作列必须声明 fixed="right"'));

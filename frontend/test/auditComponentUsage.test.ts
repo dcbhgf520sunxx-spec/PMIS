@@ -209,7 +209,7 @@ test('组件审计允许列行为完整的标准列表', () => {
   const result = runStrictAudit(
     `export function CustomerListPage() {
       const columns = [
-        { title: '序号', width: 56, fixed: 'left' },
+        { title: '序号', width: 56 },
         { title: '客户名称', dataIndex: 'name', width: 180, fixed: 'left', sorter: true },
         { title: '创建时间', dataIndex: 'createdAt', width: 170, sorter: true },
         { title: '操作', valueType: 'option', width: 160, fixed: 'right' }

@@ -171,7 +171,6 @@ export function UserListPage() {
     {
       title: '序号',
       width: 56,
-      fixed: 'left',
       hideInSetting: true,
       search: false,
       render: (_, __, index) => renderIndex(index)

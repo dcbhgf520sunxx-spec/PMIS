@@ -283,7 +283,6 @@ export function WorkOrderTemplatePage() {
     {
       title: '序号',
       width: 48,
-      fixed: 'left',
       hideInSetting: true,
       search: false,
       render: (_, __, index) => renderIndex(index)

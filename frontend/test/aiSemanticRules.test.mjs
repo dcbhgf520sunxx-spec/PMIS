@@ -43,6 +43,7 @@ test('列表规则明确列宽、固定列、横向滚动和排序契约', () =>
   const template = read('../../docs/ai-delivery-template.md');
   assert.match(rules, /数值型 `width`/);
   assert.match(rules, /fixed: 'left'/);
+  assert.match(rules, /序号列不固定/);
   assert.match(rules, /fixed: 'right'/);
   assert.match(rules, /scroll\.x/);
   assert.match(rules, /sorter: true/);

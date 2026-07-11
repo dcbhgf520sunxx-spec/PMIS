@@ -53,7 +53,7 @@ API 接入保持统一：
 必须保持以下规则：
 
 - 第一列业务值进入详情，操作列不放“详情”。
-- 每个可见列必须声明数值型 `width`，保证 `SearchTable` 能生成列宽拖拽手柄；序号列和第一业务列必须声明 `fixed: 'left'`，存在操作列时必须声明 `fixed: 'right'`，只读列表不强制新增操作列。
+- 每个可见列必须声明数值型 `width`，保证 `SearchTable` 能生成列宽拖拽手柄；序号列不固定，只有第一业务列必须声明 `fixed: 'left'`；存在操作列时必须声明 `fixed: 'right'`，只读列表不强制新增操作列。
 - 存在固定列的标准列表必须通过 `TemplateListPage.table.scroll.x` 声明足够的横向宽度；不能只写 `fixed` 而没有横向滚动区域。
 - 可排序的主要业务字段、状态和日期列声明 `sorter: true`，服务端分页列表同时绑定 `sortOrder` 并把统一排序状态传给接口；标准列表至少提供一个可排序业务列。
 - 操作列使用 `OperationColumnActions`，最多 3 个动作直接展示；4 个及以上时由组件保留前 2 个，第 3 个及之后收入“更多”。动作统一使用文字形态：普通动作使用 `AdminTextAction`，删除使用 `DeleteConfirmAction variant="text"`，状态变更使用 `StatusChangeAction variant="text"` 或以它为底层的业务 `*StatusChangeAction`。

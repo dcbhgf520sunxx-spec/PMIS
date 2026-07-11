@@ -143,7 +143,7 @@ function inDateRange(value: string, range: unknown[]) {
 }
 
 const drawerTableColumns: ProColumns<DrawerTableRecord>[] = [
-  { title: '序号', valueType: 'index', width: 48, fixed: 'left', hideInSetting: true },
+  { title: '序号', valueType: 'index', width: 48, hideInSetting: true },
   {
     title: '问题描述',
     dataIndex: 'problemDesc',
@@ -795,7 +795,6 @@ export function DesignSystemPage() {
       title: '序号',
       valueType: 'index',
       width: 48,
-      fixed: 'left',
       search: false,
       hideInSetting: true
     },
