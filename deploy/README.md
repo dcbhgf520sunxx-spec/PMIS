@@ -19,7 +19,7 @@ npm install -g pm2
 
 ```bash
 cd /path/to/apps
-git clone https://gitee.com/znjs_0/project-template.git
+git clone https://github.com/dcbhgf520sunxx-spec/project-template.git
 cd project-template
 ```
 
