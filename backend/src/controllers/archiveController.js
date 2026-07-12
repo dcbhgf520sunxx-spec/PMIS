@@ -112,11 +112,7 @@ exports.update = async (req, res) => {
     await db.prepare(
       'UPDATE pms_archive SET name = ?, sort_order = ?, updater_id = ? WHERE id = ?'
     ).run(name || old.name, sort_order !== undefined ? sort_order : old.sort_order, operatorId, req.params.id)
-    if (changes.length > 0) {
-      for (const ch of changes) {
-        await db.writeLog(operatorId, '编辑', '档案', req.params.id, ch.field, ch.oldVal ?? null, ch.newVal ?? null, req.ip)
-      }
-    }
+    if (changes.length > 0) await db.writeLogs(operatorId, '编辑', '档案', req.params.id, changes, req.ip)
     ok(res, null)
   } catch (err) {
     console.error(err)
@@ -195,9 +191,7 @@ exports.batchUpdateSort = async (req, res) => {
         if (!old || Number(old.sort_order) === nextSortOrder) continue
 
         await conn.prepare('UPDATE pms_archive SET sort_order = ?, updater_id = ?, updated_at = NOW() WHERE id = ?').run(nextSortOrder, operatorId, archiveId)
-        await conn.prepare(
-          'INSERT INTO pms_op_log (user_id, action, module, target_id, field_name, old_value, new_value, ip, target_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        ).run(operatorId, '排序', '档案', archiveId, 'sort_order', old.sort_order, nextSortOrder, req.ip, old.name)
+        await conn.writeLog(operatorId, '排序', '档案', archiveId, 'sort_order', old.sort_order, nextSortOrder, req.ip, old.name)
       }
     })
     ok(res, null)

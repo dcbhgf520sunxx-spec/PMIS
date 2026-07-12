@@ -158,11 +158,10 @@ exports.update = async (req, res) => {
         'UPDATE pms_role SET code = ?, name = ?, description = ?, updater_id = ? WHERE id = ?'
       ).run(code, name, description || null, operatorId, req.params.id)
 
-      // Write one log entry per changed field
       const fmt = (v) => v ?? '空'
-      for (const ch of changes) {
-        await db.writeLog(operatorId, '编辑', '角色', req.params.id, ch.field, fmt(ch.oldVal), fmt(ch.newVal), req.ip)
-      }
+      await db.writeLogs(operatorId, '编辑', '角色', req.params.id, changes.map((change) => ({
+        ...change, oldVal: fmt(change.oldVal), newVal: fmt(change.newVal)
+      })), req.ip)
     }
 
     ok(res, null)

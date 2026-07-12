@@ -59,11 +59,7 @@ exports.update = async (req, res) => {
     await db.prepare(
       'UPDATE pms_archive_type SET name = ?, updater_id = ? WHERE id = ?'
     ).run(name || old.name, operatorId, req.params.id)
-    if (changes.length > 0) {
-      for (const ch of changes) {
-        await db.writeLog(operatorId, '编辑', '档案类型', req.params.id, ch.field, ch.oldVal ?? null, ch.newVal ?? null, req.ip)
-      }
-    }
+    if (changes.length > 0) await db.writeLogs(operatorId, '编辑', '档案类型', req.params.id, changes, req.ip)
     res.json({ code: 0, message: 'success', data: null })
   } catch (err) {
     console.error(err)

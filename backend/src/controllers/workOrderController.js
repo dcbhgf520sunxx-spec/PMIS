@@ -398,9 +398,7 @@ exports.batchAssign = async (req, res) => {
         if (Number(row.follower_id) === followerId) continue
         await conn.prepare('UPDATE pms_work_order SET follower_id = ?, updater_id = ?, updated_at = NOW() WHERE id = ?')
           .run(followerId, operatorId, row.id)
-        await conn.prepare(
-          'INSERT INTO pms_op_log (user_id, action, module, target_id, field_name, old_value, new_value, ip) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-        ).run(operatorId, '批量指派', '运维工单', row.id, 'follower_id', row.follower_id, followerId, req.ip)
+        await conn.writeLog(operatorId, '批量指派', '运维工单', row.id, 'follower_id', row.follower_id, followerId, req.ip)
         updatedCount += 1
       }
     })
