@@ -2096,7 +2096,14 @@
 .design-system-page__template-demo.is-detail {
   height: 560px;
   min-height: 560px;
+}
+
+.design-system-page__template-demo.is-form {
   overflow: auto;
+}
+
+.design-system-page__template-demo.is-detail {
+  overflow: hidden;
 }
 
 .design-system-page__template-demo .page-shell {

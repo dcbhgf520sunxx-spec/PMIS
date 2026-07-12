@@ -1,7 +1,9 @@
-import type { ReactNode } from 'react';
+import { Children, Fragment, isValidElement, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { ActionBar } from '../ActionBar';
 import { AdminEmptyState } from '../AdminEmptyState';
 import { AdminButton } from '../AdminPrimitives';
+import { AdminSelect } from '../AdminSelect';
 import type { DetailMetaItem } from '../DetailMetaList';
 import { DetailMetaList } from '../DetailMetaList';
 import { PageShell } from '../PageShell';
@@ -30,14 +32,33 @@ type TemplateDetailPageProps = {
   statusAction?: ReactNode;
   documentSection?: TemplateDetailSideSection | null;
   aside?: ReactNode;
+  sectionNavigation?: boolean;
   children: ReactNode;
 };
 
 type TemplateDetailSectionProps = {
   title: string;
+  sectionKey?: string;
   inlineExtra?: ReactNode;
   children: ReactNode;
 };
+
+type DetailSectionNavigationItem = {
+  key: string;
+  title: string;
+};
+
+function collectSectionNavigationItems(children: ReactNode): DetailSectionNavigationItem[] {
+  return Children.toArray(children).flatMap((child) => {
+    if (!isValidElement(child)) return [];
+    if (child.type === Fragment) {
+      return collectSectionNavigationItems((child.props as { children?: ReactNode }).children);
+    }
+    if (child.type !== TemplateDetailSection) return [];
+    const section = child as ReactElement<TemplateDetailSectionProps>;
+    return section.props.sectionKey ? [{ key: section.props.sectionKey, title: section.props.title }] : [];
+  });
+}
 
 export function TemplateDetailPage({
   title,
@@ -54,8 +75,16 @@ export function TemplateDetailPage({
   statusAction,
   documentSection,
   aside,
+  sectionNavigation = false,
   children
 }: TemplateDetailPageProps) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const navigationTargetRef = useRef<string | null>(null);
+  const navigationItems = useMemo(
+    () => sectionNavigation ? collectSectionNavigationItems(children) : [],
+    [children, sectionNavigation]
+  );
+  const [activeSectionKey, setActiveSectionKey] = useState('');
   const isUnavailable = Boolean(error) || Boolean(notFound);
   const standardAside = statusSection || documentSection ? (
     <>
@@ -71,6 +100,59 @@ export function TemplateDetailPage({
     </ActionBar>
   ) : null;
 
+  useEffect(() => {
+    if (!navigationItems.length) {
+      setActiveSectionKey('');
+      return;
+    }
+    setActiveSectionKey(navigationItems[0].key);
+    const root = scrollContainerRef.current;
+    if (!root) return;
+    const syncActiveSection = () => {
+      if (navigationTargetRef.current) {
+        setActiveSectionKey(navigationTargetRef.current);
+        return;
+      }
+      if (root.scrollHeight - root.scrollTop - root.clientHeight <= 8) {
+        setActiveSectionKey(navigationItems[navigationItems.length - 1].key);
+        return;
+      }
+      const navigationHeight = root.querySelector<HTMLElement>('.admin-template-detail-page__section-navigation')?.offsetHeight || 0;
+      const activationLine = root.scrollTop + navigationHeight + 12;
+      const sections = Array.from(root.querySelectorAll<HTMLElement>('[data-detail-section-key]'));
+      let activeSection = sections[0];
+      for (const section of sections) {
+        if (section.offsetTop > activationLine) break;
+        activeSection = section;
+      }
+      const sectionKey = activeSection?.getAttribute('data-detail-section-key');
+      if (sectionKey) setActiveSectionKey(sectionKey);
+    };
+    syncActiveSection();
+    root.addEventListener('scroll', syncActiveSection, { passive: true });
+    window.addEventListener('resize', syncActiveSection);
+    return () => {
+      root.removeEventListener('scroll', syncActiveSection);
+      window.removeEventListener('resize', syncActiveSection);
+    };
+  }, [navigationItems]);
+
+  const navigateToSection = (sectionKey: string) => {
+    navigationTargetRef.current = sectionKey;
+    setActiveSectionKey(sectionKey);
+    const root = scrollContainerRef.current;
+    const target = document.getElementById(`detail-section-${sectionKey}`);
+    if (!root || !target) return;
+    const navigationHeight = root.querySelector<HTMLElement>('.admin-template-detail-page__section-navigation')?.offsetHeight || 0;
+    scrollContainerRef.current?.scrollTo({
+      top: Math.max(target.offsetTop - navigationHeight - 10, 0),
+      behavior: 'auto'
+    });
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      navigationTargetRef.current = null;
+    }));
+  };
+
   return (
     <PageShell title={title} compact titleExtra={titleTags} titleCenter={titleCenter} actions={headerActions} loading={loading}>
       {isUnavailable ? (
@@ -80,7 +162,31 @@ export function TemplateDetailPage({
           </AdminEmptyState>
         </div>
       ) : (
-        <div className={standardAside ? 'admin-template-detail-page' : 'admin-template-detail-page is-single'}>
+        <div ref={scrollContainerRef} className={standardAside ? 'admin-template-detail-page' : 'admin-template-detail-page is-single'}>
+          {navigationItems.length ? (
+            <div className="admin-template-detail-page__section-navigation">
+              <nav className="admin-template-detail-page__section-tabs" aria-label="详情分类导航">
+                {navigationItems.map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    className={item.key === activeSectionKey ? 'is-active' : ''}
+                    onClick={() => navigateToSection(item.key)}
+                  >
+                    {item.title}
+                  </button>
+                ))}
+              </nav>
+              <div className="admin-template-detail-page__section-select">
+                <AdminSelect
+                  aria-label="详情分类导航"
+                  value={activeSectionKey || undefined}
+                  options={navigationItems.map((item) => ({ label: item.title, value: item.key }))}
+                  onChange={(value) => navigateToSection(String(value))}
+                />
+              </div>
+            </div>
+          ) : null}
           <div className="admin-template-detail-page__main">
             {children}
           </div>
@@ -91,9 +197,13 @@ export function TemplateDetailPage({
   );
 }
 
-export function TemplateDetailSection({ title, inlineExtra, children }: TemplateDetailSectionProps) {
+export function TemplateDetailSection({ title, sectionKey, inlineExtra, children }: TemplateDetailSectionProps) {
   return (
-    <section className="admin-template-detail-page__panel">
+    <section
+      id={sectionKey ? `detail-section-${sectionKey}` : undefined}
+      data-detail-section-key={sectionKey}
+      className="admin-template-detail-page__panel"
+    >
       <SectionTitle title={title} inlineExtra={inlineExtra} />
       {children}
     </section>
