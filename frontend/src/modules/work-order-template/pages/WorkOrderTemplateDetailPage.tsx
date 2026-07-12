@@ -6,7 +6,7 @@ import {
   AdminText,
   DeleteConfirmAction,
   DetailMetaList,
-  HistoryTimeline,
+  HistoryTimelineSection,
   RichTextViewer,
   TemplateDetailPage,
   TemplateDetailSection
@@ -141,9 +141,7 @@ export function WorkOrderTemplateDetailPage() {
             />
           </TemplateDetailSection>
 
-          <TemplateDetailSection title="变更历史">
-            <HistoryTimeline items={mockWorkOrderHistory} />
-          </TemplateDetailSection>
+          <HistoryTimelineSection items={mockWorkOrderHistory} />
 
     </TemplateDetailPage>
   );

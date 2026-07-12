@@ -23,6 +23,9 @@ export type HistoryTimelineItem = {
 
 type HistoryTimelineProps = {
   items: HistoryTimelineItem[];
+  expandedKeys?: string[];
+  onExpandedKeysChange?: (keys: string[]) => void;
+  showBulkToggle?: boolean;
 };
 
 function formatHistoryValue(field: string, value?: ReactNode) {
@@ -31,8 +34,10 @@ function formatHistoryValue(field: string, value?: ReactNode) {
   return value || '-';
 }
 
-export function HistoryTimeline({ items }: HistoryTimelineProps) {
-  const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+export function HistoryTimeline({ items, expandedKeys: controlledKeys, onExpandedKeysChange, showBulkToggle = true }: HistoryTimelineProps) {
+  const [innerExpandedKeys, setInnerExpandedKeys] = useState<string[]>([]);
+  const expandedKeys = controlledKeys ?? innerExpandedKeys;
+  const setExpandedKeys = onExpandedKeysChange ?? setInnerExpandedKeys;
 
   if (items.length === 0) {
     return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无历史记录" />;
@@ -51,7 +56,7 @@ export function HistoryTimeline({ items }: HistoryTimelineProps) {
 
   return (
     <div className="admin-history-timeline">
-      {expandableKeys.length > 0 ? (
+      {showBulkToggle && expandableKeys.length > 0 ? (
         <div className="admin-history-timeline__toolbar">
           <AdminTextAction onClick={() => setExpandedKeys(isAllExpanded ? [] : expandableKeys)}>
             {isAllExpanded ? '全部收起' : '全部展开'}

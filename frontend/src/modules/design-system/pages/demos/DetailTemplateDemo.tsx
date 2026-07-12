@@ -4,7 +4,7 @@ import {
   AdminSegmented,
   DetailNeighborNav,
   DetailMetaList,
-  HistoryTimeline,
+  HistoryTimelineSection,
   StatusTag,
   TemplateDetailPage,
   TemplateDetailSection
@@ -118,15 +118,14 @@ export function DetailTemplateDemo() {
               ]}
             />
           </TemplateDetailSection>
-          <TemplateDetailSection title="变更历史" sectionKey="history">
-            <HistoryTimeline
+          <HistoryTimelineSection
+              sectionKey="history"
               items={[
                 { id: 'history-1', operator: '业务管理员', action: '更新负责区域', time: '2026-07-12 09:30', changes: [{ field: '负责区域', before: '总部园区', after: '总部园区、华东区域' }] },
                 { id: 'history-2', operator: '系统管理员', action: '调整角色权限', time: '2026-07-10 16:45', changes: [{ field: '所属角色', before: '业务管理员', after: '系统管理员 / 业务管理员' }] },
                 { id: 'history-3', operator: '张三', action: '完成安全验证', time: '2026-07-08 11:20' }
               ]}
             />
-          </TemplateDetailSection>
         </TemplateDetailPage>
       </div>
     </div>

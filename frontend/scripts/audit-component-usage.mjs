@@ -258,6 +258,9 @@ function collectSemanticViolations(files) {
           if (sectionTitle !== '"变更历史"' && sectionTitle !== "'变更历史'") {
             violations.push(finding(file, sourceFile, node, 'HistoryTimeline 所在详情分组必须统一命名为“变更历史”'));
           }
+          if (parent && ts.isJsxElement(parent)) {
+            violations.push(finding(file, sourceFile, node, '详情页变更历史必须使用 HistoryTimelineSection，确保全部展开/收起位于标题后'));
+          }
         }
         if (name === 'StatusFlowModal') {
           violations.push(finding(file, sourceFile, node, '业务页面不得直接使用 StatusFlowModal，应通过 StatusChangeAction 承接'));

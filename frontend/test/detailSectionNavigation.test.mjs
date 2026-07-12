@@ -38,7 +38,7 @@ test('组件工作台提供长详情分类定位示例', () => {
 
 test('组件工作台统一使用变更历史和标准时间线', () => {
   assert.match(demoSource, /HistoryTimeline/);
-  assert.match(demoSource, /title="变更历史" sectionKey="history"/);
+  assert.match(demoSource, /<HistoryTimelineSection[\s\S]*sectionKey="history"/);
   assert.doesNotMatch(demoSource, /title="操作记录"/);
 });
 

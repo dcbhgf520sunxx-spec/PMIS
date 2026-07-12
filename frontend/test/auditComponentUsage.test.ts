@@ -350,7 +350,7 @@ test('组件审计阻断详情历史分组继续使用操作历史旧名称', ()
 
 test('组件审计允许详情历史使用统一的变更历史名称', () => {
   const result = runStrictAudit(
-    'export function CustomerDetailPage() { return <TemplateDetailPage><TemplateDetailSection title="变更历史"><HistoryTimeline items={[]} /></TemplateDetailSection></TemplateDetailPage>; }'
+    'export function CustomerDetailPage() { return <TemplateDetailPage><HistoryTimelineSection items={[]} /></TemplateDetailPage>; }'
   );
   assert.equal(result.status, 0, result.stdout);
 });

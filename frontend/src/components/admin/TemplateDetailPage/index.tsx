@@ -6,6 +6,8 @@ import { AdminButton } from '../AdminPrimitives';
 import { AdminSelect } from '../AdminSelect';
 import type { DetailMetaItem } from '../DetailMetaList';
 import { DetailMetaList } from '../DetailMetaList';
+import { HistoryTimeline, type HistoryTimelineItem } from '../HistoryTimeline';
+import { AdminTextAction } from '../AdminTextAction';
 import { PageShell } from '../PageShell';
 import { SectionTitle } from '../SectionTitle';
 import './index.css';
@@ -53,6 +55,10 @@ function collectSectionNavigationItems(children: ReactNode): DetailSectionNaviga
     if (!isValidElement(child)) return [];
     if (child.type === Fragment) {
       return collectSectionNavigationItems((child.props as { children?: ReactNode }).children);
+    }
+    if (child.type === HistoryTimelineSection) {
+      const section = child as ReactElement<{ sectionKey?: string }>;
+      return section.props.sectionKey ? [{ key: section.props.sectionKey, title: '变更历史' }] : [];
     }
     if (child.type !== TemplateDetailSection) return [];
     const section = child as ReactElement<TemplateDetailSectionProps>;
@@ -207,6 +213,25 @@ export function TemplateDetailSection({ title, sectionKey, inlineExtra, children
       <SectionTitle title={title} inlineExtra={inlineExtra} />
       {children}
     </section>
+  );
+}
+
+export function HistoryTimelineSection({ items, sectionKey }: { items: HistoryTimelineItem[]; sectionKey?: string }) {
+  const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+  const expandableKeys = items.filter((item) => item.changes?.length).map((item) => item.id);
+  const isAllExpanded = expandableKeys.length > 0 && expandableKeys.every((key) => expandedKeys.includes(key));
+  return (
+    <TemplateDetailSection
+      title="变更历史"
+      sectionKey={sectionKey}
+      inlineExtra={expandableKeys.length ? (
+        <AdminTextAction onClick={() => setExpandedKeys(isAllExpanded ? [] : expandableKeys)}>
+          {isAllExpanded ? '全部收起' : '全部展开'}
+        </AdminTextAction>
+      ) : null}
+    >
+      <HistoryTimeline items={items} expandedKeys={expandedKeys} onExpandedKeysChange={setExpandedKeys} showBulkToggle={false} />
+    </TemplateDetailSection>
   );
 }
 

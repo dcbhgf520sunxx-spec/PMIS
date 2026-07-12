@@ -7,7 +7,7 @@ import {
   DeleteConfirmAction,
   DetailNeighborNav,
   DetailMetaList,
-  HistoryTimeline,
+  HistoryTimelineSection,
   RichTextViewer,
   TemplateDetailPage,
   TemplateDetailSection,
@@ -199,9 +199,7 @@ export function WorkOrderDetailPage() {
             />
           </TemplateDetailSection>
 
-          <TemplateDetailSection title="变更历史">
-            <HistoryTimeline items={history} />
-          </TemplateDetailSection>
+          <HistoryTimelineSection items={history} />
 
     </TemplateDetailPage>
   );
