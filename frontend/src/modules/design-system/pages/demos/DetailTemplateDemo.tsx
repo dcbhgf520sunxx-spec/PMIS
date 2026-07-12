@@ -42,7 +42,6 @@ export function DetailTemplateDemo() {
           notFound={demoState === 'notFound'}
           onRetry={() => setDemoState('normal')}
           onBack={() => {}}
-          titleTags={<StatusTag status="enabled" />}
           titleCenter={(
             <DetailNeighborNav
               placement="title"
@@ -57,8 +56,7 @@ export function DetailTemplateDemo() {
           sectionNavigation
           statusSection={{
             items: [
-              { label: '状态', value: <StatusTag status="enabled" />, wide: true },
-              { label: '最近登录', value: '2026-07-04 09:30', wide: true }
+              { label: '状态', value: <StatusTag status="enabled" />, wide: true }
             ]
           }}
           statusAction={<AdminButton block type="primary">状态变更</AdminButton>}
@@ -67,7 +65,8 @@ export function DetailTemplateDemo() {
               { label: '创建人', value: '系统管理员' },
               { label: '创建时间', value: '2026-06-30 10:12', wide: true },
               { label: '更新人', value: '业务管理员' },
-              { label: '更新时间', value: '2026-07-04 09:00', wide: true }
+              { label: '更新时间', value: '2026-07-04 09:00', wide: true },
+              { label: '最近登录', value: '2026-07-04 09:30', wide: true }
             ]
           }}
         >

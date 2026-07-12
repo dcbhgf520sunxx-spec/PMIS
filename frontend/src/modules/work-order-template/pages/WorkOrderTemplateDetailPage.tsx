@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { message, Space } from 'antd';
+import { message } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   AdminButton,
-  AdminText,
   DeleteConfirmAction,
   DetailMetaList,
   HistoryTimelineSection,
@@ -44,14 +43,7 @@ export function WorkOrderTemplateDetailPage() {
     <TemplateDetailPage
       title="工单详情样板"
       onBack={() => navigate('/samples/work-order')}
-      titleTags={(
-        <Space size={8} className="admin-template-detail-page__title-extra">
-          <span className="admin-template-detail-page__code">{detail.code}</span>
-          {renderWorkOrderStatus(detail.status)}
-          {renderUrgency(detail.urgency)}
-          {detail.status < 2 ? renderOverdue(detail.isOverdue) : null}
-        </Space>
-      )}
+      titleCode={detail.code}
       actions={
         <>
           <AdminButton type="primary" onClick={() => navigate(`/samples/work-order/${detail.id}/edit`)}>编辑</AdminButton>
@@ -70,22 +62,11 @@ export function WorkOrderTemplateDetailPage() {
         </>
       }
       statusSection={{
-        children: (
-          <div className="work-order-detail-page__status-card">
-            <div className="work-order-detail-page__status-row">
-              <span>状态</span>
-              {renderWorkOrderStatus(detail.status)}
-            </div>
-            <div className="work-order-detail-page__status-row">
-              <span>紧急程度</span>
-              {renderUrgency(detail.urgency)}
-            </div>
-            <div className="work-order-detail-page__status-row">
-              <span>逾期</span>
-              {detail.status < 2 ? renderOverdue(detail.isOverdue) : <AdminText type="secondary">-</AdminText>}
-            </div>
-          </div>
-        )
+        items: [
+          { label: '状态', value: renderWorkOrderStatus(detail.status) },
+          { label: '紧急程度', value: renderUrgency(detail.urgency) },
+          { label: '逾期', value: detail.status < 2 ? renderOverdue(detail.isOverdue) : '-' }
+        ]
       }}
       statusAction={(
         <WorkOrderStatusChangeAction

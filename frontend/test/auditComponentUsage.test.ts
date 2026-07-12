@@ -323,13 +323,28 @@ test('组件审计阻断列表数据视图不启用统计', () => {
   assert.match(result.stdout, /列表页.*showCounts/);
 });
 
-test('组件审计阻断有状态详情缺少标题标签和状态操作', () => {
+test('组件审计阻断有状态详情缺少状态操作', () => {
   const result = runStrictAudit(
     'export function CustomerDetailPage() { return <TemplateDetailPage statusSection={{ items: [] }}><div /></TemplateDetailPage>; }'
   );
   assert.equal(result.status, 1);
-  assert.match(result.stdout, /titleTags/);
   assert.match(result.stdout, /statusAction/);
+});
+
+test('组件审计阻断业务页手工维护标题状态标签', () => {
+  const result = runStrictAudit(
+    'export function CustomerDetailPage() { return <TemplateDetailPage titleTags={<StatusTag />} statusSection={{ items: [] }} statusAction={<StatusConfirmAction />} />; }'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /statusSection\.items.*自动生成/);
+});
+
+test('组件审计阻断当前状态区使用自定义 children', () => {
+  const result = runStrictAudit(
+    'export function CustomerDetailPage() { return <TemplateDetailPage statusSection={{ children: <div>状态</div> }} statusAction={<StatusConfirmAction />} />; }'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /当前状态.*items/);
 });
 
 test('组件审计阻断详情右上角放置状态操作', () => {
@@ -382,14 +397,14 @@ test('组件审计阻断业务页面直接使用状态弹窗或旧状态动作',
 
 test('组件审计允许完整的通用详情语义结构', () => {
   const result = runStrictAudit(
-    'export function CustomerDetailPage() { return <TemplateDetailPage title="客户详情" titleTags={<StatusTag status="enabled" />} actions={<AdminButton>编辑</AdminButton>} statusSection={{ items: [{ label: "状态", value: "启用" }] }} statusAction={<StatusConfirmAction action="disable">停用</StatusConfirmAction>}><div /></TemplateDetailPage>; }'
+    'export function CustomerDetailPage() { return <TemplateDetailPage title="客户详情" actions={<AdminButton>编辑</AdminButton>} statusSection={{ items: [{ label: "状态", value: <StatusTag status="enabled" /> }] }} statusAction={<StatusConfirmAction action="disable">停用</StatusConfirmAction>}><div /></TemplateDetailPage>; }'
   );
   assert.equal(result.status, 0, result.stdout);
 });
 
 test('组件审计阻断普通内容冒充详情状态语义', () => {
   const result = runStrictAudit(
-    'export function CustomerDetailPage() { return <TemplateDetailPage statusSection={{ items: [] }} titleTags={<span>启用</span>} statusAction={<AdminButton>状态</AdminButton>} />; }'
+    'export function CustomerDetailPage() { return <TemplateDetailPage statusSection={{ items: [{ label: "状态", value: <span>启用</span> }] }} statusAction={<AdminButton>状态</AdminButton>} />; }'
   );
   assert.equal(result.status, 1);
   assert.match(result.stdout, /StatusTag/);

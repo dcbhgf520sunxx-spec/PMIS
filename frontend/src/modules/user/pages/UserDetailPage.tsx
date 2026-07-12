@@ -45,7 +45,6 @@ export function UserDetailPage() {
       notFound={notFound}
       onRetry={() => setReloadRevision((value) => value + 1)}
       onBack={() => navigate('/users')}
-      titleTags={user ? <StatusTag status={user.status} /> : null}
       actions={
         user ? (
           <PermissionButton type="primary" permission="user" onClick={() => navigate(`/users/${user.id}/edit`)}>

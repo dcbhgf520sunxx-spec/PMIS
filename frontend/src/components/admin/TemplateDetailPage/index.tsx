@@ -10,6 +10,7 @@ import { HistoryTimeline, type HistoryTimelineItem } from '../HistoryTimeline';
 import { AdminTextAction } from '../AdminTextAction';
 import { PageShell } from '../PageShell';
 import { SectionTitle } from '../SectionTitle';
+import { visibleStatusTitleItems } from './statusTitleItems';
 import './index.css';
 
 type TemplateDetailSideSection = {
@@ -17,6 +18,11 @@ type TemplateDetailSideSection = {
   items?: DetailMetaItem[];
   columns?: 2 | 3 | 4;
   children?: ReactNode;
+};
+
+type TemplateDetailStatusSection = {
+  title?: string;
+  items: DetailMetaItem[];
 };
 
 type TemplateDetailPageProps = {
@@ -27,10 +33,10 @@ type TemplateDetailPageProps = {
   onRetry?: () => void;
   onBack?: () => void;
   backText?: string;
-  titleTags?: ReactNode;
+  titleCode?: ReactNode;
   titleCenter?: ReactNode;
   actions?: ReactNode;
-  statusSection?: TemplateDetailSideSection | null;
+  statusSection?: TemplateDetailStatusSection | null;
   statusAction?: ReactNode;
   documentSection?: TemplateDetailSideSection | null;
   aside?: ReactNode;
@@ -75,7 +81,7 @@ export function TemplateDetailPage({
   onRetry,
   onBack,
   backText = '返回列表',
-  titleTags,
+  titleCode,
   titleCenter,
   actions,
   statusSection,
@@ -95,7 +101,7 @@ export function TemplateDetailPage({
   const isUnavailable = Boolean(error) || Boolean(notFound);
   const standardAside = statusSection || documentSection ? (
     <>
-      {statusSection ? <TemplateDetailSideSection section={statusSection} defaultTitle="当前状态" action={statusAction} /> : null}
+      {statusSection ? <TemplateDetailStatusSection section={statusSection} action={statusAction} /> : null}
       {documentSection ? <TemplateDetailSideSection section={documentSection} defaultTitle="单据信息" /> : null}
       {aside}
     </>
@@ -105,6 +111,13 @@ export function TemplateDetailPage({
       {onBack ? <AdminButton onClick={onBack}>{backText}</AdminButton> : null}
       {!isUnavailable ? actions : null}
     </ActionBar>
+  ) : null;
+  const visibleTitleStatusItems = visibleStatusTitleItems(statusSection?.items || []);
+  const resolvedTitleTags = titleCode || visibleTitleStatusItems.length ? (
+    <div className="admin-template-detail-page__title-extra">
+      {titleCode ? <span className="admin-template-detail-page__code">{titleCode}</span> : null}
+      {visibleTitleStatusItems.map((item) => <Fragment key={item.label}>{item.value}</Fragment>)}
+    </div>
   ) : null;
 
   useEffect(() => {
@@ -161,7 +174,7 @@ export function TemplateDetailPage({
   };
 
   return (
-    <PageShell title={title} compact titleExtra={titleTags} titleCenter={titleCenter} actions={headerActions} loading={loading}>
+    <PageShell title={title} compact titleExtra={resolvedTitleTags} titleCenter={titleCenter} actions={headerActions} loading={loading}>
       {isUnavailable ? (
         <div className="admin-template-detail-page__state">
           <AdminEmptyState description={notFound ? '记录不存在或已被删除' : error}>
@@ -236,6 +249,28 @@ export function HistoryTimelineSection({ items, sectionKey }: { items: HistoryTi
       )}
     >
       <HistoryTimeline items={items} expandedKeys={expandedKeys} onExpandedKeysChange={setExpandedKeys} showBulkToggle={false} />
+    </TemplateDetailSection>
+  );
+}
+
+function TemplateDetailStatusSection({
+  section,
+  action
+}: {
+  section: TemplateDetailStatusSection;
+  action?: ReactNode;
+}) {
+  return (
+    <TemplateDetailSection title={section.title || '当前状态'}>
+      <div className="admin-template-detail-page__status-list">
+        {section.items.map((item) => (
+          <div className="admin-template-detail-page__status-item" key={item.label}>
+            <span>{item.label}</span>
+            <div>{item.value}</div>
+          </div>
+        ))}
+      </div>
+      {action ? <div className="admin-template-detail-page__status-action">{action}</div> : null}
     </TemplateDetailSection>
   );
 }

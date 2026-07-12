@@ -97,11 +97,42 @@
 .admin-template-detail-page__title-extra {
   position: relative;
   top: -1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .admin-template-detail-page__code {
   color: var(--app-muted);
   font-size: 12px;
+}
+
+.admin-template-detail-page__status-list {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  background: var(--app-border);
+}
+
+.admin-template-detail-page__status-item {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  background: var(--app-surface);
+}
+
+.admin-template-detail-page__status-item > span {
+  color: var(--app-muted);
+  font-size: 12px;
+}
+
+.admin-template-detail-page__status-item > div {
+  min-width: 0;
 }
 
 .admin-template-detail-page__status-action {

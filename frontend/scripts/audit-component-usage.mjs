@@ -273,21 +273,22 @@ function collectSemanticViolations(files) {
           const statusSection = attribute(node, 'statusSection');
           const titleTags = attribute(node, 'titleTags');
           const statusAction = attribute(node, 'statusAction');
-          const titleTagsSource = attributeText(node, 'titleTags', sourceFile);
+          const statusSectionSource = attributeText(node, 'statusSection', sourceFile);
           const statusActionSource = attributeText(node, 'statusAction', sourceFile);
-          const hasStatusTag = /(?:\w*StatusTag|render\w*Status)\b/.test(titleTagsSource);
+          const hasStatusTag = /(?:\w*(?:Status|Urgency|Overdue)Tag|render\w*(?:Status|Urgency|Overdue))\b/.test(statusSectionSource);
           const hasStatusAction = /\w*Status(?:Confirm|Change)Action\b/.test(statusActionSource);
 
-          if ((titleTags && hasStatusTag) || statusAction) {
-            if (!statusSection) {
-              violations.push(finding(file, sourceFile, node, '详情包含状态标签或状态动作时必须声明 statusSection'));
-            }
+          if (titleTags) {
+            violations.push(finding(file, sourceFile, node, '标题状态标签必须由 statusSection.items 自动生成，业务页不得手工维护 titleTags'));
           }
-          if (statusSection && !titleTags) {
-            violations.push(finding(file, sourceFile, node, '有状态详情必须通过 TemplateDetailPage.titleTags 展示标题状态标签'));
+          if (statusAction && !statusSection) {
+            violations.push(finding(file, sourceFile, node, '详情包含状态动作时必须声明 statusSection'));
           }
-          if (statusSection && titleTags && !hasStatusTag) {
-            violations.push(finding(file, sourceFile, node, '有状态详情的 titleTags 必须包含 StatusTag 或统一状态标签封装'));
+          if (statusSection && (!/\bitems\s*:/.test(statusSectionSource) || /\bchildren\s*:/.test(statusSectionSource))) {
+            violations.push(finding(file, sourceFile, node, '当前状态必须通过 statusSection.items 声明，由底座统一右侧样式和标题标签'));
+          }
+          if (statusSection && /\bitems\s*:/.test(statusSectionSource) && !hasStatusTag) {
+            violations.push(finding(file, sourceFile, node, 'statusSection.items 必须使用 StatusTag 或统一状态标签封装，确保标题展示为标签'));
           }
           if (statusSection && !statusAction) {
             violations.push(finding(file, sourceFile, node, '有状态详情必须通过 TemplateDetailPage.statusAction 承接状态操作'));

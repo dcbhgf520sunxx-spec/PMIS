@@ -107,7 +107,7 @@ API 接入保持统一：
 必须保持以下规则：
 
 - 详情页标题、操作区、主区/侧区和加载态由模板承接。
-- 有状态详情必须通过 `titleTags` 在标题后展示状态等标签，并通过 `statusAction` 把状态操作紧跟在当前状态区之后；右上角 `actions` 只放编辑等页面级操作。
+- 有状态详情必须通过 `statusSection.items` 声明全部状态类标签，模板自动把同一组非空标签按相同顺序展示在标题后和右侧当前状态区；空值、空字符串和 `-` 只保留在右侧，不在标题后展示。业务页不得另传 `titleTags`，不得通过 `statusSection.children` 自定义第二套状态样式。单据编号通过 `titleCode` 单独传入。状态操作通过 `statusAction` 紧跟在当前状态区之后；右上角 `actions` 只放编辑等页面级操作。
 - 状态变更统一使用 `StatusChangeAction` 或以它为底层的业务封装。业务状态组件必须直接渲染公共 `StatusChangeAction`，仅使用 `*StatusChangeAction` 名称但内部自行拼按钮或弹窗仍属违规。目标状态语义固定为：普通操作蓝色、正向操作绿色、危险或反向操作红色；业务页面不得直接使用 `StatusFlowModal`，不得创建自维护开关和目标状态的重复弹窗。
 - 返回列表通过 `TemplateDetailPage.onBack` 传入，业务页不重复创建“返回列表”按钮和操作栏外壳。
 - 接口失败或记录不存在时，通过模板的 `error`、`notFound`、`onRetry` 展示统一状态，不能无限显示加载中。
