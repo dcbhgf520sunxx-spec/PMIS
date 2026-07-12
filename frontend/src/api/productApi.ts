@@ -9,7 +9,8 @@ const pageContract = objectContract<{list:Row[];total:number;page:number;pageSiz
 const optionContract = objectContract<{id:number;name:string;status:number}>(['id','name','status']);
 const optionsContract = arrayContract(optionContract);
 const idContract = objectContract<{id:number}>(['id']);
-const historyItemContract = objectContract<{id:number;action:string;field_name?:string;old_value?:string;new_value?:string;created_at:string;operator:string}>(['id','action','created_at','operator']);
+export type ProductHistoryItem = {id:number;action:string;created_at:string;operator:string;changes:Array<{field_name?:string;old_value?:string;new_value?:string}>};
+const historyItemContract = objectContract<ProductHistoryItem>(['id','action','created_at','operator','changes']);
 const historyContract = arrayContract(historyItemContract);
 const dt=(v?:string)=>String(v||'').slice(0,19).replace('T',' ');
 const map=(r:Row):ProductRecord=>({id:String(r.id),name:r.name,description:r.description||'',ownerId:String(r.owner_id),ownerName:r.owner_name||'-',status:Number(r.status) as ProductStatus,creatorName:r.creator_name||'-',updaterName:r.updater_name||'-',createdAt:dt(r.created_at),updatedAt:dt(r.updated_at)});
@@ -21,4 +22,4 @@ export async function createProduct(v:ProductFormValues){return unwrap<{id:numbe
 export async function updateProduct(id:string,v:ProductFormValues){return unwrap<null>(request.put(`/products/${id}`,payload(v)))}
 export async function updateProductStatus(id:string,status:ProductStatus){return unwrap<null>(request.put(`/products/${id}/status`,{status}))}
 export async function deleteProduct(id:string){return unwrap<null>(request.delete(`/products/${id}`))}
-export async function getProductHistory(id:string){return unwrap<Array<{id:number;action:string;field_name?:string;old_value?:string;new_value?:string;created_at:string;operator:string}>>(request.get(`/products/${id}/history`),historyContract)}
+export async function getProductHistory(id:string){return unwrap<ProductHistoryItem[]>(request.get(`/products/${id}/history`),historyContract)}

@@ -8,7 +8,8 @@ type ProjectPage={list:Row[];total:number;page:number;pageSize:number;viewCounts
 const viewCountsContract=objectContract<ProjectPage['viewCounts']>(['all','mine','joined']);
 const pageContract=objectContract<ProjectPage>(['list','total','page','pageSize','viewCounts'],{list:arrayContract(rowContract),viewCounts:viewCountsContract});
 const idContract=objectContract<{id:number}>(['id']);
-const historyItemContract=objectContract<{id:number;action:string;field_name?:string;old_value?:string;new_value?:string;created_at:string;operator:string}>(['id','action','created_at','operator']);
+export type ProjectHistoryItem={id:number;action:string;created_at:string;operator:string;changes:Array<{field_name?:string;old_value?:string;new_value?:string}>};
+const historyItemContract=objectContract<ProjectHistoryItem>(['id','action','created_at','operator','changes']);
 const historyContract=arrayContract(historyItemContract);
 const date=(v?:string)=>String(v||'').slice(0,10),dt=(v?:string)=>String(v||'').slice(0,19).replace('T',' ');
 const map=(r:Row):ProjectRecord=>({id:String(r.id),name:r.name,description:r.description||'',productId:String(r.product_id),productName:r.product_name,ownerId:String(r.owner_id),ownerName:r.owner_name,members:(r.members||[]).map(m=>({id:String(m.id),name:m.name})),memberIds:(r.members||[]).map(m=>String(m.id)),status:Number(r.status) as ProjectStatus,previousStatus:r.previous_status===undefined?undefined:Number(r.previous_status) as ProjectStatus,isOverdue:Boolean(Number(r.is_overdue)),startDate:date(r.start_date),expectedEndDate:date(r.expected_end_date),actualEndDate:date(r.actual_end_date),suspendDate:date(r.suspend_date),progressText:r.progress_text||'',riskText:r.risk_text||'',creatorName:r.creator_name||'-',updaterName:r.updater_name||'-',createdAt:dt(r.created_at),updatedAt:dt(r.updated_at)});
@@ -19,4 +20,4 @@ export async function createProject(v:ProjectFormValues){return unwrap<{id:numbe
 export async function updateProject(id:string,v:ProjectFormValues){return unwrap<null>(request.put(`/projects/${id}`,payload(v)))}
 export async function updateProjectStatus(id:string,status:ProjectStatus,extra:Record<string,unknown>={}){return unwrap<null>(request.put(`/projects/${id}/status`,{status,...extra}))}
 export async function deleteProject(id:string){return unwrap<null>(request.delete(`/projects/${id}`))}
-export async function getProjectHistory(id:string){return unwrap<Array<{id:number;action:string;field_name?:string;old_value?:string;new_value?:string;created_at:string;operator:string}>>(request.get(`/projects/${id}/history`),historyContract)}
+export async function getProjectHistory(id:string){return unwrap<ProjectHistoryItem[]>(request.get(`/projects/${id}/history`),historyContract)}

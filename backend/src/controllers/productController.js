@@ -2,6 +2,9 @@ const db = require('../db')
 const { parsePagination, getSortDirection } = require('../utils/pagination')
 const { ok, fail } = require('../utils/response')
 const { validateBody } = require('../utils/validation')
+const { groupOperationLogs } = require('../utils/operationHistory')
+
+const DETAIL_FIELD_ORDER = ['name', 'owner_id', 'description', 'status']
 
 const schema = {
   name: { required: true, label: '产品名称' },
@@ -86,10 +89,12 @@ exports.update = async (req, res) => {
     const operatorId = req.user.id
     const status = req.body.status === undefined ? old.status : Number(req.body.status)
     await db.prepare('UPDATE pms_product SET name = ?, description = ?, owner_id = ?, status = ?, updater_id = ?, updated_at = NOW() WHERE id = ?').run(req.body.name.trim(), req.body.description || null, req.body.owner_id, status, operatorId, req.params.id)
+    const changes = []
     for (const field of ['name', 'description', 'owner_id', 'status']) {
       const next = field === 'description' ? req.body.description || null : field === 'status' ? status : req.body[field]
-      if (String(old[field] ?? '') !== String(next ?? '')) await db.writeLog(operatorId, '编辑', '产品', req.params.id, field, old[field], next, req.ip, req.body.name.trim())
+      if (String(old[field] ?? '') !== String(next ?? '')) changes.push({ field, oldVal: old[field], newVal: next })
     }
+    if (changes.length) await db.writeLogs(operatorId, '编辑', '产品', req.params.id, changes, req.ip, req.body.name.trim())
     ok(res, null)
   } catch (error) { console.error(error); fail(res, 500, 500, '更新失败') }
 }
@@ -119,6 +124,9 @@ exports.remove = async (req, res) => {
 }
 
 exports.history = async (req, res) => {
-  try { ok(res, await db.prepare("SELECT l.id, l.action, l.field_name, l.old_value, l.new_value, l.created_at, COALESCE(u.real_name, '-') operator FROM pms_op_log l LEFT JOIN pms_user u ON u.id = l.user_id WHERE l.module = '产品' AND l.target_id = ? ORDER BY l.created_at DESC").all(req.params.id)) }
+  try {
+    const logs = await db.prepare("SELECT l.id, l.operation_id, l.action, l.field_name, l.old_value, l.new_value, l.created_at, COALESCE(u.real_name, '-') operator FROM pms_op_log l LEFT JOIN pms_user u ON u.id = l.user_id WHERE l.module = '产品' AND l.target_id = ? ORDER BY l.created_at DESC").all(req.params.id)
+    ok(res, groupOperationLogs(logs, DETAIL_FIELD_ORDER).map((group) => ({ id: group.id, action: group.action, created_at: group.created_at, operator: group.operator, changes: group.changes.map(({ field_name, old_value, new_value }) => ({ field_name, old_value, new_value })) })))
+  }
   catch (error) { console.error(error); fail(res, 500, 500, '查询失败') }
 }

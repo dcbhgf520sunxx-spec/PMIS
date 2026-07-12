@@ -3,6 +3,9 @@ const { parsePagination, getSortDirection } = require('../utils/pagination')
 const { ok, fail } = require('../utils/response')
 const { validateBody } = require('../utils/validation')
 const { normalizeMemberIds, validateProjectStatusChange, calculateProjectOverdue, allowedProjectStatuses } = require('../services/productProjectRules')
+const { groupOperationLogs } = require('../utils/operationHistory')
+
+const DETAIL_FIELD_ORDER = ['name', 'product_id', 'owner_id', 'description', 'start_date', 'expected_end_date', 'progress_text', 'risk_text', 'status', 'is_overdue', 'actual_end_date', 'suspend_date']
 
 const schema = {
   name: { required: true, label: '项目名称' },
@@ -132,10 +135,12 @@ exports.update = async (req, res) => {
         .run(req.body.name.trim(), req.body.description || null, req.body.product_id, req.body.owner_id, overdue, req.body.start_date || null, req.body.expected_end_date, req.body.progress_text || null, req.body.risk_text || null, operatorId, req.params.id)
       await replaceMembers(tx, req.params.id, req.body.member_ids)
     })
+    const changes = []
     for (const field of ['name', 'description', 'product_id', 'owner_id', 'start_date', 'expected_end_date', 'progress_text', 'risk_text', 'is_overdue']) {
       const next = field === 'is_overdue' ? overdue : req.body[field] || null
-      if (String(old[field] ?? '') !== String(next ?? '')) await db.writeLog(operatorId, '编辑', '项目', req.params.id, field, old[field], next, req.ip, req.body.name.trim())
+      if (String(old[field] ?? '') !== String(next ?? '')) changes.push({ field, oldVal: old[field], newVal: next })
     }
+    if (changes.length) await db.writeLogs(operatorId, '编辑', '项目', req.params.id, changes, req.ip, req.body.name.trim())
     ok(res, null)
   } catch (error) { console.error(error); fail(res, 500, 500, '更新失败') }
 }
@@ -158,9 +163,10 @@ exports.toggleStatus = async (req, res) => {
     const suspendDate = status === 3 ? req.body.suspend_date : null
     const overdue = calculateProjectOverdue(old.expected_end_date, status)
     await db.prepare('UPDATE pms_project SET status = ?, is_overdue = ?, actual_end_date = ?, suspend_date = ?, updater_id = ?, updated_at = NOW() WHERE id = ?').run(status, overdue, actualEndDate, suspendDate, req.user.id, req.params.id)
-    await db.writeLog(req.user.id, '状态变更', '项目', req.params.id, 'status', old.status, status, req.ip, old.name)
-    if (String(old.actual_end_date || '') !== String(actualEndDate || '')) await db.writeLog(req.user.id, '状态变更', '项目', req.params.id, 'actual_end_date', old.actual_end_date, actualEndDate, req.ip, old.name)
-    if (String(old.suspend_date || '') !== String(suspendDate || '')) await db.writeLog(req.user.id, '状态变更', '项目', req.params.id, 'suspend_date', old.suspend_date, suspendDate, req.ip, old.name)
+    const changes = [{ field: 'status', oldVal: old.status, newVal: status }]
+    if (String(old.actual_end_date || '') !== String(actualEndDate || '')) changes.push({ field: 'actual_end_date', oldVal: old.actual_end_date, newVal: actualEndDate })
+    if (String(old.suspend_date || '') !== String(suspendDate || '')) changes.push({ field: 'suspend_date', oldVal: old.suspend_date, newVal: suspendDate })
+    await db.writeLogs(req.user.id, '状态变更', '项目', req.params.id, changes, req.ip, old.name)
     ok(res, null)
   } catch (error) { console.error(error); fail(res, 500, 500, '操作失败') }
 }
@@ -176,6 +182,9 @@ exports.remove = async (req, res) => {
 }
 
 exports.history = async (req, res) => {
-  try { ok(res, await db.prepare("SELECT l.id, l.action, l.field_name, l.old_value, l.new_value, l.created_at, COALESCE(u.real_name, '-') operator FROM pms_op_log l LEFT JOIN pms_user u ON u.id = l.user_id WHERE l.module = '项目' AND l.target_id = ? ORDER BY l.created_at DESC").all(req.params.id)) }
+  try {
+    const logs = await db.prepare("SELECT l.id, l.operation_id, l.action, l.field_name, l.old_value, l.new_value, l.created_at, COALESCE(u.real_name, '-') operator FROM pms_op_log l LEFT JOIN pms_user u ON u.id = l.user_id WHERE l.module = '项目' AND l.target_id = ? ORDER BY l.created_at DESC").all(req.params.id)
+    ok(res, groupOperationLogs(logs, DETAIL_FIELD_ORDER).map((group) => ({ id: group.id, action: group.action, created_at: group.created_at, operator: group.operator, changes: group.changes.map(({ field_name, old_value, new_value }) => ({ field_name, old_value, new_value })) })))
+  }
   catch (error) { console.error(error); fail(res, 500, 500, '查询失败') }
 }

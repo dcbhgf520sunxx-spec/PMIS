@@ -29,6 +29,12 @@ test('统一门禁包含新增的语义约束测试', () => {
   assert.match(gate, /audit:api-contracts/);
 });
 
+test('AI 交付链路要求功能能力和防绕过门禁一次性交付', () => {
+  const flow = read('../../docs/ai-delivery-flow.md');
+  assert.match(flow, /能力实现和防绕过门禁必须一次性交付/);
+  assert.match(flow, /业务接入层/);
+});
+
 test('AI 链路要求完整地址菜单权限和状态组件溯源', () => {
   const rules = read('../../docs/ai-development-rules.md');
   const agents = read('../../AGENTS.md');

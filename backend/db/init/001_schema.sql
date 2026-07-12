@@ -162,6 +162,7 @@ CREATE TABLE IF NOT EXISTS pms_op_log (
   module VARCHAR(50) NOT NULL,
   target_id BIGINT,
   target_name VARCHAR(200),
+  operation_id UUID,
   field_name VARCHAR(100),
   old_value TEXT,
   new_value TEXT,
@@ -228,6 +229,7 @@ CREATE INDEX IF NOT EXISTS idx_project_member_user ON pms_project_member(user_id
 CREATE UNIQUE INDEX IF NOT EXISTS uk_work_order_problem_desc_active ON pms_work_order(md5(problem_desc)) WHERE is_deleted = 0;
 CREATE INDEX IF NOT EXISTS idx_archive_type ON pms_archive(archive_type_id, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_op_log_target ON pms_op_log(module, target_id);
+CREATE INDEX IF NOT EXISTS idx_op_log_operation ON pms_op_log(operation_id);
 CREATE INDEX IF NOT EXISTS idx_op_log_module_created_at ON pms_op_log(module, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_access_log_created_at ON pms_access_log(created_at);
 CREATE INDEX IF NOT EXISTS idx_access_log_session ON pms_access_log(session_id);

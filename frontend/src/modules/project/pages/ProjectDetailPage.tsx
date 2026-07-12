@@ -17,7 +17,7 @@ export function ProjectDetailPage() {
     setLoading(true);
     Promise.all([
       getProject(params.id).then(setRow),
-      getProjectHistory(params.id).then((items) => setHistory(items.map((item) => ({ id: String(item.id), operator: item.operator, action: item.action, time: String(item.created_at).slice(0, 19).replace('T', ' '), changes: item.field_name ? [{ field: item.field_name, before: item.old_value, after: item.new_value }] : undefined }))))
+      getProjectHistory(params.id).then((items) => setHistory(items.map((item) => ({ id: String(item.id), operator: item.operator, action: item.action, time: String(item.created_at).slice(0, 19).replace('T', ' '), changes: item.changes.map((change) => ({ field: change.field_name || '-', before: change.old_value, after: change.new_value })) }))))
     ]).catch((loadError) => { const text = loadError instanceof Error ? loadError.message : '加载失败'; if (text.includes('不存在')) setNotFound(true); else setError(text); }).finally(() => setLoading(false));
   };
   useEffect(load, [params.id, revision]);

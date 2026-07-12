@@ -22,7 +22,7 @@ export function ProductDetailPage() {
       getProductHistory(params.id).then((items) => setHistory(items.map((item) => ({
         id: String(item.id), operator: item.operator, action: item.action,
         time: String(item.created_at).slice(0, 19).replace('T', ' '),
-        changes: item.field_name ? [{ field: item.field_name, before: item.old_value, after: item.new_value }] : undefined
+        changes: item.changes.map((change) => ({ field: change.field_name || '-', before: change.old_value, after: change.new_value }))
       }))))
     ]).catch((loadError) => {
       const text = loadError instanceof Error ? loadError.message : '加载失败';
