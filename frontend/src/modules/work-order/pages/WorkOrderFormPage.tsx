@@ -111,6 +111,7 @@ export function WorkOrderFormPage({ mode }: { mode: 'create' | 'edit' | 'copy' }
         </Space>
       ) : null}
       onCancel={() => navigate('/work-orders')}
+      fieldNameMap={{ problem_desc: 'problemDesc' }}
       onSubmit={async (values) => {
         const payload = toPayload(values);
         if (mode === 'edit' && params.id) {
@@ -121,17 +122,6 @@ export function WorkOrderFormPage({ mode }: { mode: 'create' | 'edit' | 'copy' }
           message.success('工单已创建');
         }
         navigate('/work-orders');
-      }}
-      onSubmitError={(error, form) => {
-        const errorMessage = error instanceof Error ? error.message : '';
-        if (!errorMessage.includes('问题描述已存在')) return false;
-        form.setFields([
-          {
-            name: 'problemDesc',
-            errors: [errorMessage]
-          }
-        ]);
-        return true;
       }}
     >
       <TemplateFormSection title="基本信息">

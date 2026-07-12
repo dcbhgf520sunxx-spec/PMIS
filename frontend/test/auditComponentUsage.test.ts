@@ -275,7 +275,7 @@ test('组件审计阻断列表数据视图 Tab 缺少统计', () => {
         { title: '客户名称', dataIndex: 'name', width: 180, fixed: 'left', sorter: true }
       ];
       return <TemplateListPage
-        titleExtra={<ViewTabs value="all" onChange={() => undefined} items={[
+        titleExtra={<ViewTabs showCounts value="all" onChange={() => undefined} items={[
           { label: '全部客户', value: 'all' },
           { label: '我负责的', value: 'mine' }
         ]} />}
@@ -298,6 +298,26 @@ test('组件审计允许非列表场景的 ViewTabs 不带统计', () => {
       ]} />;
     }`,
     'CustomerTabsPanel.tsx'
+  );
+  assert.equal(result.status, 0, result.stdout);
+});
+
+test('组件审计允许列表数据视图不启用统计', () => {
+  const result = runStrictAudit(
+    `export function CustomerListPage() {
+      const columns = [
+        { title: '客户名称', dataIndex: 'name', width: 180, fixed: 'left', sorter: true }
+      ];
+      return <TemplateListPage
+        titleExtra={<ViewTabs value="all" onChange={() => undefined} items={[
+          { label: '全部客户', value: 'all' },
+          { label: '我负责的', value: 'mine' }
+        ]} />}
+        table={{ columns, dataSource: [], pagination: false, scroll: { x: 400 } }}
+        pagination={{}}
+      />;
+    }`,
+    'CustomerListPage.tsx'
   );
   assert.equal(result.status, 0, result.stdout);
 });

@@ -69,7 +69,9 @@ export function WorkOrderListPage() {
       urgency: appliedFilters.urgency,
       status: appliedFilters.status,
       isOverdue: appliedFilters.isOverdue,
-      followerId: viewKey === 'mine' ? currentFollowerId : appliedFilters.followerId || undefined,
+      filterFollowerId: appliedFilters.followerId || undefined,
+      viewKey,
+      currentUserId: currentFollowerId || undefined,
       submitterName: appliedFilters.submitterName || undefined,
       submitTimeFrom: toDateText(submitTimeRange[0]),
       submitTimeTo: toDateText(submitTimeRange[1]),
@@ -140,6 +142,7 @@ export function WorkOrderListPage() {
         title="运维工单"
         titleExtra={
           <ViewTabs<WorkOrderViewKey>
+            showCounts
             value={viewKey}
             onChange={handleViewChange}
             items={[

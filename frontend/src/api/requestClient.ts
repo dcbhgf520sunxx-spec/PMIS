@@ -2,6 +2,7 @@ import axios from 'axios';
 import type { ApiResponse } from '../types/api';
 import { useAuthStore } from '../stores/authStore';
 import type { ResponseContract } from './responseContract';
+import { createApiError } from './apiError';
 
 export const request = axios.create({
   baseURL: '/api',
@@ -20,13 +21,12 @@ request.interceptors.response.use(
   (response) => {
     const payload = response.data as ApiResponse<unknown>;
     if (payload && typeof payload.code === 'number' && payload.code !== 0) {
-      return Promise.reject(new Error(payload.message || '请求失败'));
+      return Promise.reject(createApiError(payload));
     }
     return response;
   },
   (error) => {
-    const message = error?.response?.data?.message || error?.message || '请求失败';
-    return Promise.reject(new Error(message));
+    return Promise.reject(createApiError(error?.response?.data, error?.message || '请求失败'));
   }
 );
 

@@ -225,6 +225,7 @@ CREATE INDEX IF NOT EXISTS idx_project_product_status ON pms_project(product_id,
 CREATE INDEX IF NOT EXISTS idx_project_owner_status ON pms_project(owner_id, status, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_project_expected_end ON pms_project(expected_end_date, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_project_member_user ON pms_project_member(user_id, project_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_work_order_problem_desc_active ON pms_work_order(md5(problem_desc)) WHERE is_deleted = 0;
 CREATE INDEX IF NOT EXISTS idx_archive_type ON pms_archive(archive_type_id, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_op_log_target ON pms_op_log(module, target_id);
 CREATE INDEX IF NOT EXISTS idx_op_log_module_created_at ON pms_op_log(module, created_at DESC);

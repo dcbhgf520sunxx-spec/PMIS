@@ -2,8 +2,9 @@ const db = require('../db')
 const { calcOverdue } = require('../utils/calcOverdue')
 const { refreshOverdueStatus } = require('../services/overdueCron')
 const { getSortDirection, parsePagination } = require('../utils/pagination')
-const { fail, ok } = require('../utils/response')
+const { fail, failField, ok } = require('../utils/response')
 const { validateBody } = require('../utils/validation')
+const { buildViewQuery, calculateViewCounts } = require('../utils/viewCounts')
 
 function requireValidBody(res, body, schema) {
   const result = validateBody(body, schema)
@@ -32,6 +33,10 @@ const workOrderStatusSchema = {
 const workOrderBatchAssignSchema = {
   ids: { required: true, type: 'array', label: '工单' },
   follower_id: { required: true, type: 'number', label: '跟进人' }
+}
+
+function isProblemDescriptionUniqueViolation(error) {
+  return error?.code === '23505' && error?.constraint === 'uk_work_order_problem_desc_active'
 }
 
 const WORK_ORDER_SORT_MAP = {
@@ -88,12 +93,30 @@ function buildWorkOrderCountSql(q) {
   }
 }
 
+function buildWorkOrderViewContext(q) {
+  const filters = { ...q, follower_id: q.filter_follower_id }
+  delete filters.filter_follower_id
+  delete filters.view_key
+  delete filters.current_user_id
+
+  const views = {
+    all: {},
+    mine: {
+      omitFilters: ['follower_id'],
+      scope: { follower_id: q.current_user_id }
+    }
+  }
+  const viewKey = q.view_key === 'mine' ? 'mine' : 'all'
+  return { filters, views, viewKey }
+}
+
 exports.list = async (req, res) => {
   try {
     const q = { ...req.query }
     const { page, pageSize, offset } = parsePagination(q)
     let sql = withJoins('COUNT(*) OVER() as total, w.id, w.system_id, w.problem_type, w.problem_desc, w.result_desc, w.follower_id, w.urgency, w.status, w.is_overdue, w.expected_resolve_date, w.resolve_date, w.close_date, w.submitter_name, w.submitter_dept, w.submit_time, w.created_at')
-    const { sql: whereSql, params } = buildWhereClause(q)
+    const { filters, views, viewKey } = buildWorkOrderViewContext(q)
+    const { sql: whereSql, params } = buildWhereClause(buildViewQuery(filters, views[viewKey]))
     sql += whereSql
 
     // 支持排序参数（与 neighbors 逻辑一致）
@@ -111,17 +134,15 @@ exports.list = async (req, res) => {
 
     const rows = await db.prepare(sql).all(...params)
     const currentTotal = Number(rows[0]?.total || 0)
-    const viewCounts = {}
-    if (q.current_user_id) {
-      const { sql: allCountSql, params: allCountParams } = buildWorkOrderCountSql({ ...q, follower_id: undefined })
-      const { sql: mineCountSql, params: mineCountParams } = buildWorkOrderCountSql({ ...q, follower_id: q.current_user_id })
-      const [allCount, mineCount] = await Promise.all([
-        db.prepare(allCountSql).get(...allCountParams),
-        db.prepare(mineCountSql).get(...mineCountParams)
-      ])
-      viewCounts.all = Number(allCount?.total || 0)
-      viewCounts.mine = Number(mineCount?.total || 0)
-    }
+    const viewCounts = q.current_user_id ? await calculateViewCounts({
+      filters,
+      views,
+      count: async (query) => {
+        const countQuery = buildWorkOrderCountSql(query)
+        const row = await db.prepare(countQuery.sql).get(...countQuery.params)
+        return row?.total
+      }
+    }) : undefined
     res.json({ code: 0, message: 'success', data: { list: rows, total: currentTotal, page, pageSize, viewCounts } })
   } catch (err) {
     console.error(err)
@@ -160,7 +181,7 @@ exports.create = async (req, res) => {
     // Validate problem_desc uniqueness
     if (problem_desc) {
       const exists = await db.prepare('SELECT id FROM pms_work_order WHERE problem_desc = ? AND is_deleted = 0').get(problem_desc)
-      if (exists) return fail(res, 400, 400, '问题描述已存在，请勿重复创建')
+      if (exists) return failField(res, 'problem_desc', '问题描述已存在，请勿重复创建')
     }
 
     const finalStatus = status !== undefined ? status : 0
@@ -173,6 +194,9 @@ exports.create = async (req, res) => {
     await db.writeLog(operatorId, '新增', '运维工单', result.lastInsertRowid, null, null, JSON.stringify({ system_id, problem_type, follower_id, urgency }), req.ip)
     ok(res, { id: result.lastInsertRowid })
   } catch (err) {
+    if (isProblemDescriptionUniqueViolation(err)) {
+      return failField(res, 'problem_desc', '问题描述已存在，请勿重复创建')
+    }
     console.error(err)
     fail(res, 500, 500, '创建失败')
   }
@@ -183,6 +207,11 @@ exports.update = async (req, res) => {
     if (!requireValidBody(res, req.body, workOrderFormSchema)) return
     const { system_id, problem_type, problem_desc, result_desc, follower_id, urgency, status, expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time } = req.body
     const operatorId = req.user.id
+
+    if (problem_desc) {
+      const exists = await db.prepare('SELECT id FROM pms_work_order WHERE problem_desc = ? AND is_deleted = 0 AND id <> ?').get(problem_desc, req.params.id)
+      if (exists) return failField(res, 'problem_desc', '问题描述已存在，请勿重复创建')
+    }
 
     const old = await db.prepare('SELECT system_id, problem_type, problem_desc, result_desc, follower_id, urgency, status, expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time FROM pms_work_order WHERE id = ?').get(req.params.id)
 
@@ -249,6 +278,9 @@ exports.update = async (req, res) => {
 
     ok(res, null)
   } catch (err) {
+    if (isProblemDescriptionUniqueViolation(err)) {
+      return failField(res, 'problem_desc', '问题描述已存在，请勿重复创建')
+    }
     console.error(err)
     fail(res, 500, 500, '更新失败')
   }
@@ -400,7 +432,8 @@ exports.getNeighbors = async (req, res) => {
     if (!id) return res.status(400).json({ code: 400, message: '缺少 id 参数', data: null })
 
     const q = { ...req.query }
-    const { sql: whereSql, params: whereParams } = buildWhereClause(q)
+    const { filters, views, viewKey } = buildWorkOrderViewContext(q)
+    const { sql: whereSql, params: whereParams } = buildWhereClause(buildViewQuery(filters, views[viewKey]))
 
     const current = await db.prepare('SELECT created_at, id FROM pms_work_order WHERE id = ? AND is_deleted = 0').get(id)
     if (!current) return res.json({ code: 0, data: { prevId: null, nextId: null } })

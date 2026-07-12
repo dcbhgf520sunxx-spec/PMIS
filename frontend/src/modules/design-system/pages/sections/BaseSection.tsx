@@ -266,6 +266,7 @@ export function BaseSection() {
                 <h4>页面视图切换</h4>
                 <ComponentEntry name="ViewTabs" />
                 <ViewTabs
+                  showCounts
                   value={viewTab}
                   onChange={setViewTab}
                   items={[

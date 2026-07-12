@@ -14,3 +14,9 @@ test('长表单滚动回归测试进入统一门禁', () => {
   assert.match(gate, /readdirSync/);
   assert.match(gate, /frontendTests/);
 });
+
+test('表单模板自动回填结构化字段错误并滚动到首个字段', () => {
+  assert.match(source, /applyApiFieldErrors/);
+  assert.match(source, /scrollToField/);
+  assert.match(source, /fieldNameMap/);
+});

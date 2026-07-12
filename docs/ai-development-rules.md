@@ -32,6 +32,8 @@ backend/src/routes/<module>.js
 API 接入保持统一：
 
 - 前端通过 `request` 和 `unwrap` 调接口，接口返回统一为 `{ code, message, data }`。
+- 表单字段校验失败统一在响应顶层返回 `fieldErrors: Record<string, string[]>`，后端使用 `failField` 生成；数据库唯一约束冲突必须转换为同一结构，不能返回 500 或只返回一段供前端匹配的文字。
+- `TemplateFormPage` 自动把结构化字段错误回填到字段下方并滚动到第一个错误字段；前后端字段名不一致时通过 `fieldNameMap` 声明映射。业务页面不得通过 `error.message.includes(...)` 手工匹配错误文字。
 - 后端字段使用数据库命名，前端 API 层负责转成页面需要的 record。
 - 页面读取接口必须为关键返回字段传入 `objectContract` / `arrayContract` 运行时契约；写接口返回业务对象时同样必须传入运行时契约。字段名不匹配时直接报错，不能静默渲染 `undefined`。
 - 前端 `id` 统一转成字符串，后端写入时再转成数字。
@@ -66,7 +68,9 @@ API 接入保持统一：
 - 普通列表不传选择列、批量操作和已选数量，分页保持在右侧。
 - 批量列表必须显式声明 `mode="batch"`，并通过 `batch` 传入已选数量和批量操作。
 - 筛选区使用 `CompactFilterBar`，表格区和底部分页区由模板承接。
-- 列表标题区使用 `ViewTabs` 切换“全部、我负责的、我参与的”等数据范围时，每个 Tab 必须传入 `count`；服务端分页列表由接口一次返回各视图的完整结果统计（统一使用 `viewCounts`），前端不得使用当前页 `rows.length`，也不得把当前视图的 `total` 复用到其他 Tab。非列表场景使用 `ViewTabs` 时，`count` 仍为可选。
+- `ViewTabs` 统计是可选能力。需要展示统计的列表必须显式传入 `showCounts`，并为每个 Tab 传入 `count`；不传 `showCounts` 时不展示统计，也不要求接口执行额外的 `COUNT` 查询。
+- 启用统计的服务端分页列表统一返回 `viewCounts`，统计口径为“公共查询条件 + 当前 Tab 的数据范围”。查询条件和视图范围必须使用不同参数表达，不能让同一个 `owner_id`、`follower_id` 同时承担查询筛选和“我的”范围；存在冲突条件时，由视图配置通过 `omitFilters` 明确排除。后端优先复用 `calculateViewCounts` 和 `buildViewQuery`，业务层只声明各视图的范围条件。
+- 启用统计后，前端不得使用当前页 `rows.length`，不得把当前视图的 `total` 复用到其他 Tab；模块测试必须覆盖公共查询条件进入全部视图、各视图范围条件正确追加、冲突查询条件按配置排除。
 
 ### 抽屉表格
 
@@ -88,6 +92,7 @@ API 接入保持统一：
 - 表单页标题、返回、取消、提交、加载态由模板承接。
 - 点击保存和回车提交必须走 `TemplateFormPage` 的同一提交入口；业务页不得另写一套提交按钮或错误处理链路。
 - 编辑页数据加载失败或记录不存在时，通过模板的 `error`、`notFound`、`onRetry` 展示统一状态，不能留下空表单或一直加载。
+- 唯一性等服务端字段校验通过结构化 `fieldErrors` 展示在对应字段下方；没有字段归属的业务错误和网络异常才使用全局消息。
 - 业务页只传 `formId`、初始值、提交回调和业务字段。
 - 字段布局优先使用模板内置 grid class，不在业务页另起一套表单布局。
 - 表单控件优先使用 `AdminProForm*` 或项目已沉淀表单组件。

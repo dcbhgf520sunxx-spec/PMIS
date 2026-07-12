@@ -5,7 +5,8 @@ export type WorkOrderListParams = {
   urgency?: number;
   status?: number;
   isOverdue?: boolean;
-  followerId?: string;
+  filterFollowerId?: string;
+  viewKey?: 'all' | 'mine';
   currentUserId?: string;
   submitterName?: string;
   submitTimeFrom?: string;
@@ -45,7 +46,8 @@ export function buildWorkOrderQueryParams(params: WorkOrderListParams = {}) {
     urgency: params.urgency,
     status: params.status,
     is_overdue: params.isOverdue === undefined ? undefined : Number(params.isOverdue),
-    follower_id: params.followerId,
+    filter_follower_id: params.filterFollowerId,
+    view_key: params.viewKey,
     current_user_id: params.currentUserId,
     submitter_name: params.submitterName,
     submit_time_from: params.submitTimeFrom,

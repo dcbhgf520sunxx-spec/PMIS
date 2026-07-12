@@ -417,6 +417,7 @@ export function WorkOrderTemplatePage() {
       title="运维工单样板"
       titleExtra={
         <ViewTabs<ViewKey>
+          showCounts
           value={viewKey}
           onChange={handleViewChange}
           items={[

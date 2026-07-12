@@ -8,6 +8,7 @@ import { AdminButton } from '../AdminPrimitives';
 import { FormPage } from '../FormPage';
 import { PageShell } from '../PageShell';
 import { SectionTitle } from '../SectionTitle';
+import { ApiError } from '../../../api/apiError';
 import './index.css';
 
 type TemplateFormPageProps<T extends Record<string, unknown>> = {
@@ -24,6 +25,7 @@ type TemplateFormPageProps<T extends Record<string, unknown>> = {
   children: ReactNode;
   onSubmit: (values: T) => Promise<void> | void;
   onSubmitError?: (error: unknown, form: ProFormInstance<T>) => boolean | void;
+  fieldNameMap?: Record<string, string>;
   onCancel: () => void;
 };
 
@@ -31,6 +33,23 @@ type TemplateFormSectionProps = {
   title: string;
   children: ReactNode;
 };
+
+function applyApiFieldErrors<T extends Record<string, unknown>>(
+  error: unknown,
+  form: ProFormInstance<T>,
+  fieldNameMap: Record<string, string>
+) {
+  if (!(error instanceof ApiError) || !error.fieldErrors) return false;
+  const fields = Object.entries(error.fieldErrors).map(([field, errors]) => ({
+    name: fieldNameMap[field] || field,
+    errors
+  }));
+  if (fields.length === 0) return false;
+
+  form.setFields(fields as Parameters<typeof form.setFields>[0]);
+  form.scrollToField(fields[0].name as never, { block: 'center' });
+  return true;
+}
 
 export function TemplateFormPage<T extends Record<string, unknown>>({
   title,
@@ -46,6 +65,7 @@ export function TemplateFormPage<T extends Record<string, unknown>>({
   children,
   onSubmit,
   onSubmitError,
+  fieldNameMap = {},
   onCancel
 }: TemplateFormPageProps<T>) {
   const { message } = App.useApp();
@@ -61,7 +81,8 @@ export function TemplateFormPage<T extends Record<string, unknown>>({
       setInnerSubmitting(true);
       await onSubmit(values);
     } catch (error) {
-      const handled = onSubmitError?.(error, formInstance);
+      const handled = applyApiFieldErrors(error, formInstance, fieldNameMap)
+        || onSubmitError?.(error, formInstance);
       if (!handled) {
         message.error(error instanceof Error ? error.message : '保存失败');
       }

@@ -378,18 +378,19 @@ function collectListViewTabContractViolations(files) {
     };
 
     return viewTabs.flatMap((node) => {
+      if (!attribute(node, 'showCounts')) return [];
       const itemsAttribute = attribute(node, 'items');
       const expression = itemsAttribute?.initializer && ts.isJsxExpression(itemsAttribute.initializer)
         ? itemsAttribute.initializer.expression
         : undefined;
       const items = expression ? unwrap(expression) : undefined;
       if (!items || !ts.isArrayLiteralExpression(items)) {
-        return [finding(file, sourceFile, node, '列表数据视图 Tab 的 items 必须是可静态审计的数组，并为每项声明 count')];
+        return [finding(file, sourceFile, node, '启用 showCounts 的列表数据视图 Tab，其 items 必须是可静态审计的数组，并为每项声明 count')];
       }
       return items.elements
         .filter(ts.isObjectLiteralExpression)
         .filter((item) => !objectProperty(item, 'count'))
-        .map((item) => finding(file, sourceFile, item, '列表数据视图 Tab 每一项必须声明 count；普通非列表 Tab 不受此约束', 'ViewTabs item'));
+        .map((item) => finding(file, sourceFile, item, '启用 showCounts 后，每个列表数据视图 Tab 都必须声明 count', 'ViewTabs item'));
     });
   });
 }

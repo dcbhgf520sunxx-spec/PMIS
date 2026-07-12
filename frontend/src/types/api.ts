@@ -2,6 +2,8 @@ export type ApiResponse<T> = {
   code: number;
   message: string;
   data: T;
+  fieldErrors?: Record<string, string[]>;
+  requestId?: string;
 };
 
 export type PageResult<T> = {

@@ -1,8 +1,9 @@
-function envelope(res, status, code, message, data = null) {
+function envelope(res, status, code, message, data = null, extra = {}) {
   return res.status(status).json({
     code,
     message,
     data,
+    ...extra,
     requestId: res.locals?.requestId
   })
 }
@@ -13,6 +14,12 @@ function ok(res, data, message = 'success') {
 
 function fail(res, status, code, message, data = null) {
   return envelope(res, status, code, message, data)
+}
+
+function failField(res, field, message, status = 400, code = 400) {
+  return envelope(res, status, code, '请检查表单字段', null, {
+    fieldErrors: { [field]: [message] }
+  })
 }
 
 function isEnvelope(body) {
@@ -34,4 +41,4 @@ function attachResponseHelpers(req, res, next) {
   next()
 }
 
-module.exports = { attachResponseHelpers, ok, fail }
+module.exports = { attachResponseHelpers, ok, fail, failField }

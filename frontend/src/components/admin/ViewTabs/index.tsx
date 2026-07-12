@@ -10,9 +10,10 @@ type ViewTabsProps<T extends string = string> = {
   items: ViewTabItem<T>[];
   value: T;
   onChange: (value: T) => void;
+  showCounts?: boolean;
 };
 
-export function ViewTabs<T extends string = string>({ items, value, onChange }: ViewTabsProps<T>) {
+export function ViewTabs<T extends string = string>({ items, value, onChange, showCounts = false }: ViewTabsProps<T>) {
   return (
     <div className="admin-view-tabs" role="tablist">
       {items.map((item) => (
@@ -25,7 +26,7 @@ export function ViewTabs<T extends string = string>({ items, value, onChange }: 
           onClick={() => onChange(item.value)}
         >
           <span>{item.label}</span>
-          {typeof item.count === 'number' ? <span className="admin-view-tabs__count">{item.count}</span> : null}
+          {showCounts && typeof item.count === 'number' ? <span className="admin-view-tabs__count">{item.count}</span> : null}
         </button>
       ))}
     </div>

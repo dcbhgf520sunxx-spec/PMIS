@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const test = require('node:test')
 
-const { attachResponseHelpers, ok, fail } = require('../src/utils/response')
+const { attachResponseHelpers, ok, fail, failField } = require('../src/utils/response')
 
 function responseDouble(requestId = 'req-123') {
   return {
@@ -25,6 +25,19 @@ test('failure response carries the requestId', () => {
   fail(res, 400, 400, '参数错误')
   assert.equal(res.statusCode, 400)
   assert.deepEqual(res.body, { code: 400, message: '参数错误', data: null, requestId: 'req-456' })
+})
+
+test('field failure uses the unified fieldErrors envelope', () => {
+  const res = responseDouble('req-field')
+  failField(res, 'problem_desc', '问题描述已存在')
+  assert.equal(res.statusCode, 400)
+  assert.deepEqual(res.body, {
+    code: 400,
+    message: '请检查表单字段',
+    data: null,
+    fieldErrors: { problem_desc: ['问题描述已存在'] },
+    requestId: 'req-field'
+  })
 })
 
 test('response helper middleware adds requestId to legacy envelopes', () => {
