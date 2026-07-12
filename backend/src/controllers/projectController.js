@@ -4,8 +4,11 @@ const { ok, fail } = require('../utils/response')
 const { validateBody } = require('../utils/validation')
 const { normalizeMemberIds, validateProjectStatusChange, calculateProjectOverdue, allowedProjectStatuses } = require('../services/productProjectRules')
 const { groupOperationLogs } = require('../utils/operationHistory')
+const { formatHistoryChanges, serializeMemberIds } = require('../utils/productProjectHistory')
 
-const DETAIL_FIELD_ORDER = ['name', 'product_id', 'owner_id', 'description', 'start_date', 'expected_end_date', 'progress_text', 'risk_text', 'status', 'is_overdue', 'actual_end_date', 'suspend_date']
+const DETAIL_FIELD_ORDER = ['name', 'product_id', 'owner_id', 'member_ids', 'description', 'start_date', 'expected_end_date', 'progress_text', 'risk_text', 'status', 'is_overdue', 'actual_end_date', 'suspend_date']
+const HISTORY_FIELD_LABELS = { name: '项目名称', product_id: '所属产品', owner_id: '负责人', member_ids: '项目成员', description: '项目描述', start_date: '启动日期', expected_end_date: '预计完成日期', progress_text: '进度记录', risk_text: '风险记录', status: '状态', is_overdue: '逾期状态', actual_end_date: '实际完成日期', suspend_date: '暂停日期', is_deleted: '删除状态' }
+const HISTORY_DATE_FIELDS = new Set(['start_date', 'expected_end_date', 'actual_end_date', 'suspend_date'])
 
 const schema = {
   name: { required: true, label: '项目名称' },
@@ -130,6 +133,9 @@ exports.update = async (req, res) => {
     const operatorId = req.user.id
     const status = Number(old.status)
     const overdue = calculateProjectOverdue(req.body.expected_end_date, status)
+    const oldMembers = await db.prepare('SELECT user_id FROM pms_project_member WHERE project_id = ?').all(req.params.id)
+    const oldMemberIds = serializeMemberIds(oldMembers.map((member) => member.user_id))
+    const newMemberIds = serializeMemberIds(normalizeMemberIds(req.body.member_ids))
     await db.transaction(async (tx) => {
       await tx.prepare(`UPDATE pms_project SET name = ?, description = ?, product_id = ?, owner_id = ?, is_overdue = ?, start_date = ?, expected_end_date = ?, progress_text = ?, risk_text = ?, updater_id = ?, updated_at = NOW() WHERE id = ?`)
         .run(req.body.name.trim(), req.body.description || null, req.body.product_id, req.body.owner_id, overdue, req.body.start_date || null, req.body.expected_end_date, req.body.progress_text || null, req.body.risk_text || null, operatorId, req.params.id)
@@ -140,6 +146,7 @@ exports.update = async (req, res) => {
       const next = field === 'is_overdue' ? overdue : req.body[field] || null
       if (String(old[field] ?? '') !== String(next ?? '')) changes.push({ field, oldVal: old[field], newVal: next })
     }
+    if (oldMemberIds !== newMemberIds) changes.push({ field: 'member_ids', oldVal: oldMemberIds, newVal: newMemberIds })
     if (changes.length) await db.writeLogs(operatorId, '编辑', '项目', req.params.id, changes, req.ip, req.body.name.trim())
     ok(res, null)
   } catch (error) { console.error(error); fail(res, 500, 500, '更新失败') }
@@ -184,7 +191,26 @@ exports.remove = async (req, res) => {
 exports.history = async (req, res) => {
   try {
     const logs = await db.prepare("SELECT l.id, l.operation_id, l.action, l.field_name, l.old_value, l.new_value, l.created_at, COALESCE(u.real_name, '-') operator FROM pms_op_log l LEFT JOIN pms_user u ON u.id = l.user_id WHERE l.module = '项目' AND l.target_id = ? ORDER BY l.created_at DESC").all(req.params.id)
-    ok(res, groupOperationLogs(logs, DETAIL_FIELD_ORDER).map((group) => ({ id: group.id, action: group.action, created_at: group.created_at, operator: group.operator, changes: group.changes.map(({ field_name, old_value, new_value }) => ({ field_name, old_value, new_value })) })))
+    const idsFor = (field) => [...new Set(logs.filter((log) => log.field_name === field).flatMap((log) => [log.old_value, log.new_value]).map(Number).filter(Number.isFinite))]
+    const memberIds = [...new Set(logs.filter((log) => log.field_name === 'member_ids').flatMap((log) => {
+      try { return [...JSON.parse(log.old_value || '[]'), ...JSON.parse(log.new_value || '[]')] } catch { return [] }
+    }).map(Number).filter(Number.isFinite))]
+    const productIds = idsFor('product_id')
+    const ownerIds = idsFor('owner_id')
+    const userIds = [...new Set([...ownerIds, ...memberIds])]
+    const [products, users] = await Promise.all([
+      productIds.length ? db.prepare(`SELECT id, name FROM pms_product WHERE id IN (${productIds.map(() => '?').join(',')})`).all(...productIds) : [],
+      userIds.length ? db.prepare(`SELECT id, real_name FROM pms_user WHERE id IN (${userIds.map(() => '?').join(',')})`).all(...userIds) : [],
+    ])
+    const userLookup = new Map(users.map((user) => [String(user.id), user.real_name]))
+    const valueLookups = {
+      product_id: new Map(products.map((product) => [String(product.id), product.name])),
+      owner_id: userLookup,
+      status: new Map([['0', '未开始'], ['1', '进行中'], ['2', '已完成'], ['3', '已暂停']]),
+      is_overdue: new Map([['0', '未逾期'], ['1', '已逾期']]),
+      is_deleted: new Map([['0', '正常'], ['1', '已删除']]),
+    }
+    ok(res, groupOperationLogs(logs, DETAIL_FIELD_ORDER).map((group) => ({ id: group.id, action: group.action, created_at: group.created_at, operator: group.operator, changes: formatHistoryChanges(group.changes, { fieldLabels: HISTORY_FIELD_LABELS, dateFields: HISTORY_DATE_FIELDS, valueLookups, arrayValueLookups: { member_ids: userLookup } }) })))
   }
   catch (error) { console.error(error); fail(res, 500, 500, '查询失败') }
 }

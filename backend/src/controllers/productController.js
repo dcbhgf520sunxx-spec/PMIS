@@ -3,8 +3,10 @@ const { parsePagination, getSortDirection } = require('../utils/pagination')
 const { ok, fail } = require('../utils/response')
 const { validateBody } = require('../utils/validation')
 const { groupOperationLogs } = require('../utils/operationHistory')
+const { formatHistoryChanges } = require('../utils/productProjectHistory')
 
 const DETAIL_FIELD_ORDER = ['name', 'owner_id', 'description', 'status']
+const HISTORY_FIELD_LABELS = { name: '产品名称', owner_id: '负责人', description: '产品描述', status: '状态', is_deleted: '删除状态' }
 
 const schema = {
   name: { required: true, label: '产品名称' },
@@ -126,7 +128,14 @@ exports.remove = async (req, res) => {
 exports.history = async (req, res) => {
   try {
     const logs = await db.prepare("SELECT l.id, l.operation_id, l.action, l.field_name, l.old_value, l.new_value, l.created_at, COALESCE(u.real_name, '-') operator FROM pms_op_log l LEFT JOIN pms_user u ON u.id = l.user_id WHERE l.module = '产品' AND l.target_id = ? ORDER BY l.created_at DESC").all(req.params.id)
-    ok(res, groupOperationLogs(logs, DETAIL_FIELD_ORDER).map((group) => ({ id: group.id, action: group.action, created_at: group.created_at, operator: group.operator, changes: group.changes.map(({ field_name, old_value, new_value }) => ({ field_name, old_value, new_value })) })))
+    const ownerIds = [...new Set(logs.filter((log) => log.field_name === 'owner_id').flatMap((log) => [log.old_value, log.new_value]).map(Number).filter(Number.isFinite))]
+    const owners = ownerIds.length ? await db.prepare(`SELECT id, real_name FROM pms_user WHERE id IN (${ownerIds.map(() => '?').join(',')})`).all(...ownerIds) : []
+    const valueLookups = {
+      owner_id: new Map(owners.map((owner) => [String(owner.id), owner.real_name])),
+      status: new Map([['0', '停用'], ['1', '启用']]),
+      is_deleted: new Map([['0', '正常'], ['1', '已删除']]),
+    }
+    ok(res, groupOperationLogs(logs, DETAIL_FIELD_ORDER).map((group) => ({ id: group.id, action: group.action, created_at: group.created_at, operator: group.operator, changes: formatHistoryChanges(group.changes, { fieldLabels: HISTORY_FIELD_LABELS, valueLookups }) })))
   }
   catch (error) { console.error(error); fail(res, 500, 500, '查询失败') }
 }
