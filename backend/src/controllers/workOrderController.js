@@ -448,7 +448,7 @@ exports.getNeighbors = async (req, res) => {
       const mapped = WORK_ORDER_SORT_MAP[q.sort_field]
       if (mapped) {
         sortCol = mapped
-        sortDir = q.sort_order === 'asc' ? 'ASC' : 'DESC'
+        sortDir = getSortDirection(q.sort_order)
       }
     }
 
