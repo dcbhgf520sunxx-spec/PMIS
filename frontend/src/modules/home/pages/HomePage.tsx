@@ -6,9 +6,9 @@ export function HomePage() {
   return (
     <section className="home-page" aria-label="首页">
       <div className="home-page__welcome">
-        <span className="home-page__mark">安</span>
-        <h1>欢迎使用小安智能管理平台</h1>
-        <p>让日常管理更清晰、更有序。</p>
+        <span className="home-page__mark">P</span>
+        <h1>不怕事情多，就怕没着落</h1>
+        <p>该排的安排，该推进的推进，该解决的别躲着。项目自然越走越顺。</p>
       </div>
       <div className="home-page__visual" aria-hidden="true">
         <div className="home-page__video-frame">

@@ -1,5 +1,5 @@
 {
-  "name": "backend",
+  "name": "pmis-backend",
   "version": "1.0.0",
   "description": "基础系统模板 - 包含用户权限、基础档案、运维工单模块",
   "main": "src/app.js",

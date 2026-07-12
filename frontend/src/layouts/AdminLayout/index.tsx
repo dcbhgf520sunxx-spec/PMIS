@@ -1,5 +1,6 @@
 import {
   DownOutlined,
+  AppstoreOutlined,
   ExperimentOutlined,
   HomeOutlined,
   LogoutOutlined,
@@ -7,6 +8,7 @@ import {
   MenuUnfoldOutlined,
   LockOutlined,
   SettingOutlined,
+  ProjectOutlined,
   ToolOutlined,
   UserOutlined
 } from '@ant-design/icons';
@@ -36,6 +38,16 @@ const businessMenuItems: AdminMenuItems = [
     key: '/home',
     icon: <HomeOutlined />,
     label: '首页'
+  },
+  {
+    key: '/products',
+    icon: <AppstoreOutlined />,
+    label: '产品管理'
+  },
+  {
+    key: '/projects',
+    icon: <ProjectOutlined />,
+    label: '项目管理'
   },
   {
     key: '/work-orders',
@@ -206,9 +218,11 @@ function getHeaderIntro(pathname: string) {
   if (pathname.startsWith('/home')) {
     return {
       title: '首页',
-      subtitle: '欢迎回来，今天也请从容处理每一项工作。'
+      subtitle: '欢迎回来，今天也把事情往前推一点。'
     };
   }
+  if (pathname.startsWith('/products')) return { title: '产品管理', subtitle: '产品有归处，事情才有来路。' };
+  if (pathname.startsWith('/projects')) return { title: '项目管理', subtitle: '该推进的推进，该解决的别躲着。' };
   if (pathname.startsWith('/system/design-system')) {
     return {
       title: '组件工作台',
@@ -397,8 +411,8 @@ export function AdminLayout() {
         trigger={null}
       >
         <div className="admin-layout__brand">
-          <span className="admin-layout__brand-mark">安</span>
-          <span className="admin-layout__brand-name">小安智能管理平台</span>
+          <span className="admin-layout__brand-mark">P</span>
+          <span className="admin-layout__brand-name">项目管理系统</span>
         </div>
         <Menu
           mode="inline"

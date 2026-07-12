@@ -7,7 +7,7 @@ export type DetailNeighborContext = {
   savedAt: number;
 };
 
-const contextPrefix = 'project-template:detail-neighbor:';
+const contextPrefix = 'pmis:detail-neighbor:';
 
 function storageKey(moduleKey: string) {
   return `${contextPrefix}${moduleKey}`;

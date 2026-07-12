@@ -1,0 +1,11 @@
+const express = require('express')
+const ctrl = require('../controllers/projectController')
+const router = express.Router()
+router.get('/', ctrl.list)
+router.get('/:id/history', ctrl.history)
+router.get('/:id', ctrl.getById)
+router.post('/', ctrl.create)
+router.put('/:id', ctrl.update)
+router.put('/:id/status', ctrl.toggleStatus)
+router.delete('/:id', ctrl.remove)
+module.exports = router

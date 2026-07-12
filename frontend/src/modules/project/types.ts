@@ -1,0 +1,11 @@
+export type ProjectStatus = 0 | 1 | 2 | 3;
+export type ProjectMember = { id: string; name: string };
+export type ProjectRecord = {
+  id: string; name: string; description: string; productId: string; productName: string;
+  ownerId: string; ownerName: string; memberIds: string[]; members: ProjectMember[];
+  status: ProjectStatus; isOverdue: boolean; startDate: string; expectedEndDate: string;
+  previousStatus?: ProjectStatus;
+  actualEndDate: string; suspendDate: string; progressText: string; riskText: string;
+  creatorName: string; updaterName: string; createdAt: string; updatedAt: string;
+};
+export type ProjectFormValues = { name: string; productId: string; ownerId: string; memberIds?: string[]; startDate?: string; expectedEndDate: string; description?: string; progressText?: string; riskText?: string };

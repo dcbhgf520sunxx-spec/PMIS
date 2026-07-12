@@ -185,6 +185,35 @@ test('组件审计阻断使用通用危险确认实现删除', () => {
   assert.match(result.stdout, /DeleteConfirmAction/);
 });
 
+test('组件审计阻断确认组件与业务页面重复展示成功提示', () => {
+  const result = runStrictAudit(
+    `export function ProductDetailPage() {
+      return <StatusConfirmAction
+        action="disable"
+        onConfirm={async () => { await updateStatus(); message.success('停用成功'); }}
+      >停用产品</StatusConfirmAction>;
+    }`,
+    'ProductStatusAction.tsx'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /默认会展示成功提示/);
+  assert.match(result.stdout, /successMessage=\{false\}/);
+});
+
+test('组件审计允许业务页面关闭组件默认提示后动态提示', () => {
+  const result = runStrictAudit(
+    `export function ProductDetailPage() {
+      return <StatusConfirmAction
+        action="disable"
+        successMessage={false}
+        onConfirm={async () => { await updateStatus(); message.success('停用成功'); }}
+      >停用产品</StatusConfirmAction>;
+    }`,
+    'ProductStatusAction.tsx'
+  );
+  assert.equal(result.status, 0, result.stdout);
+});
+
 test('组件审计阻断标准列表缺少列宽、固定列、横向滚动和排序契约', () => {
   const result = runStrictAudit(
     `export function CustomerListPage() {

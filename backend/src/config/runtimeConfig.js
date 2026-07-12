@@ -8,7 +8,7 @@ const PLACEHOLDER_SECRETS = new Set([
 
 function validateRuntimeConfig(env = process.env) {
   const isProduction = env.NODE_ENV === 'production'
-  const allowedOrigin = env.ALLOWED_ORIGIN || (isProduction ? '' : 'http://localhost:3102')
+  const allowedOrigin = env.ALLOWED_ORIGIN || (isProduction ? '' : 'http://localhost:3104')
   const secret = String(env.JWT_SECRET || '').trim()
 
   if (isProduction && !allowedOrigin) {

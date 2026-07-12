@@ -1,23 +1,23 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: project-template-postgres
+    container_name: pmis-postgres
     command: ["postgres", "-c", "timezone=Asia/Shanghai"]
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
-      POSTGRES_DB: project_template
+      POSTGRES_DB: pmis
       POSTGRES_USER: pms
       POSTGRES_PASSWORD: pms123456
       TZ: Asia/Shanghai
     volumes:
-      - project_template_pgdata:/var/lib/postgresql/data
+      - pmis_pgdata:/var/lib/postgresql/data
       - ./backend/db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pms -d project_template"]
+      test: ["CMD-SHELL", "pg_isready -U pms -d pmis"]
       interval: 10s
       timeout: 5s
       retries: 5
 
 volumes:
-  project_template_pgdata:
+  pmis_pgdata:

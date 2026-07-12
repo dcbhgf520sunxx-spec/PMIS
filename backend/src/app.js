@@ -20,6 +20,8 @@ const archiveController = require('./controllers/archiveController')
 const workOrderRoutes = require('./routes/workOrder')
 const accessLogRoutes = require('./routes/accessLog')
 const messageRoutes = require('./routes/message')
+const productRoutes = require('./routes/product')
+const projectRoutes = require('./routes/project')
 const { start: startOverdueCron } = require('./services/overdueCron')
 
 const app = express()
@@ -56,6 +58,8 @@ app.use('/api/menus', verifyToken, checkPermission('/roles'), menuRoutes)
 app.use('/api/archive-types', verifyToken, checkPermission('/archive'), archiveTypeRoutes)
 app.use('/api/archives', verifyToken, checkPermission('/archive'), archiveRoutes)
 app.use('/api/work-orders', verifyToken, checkPermission('/work-orders'), workOrderRoutes)
+app.use('/api/products', verifyToken, checkPermission('/products'), productRoutes)
+app.use('/api/projects', verifyToken, checkPermission('/projects'), projectRoutes)
 app.use('/api/access-logs', verifyToken, checkPermission('/access-logs'), accessLogRoutes)
 
 app.use((err, req, res, next) => {
@@ -63,7 +67,7 @@ app.use((err, req, res, next) => {
   fail(res, 500, 500, '服务器内部错误')
 })
 
-const PORT = process.env.PORT || 3101
+const PORT = process.env.PORT || 3103
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`)
   if (process.send) process.send('ready')

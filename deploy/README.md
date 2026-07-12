@@ -1,4 +1,4 @@
-# project-template 部署说明
+# PMIS 部署说明
 
 本文档用于部署项目管理系统基建模板。
 
@@ -19,8 +19,8 @@ npm install -g pm2
 
 ```bash
 cd /path/to/apps
-git clone https://github.com/dcbhgf520sunxx-spec/project-template.git
-cd project-template
+git clone <PMIS_REPOSITORY_URL>
+cd PMIS
 ```
 
 ## 3. 配置数据库
@@ -36,12 +36,12 @@ vi .env
 示例：
 
 ```env
-PORT=3101
+PORT=3103
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=pms
 DB_PASSWORD=你的密码
-DB_NAME=project_template
+DB_NAME=pmis
 JWT_SECRET=请替换为随机密钥
 ALLOWED_ORIGIN=http://你的域名或IP
 ```
@@ -59,21 +59,21 @@ npm run db:migrate
 后端：
 
 ```bash
-cd /path/to/apps/project-template/backend
+cd /path/to/apps/PMIS/backend
 npm ci --omit=dev
 ```
 
 前端：
 
 ```bash
-cd /path/to/apps/project-template/frontend
+cd /path/to/apps/PMIS/frontend
 npm ci
 ```
 
 ## 5. 构建 React 前端
 
 ```bash
-cd /path/to/apps/project-template/frontend
+cd /path/to/apps/PMIS/frontend
 npm run build
 ```
 
@@ -85,12 +85,12 @@ frontend/dist
 
 ## 6. 配置 PM2
 
-确认 `deploy/pm2.config.js` 中端口为 `3101`，并确认 `backend/.env` 指向 PostgreSQL。
+确认 `deploy/pm2.config.js` 中端口为 `3103`，并确认 `backend/.env` 指向 PostgreSQL。
 
 启动后端：
 
 ```bash
-cd /path/to/apps/project-template
+cd /path/to/apps/PMIS
 mkdir -p backend/logs
 pm2 start deploy/pm2.config.js
 pm2 save
@@ -100,7 +100,7 @@ pm2 save
 
 ```bash
 pm2 status
-pm2 logs project-template-backend --lines 100
+pm2 logs PMIS-backend --lines 100
 ```
 
 ## 7. 配置 Nginx
@@ -108,13 +108,13 @@ pm2 logs project-template-backend --lines 100
 复制配置：
 
 ```bash
-sudo cp deploy/nginx.conf /etc/nginx/conf.d/project-template.conf
+sudo cp deploy/nginx.conf /etc/nginx/conf.d/PMIS.conf
 ```
 
 编辑配置：
 
 ```bash
-sudo vi /etc/nginx/conf.d/project-template.conf
+sudo vi /etc/nginx/conf.d/PMIS.conf
 ```
 
 必须修改：
@@ -134,13 +134,13 @@ sudo nginx -s reload
 健康检查：
 
 ```bash
-curl http://localhost:3101/api/health
+curl http://localhost:3103/api/health
 ```
 
 登录接口：
 
 ```bash
-curl http://localhost:3101/api/auth/login \
+curl http://localhost:3103/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"account":"admin","password":"vv123456"}'
 ```
@@ -157,15 +157,15 @@ React 使用 history 路由，Nginx 必须保留 `try_files $uri $uri/ /index.ht
 
 ```bash
 pm2 status
-pm2 restart project-template-backend
-pm2 logs project-template-backend --lines 100
+pm2 restart PMIS-backend
+pm2 logs PMIS-backend --lines 100
 sudo nginx -t
 sudo nginx -s reload
 ```
 
 ## 10. 注意事项
 
-- 后端端口使用 `3101`
+- 后端端口使用 `3103`
 - 前端生产访问由 Nginx 提供
 - 数据库为 PostgreSQL，不使用 MySQL
 - 不要占用 `3001`、`3002`

@@ -100,6 +100,13 @@ const AccessLogListPage = lazy(() =>
     default: module.AccessLogListPage
   }))
 );
+const ProductListPage = lazy(() => import('../modules/product/pages/ProductListPage').then((module) => ({ default: module.ProductListPage })));
+const ProductFormPage = lazy(() => import('../modules/product/pages/ProductFormPage').then((module) => ({ default: module.ProductFormPage })));
+const ProductDetailPage = lazy(() => import('../modules/product/pages/ProductDetailPage').then((module) => ({ default: module.ProductDetailPage })));
+const ProjectListPage = lazy(() => import('../modules/project/pages/ProjectListPage').then((module) => ({ default: module.ProjectListPage })));
+const ProjectFormPage = lazy(() => import('../modules/project/pages/ProjectFormPage').then((module) => ({ default: module.ProjectFormPage })));
+const ProjectDetailPage = lazy(() => import('../modules/project/pages/ProjectDetailPage').then((module) => ({ default: module.ProjectDetailPage })));
+
 export const routes: RouteObject[] = [
   {
     path: '/login',
@@ -112,6 +119,14 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <DefaultEntryRedirect /> },
       { path: 'home', element: withRouteSuspense(<HomePage />) },
+      { path: 'products', element: withRouteSuspense(<ProductListPage />) },
+      { path: 'products/new', element: withRouteSuspense(<ProductFormPage mode="create" />) },
+      { path: 'products/:id/edit', element: withRouteSuspense(<ProductFormPage mode="edit" />) },
+      { path: 'products/:id', element: withRouteSuspense(<ProductDetailPage />) },
+      { path: 'projects', element: withRouteSuspense(<ProjectListPage />) },
+      { path: 'projects/new', element: withRouteSuspense(<ProjectFormPage mode="create" />) },
+      { path: 'projects/:id/edit', element: withRouteSuspense(<ProjectFormPage mode="edit" />) },
+      { path: 'projects/:id', element: withRouteSuspense(<ProjectDetailPage />) },
       { path: 'roles', element: withRouteSuspense(<RoleListPage />) },
       { path: 'roles/new', element: withRouteSuspense(<RoleFormPage mode="create" />) },
       { path: 'roles/:id/edit', element: withRouteSuspense(<RoleFormPage mode="edit" />) },

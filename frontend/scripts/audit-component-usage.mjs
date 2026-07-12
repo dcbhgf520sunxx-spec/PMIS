@@ -168,6 +168,12 @@ function resolveImportedComponentSource(file, sourceFile, componentName) {
 }
 
 function collectSemanticViolations(files) {
+  const successMessageActions = new Set([
+    'BubbleConfirmAction',
+    'ConfirmAction',
+    'DeleteConfirmAction',
+    'StatusConfirmAction'
+  ]);
   const allowedOperationActions = new Set([
     'AdminTextAction',
     'StatusConfirmAction',
@@ -225,6 +231,18 @@ function collectSemanticViolations(files) {
       if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
         const name = jsxTagName(node, sourceFile);
         inspectBusinessStatusAction(node, name);
+        if (successMessageActions.has(name)) {
+          const onConfirmSource = attributeText(node, 'onConfirm', sourceFile);
+          const successMessageSource = attributeText(node, 'successMessage', sourceFile);
+          if (/\bmessage\.success\s*\(/.test(onConfirmSource) && successMessageSource !== '{false}') {
+            violations.push(finding(
+              file,
+              sourceFile,
+              node,
+              `${name} 默认会展示成功提示；onConfirm 自行提示时必须声明 successMessage={false}`
+            ));
+          }
+        }
         if (name === 'StatusFlowModal') {
           violations.push(finding(file, sourceFile, node, '业务页面不得直接使用 StatusFlowModal，应通过 StatusChangeAction 承接'));
         }

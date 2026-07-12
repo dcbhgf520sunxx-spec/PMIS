@@ -20,6 +20,6 @@ test('production rejects placeholder jwt secrets', () => {
 test('development keeps the local origin default', () => {
   assert.deepEqual(
     validateRuntimeConfig({ NODE_ENV: 'development', JWT_SECRET: 'local-development-secret' }),
-    { allowedOrigin: 'http://localhost:3102' }
+    { allowedOrigin: 'http://localhost:3104' }
   )
 })

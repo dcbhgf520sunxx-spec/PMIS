@@ -1,5 +1,5 @@
 SET TIME ZONE 'Asia/Shanghai';
-ALTER DATABASE project_template SET timezone TO 'Asia/Shanghai';
+ALTER DATABASE pmis SET timezone TO 'Asia/Shanghai';
 ALTER ROLE pms SET timezone TO 'Asia/Shanghai';
 
 CREATE TABLE IF NOT EXISTS pms_user (
@@ -84,6 +84,48 @@ CREATE TABLE IF NOT EXISTS pms_work_order (
   is_deleted SMALLINT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS pms_product (
+  id BIGSERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  owner_id BIGINT NOT NULL REFERENCES pms_user(id) ON DELETE RESTRICT,
+  status SMALLINT NOT NULL DEFAULT 1 CHECK (status IN (0, 1)),
+  creator_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  updater_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  is_deleted SMALLINT NOT NULL DEFAULT 0 CHECK (is_deleted IN (0, 1)),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS pms_project (
+  id BIGSERIAL PRIMARY KEY,
+  name VARCHAR(200) NOT NULL,
+  description TEXT,
+  product_id BIGINT NOT NULL REFERENCES pms_product(id) ON DELETE RESTRICT,
+  owner_id BIGINT NOT NULL REFERENCES pms_user(id) ON DELETE RESTRICT,
+  status SMALLINT NOT NULL DEFAULT 0 CHECK (status IN (0, 1, 2, 3)),
+  is_overdue SMALLINT NOT NULL DEFAULT 0 CHECK (is_overdue IN (0, 1)),
+  start_date DATE,
+  expected_end_date DATE NOT NULL,
+  actual_end_date DATE,
+  suspend_date DATE,
+  progress_text TEXT,
+  risk_text TEXT,
+  creator_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  updater_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  is_deleted SMALLINT NOT NULL DEFAULT 0 CHECK (is_deleted IN (0, 1)),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS pms_project_member (
+  id BIGSERIAL PRIMARY KEY,
+  project_id BIGINT NOT NULL REFERENCES pms_project(id) ON DELETE CASCADE,
+  user_id BIGINT NOT NULL REFERENCES pms_user(id) ON DELETE RESTRICT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (project_id, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS pms_archive_type (
@@ -176,6 +218,13 @@ CREATE INDEX IF NOT EXISTS idx_role_deleted ON pms_role(is_deleted);
 CREATE INDEX IF NOT EXISTS idx_menu_path ON pms_menu(path);
 CREATE INDEX IF NOT EXISTS idx_work_order_status ON pms_work_order(status, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_work_order_follower ON pms_work_order(follower_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_product_name_active ON pms_product(name) WHERE is_deleted = 0;
+CREATE INDEX IF NOT EXISTS idx_product_owner_status ON pms_product(owner_id, status, is_deleted);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_project_name_active ON pms_project(name) WHERE is_deleted = 0;
+CREATE INDEX IF NOT EXISTS idx_project_product_status ON pms_project(product_id, status, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_project_owner_status ON pms_project(owner_id, status, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_project_expected_end ON pms_project(expected_end_date, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_project_member_user ON pms_project_member(user_id, project_id);
 CREATE INDEX IF NOT EXISTS idx_archive_type ON pms_archive(archive_type_id, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_op_log_target ON pms_op_log(module, target_id);
 CREATE INDEX IF NOT EXISTS idx_op_log_module_created_at ON pms_op_log(module, created_at DESC);
@@ -216,7 +265,9 @@ VALUES
   (14, 9, '基础组件', 'design_system_base', 2, '/system/design-system?category=base', NULL, 45, 1, 1),
   (15, 9, '输入组件', 'design_system_input', 2, '/system/design-system?category=input', NULL, 46, 1, 1),
   (16, 9, '反馈组件', 'design_system_feedback', 2, '/system/design-system?category=feedback', NULL, 47, 1, 1),
-  (17, 9, '数据展示', 'design_system_display', 2, '/system/design-system?category=display', NULL, 48, 1, 1)
+  (17, 9, '数据展示', 'design_system_display', 2, '/system/design-system?category=display', NULL, 48, 1, 1),
+  (18, 0, '产品管理', 'product', 2, '/products', 'AppstoreOutlined', 6, 1, 1),
+  (19, 0, '项目管理', 'project', 2, '/projects', 'ProjectOutlined', 7, 1, 1)
 ON CONFLICT (code) DO UPDATE SET
   parent_id = EXCLUDED.parent_id,
   name = EXCLUDED.name,

@@ -13,7 +13,7 @@ const pool = new Pool({
   port: Number(process.env.DB_PORT || 5432),
   user: process.env.DB_USER || 'pms',
   password: process.env.DB_PASSWORD || 'pms123456',
-  database: process.env.DB_NAME || 'project_template',
+  database: process.env.DB_NAME || 'pmis',
   max: Number(process.env.DB_POOL_MAX || 10),
   options: process.env.DB_OPTIONS || `-c timezone=${DB_TIMEZONE}`,
 })

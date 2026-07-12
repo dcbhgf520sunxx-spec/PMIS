@@ -3,14 +3,14 @@ const path = require('path')
 module.exports = {
   apps: [
     {
-      name: 'project-template-backend',
+      name: 'pmis-backend',
       script: path.join(__dirname, '..', 'backend', 'src', 'app.js'),
       cwd: path.join(__dirname, '..', 'backend'),
       instances: 1,
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
-        PORT: 3101,
+        PORT: 3103,
       },
       // 日志
       error_file: path.join(__dirname, '..', 'backend', 'logs', 'pm2-error.log'),

@@ -101,24 +101,24 @@ export function LoginPage() {
             <img src={robotMini} alt="" />
           </div>
           <Typography.Title className="login-hero-title" level={1}>
-            让 AI 参与业务运行的每一个关键环节
+            不怕事情多，就怕没着落
           </Typography.Title>
         </div>
         <p className="login-hero-copy">
-          小安智能管理平台连接业务数据、智能体能力与人工决策，将 AI 的执行过程、交互记录与处理结果统一沉淀，让业务从单点操作走向可协同、可追踪、可持续优化。
+          该排的安排，该推进的推进，该解决的别躲着。项目自然越走越顺。
         </p>
         <div className="login-signal-grid">
           <span>
             <InteractionOutlined />
-            智能协同
+            产品规划
           </span>
           <span>
             <NodeIndexOutlined />
-            过程透明
+            项目推进
           </span>
           <span>
             <ApartmentOutlined />
-            结果沉淀
+            交付闭环
           </span>
         </div>
       </div>
@@ -144,7 +144,7 @@ export function LoginPage() {
           </span>
         </div>
         <Typography.Title className="login-title" level={3}>
-          小安智能管理平台
+          项目管理系统
         </Typography.Title>
         <form autoComplete="on" className="login-form" onSubmit={handleSubmit}>
           <label
@@ -185,17 +185,17 @@ export function LoginPage() {
             loading={submitting}
             type="primary"
           >
-            进入平台
+            登录系统
           </Button>
         </form>
         <div className="login-trust-row" aria-hidden="true">
           <span>
             <ThunderboltOutlined />
-            智能体协同
+            协同推进
           </span>
           <span>
             <FieldTimeOutlined />
-            结果可追溯
+            全程留痕
           </span>
         </div>
       </Card>
