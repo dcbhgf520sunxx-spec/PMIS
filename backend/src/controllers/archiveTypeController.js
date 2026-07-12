@@ -1,4 +1,5 @@
 const db = require('../db')
+const { failField } = require('../utils/response')
 
 function withCreatorUpdater(sql) {
   return `SELECT ${sql}, u1.real_name as creator_name, u2.real_name as updater_name
@@ -34,7 +35,7 @@ exports.create = async (req, res) => {
     const code = String(nextSeq).padStart(3, '0')
 
     const existsPrefix = await db.prepare('SELECT id FROM pms_archive_type WHERE code_prefix = ? AND is_deleted = 0').get(code_prefix)
-    if (existsPrefix) return res.status(400).json({ code: 400, message: '编码前缀已存在', data: null })
+    if (existsPrefix) return failField(res, 'code_prefix', '编码前缀已存在')
 
     const result = await db.prepare(
       'INSERT INTO pms_archive_type (code, code_prefix, name, status, creator_id, updater_id) VALUES (?, ?, ?, 1, ?, ?)'
@@ -43,7 +44,7 @@ exports.create = async (req, res) => {
     res.json({ code: 0, message: 'success', data: { id: result.lastInsertRowid, code } })
   } catch (err) {
     console.error(err)
-    if (err.code === '23505') return res.status(400).json({ code: 400, message: '类型编码或编码前缀已存在，请重试', data: null })
+    if (err.code === '23505' && String(err.constraint || '').includes('code_prefix')) return failField(res, 'code_prefix', '编码前缀已存在')
     res.status(500).json({ code: 500, message: '创建失败', data: null })
   }
 }

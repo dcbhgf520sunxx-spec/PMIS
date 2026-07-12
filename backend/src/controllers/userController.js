@@ -1,7 +1,7 @@
 const db = require('../db')
 const bcrypt = require('bcryptjs')
 const { getSortDirection, parsePagination } = require('../utils/pagination')
-const { fail, ok } = require('../utils/response')
+const { fail, failField, ok } = require('../utils/response')
 const { validateBody } = require('../utils/validation')
 
 function requireValidBody(res, body, schema) {
@@ -122,11 +122,11 @@ exports.create = async (req, res) => {
 
     if (employee_no) {
       const exists = await db.prepare('SELECT id FROM pms_user WHERE employee_no = ? AND is_deleted = 0').get(employee_no)
-      if (exists) return fail(res, 400, 400, '工号已存在')
+      if (exists) return failField(res, 'employee_no', '工号已存在')
     }
     if (phone) {
       const exists = await db.prepare('SELECT id FROM pms_user WHERE phone = ? AND is_deleted = 0').get(phone)
-      if (exists) return fail(res, 400, 400, '手机号已存在')
+      if (exists) return failField(res, 'phone', '手机号已存在')
     }
 
     const hashedPassword = await bcrypt.hash(password || 'vv123456', 10)
@@ -151,7 +151,10 @@ exports.create = async (req, res) => {
     ok(res, { id: userId })
   } catch (err) {
     console.error(err)
-    if (isUniqueViolation(err)) return fail(res, 400, 400, '工号或手机号已存在')
+    if (isUniqueViolation(err)) {
+      const field = String(err.constraint || '').includes('phone') ? 'phone' : 'employee_no'
+      return failField(res, field, field === 'phone' ? '手机号已存在' : '工号已存在')
+    }
     fail(res, 500, 500, '创建失败')
   }
 }
@@ -166,7 +169,7 @@ exports.update = async (req, res) => {
 
     if (phone) {
       const exists = await db.prepare('SELECT id FROM pms_user WHERE phone = ? AND is_deleted = 0 AND id != ?').get(phone, req.params.id)
-      if (exists) return fail(res, 400, 400, '手机号已存在')
+      if (exists) return failField(res, 'phone', '手机号已存在')
     }
 
     // Build changes: one entry per changed field

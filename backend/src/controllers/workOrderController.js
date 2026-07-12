@@ -5,6 +5,7 @@ const { getSortDirection, parsePagination } = require('../utils/pagination')
 const { fail, failField, ok } = require('../utils/response')
 const { validateBody } = require('../utils/validation')
 const { buildViewQuery, calculateViewCounts } = require('../utils/viewCounts')
+const { groupOperationLogs } = require('../utils/operationHistory')
 
 function requireValidBody(res, body, schema) {
   const result = validateBody(body, schema)
@@ -270,11 +271,7 @@ exports.update = async (req, res) => {
     const sql = `UPDATE pms_work_order SET ${setParts.join(', ')} WHERE id = ?`
     await db.prepare(sql).run(...params)
 
-    if (changes.length > 0) {
-      for (const ch of changes) {
-        await db.writeLog(operatorId, '编辑', '运维工单', req.params.id, ch.field, ch.oldVal ?? null, ch.newVal ?? null, req.ip)
-      }
-    }
+    if (changes.length > 0) await db.writeLogs(operatorId, '编辑', '运维工单', req.params.id, changes, req.ip)
 
     ok(res, null)
   } catch (err) {
@@ -354,9 +351,11 @@ exports.toggleStatus = async (req, res) => {
       'UPDATE pms_work_order SET status = ?, is_overdue = ?, resolve_date = ?, close_date = ?, result_desc = ?, updater_id = ? WHERE id = ?'
     ).run(status, is_overdue, finalResolveDate, finalCloseDate, finalResultDesc, operatorId, req.params.id)
 
-    for (const ch of changes) {
-      await db.writeLog(operatorId, '状态变更', '运维工单', req.params.id, ch.field, ch.oldVal ?? '空', ch.newVal ?? '空', req.ip)
-    }
+    await db.writeLogs(operatorId, '状态变更', '运维工单', req.params.id, changes.map((change) => ({
+      ...change,
+      oldVal: change.oldVal ?? '空',
+      newVal: change.newVal ?? '空'
+    })), req.ip)
     ok(res, null)
   } catch (err) {
     console.error(err)
@@ -481,10 +480,10 @@ const FIELD_LABEL = {
 }
 
 /** Sort order for display (matches detail page field order) */
-const FIELD_SORT_ORDER = [
-  '问题描述', '所属系统', '问题类型', '紧急程度', '状态',
-  '逾期', '跟进人', '提出人', '提出组织', '提出时间',
-  '预计完成时间', '实际修复时间', '处置结果', '关闭时间',
+const DETAIL_FIELD_ORDER = [
+  'problem_desc', 'system_id', 'problem_type', 'urgency', 'status',
+  'is_overdue', 'follower_id', 'submitter_name', 'submitter_dept', 'submit_time',
+  'expected_resolve_date', 'resolve_date', 'result_desc', 'close_date',
 ]
 const HISTORY_DATE_FIELDS = new Set(['expected_resolve_date', 'resolve_date', 'close_date', 'submit_time'])
 
@@ -514,10 +513,6 @@ function resolveValue(field, value, lookups = {}) {
     return { 0: '否', 1: '是' }[String(value)] || value
   }
   return String(value)
-}
-
-function historyTimeKey(value) {
-  return String(value || '').replace('T', ' ').slice(0, 19)
 }
 
 function buildIdInQuery(ids, selectSql, tableName) {
@@ -555,17 +550,12 @@ exports.getHistory = async (req, res) => {
       archives: new Map(archives.map(row => [String(row.id), row.name]))
     }
 
-    const grouped = []
-    const groupMap = new Map()
-    for (const log of logs) {
-      const key = `${log.user_id}_${log.action}_${historyTimeKey(log.created_at)}`
-      if (!groupMap.has(key)) {
-        const group = { user: log.real_name, action: log.action, time: log.created_at, changes: [] }
-        grouped.push(group)
-        groupMap.set(key, group)
-      }
-      groupMap.get(key).changes.push(log)
-    }
+    const grouped = groupOperationLogs(logs, DETAIL_FIELD_ORDER).map((group) => ({
+      user: group.real_name,
+      action: group.action,
+      time: group.created_at,
+      changes: group.changes
+    }))
 
     const entries = []
     for (const g of grouped) {
@@ -604,8 +594,6 @@ exports.getHistory = async (req, res) => {
           }
         }
       }
-
-      details.sort((a, b) => FIELD_SORT_ORDER.indexOf(a.field) - FIELD_SORT_ORDER.indexOf(b.field))
 
       if (!title || (g.action === '状态变更' && details.length === 0 && title === '状态变更')) continue
 

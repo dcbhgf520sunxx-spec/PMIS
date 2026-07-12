@@ -83,10 +83,19 @@ async function transaction(fn) {
   }
 }
 
-function writeLog(userId, action, module, targetId, fieldName, oldValue, newValue, ip, targetName) {
+function writeLog(userId, action, module, targetId, fieldName, oldValue, newValue, ip, targetName, operationId) {
   return prepare(
-    'INSERT INTO pms_op_log (user_id, action, module, target_id, field_name, old_value, new_value, ip, target_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  ).run(userId, action, module, targetId, fieldName, oldValue, newValue, ip, targetName || null)
+    'INSERT INTO pms_op_log (user_id, action, module, target_id, field_name, old_value, new_value, ip, target_name, operation_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).run(userId, action, module, targetId, fieldName, oldValue, newValue, ip, targetName || null, operationId || null)
 }
 
-module.exports = { prepare, exec, transaction, writeLog, pool }
+async function writeLogs(userId, action, module, targetId, changes, ip, targetName) {
+  const { createOperationId } = require('./utils/operationHistory')
+  const operationId = createOperationId()
+  for (const change of changes) {
+    await writeLog(userId, action, module, targetId, change.field, change.oldVal ?? null, change.newVal ?? null, ip, targetName, operationId)
+  }
+  return operationId
+}
+
+module.exports = { prepare, exec, transaction, writeLog, writeLogs, pool }
