@@ -302,7 +302,7 @@ test('组件审计允许非列表场景的 ViewTabs 不带统计', () => {
   assert.equal(result.status, 0, result.stdout);
 });
 
-test('组件审计允许列表数据视图不启用统计', () => {
+test('组件审计阻断列表数据视图不启用统计', () => {
   const result = runStrictAudit(
     `export function CustomerListPage() {
       const columns = [
@@ -319,7 +319,8 @@ test('组件审计允许列表数据视图不启用统计', () => {
     }`,
     'CustomerListPage.tsx'
   );
-  assert.equal(result.status, 0, result.stdout);
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /列表页.*showCounts/);
 });
 
 test('组件审计阻断有状态详情缺少标题标签和状态操作', () => {

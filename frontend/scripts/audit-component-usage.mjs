@@ -378,7 +378,9 @@ function collectListViewTabContractViolations(files) {
     };
 
     return viewTabs.flatMap((node) => {
-      if (!attribute(node, 'showCounts')) return [];
+      if (!attribute(node, 'showCounts')) {
+        return [finding(file, sourceFile, node, '列表页出现 ViewTabs 时必须显式启用 showCounts，并为每个 Tab 提供真实统计')];
+      }
       const itemsAttribute = attribute(node, 'items');
       const expression = itemsAttribute?.initializer && ts.isJsxExpression(itemsAttribute.initializer)
         ? itemsAttribute.initializer.expression

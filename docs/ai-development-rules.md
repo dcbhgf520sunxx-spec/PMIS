@@ -68,7 +68,7 @@ API 接入保持统一：
 - 普通列表不传选择列、批量操作和已选数量，分页保持在右侧。
 - 批量列表必须显式声明 `mode="batch"`，并通过 `batch` 传入已选数量和批量操作。
 - 筛选区使用 `CompactFilterBar`，表格区和底部分页区由模板承接。
-- `ViewTabs` 统计是可选能力。需要展示统计的列表必须显式传入 `showCounts`，并为每个 Tab 传入 `count`；不传 `showCounts` 时不展示统计，也不要求接口执行额外的 `COUNT` 查询。
+- `ViewTabs` 在非列表场景中统计是可选能力；只要出现在 `TemplateListPage` 列表页中，就必须显式传入 `showCounts`，并为每个 Tab 传入真实 `count`，后端必须提供对应统计口径。
 - 启用统计的服务端分页列表统一返回 `viewCounts`，统计口径为“公共查询条件 + 当前 Tab 的数据范围”。查询条件和视图范围必须使用不同参数表达，不能让同一个 `owner_id`、`follower_id` 同时承担查询筛选和“我的”范围；存在冲突条件时，由视图配置通过 `omitFilters` 明确排除。后端优先复用 `calculateViewCounts` 和 `buildViewQuery`，业务层只声明各视图的范围条件。
 - 启用统计后，前端不得使用当前页 `rows.length`，不得把当前视图的 `total` 复用到其他 Tab；模块测试必须覆盖公共查询条件进入全部视图、各视图范围条件正确追加、冲突查询条件按配置排除。
 
