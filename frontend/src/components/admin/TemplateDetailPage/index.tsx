@@ -79,6 +79,7 @@ export function TemplateDetailPage({
   children
 }: TemplateDetailPageProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const navigationTargetRef = useRef<string | null>(null);
   const navigationItems = useMemo(
     () => sectionNavigation ? collectSectionNavigationItems(children) : [],
     [children, sectionNavigation]
@@ -106,32 +107,38 @@ export function TemplateDetailPage({
     }
     setActiveSectionKey(navigationItems[0].key);
     const root = scrollContainerRef.current;
-    if (!root || typeof IntersectionObserver === 'undefined') return;
-    const activateLastSectionAtBottom = () => {
-      if (root.scrollHeight - root.scrollTop - root.clientHeight <= 2) {
-        setActiveSectionKey(navigationItems[navigationItems.length - 1].key);
+    if (!root) return;
+    const syncActiveSection = () => {
+      if (navigationTargetRef.current) {
+        setActiveSectionKey(navigationTargetRef.current);
+        return;
       }
-    };
-    const observer = new IntersectionObserver((entries) => {
-      if (root.scrollHeight - root.scrollTop - root.clientHeight <= 2) {
+      if (root.scrollHeight - root.scrollTop - root.clientHeight <= 8) {
         setActiveSectionKey(navigationItems[navigationItems.length - 1].key);
         return;
       }
-      const visible = entries
-        .filter((entry) => entry.isIntersecting)
-        .sort((left, right) => left.boundingClientRect.top - right.boundingClientRect.top)[0];
-      const sectionKey = visible?.target.getAttribute('data-detail-section-key');
+      const navigationHeight = root.querySelector<HTMLElement>('.admin-template-detail-page__section-navigation')?.offsetHeight || 0;
+      const activationLine = root.scrollTop + navigationHeight + 12;
+      const sections = Array.from(root.querySelectorAll<HTMLElement>('[data-detail-section-key]'));
+      let activeSection = sections[0];
+      for (const section of sections) {
+        if (section.offsetTop > activationLine) break;
+        activeSection = section;
+      }
+      const sectionKey = activeSection?.getAttribute('data-detail-section-key');
       if (sectionKey) setActiveSectionKey(sectionKey);
-    }, { root, rootMargin: '-48px 0px -65% 0px', threshold: 0 });
-    root.querySelectorAll('[data-detail-section-key]').forEach((section) => observer.observe(section));
-    root.addEventListener('scroll', activateLastSectionAtBottom, { passive: true });
+    };
+    syncActiveSection();
+    root.addEventListener('scroll', syncActiveSection, { passive: true });
+    window.addEventListener('resize', syncActiveSection);
     return () => {
-      observer.disconnect();
-      root.removeEventListener('scroll', activateLastSectionAtBottom);
+      root.removeEventListener('scroll', syncActiveSection);
+      window.removeEventListener('resize', syncActiveSection);
     };
   }, [navigationItems]);
 
   const navigateToSection = (sectionKey: string) => {
+    navigationTargetRef.current = sectionKey;
     setActiveSectionKey(sectionKey);
     const root = scrollContainerRef.current;
     const target = document.getElementById(`detail-section-${sectionKey}`);
@@ -139,8 +146,11 @@ export function TemplateDetailPage({
     const navigationHeight = root.querySelector<HTMLElement>('.admin-template-detail-page__section-navigation')?.offsetHeight || 0;
     scrollContainerRef.current?.scrollTo({
       top: Math.max(target.offsetTop - navigationHeight - 10, 0),
-      behavior: 'smooth'
+      behavior: 'auto'
     });
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      navigationTargetRef.current = null;
+    }));
   };
 
   return (

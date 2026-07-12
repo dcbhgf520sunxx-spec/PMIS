@@ -11,10 +11,16 @@ const rulesSource = read('../docs/ai-development-rules.md');
 test('详情模板提供可选的顶部分类导航契约', () => {
   assert.match(templateSource, /sectionNavigation\?: boolean/);
   assert.match(templateSource, /sectionKey\?: string/);
-  assert.match(templateSource, /IntersectionObserver/);
+  assert.doesNotMatch(templateSource, /IntersectionObserver/);
+  assert.match(templateSource, /syncActiveSection/);
+  assert.match(templateSource, /navigationTargetRef/);
+  assert.match(templateSource, /requestAnimationFrame/);
+  assert.match(templateSource, /querySelectorAll<HTMLElement>\('\[data-detail-section-key\]'\)/);
   assert.match(templateSource, /scrollContainerRef\.current\?\.scrollTo/);
   assert.doesNotMatch(templateSource, /scrollIntoView/);
   assert.match(templateSource, /scrollHeight - root\.scrollTop - root\.clientHeight/);
+  assert.match(templateSource, /behavior: 'auto'/);
+  assert.doesNotMatch(templateSource, /behavior: 'smooth'/);
   assert.match(templateSource, /admin-template-detail-page__section-navigation/);
 });
 
