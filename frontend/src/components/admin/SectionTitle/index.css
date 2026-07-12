@@ -6,6 +6,15 @@
   margin-bottom: 12px;
 }
 
+.admin-section-title.is-inline-extra-after-title {
+  justify-content: flex-start;
+}
+
+.admin-section-title.is-inline-extra-after-title > .admin-section-title__content {
+  flex: 0 0 auto;
+  width: auto;
+}
+
 .admin-section-title__text {
   position: relative;
   display: inline-flex;
@@ -20,6 +29,7 @@
 
 .admin-section-title__inline-extra {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
 }
 

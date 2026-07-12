@@ -4,13 +4,14 @@ type SectionTitleProps = {
   title: string;
   description?: string;
   inlineExtra?: React.ReactNode;
+  inlineExtraPlacement?: 'after-title';
   extra?: React.ReactNode;
 };
 
-export function SectionTitle({ title, description, inlineExtra, extra }: SectionTitleProps) {
+export function SectionTitle({ title, description, inlineExtra, inlineExtraPlacement, extra }: SectionTitleProps) {
   return (
-    <div className="admin-section-title">
-      <div>
+    <div className={['admin-section-title', inlineExtraPlacement === 'after-title' ? 'is-inline-extra-after-title' : ''].filter(Boolean).join(' ')}>
+      <div className="admin-section-title__content">
         <div className="admin-section-title__text">
           <span>{title}</span>
           {inlineExtra ? <span className="admin-section-title__inline-extra">{inlineExtra}</span> : null}
