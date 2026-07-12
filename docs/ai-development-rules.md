@@ -107,8 +107,8 @@ API 接入保持统一：
 - 状态变更统一使用 `StatusChangeAction` 或以它为底层的业务封装。业务状态组件必须直接渲染公共 `StatusChangeAction`，仅使用 `*StatusChangeAction` 名称但内部自行拼按钮或弹窗仍属违规。目标状态语义固定为：普通操作蓝色、正向操作绿色、危险或反向操作红色；业务页面不得直接使用 `StatusFlowModal`，不得创建自维护开关和目标状态的重复弹窗。
 - 返回列表通过 `TemplateDetailPage.onBack` 传入，业务页不重复创建“返回列表”按钮和操作栏外壳。
 - 接口失败或记录不存在时，通过模板的 `error`、`notFound`、`onRetry` 展示统一状态，不能无限显示加载中。
-- 基础信息、单据信息、历史记录等使用详情分组和 `DetailMetaList`。
-- 长详情页存在较多分类且需要快速定位时，必须使用 `TemplateDetailPage.sectionNavigation` 和 `TemplateDetailSection.sectionKey` 提供的顶部分类导航；不得在业务页重复维护分类数组、自建锚点或滚动监听。窄屏下拉定位由模板自动承接。
+- 基础信息、单据信息、历史记录等使用详情分组和 `DetailMetaList`；使用 `HistoryTimeline` 的详情分组统一命名为“变更历史”，不得继续使用“操作历史”“操作记录”等旧名称。
+- 长详情页存在较多分类且需要快速定位时，必须使用 `TemplateDetailPage.sectionNavigation` 和 `TemplateDetailSection.sectionKey` 提供的顶部分类导航；开启分类导航后，每个参与导航的 `TemplateDetailSection` 都必须声明唯一 `sectionKey`。不得在业务页重复维护分类数组、自建锚点或滚动监听，窄屏下拉定位由模板自动承接。
 - 详情页返回、编辑等动作通过 `ActionBar` 和现有按钮组件组合。
 - 不在业务页临时重做详情卡片、字段栅格、状态展示和历史记录样式。
 
