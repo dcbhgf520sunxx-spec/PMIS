@@ -355,6 +355,14 @@ test('组件审计允许详情历史使用统一的变更历史名称', () => {
   assert.equal(result.status, 0, result.stdout);
 });
 
+test('组件审计阻断业务页手工控制 HistoryTimeline 展开状态', () => {
+  const result = runStrictAudit(
+    'export function CustomerDetailPage() { return <TemplateDetailPage><TemplateDetailSection title="变更历史"><HistoryTimeline items={[]} expandedKeys={keys} onExpandedKeysChange={setKeys} /></TemplateDetailSection></TemplateDetailPage>; }'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /HistoryTimeline.*全部展开/);
+});
+
 test('组件审计阻断开启分类导航后存在未声明 sectionKey 的分组', () => {
   const result = runStrictAudit(
     'export function CustomerDetailPage() { return <TemplateDetailPage sectionNavigation><TemplateDetailSection title="基本信息" sectionKey="basic"><div /></TemplateDetailSection><TemplateDetailSection title="变更历史"><HistoryTimeline items={[]} /></TemplateDetailSection></TemplateDetailPage>; }'

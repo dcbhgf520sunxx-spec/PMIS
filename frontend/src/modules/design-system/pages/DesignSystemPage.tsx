@@ -489,7 +489,6 @@ export function DesignSystemPage() {
   const [tableDrawerSelectedRows, setTableDrawerSelectedRows] = useState<DrawerTableRecord[]>([]);
   const [displayTablePage, setDisplayTablePage] = useState(1);
   const [displayTablePageSize, setDisplayTablePageSize] = useState(20);
-  const [displayHistoryExpandedKeys, setDisplayHistoryExpandedKeys] = useState<string[]>(['h1']);
   const [richText, setRichText] = useState('<p><strong>项目说明：</strong>这里用于沉淀可复用富文本描述，支持基础格式和粘贴图片。</p>');
   const categoryParam = searchParams.get('category');
   const activeCategory: DesignCategory = isDesignCategory(categoryParam) ? categoryParam : 'overview';
@@ -1222,11 +1221,7 @@ export function DesignSystemPage() {
                     <ComponentEntry name="HistoryTimeline" />
                     <p>用于记录数据产生、流转和变更过程，必须包含动作、人员和时间。</p>
                   </div>
-                  <HistoryTimeline
-                    items={mockWorkOrderHistory}
-                    expandedKeys={displayHistoryExpandedKeys}
-                    onExpandedKeysChange={setDisplayHistoryExpandedKeys}
-                  />
+                  <HistoryTimeline items={mockWorkOrderHistory} />
                 </section>
 
                 <section className="design-system-page__input-panel">

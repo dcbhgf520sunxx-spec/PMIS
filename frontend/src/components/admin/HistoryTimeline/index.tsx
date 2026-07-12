@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Empty, Timeline } from 'antd';
 import { richTextToSummary } from '../../../utils/richText';
+import { AdminTextAction } from '../AdminTextAction';
 import { ExpandToggleButton } from '../ExpandToggleButton';
 import './index.css';
 
@@ -22,8 +23,6 @@ export type HistoryTimelineItem = {
 
 type HistoryTimelineProps = {
   items: HistoryTimelineItem[];
-  expandedKeys?: string[];
-  onExpandedKeysChange?: (keys: string[]) => void;
 };
 
 function formatHistoryValue(field: string, value?: ReactNode) {
@@ -32,26 +31,34 @@ function formatHistoryValue(field: string, value?: ReactNode) {
   return value || '-';
 }
 
-export function HistoryTimeline({ items, expandedKeys, onExpandedKeysChange }: HistoryTimelineProps) {
-  const [innerExpandedKeys, setInnerExpandedKeys] = useState<string[]>([]);
-  const currentExpandedKeys = expandedKeys ?? innerExpandedKeys;
-  const updateExpandedKeys = onExpandedKeysChange ?? setInnerExpandedKeys;
+export function HistoryTimeline({ items }: HistoryTimelineProps) {
+  const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
 
   if (items.length === 0) {
     return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无历史记录" />;
   }
 
   const toggleExpanded = (id: string) => {
-    updateExpandedKeys(
-      currentExpandedKeys.includes(id)
-        ? currentExpandedKeys.filter((item) => item !== id)
-        : [...currentExpandedKeys, id]
+    setExpandedKeys(
+      expandedKeys.includes(id)
+        ? expandedKeys.filter((item) => item !== id)
+        : [...expandedKeys, id]
     );
   };
 
+  const expandableKeys = items.filter((item) => item.changes?.length).map((item) => item.id);
+  const isAllExpanded = expandableKeys.length > 0 && expandableKeys.every((key) => expandedKeys.includes(key));
+
   return (
-    <Timeline
-      className="admin-history-timeline"
+    <div className="admin-history-timeline">
+      {expandableKeys.length > 0 ? (
+        <div className="admin-history-timeline__toolbar">
+          <AdminTextAction onClick={() => setExpandedKeys(isAllExpanded ? [] : expandableKeys)}>
+            {isAllExpanded ? '全部收起' : '全部展开'}
+          </AdminTextAction>
+        </div>
+      ) : null}
+      <Timeline
       items={items.map((item) => ({
         key: item.id,
         children: (
@@ -64,13 +71,13 @@ export function HistoryTimeline({ items, expandedKeys, onExpandedKeysChange }: H
                   <ExpandToggleButton
                     collapseLabel="收起变更详情"
                     expandLabel="展开变更详情"
-                    expanded={currentExpandedKeys.includes(item.id)}
+                    expanded={expandedKeys.includes(item.id)}
                     onClick={() => toggleExpanded(item.id)}
                   />
                 ) : null}
               </div>
             </div>
-            {item.changes?.length && currentExpandedKeys.includes(item.id) ? (
+            {item.changes?.length && expandedKeys.includes(item.id) ? (
               <div className="admin-history-timeline__changes">
                 {item.changes.map((change, index) => (
                   <div className="admin-history-timeline__change" key={`${change.field}-${index}`}>
@@ -89,6 +96,7 @@ export function HistoryTimeline({ items, expandedKeys, onExpandedKeysChange }: H
           </div>
         )
       }))}
-    />
+      />
+    </div>
   );
 }

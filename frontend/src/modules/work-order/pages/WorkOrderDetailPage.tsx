@@ -4,7 +4,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   AdminButton,
   AdminText,
-  AdminTextAction,
   DeleteConfirmAction,
   DetailNeighborNav,
   DetailMetaList,
@@ -31,7 +30,6 @@ import { buildStatusPayload, statusTransitions } from './workOrderList.constants
 export function WorkOrderDetailPage() {
   const navigate = useNavigate();
   const params = useParams();
-  const [historyExpandedKeys, setHistoryExpandedKeys] = useState<string[]>([]);
   const [detail, setDetail] = useState<WorkOrderRecord>();
   const [history, setHistory] = useState<WorkOrderHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,10 +84,6 @@ export function WorkOrderDetailPage() {
   }
 
   const nextStatuses = statusOptions.filter((item) => statusTransitions[detail.status].includes(item.value));
-  const expandableHistoryKeys = history.filter((item) => item.changes?.length).map((item) => item.id);
-  const isAllHistoryExpanded =
-    expandableHistoryKeys.length > 0 && expandableHistoryKeys.every((key) => historyExpandedKeys.includes(key));
-
   return (
     <TemplateDetailPage
       title="工单详情"
@@ -205,21 +199,8 @@ export function WorkOrderDetailPage() {
             />
           </TemplateDetailSection>
 
-          <TemplateDetailSection
-            title="变更历史"
-            inlineExtra={expandableHistoryKeys.length > 0 ? (
-                <AdminTextAction
-                  onClick={() => setHistoryExpandedKeys(isAllHistoryExpanded ? [] : expandableHistoryKeys)}
-                >
-                  {isAllHistoryExpanded ? '全部收起' : '全部展开'}
-                </AdminTextAction>
-            ) : null}
-          >
-            <HistoryTimeline
-              items={history}
-              expandedKeys={historyExpandedKeys}
-              onExpandedKeysChange={setHistoryExpandedKeys}
-            />
+          <TemplateDetailSection title="变更历史">
+            <HistoryTimeline items={history} />
           </TemplateDetailSection>
 
     </TemplateDetailPage>

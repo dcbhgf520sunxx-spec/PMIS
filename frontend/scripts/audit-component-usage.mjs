@@ -244,6 +244,9 @@ function collectSemanticViolations(files) {
           }
         }
         if (name === 'HistoryTimeline') {
+          if (attribute(node, 'expandedKeys') || attribute(node, 'onExpandedKeysChange')) {
+            violations.push(finding(file, sourceFile, node, 'HistoryTimeline 已内置全部展开/全部收起，业务页不得手工控制展开状态'));
+          }
           let parent = node.parent;
           while (parent && parent !== sourceFile) {
             if (ts.isJsxElement(parent) && jsxTagName(parent, sourceFile) === 'TemplateDetailSection') break;

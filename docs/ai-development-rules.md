@@ -48,6 +48,8 @@ API 接入保持统一：
 
 业务页面只保留业务字段、接口调用、筛选状态、列配置和业务动作。页面结构、页头、操作区、列表底部、表单分组、详情分组、主区/侧区等由模板入口承接。
 
+后台框架顶部说明属于全局契约：除组件工作台外，统一显示“欢迎回来，今天也请从容处理每一项工作。”，不得按业务模块自定义顶部标题或文案。组件工作台可保留用于说明设计系统上下文的专属标题和说明。
+
 ### 列表页
 
 列表页统一使用 `TemplateListPage` 和 `useTemplateListPageData`。
@@ -110,6 +112,7 @@ API 接入保持统一：
 - 返回列表通过 `TemplateDetailPage.onBack` 传入，业务页不重复创建“返回列表”按钮和操作栏外壳。
 - 接口失败或记录不存在时，通过模板的 `error`、`notFound`、`onRetry` 展示统一状态，不能无限显示加载中。
 - 基础信息、单据信息、历史记录等使用详情分组和 `DetailMetaList`；使用 `HistoryTimeline` 的详情分组统一命名为“变更历史”，不得继续使用“操作历史”“操作记录”等旧名称。
+- `HistoryTimeline` 自动根据可展开记录提供“全部展开/全部收起”和单条展开能力；业务页面不得维护 `expandedKeys`、`onExpandedKeysChange` 或通过 `inlineExtra` 重复实现批量展开。
 - 同一次保存或状态变更产生的多字段日志必须共享 `pms_op_log.operation_id`，历史接口按该标识聚合为一个节点；聚合节点内的字段顺序必须复用对应详情页的字段顺序，禁止按日志写入顺序、数据库返回顺序或字段名排序。没有 `operation_id` 的历史日志按单条兼容展示，不能按“同一秒”猜测聚合。
 - 长详情页存在较多分类且需要快速定位时，必须使用 `TemplateDetailPage.sectionNavigation` 和 `TemplateDetailSection.sectionKey` 提供的顶部分类导航；开启分类导航后，每个参与导航的 `TemplateDetailSection` 都必须声明唯一 `sectionKey`。不得在业务页重复维护分类数组、自建锚点或滚动监听，窄屏下拉定位由模板自动承接。
 - 详情页返回、编辑等动作通过 `ActionBar` 和现有按钮组件组合。

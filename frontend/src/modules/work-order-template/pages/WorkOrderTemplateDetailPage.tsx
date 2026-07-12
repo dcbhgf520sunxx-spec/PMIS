@@ -4,7 +4,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   AdminButton,
   AdminText,
-  AdminTextAction,
   DeleteConfirmAction,
   DetailMetaList,
   HistoryTimeline,
@@ -28,7 +27,6 @@ import '../../work-order/pages/WorkOrderDetailPage.css';
 export function WorkOrderTemplateDetailPage() {
   const navigate = useNavigate();
   const params = useParams();
-  const [historyExpandedKeys, setHistoryExpandedKeys] = useState<string[]>([]);
   const detail = mockWorkOrders.find((item) => item.id === params.id);
   if (!detail) {
     return (
@@ -42,10 +40,6 @@ export function WorkOrderTemplateDetailPage() {
     );
   }
   const nextStatuses = statusOptions.filter((item) => item.value > detail.status);
-  const expandableHistoryKeys = mockWorkOrderHistory.filter((item) => item.changes?.length).map((item) => item.id);
-  const isAllHistoryExpanded =
-    expandableHistoryKeys.length > 0 && expandableHistoryKeys.every((key) => historyExpandedKeys.includes(key));
-
   return (
     <TemplateDetailPage
       title="工单详情样板"
@@ -147,21 +141,8 @@ export function WorkOrderTemplateDetailPage() {
             />
           </TemplateDetailSection>
 
-          <TemplateDetailSection
-            title="变更历史"
-            inlineExtra={expandableHistoryKeys.length > 0 ? (
-                <AdminTextAction
-                  onClick={() => setHistoryExpandedKeys(isAllHistoryExpanded ? [] : expandableHistoryKeys)}
-                >
-                  {isAllHistoryExpanded ? '全部收起' : '全部展开'}
-                </AdminTextAction>
-            ) : null}
-          >
-            <HistoryTimeline
-              items={mockWorkOrderHistory}
-              expandedKeys={historyExpandedKeys}
-              onExpandedKeysChange={setHistoryExpandedKeys}
-            />
+          <TemplateDetailSection title="变更历史">
+            <HistoryTimeline items={mockWorkOrderHistory} />
           </TemplateDetailSection>
 
     </TemplateDetailPage>
