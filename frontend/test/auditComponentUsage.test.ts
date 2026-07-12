@@ -340,6 +340,29 @@ test('组件审计阻断详情右上角放置状态操作', () => {
   assert.match(result.stdout, /状态操作.*statusAction/);
 });
 
+test('组件审计阻断详情历史分组继续使用操作历史旧名称', () => {
+  const result = runStrictAudit(
+    'export function CustomerDetailPage() { return <TemplateDetailPage><TemplateDetailSection title="操作历史"><HistoryTimeline items={[]} /></TemplateDetailSection></TemplateDetailPage>; }'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /HistoryTimeline.*变更历史/);
+});
+
+test('组件审计允许详情历史使用统一的变更历史名称', () => {
+  const result = runStrictAudit(
+    'export function CustomerDetailPage() { return <TemplateDetailPage><TemplateDetailSection title="变更历史"><HistoryTimeline items={[]} /></TemplateDetailSection></TemplateDetailPage>; }'
+  );
+  assert.equal(result.status, 0, result.stdout);
+});
+
+test('组件审计阻断开启分类导航后存在未声明 sectionKey 的分组', () => {
+  const result = runStrictAudit(
+    'export function CustomerDetailPage() { return <TemplateDetailPage sectionNavigation><TemplateDetailSection title="基本信息" sectionKey="basic"><div /></TemplateDetailSection><TemplateDetailSection title="变更历史"><HistoryTimeline items={[]} /></TemplateDetailSection></TemplateDetailPage>; }'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /分类导航.*sectionKey/);
+});
+
 test('组件审计阻断业务页面直接使用状态弹窗或旧状态动作', () => {
   const modalResult = runStrictAudit('export function CustomerPage() { return <StatusFlowModal open />; }', 'CustomerPage.tsx');
   const legacyResult = runStrictAudit('export function CustomerPage() { return <StatusFlowAction />; }', 'CustomerPage.tsx');

@@ -40,7 +40,7 @@ export function ProductDetailPage() {
       statusAction={row ? <StatusConfirmAction block type="primary" action={row.status === 1 ? 'disable' : 'enable'} entityName="产品" targetName={row.name} successMessage={row.status === 1 ? '停用成功' : '启用成功'} onConfirm={async () => { const status = row.status === 1 ? 0 : 1; await updateProductStatus(row.id, status); setRow({ ...row, status }); }}>{row.status === 1 ? '停用产品' : '启用产品'}</StatusConfirmAction> : null}
       documentSection={row ? { items: [{ label: '创建人', value: row.creatorName }, { label: '创建时间', value: row.createdAt, wide: true }, { label: '更新人', value: row.updaterName }, { label: '更新时间', value: row.updatedAt, wide: true }] } : null}
     >
-      {row ? <><TemplateDetailSection title="基本信息"><DetailMetaList items={[{ label: '产品名称', value: row.name }, { label: '负责人', value: row.ownerName }]} /></TemplateDetailSection><TemplateDetailSection title="产品描述"><RichTextViewer value={row.description || '暂无描述'} /></TemplateDetailSection><TemplateDetailSection title="操作历史"><HistoryTimeline items={history} /></TemplateDetailSection></> : null}
+      {row ? <><TemplateDetailSection title="基本信息"><DetailMetaList items={[{ label: '产品名称', value: row.name }, { label: '负责人', value: row.ownerName }]} /></TemplateDetailSection><TemplateDetailSection title="产品描述"><RichTextViewer value={row.description || '暂无描述'} /></TemplateDetailSection><TemplateDetailSection title="变更历史"><HistoryTimeline items={history} /></TemplateDetailSection></> : null}
     </TemplateDetailPage>
   );
 }

@@ -243,6 +243,19 @@ function collectSemanticViolations(files) {
             ));
           }
         }
+        if (name === 'HistoryTimeline') {
+          let parent = node.parent;
+          while (parent && parent !== sourceFile) {
+            if (ts.isJsxElement(parent) && jsxTagName(parent, sourceFile) === 'TemplateDetailSection') break;
+            parent = parent.parent;
+          }
+          const sectionTitle = parent && ts.isJsxElement(parent)
+            ? attributeText(parent, 'title', sourceFile)
+            : '';
+          if (sectionTitle !== '"变更历史"' && sectionTitle !== "'变更历史'") {
+            violations.push(finding(file, sourceFile, node, 'HistoryTimeline 所在详情分组必须统一命名为“变更历史”'));
+          }
+        }
         if (name === 'StatusFlowModal') {
           violations.push(finding(file, sourceFile, node, '业务页面不得直接使用 StatusFlowModal，应通过 StatusChangeAction 承接'));
         }
@@ -279,6 +292,17 @@ function collectSemanticViolations(files) {
           const actionsSource = attributeText(node, 'actions', sourceFile);
           if (/Status(?:Confirm|Change)Action|StatusFlowModal/.test(actionsSource)) {
             violations.push(finding(file, sourceFile, node, '详情状态操作不得放在右上角 actions，必须放入 statusAction'));
+          }
+          if (attribute(node, 'sectionNavigation')) {
+            const inspectNavigationSections = (child) => {
+              if ((ts.isJsxElement(child) || ts.isJsxSelfClosingElement(child))
+                && jsxTagName(child, sourceFile) === 'TemplateDetailSection'
+                && !attribute(child, 'sectionKey')) {
+                violations.push(finding(file, sourceFile, child, '开启详情分类导航后，每个 TemplateDetailSection 必须声明唯一 sectionKey'));
+              }
+              ts.forEachChild(child, inspectNavigationSections);
+            };
+            ts.forEachChild(node, inspectNavigationSections);
           }
         }
       }
