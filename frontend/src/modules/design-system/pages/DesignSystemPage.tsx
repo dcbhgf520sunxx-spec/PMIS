@@ -1182,12 +1182,12 @@ export function DesignSystemPage() {
                   <div className="design-system-page__input-panel-head">
                     <h3>标签、徽标与头像</h3>
                     <ComponentEntry name="AdminTag / AdminBadge / AdminAvatar" />
-                    <p>用于分类、数量和人员提示，不替代流程状态、紧急程度和逾期标签。</p>
+                    <p>用于分类、数量和人员提示。普通分类统一使用默认样式，不自行映射颜色，也不替代流程状态、紧急程度和逾期标签。</p>
                   </div>
                   <AdminSpace direction="vertical" size={12}>
                     <AdminSpace wrap>
-                      <AdminTag color="blue">系统优化</AdminTag>
-                      <AdminTag color="cyan">后台维护</AdminTag>
+                      <AdminTag>系统优化</AdminTag>
+                      <AdminTag>后台维护</AdminTag>
                       <AdminTag>日常操作</AdminTag>
                     </AdminSpace>
                     <AdminSpace wrap size={18} className="design-system-page__display-badge-row">

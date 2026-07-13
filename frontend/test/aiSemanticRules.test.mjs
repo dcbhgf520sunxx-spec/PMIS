@@ -24,6 +24,18 @@ test('AI 交付链路要求语义审计和浏览器检查', () => {
   assert.match(template, /状态操作位置/);
 });
 
+test('开发规则明确普通分类标签不得自行映射颜色', () => {
+  const rules = read('../../docs/ai-development-rules.md');
+  const flow = read('../../docs/ai-delivery-flow.md');
+  const template = read('../../docs/ai-delivery-template.md');
+  const workbench = read('../src/modules/design-system/pages/DesignSystemPage.tsx');
+  assert.match(rules, /普通分类标签.*AdminTag.*不得.*color/);
+  assert.match(flow, /普通分类标签.*不得自行指定颜色/);
+  assert.match(template, /普通分类标签.*默认样式/);
+  assert.match(workbench, /普通分类统一使用默认样式/);
+  assert.doesNotMatch(workbench, /<AdminTag\s+color=/);
+});
+
 test('统一门禁包含新增的语义约束测试', () => {
   const gate = read('../../scripts/verify-change.mjs');
   assert.match(gate, /readdirSync/);
@@ -58,4 +70,12 @@ test('列表规则明确列宽、固定列、横向滚动和排序契约', () =>
   assert.match(template, /左右固定列/);
   assert.match(template, /列宽拖拽/);
   assert.match(template, /列头排序/);
+});
+
+test('列表规则要求创建人和创建时间固定为末尾业务列', () => {
+  const rules = read('../../docs/ai-development-rules.md');
+  const template = read('../../docs/ai-delivery-template.md');
+  assert.match(rules, /最后两个业务列.*创建人.*创建时间/);
+  assert.match(rules, /访问日志.*例外/);
+  assert.match(template, /创建人.*创建时间.*操作列之前/);
 });

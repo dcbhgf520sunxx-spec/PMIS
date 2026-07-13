@@ -92,6 +92,23 @@ test('组件审计阻断业务页直接使用 antd Button', () => {
   }
 });
 
+test('组件审计阻断业务模块直接使用原生 Tag', () => {
+  const modulesDir = mkdtempSync(join(tmpdir(), 'component-audit-'));
+  const pagePath = join(modulesDir, 'TaskListPage.tsx');
+  writeFileSync(pagePath, 'export function TaskListPage() { return <Tag color="purple">需求</Tag>; }');
+
+  try {
+    const result = spawnSync(process.execPath, [scriptPath, '--strict', '--modules-dir', modulesDir], {
+      encoding: 'utf8',
+      stdio: 'pipe'
+    });
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /AdminTag/);
+  } finally {
+    rmSync(modulesDir, { recursive: true, force: true });
+  }
+});
+
 test('组件审计阻断业务页直接使用 Typography.Text', () => {
   const modulesDir = mkdtempSync(join(tmpdir(), 'component-audit-'));
   const pagePath = join(modulesDir, 'WorkOrderTemplatePage.tsx');
@@ -167,6 +184,23 @@ function runStrictAuditFiles(files: Record<string, string>) {
   return result;
 }
 
+test('组件审计阻断普通分类标签自行指定颜色', () => {
+  const result = runStrictAudit(
+    'export function TaskSourceTag() { return <AdminTag color="purple">需求</AdminTag>; }',
+    'TaskSourceTag.tsx'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /普通分类标签.*不得自行指定 color/);
+});
+
+test('组件审计允许普通分类使用默认 AdminTag', () => {
+  const result = runStrictAudit(
+    'export function TaskSourceTag() { return <AdminTag>需求</AdminTag>; }',
+    'TaskSourceTag.tsx'
+  );
+  assert.equal(result.status, 0, result.stdout);
+});
+
 test('组件审计阻断操作列中的普通按钮形态', () => {
   const result = runStrictAudit(
     'export function CustomerListPage() { return <OperationColumnActions><AdminButton>状态变更</AdminButton></OperationColumnActions>; }',
@@ -240,6 +274,7 @@ test('组件审计允许列行为完整的标准列表', () => {
       const columns = [
         { title: '序号', width: 56, fixed: 'left' },
         { title: '客户名称', dataIndex: 'name', width: 180, fixed: 'left', sorter: true },
+        { title: '创建人', dataIndex: 'creatorName', width: 120, sorter: true },
         { title: '创建时间', dataIndex: 'createdAt', width: 170, sorter: true },
         { title: '操作', valueType: 'option', width: 160, fixed: 'right' }
       ];
@@ -247,6 +282,67 @@ test('组件审计允许列行为完整的标准列表', () => {
     }`,
     'CustomerListPage.tsx'
   );
+  assert.equal(result.status, 0, result.stdout);
+});
+
+test('组件审计阻断标准列表缺少末尾创建字段或字段顺序错误', () => {
+  const missing = runStrictAudit(
+    `export function CustomerListPage() {
+      const columns = [
+        { title: '序号', width: 56, fixed: 'left' },
+        { title: '客户名称', dataIndex: 'name', width: 180, fixed: 'left', sorter: true },
+        { title: '操作', valueType: 'option', width: 160, fixed: 'right' }
+      ];
+      return <TemplateListPage table={{ columns, dataSource: [], pagination: false, scroll: { x: 800 } }} pagination={{}} />;
+    }`,
+    'CustomerListPage.tsx'
+  );
+  assert.equal(missing.status, 1);
+  assert.match(missing.stdout, /创建人.*创建时间/);
+
+  const wrongOrder = runStrictAudit(
+    `export function CustomerListPage() {
+      const columns = [
+        { title: '序号', width: 56, fixed: 'left' },
+        { title: '客户名称', dataIndex: 'name', width: 180, fixed: 'left', sorter: true },
+        { title: '创建时间', dataIndex: 'createdAt', width: 170, sorter: true },
+        { title: '创建人', dataIndex: 'creatorName', width: 120, sorter: true },
+        { title: '操作', valueType: 'option', width: 160, fixed: 'right' }
+      ];
+      return <TemplateListPage table={{ columns, dataSource: [], pagination: false, scroll: { x: 900 } }} pagination={{}} />;
+    }`,
+    'CustomerListPage.tsx'
+  );
+  assert.equal(wrongOrder.status, 1);
+  assert.match(wrongOrder.stdout, /最后两个业务列/);
+});
+
+test('组件审计检查拆分到 ListColumns 文件中的创建字段', () => {
+  const result = runStrictAudit(
+    `export function createCustomerListColumns() {
+      return [
+        { title: '序号', width: 56, fixed: 'left' },
+        { title: '客户名称', dataIndex: 'name', width: 180, fixed: 'left', sorter: true },
+        { title: '操作', valueType: 'option', width: 160, fixed: 'right' }
+      ];
+    }`,
+    'CustomerListColumns.tsx'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /创建人.*创建时间/);
+});
+
+test('组件审计允许访问日志不声明创建人和创建时间', () => {
+  const result = runStrictAuditFiles({
+    'access-log/AccessLogListPage.tsx': `export function AccessLogListPage() {
+      const columns = [
+        { title: '序号', width: 56, fixed: 'left' },
+        { title: '操作人', dataIndex: 'operatorName', width: 160, fixed: 'left', sorter: true },
+        { title: '访问时间', dataIndex: 'visitedAt', width: 170, sorter: true }
+      ];
+      return <TemplateListPage table={{ columns, dataSource: [], pagination: false, scroll: { x: 600 } }} pagination={{}} />;
+    }`
+  });
   assert.equal(result.status, 0, result.stdout);
 });
 

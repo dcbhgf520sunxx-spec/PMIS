@@ -35,7 +35,8 @@ const blockingRules = [
   { pattern: /<ProForm(\s|>)/g, reason: '表单容器应优先使用 TemplateFormPage' },
   { pattern: /<ProCard(\s|>)/g, reason: '卡片应优先使用页面样板或 AdminCard' },
   { pattern: /<Dropdown(\s|>)/g, reason: '动作下拉应优先使用 AdminActionDropdown / AdminSearchDropdown' },
-  { pattern: /<Typography\.Text(\s|>)/g, reason: '文本状态应优先使用 AdminText' }
+  { pattern: /<Typography\.Text(\s|>)/g, reason: '文本状态应优先使用 AdminText' },
+  { pattern: /<Tag(\s|>)/g, reason: '标签应使用 AdminTag 或状态、紧急程度、逾期等统一语义标签' }
 ];
 
 const warningRules = [];
@@ -268,6 +269,9 @@ function collectSemanticViolations(files) {
         if (name === 'StatusFlowAction') {
           violations.push(finding(file, sourceFile, node, 'StatusFlowAction 已废弃，必须使用 StatusChangeAction'));
         }
+        if (name === 'AdminTag' && attribute(node, 'color')) {
+          violations.push(finding(file, sourceFile, node, '普通分类标签统一使用 AdminTag 默认样式，不得自行指定 color；状态语义应使用对应统一标签'));
+        }
         if (name === 'OperationColumnActions') inspectOperationChildren(node);
         if (name === 'TemplateDetailPage') {
           const statusSection = attribute(node, 'statusSection');
@@ -379,6 +383,49 @@ function collectListColumnContractViolations(files) {
   });
 }
 
+function collectListCreationColumnViolations(files) {
+  return files.flatMap((file) => {
+    const source = readFileSync(file, 'utf8');
+    const modulePath = relative(modulesDir, file).split('/');
+    if (modulePath[0] === 'access-log') return [];
+    const isListPage = file.endsWith('ListPage.tsx') && source.includes('<TemplateListPage');
+    const isListColumns = file.endsWith('ListColumns.tsx');
+    if (!isListPage && !isListColumns) return [];
+
+    const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const candidates = [];
+    const visit = (node) => {
+      if (ts.isArrayLiteralExpression(node)) {
+        const columns = node.elements.filter(ts.isObjectLiteralExpression);
+        const titledColumns = columns.filter((column) => objectProperty(column, 'title'));
+        if (titledColumns.length >= 2) candidates.push({ node, columns: titledColumns });
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(sourceFile);
+    const candidate = candidates.sort((left, right) => right.columns.length - left.columns.length)[0];
+    if (!candidate) return [];
+
+    const visibleColumns = candidate.columns.filter((column) => propertyText(column, 'hideInTable', sourceFile) !== 'true');
+    const businessColumns = visibleColumns.filter((column) => {
+      const title = propertyText(column, 'title', sourceFile).replace(/^['"]|['"]$/g, '');
+      return title !== '序号' && propertyText(column, 'valueType', sourceFile).replace(/['"]/g, '') !== 'option';
+    });
+    const creator = businessColumns.at(-2);
+    const createdAt = businessColumns.at(-1);
+    const titleOf = (column) => column ? propertyText(column, 'title', sourceFile).replace(/^['"]|['"]$/g, '') : '';
+    const dataIndexOf = (column) => column ? propertyText(column, 'dataIndex', sourceFile).replace(/^['"]|['"]$/g, '') : '';
+    const valid = titleOf(creator) === '创建人' && dataIndexOf(creator) === 'creatorName'
+      && titleOf(createdAt) === '创建时间' && dataIndexOf(createdAt) === 'createdAt';
+    return valid ? [] : [finding(
+      file,
+      sourceFile,
+      candidate.node,
+      '标准列表最后两个业务列必须依次为创建人（creatorName）和创建时间（createdAt），并位于操作列之前'
+    )];
+  });
+}
+
 function collectListViewTabContractViolations(files) {
   return files.flatMap((file) => {
     if (!file.endsWith('ListPage.tsx')) return [];
@@ -438,18 +485,19 @@ const listTemplateBlocking = collectMatches(files, listTemplateRules, 'BLOCK');
 const pageTemplateBlocking = collectPageTemplateViolations(files);
 const semanticBlocking = collectSemanticViolations(files);
 const listColumnContractBlocking = collectListColumnContractViolations(files);
+const listCreationColumnBlocking = collectListCreationColumnViolations(files);
 const listViewTabContractBlocking = collectListViewTabContractViolations(files);
 const warnings = collectMatches(files, warningRules, 'WARN');
 
 console.log('组件接入审计');
 console.log(`扫描文件：${files.length}`);
-console.log(`阻断项：${blocking.length + listTemplateBlocking.length + pageTemplateBlocking.length + semanticBlocking.length + listColumnContractBlocking.length + listViewTabContractBlocking.length}`);
+console.log(`阻断项：${blocking.length + listTemplateBlocking.length + pageTemplateBlocking.length + semanticBlocking.length + listColumnContractBlocking.length + listCreationColumnBlocking.length + listViewTabContractBlocking.length}`);
 console.log(`提醒项：${warnings.length}`);
 
-for (const item of [...blocking, ...listTemplateBlocking, ...pageTemplateBlocking, ...semanticBlocking, ...listColumnContractBlocking, ...listViewTabContractBlocking, ...warnings]) {
+for (const item of [...blocking, ...listTemplateBlocking, ...pageTemplateBlocking, ...semanticBlocking, ...listColumnContractBlocking, ...listCreationColumnBlocking, ...listViewTabContractBlocking, ...warnings]) {
   console.log(`${item.level} ${item.file}:${item.line} ${item.token} ${item.reason}`);
 }
 
-if (strict && (blocking.length > 0 || listTemplateBlocking.length > 0 || pageTemplateBlocking.length > 0 || semanticBlocking.length > 0 || listColumnContractBlocking.length > 0 || listViewTabContractBlocking.length > 0)) {
+if (strict && (blocking.length > 0 || listTemplateBlocking.length > 0 || pageTemplateBlocking.length > 0 || semanticBlocking.length > 0 || listColumnContractBlocking.length > 0 || listCreationColumnBlocking.length > 0 || listViewTabContractBlocking.length > 0)) {
   process.exitCode = 1;
 }

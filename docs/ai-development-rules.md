@@ -50,6 +50,12 @@ API 接入保持统一：
 
 后台框架顶部说明属于全局契约：除组件工作台外，统一显示“欢迎回来，今天也请从容处理每一项工作。”，不得按业务模块自定义顶部标题或文案。组件工作台可保留用于说明设计系统上下文的专属标题和说明。
 
+### 标签与色彩
+
+- 普通分类标签统一使用不传颜色的 `AdminTag` 默认样式，业务模块不得给 `AdminTag` 传入 `color` 自行建立“类型=颜色”的映射，也不得直接使用原生 `Tag` 绕过约束。
+- 状态、紧急程度、逾期等具有固定语义的信息必须使用对应统一标签组件，不得用普通分类标签模拟。
+- 紫色只用于组件层已经明确的 AI 标识和特色模块，不用于项目、需求、任务、工单等普通业务分类。
+
 ### 列表页
 
 列表页统一使用 `TemplateListPage` 和 `useTemplateListPageData`。
@@ -61,6 +67,7 @@ API 接入保持统一：
 - 存在固定列的标准列表必须通过 `TemplateListPage.table.scroll.x` 声明足够的横向宽度；不能只写 `fixed` 而没有横向滚动区域。
 - 固定列属于代码强制结构，优先级高于用户历史列设置；列设置可以保留显示、顺序和非强制列固定偏好，但不得覆盖代码声明的左右固定列。
 - 除序号列和操作列外，标准列表每个可见列都必须声明 `sorter: true`；服务端分页列表同时绑定 `sortOrder` 并把统一排序状态传给接口。
+- 标准业务列表的最后两个业务列必须依次为“创建人”（`creatorName`）和“创建时间”（`createdAt`），并紧邻操作列之前；没有操作列时“创建时间”就是最后一列。两列必须返回真实数据、声明数值型 `width` 并支持排序。访问日志等不存在“创建人”业务语义的系统事件列表属于明确例外。
 - 操作列使用 `OperationColumnActions`，最多 3 个动作直接展示；4 个及以上时由组件保留前 2 个，第 3 个及之后收入“更多”。动作统一使用文字形态：普通动作使用 `AdminTextAction`，删除使用 `DeleteConfirmAction variant="text"`，状态变更使用 `StatusChangeAction variant="text"` 或以它为底层的业务 `*StatusChangeAction`。
 - 删除不得使用通用 `ConfirmAction danger` 或业务自建 `Modal`；启用、停用等二态确认使用 `StatusConfirmAction`。
 - `ConfirmAction`、`StatusConfirmAction`、`DeleteConfirmAction` 和 `BubbleConfirmAction` 默认负责成功提示；业务页需要自定义静态文案时传 `successMessage`，需要根据接口结果动态提示时传 `successMessage={false}` 后自行提示，同一次操作不得由组件和业务页重复提示。
