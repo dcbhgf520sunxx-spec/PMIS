@@ -61,6 +61,7 @@ API 接入保持统一：
 - 存在固定列的标准列表必须通过 `TemplateListPage.table.scroll.x` 声明足够的横向宽度；不能只写 `fixed` 而没有横向滚动区域。
 - 固定列属于代码强制结构，优先级高于用户历史列设置；列设置可以保留显示、顺序和非强制列固定偏好，但不得覆盖代码声明的左右固定列。
 - 除序号列和操作列外，标准列表每个可见列都必须声明 `sorter: true`；服务端分页列表同时绑定 `sortOrder` 并把统一排序状态传给接口。
+- 标准业务列表的最后两个业务列必须依次为“创建人”（`creatorName`）和“创建时间”（`createdAt`），并紧邻操作列之前；没有操作列时“创建时间”就是最后一列。两列必须返回真实数据、声明数值型 `width` 并支持排序。访问日志等不存在“创建人”业务语义的系统事件列表属于明确例外。
 - 操作列使用 `OperationColumnActions`，最多 3 个动作直接展示；4 个及以上时由组件保留前 2 个，第 3 个及之后收入“更多”。动作统一使用文字形态：普通动作使用 `AdminTextAction`，删除使用 `DeleteConfirmAction variant="text"`，状态变更使用 `StatusChangeAction variant="text"` 或以它为底层的业务 `*StatusChangeAction`。
 - 删除不得使用通用 `ConfirmAction danger` 或业务自建 `Modal`；启用、停用等二态确认使用 `StatusConfirmAction`。
 - 序号使用 `renderIndex(index)`，按过滤后的全量数据位置计算。

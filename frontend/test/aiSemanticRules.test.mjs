@@ -59,3 +59,11 @@ test('列表规则明确列宽、固定列、横向滚动和排序契约', () =>
   assert.match(template, /列宽拖拽/);
   assert.match(template, /列头排序/);
 });
+
+test('列表规则要求创建人和创建时间固定为末尾业务列', () => {
+  const rules = read('../../docs/ai-development-rules.md');
+  const template = read('../../docs/ai-delivery-template.md');
+  assert.match(rules, /最后两个业务列.*创建人.*创建时间/);
+  assert.match(rules, /访问日志.*例外/);
+  assert.match(template, /创建人.*创建时间.*操作列之前/);
+});

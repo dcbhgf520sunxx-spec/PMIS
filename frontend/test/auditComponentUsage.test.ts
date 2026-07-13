@@ -211,6 +211,7 @@ test('组件审计允许列行为完整的标准列表', () => {
       const columns = [
         { title: '序号', width: 56, fixed: 'left' },
         { title: '客户名称', dataIndex: 'name', width: 180, fixed: 'left', sorter: true },
+        { title: '创建人', dataIndex: 'creatorName', width: 120, sorter: true },
         { title: '创建时间', dataIndex: 'createdAt', width: 170, sorter: true },
         { title: '操作', valueType: 'option', width: 160, fixed: 'right' }
       ];
@@ -218,6 +219,67 @@ test('组件审计允许列行为完整的标准列表', () => {
     }`,
     'CustomerListPage.tsx'
   );
+  assert.equal(result.status, 0, result.stdout);
+});
+
+test('组件审计阻断标准列表缺少末尾创建字段或字段顺序错误', () => {
+  const missing = runStrictAudit(
+    `export function CustomerListPage() {
+      const columns = [
+        { title: '序号', width: 56, fixed: 'left' },
+        { title: '客户名称', dataIndex: 'name', width: 180, fixed: 'left', sorter: true },
+        { title: '操作', valueType: 'option', width: 160, fixed: 'right' }
+      ];
+      return <TemplateListPage table={{ columns, dataSource: [], pagination: false, scroll: { x: 800 } }} pagination={{}} />;
+    }`,
+    'CustomerListPage.tsx'
+  );
+  assert.equal(missing.status, 1);
+  assert.match(missing.stdout, /创建人.*创建时间/);
+
+  const wrongOrder = runStrictAudit(
+    `export function CustomerListPage() {
+      const columns = [
+        { title: '序号', width: 56, fixed: 'left' },
+        { title: '客户名称', dataIndex: 'name', width: 180, fixed: 'left', sorter: true },
+        { title: '创建时间', dataIndex: 'createdAt', width: 170, sorter: true },
+        { title: '创建人', dataIndex: 'creatorName', width: 120, sorter: true },
+        { title: '操作', valueType: 'option', width: 160, fixed: 'right' }
+      ];
+      return <TemplateListPage table={{ columns, dataSource: [], pagination: false, scroll: { x: 900 } }} pagination={{}} />;
+    }`,
+    'CustomerListPage.tsx'
+  );
+  assert.equal(wrongOrder.status, 1);
+  assert.match(wrongOrder.stdout, /最后两个业务列/);
+});
+
+test('组件审计检查拆分到 ListColumns 文件中的创建字段', () => {
+  const result = runStrictAudit(
+    `export function createCustomerListColumns() {
+      return [
+        { title: '序号', width: 56, fixed: 'left' },
+        { title: '客户名称', dataIndex: 'name', width: 180, fixed: 'left', sorter: true },
+        { title: '操作', valueType: 'option', width: 160, fixed: 'right' }
+      ];
+    }`,
+    'CustomerListColumns.tsx'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /创建人.*创建时间/);
+});
+
+test('组件审计允许访问日志不声明创建人和创建时间', () => {
+  const result = runStrictAuditFiles({
+    'access-log/AccessLogListPage.tsx': `export function AccessLogListPage() {
+      const columns = [
+        { title: '序号', width: 56, fixed: 'left' },
+        { title: '操作人', dataIndex: 'operatorName', width: 160, fixed: 'left', sorter: true },
+        { title: '访问时间', dataIndex: 'visitedAt', width: 170, sorter: true }
+      ];
+      return <TemplateListPage table={{ columns, dataSource: [], pagination: false, scroll: { x: 600 } }} pagination={{}} />;
+    }`
+  });
   assert.equal(result.status, 0, result.stdout);
 });
 
