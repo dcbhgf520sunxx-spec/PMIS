@@ -15,7 +15,7 @@
 
 1. AI 先阅读相关页面、接口、数据表和已有组件，列出本次影响范围。
 2. AI 按样板和组件规则实现；涉及路由、菜单、权限、接口或数据库时同步处理对应层。
-3. AI 运行 `node scripts/verify-change.mjs`，完成组件扫描、JSX 语义审计和接口运行时契约审计，未通过不得交付；随后使用浏览器实际打开受影响页面，完成对应的列表、查询、表单、权限拒绝或接口错误冒烟检查。
+3. AI 运行 `node scripts/verify-change.mjs`，完成组件扫描、JSX 语义审计、接口运行时契约审计和本地后端运行态新鲜度检查；后端源码晚于当前服务启动时间时必须重启后端并重新执行门禁，未通过不得交付。随后使用浏览器实际打开受影响页面，完成对应的列表、查询、表单、权限拒绝或接口错误冒烟检查。
 4. AI 输出 `docs/ai-delivery-template.md` 规定的交付单，并标明是否需要表结构确认。
 5. 用户确认表结构后，AI 执行 `cd backend && npm run db:migrate`，再验证接口读写。
 6. AI 提供可验收环境；用户完成最终业务验收并确认发布后，AI 部署并验证线上健康检查和核心流程。
@@ -28,6 +28,7 @@
 | 页面变更 | 样板/组件规范、JSX 语义审计、加载/空/错误/权限状态及浏览器核心流程 |
 | 路由、菜单、权限变更 | 前端路由、侧栏菜单、包含查询参数的完整菜单地址与后端 `checkPermission` 一致；组件工作台子页逐项授权，父菜单不放开兄弟菜单；接口复用既有业务权限时说明归属 |
 | 接口变更 | 路由挂载、鉴权、前端 API 字段转换、读写结果运行时字段契约和核心读写验证 |
+| 后端代码变更 | 本地后端运行态新鲜度；服务启动时间不得早于 `backend/src` 最新修改时间，避免源码已修复但运行进程仍使用旧代码 |
 | 多状态业务变更 | 模块级 `statusTransitions` 测试覆盖允许/禁止流转、附加字段和前后端一致性 |
 | 数据库变更 | 初始化 SQL、增量 migration、后端 SQL/测试、表结构 Markdown/Excel；先确认表结构再执行 migration |
 | 发布变更 | PostgreSQL/React 部署配置、构建产物、健康检查和核心接口检查 |
@@ -45,6 +46,7 @@
 
 ```bash
 node scripts/verify-change.mjs
+node scripts/check-backend-runtime-freshness.mjs
 cd backend && npm run db:migrate -- --check
 cd backend && npm run db:migrate
 ```

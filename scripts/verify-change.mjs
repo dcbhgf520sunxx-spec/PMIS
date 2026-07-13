@@ -41,13 +41,15 @@ const frontendTests = readdirSync(join(rootDir, 'frontend/test'))
 const commands = [
   { cwd: '.', command: 'node', args: ['--test', 'scripts/check-delivery-contract.test.mjs'] },
   { cwd: '.', command: 'node', args: ['--test', 'scripts/delivery-change-context.test.mjs'] },
+  { cwd: '.', command: 'node', args: ['--test', 'scripts/backend-runtime-freshness.test.mjs'] },
   { cwd: 'frontend', command: 'node', args: ['--experimental-strip-types', '--test', ...frontendTests] },
   { cwd: 'frontend', command: 'npm', args: ['run', 'audit:components'] },
   { cwd: 'frontend', command: 'npm', args: ['run', 'audit:components:strict'] },
   { cwd: 'frontend', command: 'npm', args: ['run', 'audit:api-contracts'] },
   { cwd: 'frontend', command: 'npm', args: ['run', 'build'] },
   { cwd: 'backend', command: 'npm', args: ['run', 'audit:operation-history'] },
-  { cwd: 'backend', command: 'npm', args: ['test'] }
+  { cwd: 'backend', command: 'npm', args: ['test'] },
+  { cwd: '.', command: 'node', args: ['scripts/check-backend-runtime-freshness.mjs'] }
 ];
 
 function gitOutput(args) {

@@ -3,13 +3,14 @@ import './index.css';
 
 type AssistantMood =
   | 'idle'
-  | 'run'
-  | 'patrol'
-  | 'wave'
-  | 'sit'
-  | 'cheer'
-  | 'think'
-  | 'look';
+  | 'running-right'
+  | 'running-left'
+  | 'waving'
+  | 'jumping'
+  | 'failed'
+  | 'waiting'
+  | 'running'
+  | 'review';
 
 type Position = {
   x: number;
@@ -42,11 +43,11 @@ const EDGE_GAP = 14;
 const RUN_DIRECTION_THRESHOLD = 2;
 const AMBIENT_MOODS: AssistantMood[] = [
   'idle',
-  'wave',
-  'sit',
-  'cheer',
-  'think',
-  'look'
+  'waving',
+  'jumping',
+  'waiting',
+  'running',
+  'review'
 ];
 
 function clampPosition(position: Position) {
@@ -170,13 +171,12 @@ export function AdminFloatingAssistant({ onClick, storageKey = DEFAULT_STORAGE_K
 
   if (!position) return null;
 
-  const mood: AssistantMood = isDragging ? 'run' : isHovering ? 'wave' : ambientMood;
+  const mood: AssistantMood = isDragging ? `running-${runDirection}` : isHovering ? 'waving' : ambientMood;
 
   return (
     <button
       className="admin-floating-assistant"
       data-mood={mood}
-      data-run-direction={runDirection}
       type="button"
       aria-label="AI 助手入口"
       style={{ left: position.x, top: position.y }}

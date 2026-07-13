@@ -48,35 +48,36 @@
   animation: admin-floating-assistant-idle 1.15s steps(6) infinite;
 }
 
-.admin-floating-assistant[data-mood='run'] .admin-floating-assistant__sprite {
-  --assistant-run-y: 0px;
-  background-image: url('../../../assets/assistant/minibot-run-spritesheet.webp');
-  background-size: 576px 156px;
-  animation: admin-floating-assistant-run 0.75s steps(8) infinite;
+.admin-floating-assistant[data-mood='running-right'] .admin-floating-assistant__sprite {
+  animation: admin-floating-assistant-running-right 0.98s steps(8) infinite;
 }
 
-.admin-floating-assistant[data-mood='patrol'] .admin-floating-assistant__sprite {
-  animation: admin-floating-assistant-patrol 0.8s steps(8) infinite;
+.admin-floating-assistant[data-mood='running-left'] .admin-floating-assistant__sprite {
+  animation: admin-floating-assistant-running-left 0.98s steps(8) infinite;
 }
 
-.admin-floating-assistant[data-mood='wave'] .admin-floating-assistant__sprite {
-  animation: admin-floating-assistant-wave 0.95s steps(4) infinite;
+.admin-floating-assistant[data-mood='waving'] .admin-floating-assistant__sprite {
+  animation: admin-floating-assistant-waving 0.84s steps(4) infinite;
 }
 
-.admin-floating-assistant[data-mood='sit'] .admin-floating-assistant__sprite {
-  animation: admin-floating-assistant-sit 1s steps(5) infinite;
+.admin-floating-assistant[data-mood='jumping'] .admin-floating-assistant__sprite {
+  animation: admin-floating-assistant-jumping 0.98s steps(5) infinite;
 }
 
-.admin-floating-assistant[data-mood='cheer'] .admin-floating-assistant__sprite {
-  animation: admin-floating-assistant-cheer 1s steps(6) infinite;
+.admin-floating-assistant[data-mood='failed'] .admin-floating-assistant__sprite {
+  animation: admin-floating-assistant-failed 1.2s steps(8) infinite;
 }
 
-.admin-floating-assistant[data-mood='think'] .admin-floating-assistant__sprite {
-  animation: admin-floating-assistant-think 1.1s steps(6) infinite;
+.admin-floating-assistant[data-mood='waiting'] .admin-floating-assistant__sprite {
+  animation: admin-floating-assistant-waiting 1.16s steps(6) infinite;
 }
 
-.admin-floating-assistant[data-mood='look'] .admin-floating-assistant__sprite {
-  animation: admin-floating-assistant-look 1.1s steps(6) infinite;
+.admin-floating-assistant[data-mood='running'] .admin-floating-assistant__sprite {
+  animation: admin-floating-assistant-running 0.94s steps(6) infinite;
+}
+
+.admin-floating-assistant[data-mood='review'] .admin-floating-assistant__sprite {
+  animation: admin-floating-assistant-review 1.18s steps(6) infinite;
 }
 
 .admin-floating-assistant:hover .admin-floating-assistant__sprite,
@@ -85,13 +86,8 @@
   transform: translateX(-50%) translateY(-3px);
 }
 
-.admin-floating-assistant[data-mood='run'][data-run-direction='right'] .admin-floating-assistant__sprite {
-  --assistant-run-y: 0px;
-  transform: translateX(-50%);
-}
-
-.admin-floating-assistant[data-mood='run'][data-run-direction='left'] .admin-floating-assistant__sprite {
-  --assistant-run-y: -78px;
+.admin-floating-assistant[data-mood='running-right'] .admin-floating-assistant__sprite,
+.admin-floating-assistant[data-mood='running-left'] .admin-floating-assistant__sprite {
   transform: translateX(-50%);
 }
 
@@ -115,27 +111,17 @@
   }
 }
 
-@keyframes admin-floating-assistant-run {
+@keyframes admin-floating-assistant-running-right {
   from {
-    background-position: 0 var(--assistant-run-y);
+    background-position: 0 -78px;
   }
 
   to {
-    background-position: -576px var(--assistant-run-y);
+    background-position: -576px -78px;
   }
 }
 
-@keyframes admin-floating-assistant-wave {
-  from {
-    background-position: 0 -234px;
-  }
-
-  to {
-    background-position: -288px -234px;
-  }
-}
-
-@keyframes admin-floating-assistant-patrol {
+@keyframes admin-floating-assistant-running-left {
   from {
     background-position: 0 -156px;
   }
@@ -145,7 +131,17 @@
   }
 }
 
-@keyframes admin-floating-assistant-sit {
+@keyframes admin-floating-assistant-waving {
+  from {
+    background-position: 0 -234px;
+  }
+
+  to {
+    background-position: -288px -234px;
+  }
+}
+
+@keyframes admin-floating-assistant-jumping {
   from {
     background-position: 0 -312px;
   }
@@ -155,7 +151,17 @@
   }
 }
 
-@keyframes admin-floating-assistant-cheer {
+@keyframes admin-floating-assistant-failed {
+  from {
+    background-position: 0 -390px;
+  }
+
+  to {
+    background-position: -576px -390px;
+  }
+}
+
+@keyframes admin-floating-assistant-waiting {
   from {
     background-position: 0 -468px;
   }
@@ -165,7 +171,7 @@
   }
 }
 
-@keyframes admin-floating-assistant-think {
+@keyframes admin-floating-assistant-running {
   from {
     background-position: 0 -546px;
   }
@@ -175,7 +181,7 @@
   }
 }
 
-@keyframes admin-floating-assistant-look {
+@keyframes admin-floating-assistant-review {
   from {
     background-position: 0 -624px;
   }
