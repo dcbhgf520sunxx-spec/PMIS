@@ -24,16 +24,29 @@ test('AI 交付链路要求语义审计和浏览器检查', () => {
   assert.match(template, /状态操作位置/);
 });
 
-test('开发规则明确普通分类标签不得自行映射颜色', () => {
+test('开发规则明确分类色由业务集中映射且同一维度不得重复', () => {
   const rules = read('../../docs/ai-development-rules.md');
   const flow = read('../../docs/ai-delivery-flow.md');
   const template = read('../../docs/ai-delivery-template.md');
   const workbench = read('../src/modules/design-system/pages/DesignSystemPage.tsx');
-  assert.match(rules, /普通分类标签.*AdminTag.*不得.*color/);
-  assert.match(flow, /普通分类标签.*不得自行指定颜色/);
-  assert.match(template, /普通分类标签.*默认样式/);
-  assert.match(workbench, /普通分类统一使用默认样式/);
-  assert.doesNotMatch(workbench, /<AdminTag\s+color=/);
+  assert.match(rules, /CategoryTag/);
+  assert.match(rules, /defineCategoryToneMap/);
+  assert.match(rules, /同一分类维度.*不得.*相同/);
+  assert.match(flow, /分类标签.*集中映射/);
+  assert.match(template, /分类色映射.*不重复/);
+  assert.match(workbench, /业务定义分类含义和色调映射/);
+  assert.match(workbench, /<CategoryTag\s+tone=/);
+});
+
+test('开发规则要求变更历史在进入组件前完成中文转译', () => {
+  const rules = read('../../docs/ai-development-rules.md');
+  const flow = read('../../docs/ai-delivery-flow.md');
+  const template = read('../../docs/ai-delivery-template.md');
+  const workbench = read('../src/modules/design-system/pages/DesignSystemPage.tsx');
+  assert.match(rules, /变更历史.*中文字段名.*业务展示值/);
+  assert.match(flow, /变更历史转译/);
+  assert.match(template, /变更历史中文化/);
+  assert.match(workbench, /字段名和值必须是最终中文展示文本/);
 });
 
 test('统一门禁包含新增的语义约束测试', () => {

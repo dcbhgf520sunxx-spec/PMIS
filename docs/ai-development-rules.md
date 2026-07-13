@@ -52,9 +52,10 @@ API 接入保持统一：
 
 ### 标签与色彩
 
-- 普通分类标签统一使用不传颜色的 `AdminTag` 默认样式，业务模块不得给 `AdminTag` 传入 `color` 自行建立“类型=颜色”的映射，也不得直接使用原生 `Tag` 绕过约束。
+- 不需要区分多个值的普通标签使用不传颜色的 `AdminTag`；同一分类维度存在多个值时使用 `CategoryTag`，由业务模块通过 `defineCategoryToneMap` 集中声明业务值与受控色调的映射，底座不定义“某业务类型应使用什么颜色”。
+- 同一分类维度的不同值不得使用相同色调，同一业务值在同一系统内必须保持色调稳定。业务页面不得直接写死 `tone`，不得给 `AdminTag` / `CategoryTag` 传入 `color`，也不得直接使用原生 `Tag` 绕过约束。
 - 状态、紧急程度、逾期等具有固定语义的信息必须使用对应统一标签组件，不得用普通分类标签模拟。
-- 紫色只用于组件层已经明确的 AI 标识和特色模块，不用于项目、需求、任务、工单等普通业务分类。
+- 分类色板只提供蓝、青、靛、紫、品红等非状态色调；成功、警告、危险等语义色不进入分类色板。
 
 ### 列表页
 
@@ -121,6 +122,7 @@ API 接入保持统一：
 - 基础信息、单据信息、历史记录等使用详情分组和 `DetailMetaList`；使用 `HistoryTimeline` 的详情分组统一命名为“变更历史”，不得继续使用“操作历史”“操作记录”等旧名称。
 - 详情页变更历史统一使用 `HistoryTimelineSection`，由它把“全部展开/全部收起”紧跟在“变更历史”标题之后并承接单条展开；业务页面不得使用 `TemplateDetailSection + HistoryTimeline` 拼装，不得维护 `expandedKeys`、`onExpandedKeysChange` 或通过 `inlineExtra` 重复实现。
 - 同一次保存或状态变更产生的多字段日志必须共享 `pms_op_log.operation_id`，历史接口按该标识聚合为一个节点；聚合节点内的字段顺序必须复用对应详情页的字段顺序，禁止按日志写入顺序、数据库返回顺序或字段名排序。没有 `operation_id` 的历史日志按单条兼容展示，不能按“同一秒”猜测聚合。
+- 变更历史进入 `HistoryTimeline` 前必须完成转译，使用中文字段名和业务展示值：人员和关联对象 ID 转为名称，枚举和状态码转为中文含义，日期使用页面统一格式。后端优先复用 `formatHistoryChanges` 并显式声明 `fieldLabels`、`valueLookups` 和 `dateFields`；不得把 `field_name`、`*_id`、枚举编码等数据库原始值直接交给前端或组件。
 - 长详情页存在较多分类且需要快速定位时，必须使用 `TemplateDetailPage.sectionNavigation` 和 `TemplateDetailSection.sectionKey` 提供的顶部分类导航；开启分类导航后，每个参与导航的 `TemplateDetailSection` 都必须声明唯一 `sectionKey`。不得在业务页重复维护分类数组、自建锚点或滚动监听，窄屏下拉定位由模板自动承接。
 - 详情页返回、编辑等动作通过 `ActionBar` 和现有按钮组件组合。
 - 不在业务页临时重做详情卡片、字段栅格、状态展示和历史记录样式。

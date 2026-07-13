@@ -270,7 +270,18 @@ function collectSemanticViolations(files) {
           violations.push(finding(file, sourceFile, node, 'StatusFlowAction 已废弃，必须使用 StatusChangeAction'));
         }
         if (name === 'AdminTag' && attribute(node, 'color')) {
-          violations.push(finding(file, sourceFile, node, '普通分类标签统一使用 AdminTag 默认样式，不得自行指定 color；状态语义应使用对应统一标签'));
+          violations.push(finding(file, sourceFile, node, '普通分类标签不得自行指定 color；需要区分多个分类值时使用 CategoryTag 和集中色调映射'));
+        }
+        if (name === 'CategoryTag') {
+          const tone = attribute(node, 'tone');
+          const toneSource = attributeText(node, 'tone', sourceFile);
+          if (attribute(node, 'color') || !tone) {
+            violations.push(finding(file, sourceFile, node, 'CategoryTag 必须通过 tone 使用底座受控分类色板，不得传入 color 或省略 tone'));
+          } else if (/^["']/.test(toneSource)) {
+            violations.push(finding(file, sourceFile, node, 'CategoryTag 的 tone 必须来自业务集中映射，不得在页面中直接写死色调'));
+          } else if (!source.includes('defineCategoryToneMap(')) {
+            violations.push(finding(file, sourceFile, node, 'CategoryTag 所在业务封装必须通过 defineCategoryToneMap 集中声明并校验分类色调映射'));
+          }
         }
         if (name === 'OperationColumnActions') inspectOperationChildren(node);
         if (name === 'TemplateDetailPage') {

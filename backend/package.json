@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node --watch src/app.js",
     "start": "node src/app.js",
+    "audit:operation-history": "node scripts/audit-operation-history.js",
     "test": "node --test",
     "db:migrate": "node scripts/migrate.js"
   },

@@ -17,7 +17,7 @@ const foundationColorGroups = [
     note: '按场景克制使用，单页按需选 1-3 种，避免后台页面变花。',
     colors: [
       { name: '青蓝', value: '#0ea5e9', scene: '信息提示、辅助点缀，不做核心悬浮色', token: 'app-cyan' },
-      { name: '淡紫', value: 'var(--app-purple)', scene: 'AI 标识、特色模块；不用于普通业务分类', token: 'app-purple' },
+      { name: '淡紫', value: 'var(--app-purple)', scene: 'AI 标识、特色模块；分类标签仅通过受控色板使用', token: 'app-purple' },
       { name: '暖橙', value: 'var(--app-warning-strong)', scene: '待办、提醒、中优先级', token: 'semantic-warning' },
       { name: '冷灰蓝', value: 'var(--app-steel)', scene: '弱操作、次级图标、辅助说明', token: 'app-steel' }
     ]

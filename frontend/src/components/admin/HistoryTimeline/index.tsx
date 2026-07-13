@@ -7,8 +7,11 @@ import { ExpandToggleButton } from '../ExpandToggleButton';
 import './index.css';
 
 export type HistoryChange = {
+  /** 业务接口已经转译完成的最终中文字段名。 */
   field: string;
+  /** 最终展示值，不能传数据库 ID 或枚举编码。 */
   before?: ReactNode;
+  /** 最终展示值，不能传数据库 ID 或枚举编码。 */
   after?: ReactNode;
 };
 

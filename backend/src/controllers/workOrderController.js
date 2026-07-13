@@ -5,7 +5,7 @@ const { getSortDirection, parsePagination } = require('../utils/pagination')
 const { fail, failField, ok } = require('../utils/response')
 const { validateBody } = require('../utils/validation')
 const { buildViewQuery, calculateViewCounts } = require('../utils/viewCounts')
-const { groupOperationLogs } = require('../utils/operationHistory')
+const { formatHistoryChanges, groupOperationLogs } = require('../utils/operationHistory')
 
 function requireValidBody(res, body, schema) {
   const result = validateBody(body, schema)
@@ -485,32 +485,9 @@ const DETAIL_FIELD_ORDER = [
 ]
 const HISTORY_DATE_FIELDS = new Set(['expected_resolve_date', 'resolve_date', 'close_date', 'submit_time'])
 
-function formatHistoryDate(value) {
-  return String(value || '').replace('T', ' ').slice(0, 10)
-}
-
-/** Resolve a raw value to a display name based on field */
-function resolveValue(field, value, lookups = {}) {
-  if (value === '空' || value === undefined) return ''
-  if (field === 'is_overdue') return value === null || value === '' ? '-' : (Number(value) === 1 ? '逾期' : '未逾期')
-  if (value === null) return ''
-  if (HISTORY_DATE_FIELDS.has(field)) return formatHistoryDate(value)
-  if (field === 'follower_id') {
-    return lookups.users?.get(String(value)) || value
-  }
-  if (field === 'system_id' || field === 'problem_type') {
-    return lookups.archives?.get(String(value)) || value
-  }
-  if (field === 'urgency') {
-    return { 0: '低', 1: '中', 2: '高' }[String(value)] || value
-  }
-  if (field === 'status') {
-    return { 0: '待处理', 1: '处理中', 2: '已完成', 3: '已关闭' }[String(value)] || value
-  }
-  if (field === 'is_overdue') {
-    return { 0: '否', 1: '是' }[String(value)] || value
-  }
-  return String(value)
+function resolveHistoryStatus(value) {
+  if (value === null || value === undefined || value === '空') return ''
+  return { 0: '待处理', 1: '处理中', 2: '已完成', 3: '已关闭' }[String(value)] || String(value)
 }
 
 function buildIdInQuery(ids, selectSql, tableName) {
@@ -559,6 +536,18 @@ exports.getHistory = async (req, res) => {
     for (const g of grouped) {
       let title = ''
       const details = []
+      const formatDetails = (changes) => formatHistoryChanges(changes, {
+        fieldLabels: FIELD_LABEL,
+        dateFields: HISTORY_DATE_FIELDS,
+        valueLookups: {
+          follower_id: lookups.users,
+          system_id: lookups.archives,
+          problem_type: lookups.archives,
+          urgency: new Map([['0', '低'], ['1', '中'], ['2', '高']]),
+          status: new Map([['0', '待处理'], ['1', '处理中'], ['2', '已完成'], ['3', '已关闭']]),
+          is_overdue: new Map([['0', '未逾期'], ['1', '逾期']])
+        }
+      }).map((change) => ({ field: change.field_name, oldVal: change.old_value, newVal: change.new_value }))
 
       if (g.action === '新增') {
         title = '创建'
@@ -566,30 +555,19 @@ exports.getHistory = async (req, res) => {
         title = '删除'
       } else if (g.action === '编辑' || g.action === '批量指派') {
         title = g.action
-        for (const ch of g.changes) {
-          const label = FIELD_LABEL[ch.field_name] || ch.field_name
-          const oldVal = resolveValue(ch.field_name, ch.old_value, lookups)
-          const newVal = resolveValue(ch.field_name, ch.new_value, lookups)
-          details.push({ field: label, oldVal, newVal })
-        }
+        details.push(...formatDetails(g.changes))
       } else if (g.action === '状态变更') {
         title = '状态变更'
         const statusChange = g.changes.find(c => c.field_name === 'status')
         if (statusChange) {
-          const oldStatus = resolveValue('status', statusChange.old_value, lookups)
-          const newStatus = resolveValue('status', statusChange.new_value, lookups)
+          const oldStatus = resolveHistoryStatus(statusChange.old_value)
+          const newStatus = resolveHistoryStatus(statusChange.new_value)
           if (oldStatus && newStatus && oldStatus !== newStatus) {
             details.push({ field: '状态', oldVal: oldStatus, newVal: newStatus })
           }
         }
-        for (const ch of g.changes) {
-          if (ch.field_name === 'status') continue
-          const label = FIELD_LABEL[ch.field_name] || ch.field_name
-          const oldVal = resolveValue(ch.field_name, ch.old_value, lookups)
-          const newVal = resolveValue(ch.field_name, ch.new_value, lookups)
-          if (oldVal !== newVal) {
-            details.push({ field: label, oldVal, newVal })
-          }
+        for (const change of formatDetails(g.changes.filter((item) => item.field_name !== 'status'))) {
+          if (change.oldVal !== change.newVal) details.push(change)
         }
       }
 

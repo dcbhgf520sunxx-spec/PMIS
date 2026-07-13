@@ -4,6 +4,7 @@ export * from './ActionBar';
 export * from './FormPage';
 export * from './DetailPage';
 export * from './StatusTag';
+export * from './CategoryTag';
 export * from './PermissionButton';
 export * from './BubbleConfirmAction';
 export * from './ConfirmAction';

@@ -193,9 +193,54 @@ test('组件审计阻断普通分类标签自行指定颜色', () => {
   assert.match(result.stdout, /普通分类标签.*不得自行指定 color/);
 });
 
-test('组件审计允许普通分类使用默认 AdminTag', () => {
+test('组件审计允许不需要区分的普通标签使用默认 AdminTag', () => {
   const result = runStrictAudit(
     'export function TaskSourceTag() { return <AdminTag>需求</AdminTag>; }',
+    'TaskSourceTag.tsx'
+  );
+  assert.equal(result.status, 0, result.stdout);
+});
+
+test('组件审计阻断分类标签绕开受控色调属性', () => {
+  const result = runStrictAudit(
+    'export function TaskSourceTag() { return <CategoryTag color="purple">需求</CategoryTag>; }',
+    'TaskSourceTag.tsx'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /CategoryTag.*tone/);
+});
+
+test('组件审计阻断分类标签缺少受控色调', () => {
+  const result = runStrictAudit(
+    'export function TaskSourceTag() { return <CategoryTag>需求</CategoryTag>; }',
+    'TaskSourceTag.tsx'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /CategoryTag.*tone/);
+});
+
+test('组件审计阻断业务页面直接写死分类色调', () => {
+  const result = runStrictAudit(
+    'export function TaskSourceTag() { return <CategoryTag tone="cyan">需求</CategoryTag>; }',
+    'TaskSourceTag.tsx'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /集中映射/);
+});
+
+test('组件审计阻断分类标签变量未经过集中映射校验', () => {
+  const result = runStrictAudit(
+    'export function TaskSourceTag() { return <CategoryTag tone={sourceTypeTones[type]}>类型</CategoryTag>; }',
+    'TaskSourceTag.tsx'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /defineCategoryToneMap/);
+});
+
+test('组件审计允许业务通过集中映射传入受控色调', () => {
+  const result = runStrictAudit(
+    `const sourceTypeTones = defineCategoryToneMap({ typeA: 'blue', typeB: 'cyan' });
+     export function TaskSourceTag() { return <CategoryTag tone={sourceTypeTones[type]}>类型</CategoryTag>; }`,
     'TaskSourceTag.tsx'
   );
   assert.equal(result.status, 0, result.stdout);

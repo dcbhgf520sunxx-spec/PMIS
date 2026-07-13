@@ -38,10 +38,12 @@ import {
   AdminTextAction,
   AdminTree,
   BubbleConfirmAction,
+  CategoryTag,
   ConfirmAction,
   CompactFilterBar,
   createListFilterItems,
   createListSorters,
+  defineCategoryToneMap,
   DeleteConfirmAction,
   DetailMetaList,
   HistoryTimeline,
@@ -83,6 +85,12 @@ import {
 import './DesignSystemPage.css';
 
 type DrawerTableRecord = WorkOrderRecord;
+
+const categoryDemoTones = defineCategoryToneMap({
+  typeA: 'blue',
+  typeB: 'cyan',
+  typeC: 'indigo'
+});
 
 type DrawerTableFilters = {
   problemDesc: string;
@@ -1181,14 +1189,15 @@ export function DesignSystemPage() {
                 <section className="design-system-page__input-panel">
                   <div className="design-system-page__input-panel-head">
                     <h3>标签、徽标与头像</h3>
-                    <ComponentEntry name="AdminTag / AdminBadge / AdminAvatar" />
-                    <p>用于分类、数量和人员提示。普通分类统一使用默认样式，不自行映射颜色，也不替代流程状态、紧急程度和逾期标签。</p>
+                    <ComponentEntry name="AdminTag / CategoryTag / AdminBadge / AdminAvatar" />
+                    <p>业务定义分类含义和色调映射，底座只提供受控色板并阻止同一维度重复用色；流程状态、紧急程度和逾期使用各自的语义标签。</p>
                   </div>
                   <AdminSpace direction="vertical" size={12}>
                     <AdminSpace wrap>
-                      <AdminTag>系统优化</AdminTag>
-                      <AdminTag>后台维护</AdminTag>
-                      <AdminTag>日常操作</AdminTag>
+                      <CategoryTag tone={categoryDemoTones.typeA}>分类一</CategoryTag>
+                      <CategoryTag tone={categoryDemoTones.typeB}>分类二</CategoryTag>
+                      <CategoryTag tone={categoryDemoTones.typeC}>分类三</CategoryTag>
+                      <AdminTag>无需区分</AdminTag>
                     </AdminSpace>
                     <AdminSpace wrap size={18} className="design-system-page__display-badge-row">
                       <AdminBadge count={8}>
@@ -1219,7 +1228,7 @@ export function DesignSystemPage() {
                   <div className="design-system-page__input-panel-head">
                     <h3>时间线与日志</h3>
                     <ComponentEntry name="HistoryTimeline" />
-                    <p>用于记录数据产生、流转和变更过程，必须包含动作、人员和时间。</p>
+                    <p>用于记录数据产生、流转和变更过程。字段名和值必须是最终中文展示文本，不接收数据库字段名、关联 ID 或枚举编码。</p>
                   </div>
                   <HistoryTimeline items={mockWorkOrderHistory} />
                 </section>
