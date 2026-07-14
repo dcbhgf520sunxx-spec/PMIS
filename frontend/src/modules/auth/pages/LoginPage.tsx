@@ -1,5 +1,5 @@
 import { type FormEvent, type MouseEvent, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { App, Button, Card, Input, Typography } from 'antd';
 import {
   ApartmentOutlined,
@@ -14,7 +14,6 @@ import {
 import { derivePermissions, getUserPreference, login } from '../../../api/authApi';
 import { useAuthStore } from '../../../stores/authStore';
 import robotMini from '../../../assets/login/robot-mini.png';
-import { consumeLoginReturnTo, sanitizeInternalReturnTo } from '../../../components/admin/PageNavigation';
 import './LoginPage.css';
 
 type FocusedField = 'account' | 'password' | null;
@@ -28,7 +27,6 @@ type Ripple = {
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { message } = App.useApp();
   const setAuth = useAuthStore((state) => state.setAuth);
   const setPreference = useAuthStore((state) => state.setPreference);
@@ -87,9 +85,7 @@ export function LoginPage() {
       const preference = await getUserPreference();
       setPreference(preference);
       message.success('登录成功');
-      const fallback = preference.default_route || '/home';
-      const stateReturnTo = sanitizeInternalReturnTo((location.state as { returnTo?: string } | null)?.returnTo);
-      navigate(stateReturnTo || consumeLoginReturnTo(fallback), { replace: true });
+      navigate(preference.default_route || '/home', { replace: true });
     } catch (error) {
       message.error(error instanceof Error ? error.message : '登录失败');
     } finally {

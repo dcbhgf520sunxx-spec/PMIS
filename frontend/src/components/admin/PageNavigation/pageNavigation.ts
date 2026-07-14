@@ -30,18 +30,3 @@ export function resolveReturnTo(search: string, fallback: string, allowedRouteBa
   const raw = new URLSearchParams(search).get('returnTo');
   return sanitizeInternalReturnTo(raw, allowedRouteBase) || fallback;
 }
-
-const LOGIN_RETURN_KEY = 'project-template:login-return-to';
-
-export function saveLoginReturnTo(path: string) {
-  if (typeof window === 'undefined') return;
-  const safe = sanitizeInternalReturnTo(path);
-  if (safe && safe !== '/login') window.sessionStorage.setItem(LOGIN_RETURN_KEY, safe);
-}
-
-export function consumeLoginReturnTo(fallback: string) {
-  if (typeof window === 'undefined') return fallback;
-  const value = window.sessionStorage.getItem(LOGIN_RETURN_KEY);
-  window.sessionStorage.removeItem(LOGIN_RETURN_KEY);
-  return sanitizeInternalReturnTo(value) || fallback;
-}
