@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   buildDetailNeighborPath,
   loadDetailNeighborContext,
@@ -27,6 +27,8 @@ export function useDetailNeighbors({
   fetchNeighbors
 }: UseDetailNeighborsParams) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = new URLSearchParams(location.search).get('returnTo');
   const [neighbors, setNeighbors] = useState<DetailNeighborsResult>({
     prevId: null,
     nextId: null
@@ -37,7 +39,7 @@ export function useDetailNeighbors({
     if (!id) return;
 
     let cancelled = false;
-    const context = loadDetailNeighborContext(moduleKey);
+    const context = returnTo ? loadDetailNeighborContext(moduleKey, returnTo) : null;
     const params = context?.params || {};
 
     setLoading(true);
@@ -55,16 +57,16 @@ export function useDetailNeighbors({
     return () => {
       cancelled = true;
     };
-  }, [fetchNeighbors, id, moduleKey]);
+  }, [fetchNeighbors, id, moduleKey, returnTo]);
 
-  const context = loadDetailNeighborContext(moduleKey);
+  const context = returnTo ? loadDetailNeighborContext(moduleKey, returnTo) : null;
   const activeRouteBase = context?.routeBase || routeBase;
 
   return {
     ...neighbors,
     loading,
     navigateNeighbor: (targetId: string | number) => {
-      navigate(buildDetailNeighborPath(activeRouteBase, targetId));
+      navigate(buildDetailNeighborPath(activeRouteBase, targetId, location.search), { replace: true });
     }
   };
 }

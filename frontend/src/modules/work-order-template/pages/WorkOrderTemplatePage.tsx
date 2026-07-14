@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Key } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
-import { useNavigate } from 'react-router-dom';
 import {
   ActionBar,
   AdminButton,
@@ -18,10 +17,13 @@ import {
   createListSorters,
   DetailLinkCell,
   InfoGrid,
+  listRouteCodecs,
   listSorters,
   OperationColumnActions,
   TemplateListPage,
   useCommittedFilters,
+  useListViewState,
+  usePageReturnNavigation,
   useTemplateListPageData,
   ViewTabs
 } from '../../../components/admin';
@@ -97,9 +99,20 @@ function inDateRange(value: string, range: unknown[]) {
 }
 
 export function WorkOrderTemplatePage() {
-  const navigate = useNavigate();
-  const [viewKey, setViewKey] = useState<ViewKey>('all');
-  const { draftFilters, appliedFilters, revision: filterRevision, setDraftFilters, commitFilters, resetFilters } = useCommittedFilters(defaultFilters);
+  const { navigateWithReturn } = usePageReturnNavigation('/samples/work-order');
+  const [viewKey, setViewKey] = useListViewState<ViewKey>('all', ['all', 'mine'], true);
+  const { draftFilters, appliedFilters, revision: filterRevision, setDraftFilters, commitFilters, resetFilters } = useCommittedFilters(defaultFilters, {
+    urlSync: true,
+    codecs: {
+      problemTypes: listRouteCodecs.stringArray,
+      urgency: listRouteCodecs.number,
+      status: listRouteCodecs.number,
+      isOverdue: listRouteCodecs.boolean,
+      followerId: listRouteCodecs.string,
+      submitTimeRange: listRouteCodecs.dateArray,
+      expectedResolveDateRange: listRouteCodecs.dateArray
+    }
+  });
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
   const [selectedRows, setSelectedRows] = useState<WorkOrderRecord[]>([]);
   const [batchStatusOpen, setBatchStatusOpen] = useState(false);
@@ -143,7 +156,7 @@ export function WorkOrderTemplatePage() {
     pagination,
     handleTableChange,
     renderIndex
-  } = useTemplateListPageData({ rows: filteredRows, sorters: workOrderTemplateSorters, resetOn: [filterRevision, viewKey] });
+  } = useTemplateListPageData({ rows: filteredRows, sorters: workOrderTemplateSorters, resetOn: [filterRevision, viewKey], urlSync: true });
 
   const filterItems = useMemo(() => {
     return createListFilterItems([
@@ -298,7 +311,7 @@ export function WorkOrderTemplatePage() {
       sortOrder: sortState.field === 'problemDesc' ? sortState.order : null,
       render: (_, record) => (
         <div className="work-order-problem-cell">
-          <DetailLinkCell className="work-order-problem-cell__text" title={record.problemDesc} onClick={() => navigate(`/samples/work-order/${record.id}`)}>
+          <DetailLinkCell className="work-order-problem-cell__text" title={record.problemDesc} onClick={() => navigateWithReturn(`/samples/work-order/${record.id}`)}>
             {record.problemDesc}
           </DetailLinkCell>
           {record.isOverdue ? <span className="work-order-problem-cell__tag">{renderOverdue(true)}</span> : null}
@@ -379,7 +392,7 @@ export function WorkOrderTemplatePage() {
       fixed: 'right',
       render: (_, record) => (
         <OperationColumnActions>
-          <AdminTextAction onClick={() => navigate(`/samples/work-order/${record.id}/edit`)}>编辑</AdminTextAction>
+          <AdminTextAction onClick={() => navigateWithReturn(`/samples/work-order/${record.id}/edit`)}>编辑</AdminTextAction>
           <WorkOrderStatusChangeAction
             variant="text"
             workOrder={record}
@@ -388,7 +401,7 @@ export function WorkOrderTemplatePage() {
           >
             状态变更
           </WorkOrderStatusChangeAction>
-          <AdminTextAction onClick={() => navigate(`/samples/work-order/${record.id}/copy`)}>复制</AdminTextAction>
+          <AdminTextAction onClick={() => navigateWithReturn(`/samples/work-order/${record.id}/copy`)}>复制</AdminTextAction>
           <DeleteConfirmAction
             variant="text"
             entityName="工单"
@@ -401,7 +414,7 @@ export function WorkOrderTemplatePage() {
         </OperationColumnActions>
       )
     }
-  ], [navigate, renderIndex, sortState]);
+  ], [navigateWithReturn, renderIndex, sortState]);
 
   const sameStatus = selectedRows.length === 0 || selectedRows.every((item) => item.status === selectedRows[0].status);
   const handleViewChange = (nextViewKey: ViewKey) => {
@@ -428,7 +441,7 @@ export function WorkOrderTemplatePage() {
       }
       actions={
         <ActionBar>
-          <AdminButton type="primary" onClick={() => navigate('/samples/work-order/new')}>新增工单</AdminButton>
+          <AdminButton type="primary" onClick={() => navigateWithReturn('/samples/work-order/new')}>新增工单</AdminButton>
         </ActionBar>
       }
       filter={(

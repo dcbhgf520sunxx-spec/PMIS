@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
-import { useNavigate } from 'react-router-dom';
 import {
   ActionBar,
   AdminInput,
@@ -15,6 +14,7 @@ import {
   PermissionButton,
   TemplateListPage,
   useCommittedFilters,
+  usePageReturnNavigation,
   useTemplateListPageData
 } from '../../../components/admin';
 import { deleteRole, getRoleList, type RoleRecord } from '../../../api/roleApi';
@@ -39,10 +39,10 @@ const roleSorters = createListSorters<RoleRecord>({
 });
 
 export function RoleListPage() {
-  const navigate = useNavigate();
+  const { navigateWithReturn } = usePageReturnNavigation('/roles');
   const [rows, setRows] = useState<RoleRecord[]>([]);
   const [serverTotal, setServerTotal] = useState(0);
-  const { draftFilters, appliedFilters, revision: filterRevision, setDraftFilters, commitFilters, resetFilters } = useCommittedFilters(defaultFilters);
+  const { draftFilters, appliedFilters, revision: filterRevision, setDraftFilters, commitFilters, resetFilters } = useCommittedFilters(defaultFilters, { urlSync: true });
 
   const {
     currentPage,
@@ -53,7 +53,7 @@ export function RoleListPage() {
     pagination,
     handleTableChange,
     renderIndex
-  } = useTemplateListPageData({ rows, sorters: roleSorters, resetOn: [filterRevision], total: serverTotal, serverPaging: true });
+  } = useTemplateListPageData({ rows, sorters: roleSorters, resetOn: [filterRevision], total: serverTotal, serverPaging: true, urlSync: true });
 
   const loadRows = async () => {
     const result = await getRoleList({
@@ -121,7 +121,7 @@ export function RoleListPage() {
       sorter: true,
       sortOrder: sortState.field === 'code' ? sortState.order : null,
       render: (_, record) => (
-        <DetailLinkCell onClick={() => navigate(`/roles/${record.id}`)}>
+        <DetailLinkCell onClick={() => navigateWithReturn(`/roles/${record.id}`)}>
           {record.code}
         </DetailLinkCell>
       )
@@ -171,7 +171,7 @@ export function RoleListPage() {
       fixed: 'right',
       render: (_, record) => (
         <OperationColumnActions>
-          <AdminTextAction onClick={() => navigate(`/roles/${record.id}/edit`)}>
+          <AdminTextAction onClick={() => navigateWithReturn(`/roles/${record.id}/edit`)}>
             编辑
           </AdminTextAction>
           <DeleteConfirmAction
@@ -196,7 +196,7 @@ export function RoleListPage() {
       title="角色管理"
       actions={
         <ActionBar>
-          <PermissionButton type="primary" permission="role" onClick={() => navigate('/roles/new')}>
+          <PermissionButton type="primary" permission="role" onClick={() => navigateWithReturn('/roles/new')}>
             新增角色
           </PermissionButton>
         </ActionBar>

@@ -12,6 +12,7 @@ import {
   UserOutlined
 } from '@ant-design/icons';
 import { derivePermissions, getUserPreference, login } from '../../../api/authApi';
+import { PasswordChangeModal } from '../../account/components/PasswordChangeModal';
 import { useAuthStore } from '../../../stores/authStore';
 import robotMini from '../../../assets/login/robot-mini.png';
 import './LoginPage.css';
@@ -30,12 +31,21 @@ export function LoginPage() {
   const { message } = App.useApp();
   const setAuth = useAuthStore((state) => state.setAuth);
   const setPreference = useAuthStore((state) => state.setPreference);
+  const mustChangePassword = useAuthStore((state) => state.mustChangePassword);
+  const setMustChangePassword = useAuthStore((state) => state.setMustChangePassword);
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
   const [focusedField, setFocusedField] = useState<FocusedField>(null);
   const [ripples, setRipples] = useState<Ripple[]>([]);
   const [buttonPressed, setButtonPressed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const enterPreferredPage = async () => {
+    const preference = await getUserPreference();
+    setPreference(preference);
+    message.success('登录成功');
+    navigate(preference.default_route || '/home', { replace: true });
+  };
 
   const createRipple = (event: MouseEvent<HTMLElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -75,17 +85,20 @@ export function LoginPage() {
         account: account.trim(),
         password
       });
+      const firstLogin = result.first_login === 1;
       setAuth({
         token: result.token,
         user: result.user,
         menus: result.menus,
         permissions: derivePermissions(result.menus),
-        accessSessionId: result.access_session_id
+        accessSessionId: result.access_session_id,
+        mustChangePassword: firstLogin
       });
-      const preference = await getUserPreference();
-      setPreference(preference);
-      message.success('登录成功');
-      navigate(preference.default_route || '/home', { replace: true });
+      if (firstLogin) {
+        message.warning('首次登录，请先修改密码');
+        return;
+      }
+      await enterPreferredPage();
     } catch (error) {
       message.error(error instanceof Error ? error.message : '登录失败');
     } finally {
@@ -94,7 +107,8 @@ export function LoginPage() {
   };
 
   return (
-    <section className="login-page">
+    <>
+      <section className="login-page">
       <div className="login-intro" aria-hidden="true">
         <div className="login-hero-headline">
           <div className="login-hero-robot">
@@ -199,6 +213,15 @@ export function LoginPage() {
           </span>
         </div>
       </Card>
-    </section>
+      </section>
+      <PasswordChangeModal
+        open={mustChangePassword}
+        forced
+        onSuccess={() => {
+          setMustChangePassword(false);
+          void enterPreferredPage();
+        }}
+      />
+    </>
   );
 }

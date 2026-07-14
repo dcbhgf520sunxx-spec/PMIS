@@ -3,14 +3,15 @@ import { App, Space } from 'antd';
 import type { RuleObject } from 'antd/es/form';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   AdminProFormRichDescription,
   AdminProFormDatePicker,
   AdminProFormSelect,
   AdminProFormText,
   TemplateFormPage,
-  TemplateFormSection
+  TemplateFormSection,
+  usePageReturnNavigation
 } from '../../../components/admin';
 import { getUserOptions } from '../../../api/userApi';
 import { getArchiveOptionsByTypeName } from '../../../api/archiveApi';
@@ -66,7 +67,7 @@ function toPayload(values: WorkOrderFormValues): WorkOrderFormPayload {
 }
 
 export function WorkOrderFormPage({ mode }: { mode: 'create' | 'edit' | 'copy' }) {
-  const navigate = useNavigate();
+  const { returnToSource } = usePageReturnNavigation('/work-orders');
   const params = useParams();
   const { message } = App.useApp();
   const [source, setSource] = useState<WorkOrderRecord>();
@@ -110,7 +111,7 @@ export function WorkOrderFormPage({ mode }: { mode: 'create' | 'edit' | 'copy' }
           <span className="admin-template-form-page__code">{source.code}</span>
         </Space>
       ) : null}
-      onCancel={() => navigate('/work-orders')}
+      onCancel={returnToSource}
       fieldNameMap={{ problem_desc: 'problemDesc' }}
       onSubmit={async (values) => {
         const payload = toPayload(values);
@@ -121,7 +122,7 @@ export function WorkOrderFormPage({ mode }: { mode: 'create' | 'edit' | 'copy' }
           await createWorkOrder(payload);
           message.success('工单已创建');
         }
-        navigate('/work-orders');
+        returnToSource();
       }}
     >
       <TemplateFormSection title="基本信息">

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { App } from 'antd';
 import { ProForm, type ProFormInstance } from '@ant-design/pro-components';
@@ -10,6 +10,7 @@ import { PageShell } from '../PageShell';
 import { SectionTitle } from '../SectionTitle';
 import { ApiError } from '../../../api/apiError';
 import './index.css';
+import { UNSAVED_CHANGES_MESSAGE, useUnsavedChangesGuard } from './useUnsavedChangesGuard';
 
 type TemplateFormPageProps<T extends Record<string, unknown>> = {
   title: string;
@@ -68,19 +69,37 @@ export function TemplateFormPage<T extends Record<string, unknown>>({
   fieldNameMap = {},
   onCancel
 }: TemplateFormPageProps<T>) {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [innerForm] = ProForm.useForm<T>();
   const formInstance = form || innerForm;
   const [innerSubmitting, setInnerSubmitting] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
   const isUnavailable = Boolean(error) || Boolean(notFound);
   const isSubmitting = Boolean(submitting || innerSubmitting);
 
+  useEffect(() => setDirty(false), [initialValues]);
+
+  const confirm = useCallback((onConfirm: () => void, onCancel: () => void) => {
+    modal.confirm({
+      title: '确认离开当前页面？',
+      content: UNSAVED_CHANGES_MESSAGE,
+      okText: '确认离开',
+      cancelText: '继续编辑',
+      onOk: onConfirm,
+      onCancel
+    });
+  }, [modal]);
+  const { allowNextNavigation, blockNextNavigation, confirmDiscard } = useUnsavedChangesGuard(dirty, confirm);
+
   const handleSubmit = async (values: T) => {
     try {
       setInnerSubmitting(true);
+      allowNextNavigation();
       await onSubmit(values);
+      setDirty(false);
     } catch (error) {
+      blockNextNavigation();
       const handled = applyApiFieldErrors(error, formInstance, fieldNameMap)
         || onSubmitError?.(error, formInstance);
       if (!handled) {
@@ -99,7 +118,7 @@ export function TemplateFormPage<T extends Record<string, unknown>>({
       titleExtra={titleExtra}
       actions={(
         <ActionBar>
-          <AdminButton disabled={isSubmitting} onClick={onCancel}>取消</AdminButton>
+          <AdminButton disabled={isSubmitting} onClick={() => confirmDiscard(onCancel)}>取消</AdminButton>
           {!isUnavailable ? (
             <AdminButton type="primary" htmlType="submit" form={formId} loading={isSubmitting}>保存</AdminButton>
           ) : null}
@@ -118,8 +137,9 @@ export function TemplateFormPage<T extends Record<string, unknown>>({
           form={formInstance}
           initialValues={initialValues}
           showActions={false}
-          onCancel={onCancel}
+          onCancel={() => confirmDiscard(onCancel)}
           onSubmit={handleSubmit}
+          onValuesChange={() => setDirty(true)}
         >
           <div className="admin-template-form-page">
             {children}

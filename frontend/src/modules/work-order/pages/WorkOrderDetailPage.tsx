@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { message } from 'antd';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   AdminButton,
   DeleteConfirmAction,
@@ -10,7 +10,8 @@ import {
   RichTextViewer,
   TemplateDetailPage,
   TemplateDetailSection,
-  useDetailNeighbors
+  useDetailNeighbors,
+  usePageReturnNavigation
 } from '../../../components/admin';
 import { WorkOrderStatusChangeAction } from '../components/WorkOrderStatusChangeAction';
 import { deleteWorkOrder, getWorkOrder, getWorkOrderHistory, getWorkOrderNeighbors, updateWorkOrderStatus } from '../../../api/workOrderApi';
@@ -27,7 +28,7 @@ import './WorkOrderDetailPage.css';
 import { buildStatusPayload, statusTransitions } from './workOrderList.constants';
 
 export function WorkOrderDetailPage() {
-  const navigate = useNavigate();
+  const { navigateWithReturn, returnToSource } = usePageReturnNavigation('/work-orders');
   const params = useParams();
   const [detail, setDetail] = useState<WorkOrderRecord>();
   const [history, setHistory] = useState<WorkOrderHistoryItem[]>([]);
@@ -75,7 +76,7 @@ export function WorkOrderDetailPage() {
         error={loadError}
         notFound={notFound}
         onRetry={loadDetail}
-        onBack={() => navigate('/work-orders')}
+        onBack={returnToSource}
       >
         {null}
       </TemplateDetailPage>
@@ -86,7 +87,7 @@ export function WorkOrderDetailPage() {
   return (
     <TemplateDetailPage
       title="工单详情"
-      onBack={() => navigate('/work-orders')}
+      onBack={returnToSource}
       titleCode={detail.code}
       titleCenter={(
         <DetailNeighborNav
@@ -101,15 +102,15 @@ export function WorkOrderDetailPage() {
       )}
       actions={
         <>
-          <AdminButton type="primary" onClick={() => navigate(`/work-orders/${detail.id}/edit`)}>编辑</AdminButton>
-          <AdminButton onClick={() => navigate(`/work-orders/${detail.id}/copy`)}>复制</AdminButton>
+          <AdminButton type="primary" onClick={() => navigateWithReturn(`/work-orders/${detail.id}/edit`)}>编辑</AdminButton>
+          <AdminButton onClick={() => navigateWithReturn(`/work-orders/${detail.id}/copy`)}>复制</AdminButton>
           <DeleteConfirmAction
             entityName="工单"
             targetName={detail.code}
             onConfirm={async () => {
               await deleteWorkOrder(detail.id);
               message.success('工单已删除');
-              navigate('/work-orders');
+              returnToSource();
             }}
             successMessage={false}
           >

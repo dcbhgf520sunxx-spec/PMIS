@@ -1,14 +1,16 @@
 import { useMemo, useState } from 'react';
 import type { Key } from 'react';
 import { message } from 'antd';
-import { useNavigate } from 'react-router-dom';
 import {
   ActionBar,
   AdminButton,
   createDetailNeighborContext,
+  listRouteCodecs,
   saveDetailNeighborContext,
   TemplateListPage,
   useCommittedFilters,
+  useListViewState,
+  usePageReturnNavigation,
   ViewTabs
 } from '../../../components/admin';
 import { deleteWorkOrder, updateWorkOrderStatus } from '../../../api/workOrderApi';
@@ -29,11 +31,23 @@ import { useWorkOrderListData } from './useWorkOrderListData';
 import './WorkOrderListPage.css';
 
 export function WorkOrderListPage() {
-  const navigate = useNavigate();
+  const { currentPath, navigateWithReturn } = usePageReturnNavigation('/work-orders');
   const currentUser = useAuthStore((state) => state.user);
   const currentFollowerId = currentUser ? String(currentUser.id) : '';
-  const [viewKey, setViewKey] = useState<WorkOrderViewKey>('mine');
-  const { draftFilters, appliedFilters, revision: filterRevision, setDraftFilters, commitFilters, resetFilters } = useCommittedFilters(defaultWorkOrderListFilters);
+  const [viewKey, setViewKey] = useListViewState<WorkOrderViewKey>('mine', ['all', 'mine'], true);
+  const { draftFilters, appliedFilters, revision: filterRevision, setDraftFilters, commitFilters, resetFilters } = useCommittedFilters(defaultWorkOrderListFilters, {
+    urlSync: true,
+    codecs: {
+      systemId: listRouteCodecs.string,
+      problemTypes: listRouteCodecs.stringArray,
+      urgency: listRouteCodecs.number,
+      status: listRouteCodecs.number,
+      isOverdue: listRouteCodecs.boolean,
+      followerId: listRouteCodecs.string,
+      submitTimeRange: listRouteCodecs.dateArray,
+      expectedResolveDateRange: listRouteCodecs.dateArray
+    }
+  });
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
 
   const {
@@ -86,13 +100,14 @@ export function WorkOrderListPage() {
     saveDetailNeighborContext(createDetailNeighborContext({
       moduleKey: 'work-order',
       routeBase: '/work-orders',
-      params: buildCurrentNeighborParams()
+      params: buildCurrentNeighborParams(),
+      sourcePath: currentPath
     }));
-    navigate(`/work-orders/${record.id}`);
+    navigateWithReturn(`/work-orders/${record.id}`);
   };
 
   const columns = useMemo(() => createWorkOrderColumns({
-    navigate,
+    navigate: navigateWithReturn,
     renderIndex: listData.renderIndex,
     sortState: listData.sortState,
     systemOptions,
@@ -110,7 +125,7 @@ export function WorkOrderListPage() {
       await reload();
       message.success('工单已删除');
     }
-  }), [listData.renderIndex, listData.sortState, navigate, openDetail, problemTypeOptions, reload, systemOptions, userOptions, viewKey]);
+  }), [listData.renderIndex, listData.sortState, navigateWithReturn, openDetail, problemTypeOptions, reload, systemOptions, userOptions, viewKey]);
 
   const batch = useWorkOrderBatchActions({
     selectedRecords,
@@ -157,7 +172,7 @@ export function WorkOrderListPage() {
         }
         actions={
           <ActionBar>
-            <AdminButton type="primary" onClick={() => navigate('/work-orders/new')}>新增工单</AdminButton>
+            <AdminButton type="primary" onClick={() => navigateWithReturn('/work-orders/new')}>新增工单</AdminButton>
           </ActionBar>
         }
         filter={(

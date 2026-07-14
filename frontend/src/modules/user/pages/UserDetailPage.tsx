@@ -1,19 +1,20 @@
 import { useEffect, useState } from 'react';
 import { message } from 'antd';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   DetailMetaList,
   PermissionButton,
   StatusConfirmAction,
   StatusTag,
   TemplateDetailPage,
-  TemplateDetailSection
+  TemplateDetailSection,
+  usePageReturnNavigation
 } from '../../../components/admin';
 import { getUser, toggleUserStatus } from '../../../api/userApi';
 import type { UserRecord } from '../types';
 
 export function UserDetailPage() {
-  const navigate = useNavigate();
+  const { navigateWithReturn, returnToSource } = usePageReturnNavigation('/users');
   const params = useParams();
   const [user, setUser] = useState<UserRecord>();
   const [loading, setLoading] = useState(true);
@@ -44,10 +45,10 @@ export function UserDetailPage() {
       error={loadError}
       notFound={notFound}
       onRetry={() => setReloadRevision((value) => value + 1)}
-      onBack={() => navigate('/users')}
+      onBack={returnToSource}
       actions={
         user ? (
-          <PermissionButton type="primary" permission="user" onClick={() => navigate(`/users/${user.id}/edit`)}>
+          <PermissionButton type="primary" permission="user" onClick={() => navigateWithReturn(`/users/${user.id}/edit`)}>
             编辑
           </PermissionButton>
         ) : null

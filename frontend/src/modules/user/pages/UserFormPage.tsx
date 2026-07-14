@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { App } from 'antd';
 import type { RuleObject } from 'antd/es/form';
 import { ProForm } from '@ant-design/pro-components';
-import { useNavigate, useParams } from 'react-router-dom';
-import { AdminProFormSelect, AdminProFormText, TemplateFormPage, TemplateFormSection } from '../../../components/admin';
+import { useParams } from 'react-router-dom';
+import { AdminProFormSelect, AdminProFormText, TemplateFormPage, TemplateFormSection, usePageReturnNavigation } from '../../../components/admin';
 import {
   checkEmployeeNo,
   checkPhone,
@@ -30,7 +30,7 @@ function mergeRoleOptions(
 }
 
 export function UserFormPage({ mode }: UserFormPageProps) {
-  const navigate = useNavigate();
+  const { returnToSource } = usePageReturnNavigation('/users');
   const params = useParams();
   const { message } = App.useApp();
   const [initialValues, setInitialValues] = useState<Partial<UserFormValues>>();
@@ -76,7 +76,7 @@ export function UserFormPage({ mode }: UserFormPageProps) {
       notFound={notFound}
       onRetry={() => setReloadRevision((value) => value + 1)}
       initialValues={initialValues}
-      onCancel={() => navigate('/users')}
+      onCancel={returnToSource}
       onSubmit={async (values) => {
         if (mode === 'create') {
           await createUser(values);
@@ -85,7 +85,7 @@ export function UserFormPage({ mode }: UserFormPageProps) {
           await updateUser(params.id, values);
           message.success('保存成功');
         }
-        navigate('/users');
+        returnToSource();
       }}
     >
       <TemplateFormSection title="基本信息">

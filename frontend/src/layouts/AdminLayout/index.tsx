@@ -244,6 +244,7 @@ export function AdminLayout() {
   const user = useAuthStore((state) => state.user);
   const userMenus = useAuthStore((state) => state.menus);
   const token = useAuthStore((state) => state.token);
+  const mustChangePassword = useAuthStore((state) => state.mustChangePassword);
   const accessSessionId = useAuthStore((state) => state.accessSessionId);
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const [collapsed, setCollapsed] = useState(false);
@@ -281,7 +282,7 @@ export function AdminLayout() {
   }, [collapsed, selectedKey, visibleMenuItems]);
 
   useEffect(() => {
-    if (!token) return undefined;
+    if (!token || mustChangePassword) return undefined;
 
     lastActivityAtRef.current = Date.now();
     lastHeartbeatAtRef.current = 0;
@@ -329,10 +330,10 @@ export function AdminLayout() {
       });
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [accessSessionId, clearAuth, navigate, token]);
+  }, [accessSessionId, clearAuth, mustChangePassword, navigate, token]);
 
   useEffect(() => {
-    if (!token) {
+    if (!token || mustChangePassword) {
       setMessageItems([]);
       return;
     }
@@ -353,7 +354,7 @@ export function AdminLayout() {
     return () => {
       ignore = true;
     };
-  }, [token]);
+  }, [mustChangePassword, token]);
 
   const reloadMessages = async () => {
     const rows = await getMessages();
@@ -381,6 +382,10 @@ export function AdminLayout() {
   };
 
   if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (mustChangePassword) {
     return <Navigate to="/login" replace />;
   }
 

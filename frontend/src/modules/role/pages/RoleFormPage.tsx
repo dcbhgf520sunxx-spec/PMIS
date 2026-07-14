@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { Key } from 'react';
 import { App } from 'antd';
-import { useNavigate, useParams } from 'react-router-dom';
-import { AdminProFormText, AdminProFormTextArea, AdminTree, TemplateFormPage, TemplateFormSection } from '../../../components/admin';
+import { useParams } from 'react-router-dom';
+import { AdminProFormText, AdminProFormTextArea, AdminTree, TemplateFormPage, TemplateFormSection, usePageReturnNavigation } from '../../../components/admin';
 import {
   checkRoleCode,
   createRole,
@@ -20,7 +20,7 @@ type RoleFormPageProps = {
 };
 
 export function RoleFormPage({ mode }: RoleFormPageProps) {
-  const navigate = useNavigate();
+  const { returnToSource } = usePageReturnNavigation('/roles');
   const params = useParams();
   const { message } = App.useApp();
   const [initialValues, setInitialValues] = useState<Partial<RoleFormValues>>();
@@ -65,7 +65,7 @@ export function RoleFormPage({ mode }: RoleFormPageProps) {
       notFound={notFound}
       onRetry={() => setReloadRevision((value) => value + 1)}
       initialValues={initialValues}
-      onCancel={() => navigate('/roles')}
+      onCancel={returnToSource}
       onSubmit={async (values) => {
         let roleId = params.id;
         if (mode === 'create') {
@@ -79,7 +79,7 @@ export function RoleFormPage({ mode }: RoleFormPageProps) {
         if (mode === 'edit' && roleId) {
           await saveRoleMenuIds(roleId, checkedMenuIds.map(Number));
         }
-        navigate('/roles');
+        returnToSource();
       }}
     >
       <TemplateFormSection title="基本信息">

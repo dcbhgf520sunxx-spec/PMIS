@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import type { Key } from 'react';
 import { message } from 'antd';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   AdminTree,
   DeleteConfirmAction,
   DetailMetaList,
   PermissionButton,
   TemplateDetailPage,
-  TemplateDetailSection
+  TemplateDetailSection,
+  usePageReturnNavigation
 } from '../../../components/admin';
 import {
   deleteRole,
@@ -20,7 +21,7 @@ import {
 import { buildMenuTree, collectTreeKeys } from '../roleMenuTree';
 
 export function RoleDetailPage() {
-  const navigate = useNavigate();
+  const { navigateWithReturn, returnToSource } = usePageReturnNavigation('/roles');
   const params = useParams();
   const [role, setRole] = useState<RoleRecord>();
   const [menuTree, setMenuTree] = useState<import('antd/es/tree').DataNode[]>([]);
@@ -59,11 +60,11 @@ export function RoleDetailPage() {
       error={loadError}
       notFound={notFound}
       onRetry={() => setReloadRevision((value) => value + 1)}
-      onBack={() => navigate('/roles')}
+      onBack={returnToSource}
       actions={
         <>
           {role ? (
-            <PermissionButton type="primary" permission="role" onClick={() => navigate(`/roles/${role.id}/edit`)}>
+            <PermissionButton type="primary" permission="role" onClick={() => navigateWithReturn(`/roles/${role.id}/edit`)}>
               编辑
             </PermissionButton>
           ) : null}
@@ -75,7 +76,7 @@ export function RoleDetailPage() {
               onConfirm={async () => {
                 await deleteRole(role.id);
                 message.success('删除成功');
-                navigate('/roles');
+                returnToSource();
               }}
               successMessage={false}
             >

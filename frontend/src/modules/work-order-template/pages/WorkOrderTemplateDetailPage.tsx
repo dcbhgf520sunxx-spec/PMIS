@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { message } from 'antd';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   AdminButton,
   DeleteConfirmAction,
@@ -8,7 +8,8 @@ import {
   HistoryTimelineSection,
   RichTextViewer,
   TemplateDetailPage,
-  TemplateDetailSection
+  TemplateDetailSection,
+  usePageReturnNavigation
 } from '../../../components/admin';
 import { WorkOrderStatusChangeAction } from '../../work-order/components/WorkOrderStatusChangeAction';
 import { mockWorkOrderHistory, mockWorkOrders } from '../../work-order/mock';
@@ -24,7 +25,7 @@ import {
 import '../../work-order/pages/WorkOrderDetailPage.css';
 
 export function WorkOrderTemplateDetailPage() {
-  const navigate = useNavigate();
+  const { navigateWithReturn, returnToSource } = usePageReturnNavigation('/samples/work-order');
   const params = useParams();
   const detail = mockWorkOrders.find((item) => item.id === params.id);
   if (!detail) {
@@ -32,7 +33,7 @@ export function WorkOrderTemplateDetailPage() {
       <TemplateDetailPage
         title="工单详情样板"
         notFound
-        onBack={() => navigate('/samples/work-order')}
+        onBack={returnToSource}
       >
         {null}
       </TemplateDetailPage>
@@ -42,18 +43,18 @@ export function WorkOrderTemplateDetailPage() {
   return (
     <TemplateDetailPage
       title="工单详情样板"
-      onBack={() => navigate('/samples/work-order')}
+      onBack={returnToSource}
       titleCode={detail.code}
       actions={
         <>
-          <AdminButton type="primary" onClick={() => navigate(`/samples/work-order/${detail.id}/edit`)}>编辑</AdminButton>
-          <AdminButton onClick={() => navigate(`/samples/work-order/${detail.id}/copy`)}>复制</AdminButton>
+          <AdminButton type="primary" onClick={() => navigateWithReturn(`/samples/work-order/${detail.id}/edit`)}>编辑</AdminButton>
+          <AdminButton onClick={() => navigateWithReturn(`/samples/work-order/${detail.id}/copy`)}>复制</AdminButton>
           <DeleteConfirmAction
             entityName="工单"
             targetName={detail.code}
             onConfirm={() => {
               message.success('样板工单已删除');
-              navigate('/samples/work-order');
+              returnToSource();
             }}
             successMessage={false}
           >

@@ -13,7 +13,6 @@ import {
 } from '../../../components/admin';
 import {
   changeCurrentPhone,
-  changeCurrentPassword,
   getCurrentUser,
   getUserPreference,
   resetCurrentAvatar,
@@ -23,6 +22,7 @@ import {
 import { useAuthStore } from '../../../stores/authStore';
 import type { CurrentUserResult } from '../../../api/authApi';
 import type { UserPreference } from '../../../stores/authStore';
+import { PasswordChangeModal } from './PasswordChangeModal';
 import './AccountDrawers.css';
 
 const AVATAR_MAX_SIZE_MB = 5;
@@ -31,12 +31,6 @@ const AVATAR_MAX_SIZE_BYTES = AVATAR_MAX_SIZE_MB * 1024 * 1024;
 type AccountDrawersProps = {
   active: 'profile' | 'preferences' | 'password' | null;
   onClose: () => void;
-};
-
-type PasswordFormValues = {
-  oldPassword: string;
-  newPassword: string;
-  confirmPassword: string;
 };
 
 type PhoneFormValues = {
@@ -84,13 +78,11 @@ export function AccountDrawers({ active, onClose }: AccountDrawersProps) {
   const setUser = useAuthStore((state) => state.setUser);
   const setPreference = useAuthStore((state) => state.setPreference);
   const [preferenceForm] = Form.useForm<UserPreference>();
-  const [passwordForm] = Form.useForm<PasswordFormValues>();
   const [phoneForm] = Form.useForm<PhoneFormValues>();
   const [currentUser, setCurrentUser] = useState<CurrentUserResult>();
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [phoneOpen, setPhoneOpen] = useState(false);
   const [savingPreference, setSavingPreference] = useState(false);
-  const [savingPassword, setSavingPassword] = useState(false);
   const [savingPhone, setSavingPhone] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [resettingAvatar, setResettingAvatar] = useState(false);
@@ -114,10 +106,9 @@ export function AccountDrawers({ active, onClose }: AccountDrawersProps) {
 
   useEffect(() => {
     if (active !== 'password') return;
-    passwordForm.resetFields();
     setPasswordOpen(true);
     onClose();
-  }, [active, onClose, passwordForm]);
+  }, [active, onClose]);
 
   useEffect(() => {
     if (!profileOpen) return;
@@ -235,24 +226,6 @@ export function AccountDrawers({ active, onClose }: AccountDrawersProps) {
       message.error(error instanceof Error ? error.message : '保存失败');
     } finally {
       setSavingPreference(false);
-    }
-  };
-
-  const handleChangePassword = async () => {
-    const values = await passwordForm.validateFields();
-    setSavingPassword(true);
-    try {
-      await changeCurrentPassword({
-        oldPassword: values.oldPassword,
-        newPassword: values.newPassword
-      });
-      message.success('密码已修改');
-      setPasswordOpen(false);
-      passwordForm.resetFields();
-    } catch (error) {
-      message.error(error instanceof Error ? error.message : '修改失败');
-    } finally {
-      setSavingPassword(false);
     }
   };
 
@@ -385,53 +358,11 @@ export function AccountDrawers({ active, onClose }: AccountDrawersProps) {
         </Form>
       </AdminModal>
 
-      <AdminModal
-        title="修改密码"
+      <PasswordChangeModal
         open={passwordOpen}
-        width={420}
-        confirmLoading={savingPassword}
         onCancel={() => setPasswordOpen(false)}
-        onOk={handleChangePassword}
-      >
-        <Form className="account-drawer__form" form={passwordForm} layout="vertical">
-          <Form.Item name="oldPassword" label="原密码" rules={[{ required: true, message: '请输入原密码' }]}>
-            <AdminPasswordInput placeholder="请输入原密码" />
-          </Form.Item>
-          <Form.Item
-            name="newPassword"
-            label="新密码"
-            dependencies={['oldPassword']}
-            rules={[
-              { required: true, message: '请输入新密码' },
-              { min: 6, message: '新密码至少 6 位' },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue('oldPassword') !== value) return Promise.resolve();
-                  return Promise.reject(new Error('新密码不能与原密码一致'));
-                }
-              })
-            ]}
-          >
-            <AdminPasswordInput placeholder="请输入新密码" />
-          </Form.Item>
-          <Form.Item
-            name="confirmPassword"
-            label="确认新密码"
-            dependencies={['newPassword']}
-            rules={[
-              { required: true, message: '请再次输入新密码' },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue('newPassword') === value) return Promise.resolve();
-                  return Promise.reject(new Error('两次输入的新密码不一致'));
-                }
-              })
-            ]}
-          >
-            <AdminPasswordInput placeholder="请再次输入新密码" />
-          </Form.Item>
-        </Form>
-      </AdminModal>
+        onSuccess={() => setPasswordOpen(false)}
+      />
     </>
   );
 }

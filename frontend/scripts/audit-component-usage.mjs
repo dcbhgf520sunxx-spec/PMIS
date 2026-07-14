@@ -107,6 +107,12 @@ function collectPageTemplateViolations(files) {
         reason: '新增编辑页必须从 TemplateFormPage 入口接入'
       });
     }
+    if (pagePath.endsWith('FormPage.tsx') && source.includes('<TemplateFormPage') && !source.includes('usePageReturnNavigation')) {
+      violations.push({
+        level: 'BLOCK', file: relative(rootDir, file), line: 1, token: 'FormPage',
+        reason: '新增编辑页必须使用 usePageReturnNavigation 统一保存、取消和直接访问的返回目标'
+      });
+    }
     if (pagePath.endsWith('DetailPage.tsx') && !source.includes('<TemplateDetailPage')) {
       violations.push({
         level: 'BLOCK',
@@ -114,6 +120,18 @@ function collectPageTemplateViolations(files) {
         line: 1,
         token: 'DetailPage',
         reason: '详情页必须从 TemplateDetailPage 入口接入'
+      });
+    }
+    if (pagePath.endsWith('DetailPage.tsx') && source.includes('<TemplateDetailPage') && !source.includes('usePageReturnNavigation')) {
+      violations.push({
+        level: 'BLOCK', file: relative(rootDir, file), line: 1, token: 'DetailPage',
+        reason: '详情页必须使用 usePageReturnNavigation 统一返回列表和进入编辑的来源链路'
+      });
+    }
+    if (pagePath.endsWith('ListPage.tsx') && source.includes('<TemplateListPage') && !/urlSync\s*:\s*true/.test(source)) {
+      violations.push({
+        level: 'BLOCK', file: relative(rootDir, file), line: 1, token: 'ListPage',
+        reason: '标准列表必须通过 urlSync: true 同步已提交筛选、分页和排序状态'
       });
     }
 

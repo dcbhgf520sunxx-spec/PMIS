@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
-import { useNavigate } from 'react-router-dom';
 import {
   ActionBar,
   AdminInput,
@@ -11,6 +10,7 @@ import {
   createListFilterItems,
   createListSorters,
   DetailLinkCell,
+  listRouteCodecs,
   listSorters,
   OperationColumnActions,
   PermissionButton,
@@ -18,6 +18,7 @@ import {
   StatusConfirmAction,
   TemplateListPage,
   useCommittedFilters,
+  usePageReturnNavigation,
   useTemplateListPageData
 } from '../../../components/admin';
 import { getUserList, resetUserPassword, toggleUserStatus } from '../../../api/userApi';
@@ -51,10 +52,13 @@ const userSorters = createListSorters<UserRecord>({
 });
 
 export function UserListPage() {
-  const navigate = useNavigate();
+  const { navigateWithReturn } = usePageReturnNavigation('/users');
   const [rows, setRows] = useState<UserRecord[]>([]);
   const [serverTotal, setServerTotal] = useState(0);
-  const { draftFilters, appliedFilters, revision: filterRevision, setDraftFilters, commitFilters, resetFilters } = useCommittedFilters(defaultFilters);
+  const { draftFilters, appliedFilters, revision: filterRevision, setDraftFilters, commitFilters, resetFilters } = useCommittedFilters(defaultFilters, {
+    urlSync: true,
+    codecs: { roleIds: listRouteCodecs.stringArray, status: listRouteCodecs.string }
+  });
   const [roleOptions, setRoleOptions] = useState<Array<{ label: string; value: string }>>([]);
 
   const {
@@ -66,7 +70,7 @@ export function UserListPage() {
     pagination,
     handleTableChange,
     renderIndex
-  } = useTemplateListPageData({ rows, sorters: userSorters, resetOn: [filterRevision], total: serverTotal, serverPaging: true });
+  } = useTemplateListPageData({ rows, sorters: userSorters, resetOn: [filterRevision], total: serverTotal, serverPaging: true, urlSync: true });
 
   const loadRows = async () => {
     const result = await getUserList({
@@ -184,7 +188,7 @@ export function UserListPage() {
       sorter: true,
       sortOrder: sortState.field === 'employeeNo' ? sortState.order : null,
       render: (_, record) => (
-        <DetailLinkCell onClick={() => navigate(`/users/${record.id}`)}>
+        <DetailLinkCell onClick={() => navigateWithReturn(`/users/${record.id}`)}>
           {record.employeeNo}
         </DetailLinkCell>
       )
@@ -240,7 +244,7 @@ export function UserListPage() {
       fixed: 'right',
       render: (_, record) => (
         <OperationColumnActions>
-          <AdminTextAction onClick={() => navigate(`/users/${record.id}/edit`)}>
+          <AdminTextAction onClick={() => navigateWithReturn(`/users/${record.id}/edit`)}>
             编辑
           </AdminTextAction>
           <StatusConfirmAction
@@ -275,7 +279,7 @@ export function UserListPage() {
       title="用户管理"
       actions={
         <ActionBar>
-          <PermissionButton type="primary" permission="user" onClick={() => navigate('/users/new')}>
+          <PermissionButton type="primary" permission="user" onClick={() => navigateWithReturn('/users/new')}>
             新增用户
           </PermissionButton>
         </ActionBar>

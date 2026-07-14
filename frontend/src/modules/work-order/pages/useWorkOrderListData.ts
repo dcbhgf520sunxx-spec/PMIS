@@ -34,7 +34,8 @@ export function useWorkOrderListData({
     sorters: workOrderSorters,
     resetOn: [filterRevision, viewKey],
     total: serverTotal,
-    serverPaging: true
+    serverPaging: true,
+    urlSync: true
   });
 
   const loadWorkOrders = useCallback(async () => {

@@ -6,6 +6,7 @@ import { DataListPage } from '../DataListPage';
 import { PageShell } from '../PageShell';
 import { TablePagination } from '../TablePagination';
 import { useListPageData } from '../DataListPage/useListPageData';
+import { useListScrollRestoration } from './useListScrollRestoration';
 
 export type TemplateListPagination = {
   current: number;
@@ -60,6 +61,7 @@ export function TemplateListPage<
     onRetry,
     ...restProps
   } = props;
+  useListScrollRestoration(!embedded);
   const dataListProps = { ...restProps } as TemplateListPageBaseProps<T, P> & { batch?: TemplateListBatchMode['batch'] };
   delete dataListProps.batch;
   delete dataListProps.error;
@@ -97,8 +99,14 @@ export function TemplateListPage<
 
   if (embedded) return content;
 
-  return <PageShell title={title || ''} compact titleExtra={titleExtra} actions={actions}>{content}</PageShell>;
+  return (
+    <PageShell title={title || ''} compact titleExtra={titleExtra} actions={actions}>
+      {content}
+    </PageShell>
+  );
 }
 
 export const useTemplateListPageData = useListPageData;
 export { useCommittedFilters } from './useCommittedFilters';
+export { useListViewState } from './useListViewState';
+export * from './listRouteState';

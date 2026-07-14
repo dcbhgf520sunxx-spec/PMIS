@@ -7,6 +7,7 @@ import {
   CompactFilterBar,
   createListFilterItems,
   createListSorters,
+  listRouteCodecs,
   listSorters,
   StatusTag,
   TemplateListPage,
@@ -56,7 +57,14 @@ function toDateRange(value: unknown): DateLike[] {
 export function AccessLogListPage() {
   const [rows, setRows] = useState<AccessLogRecord[]>([]);
   const [serverTotal, setServerTotal] = useState(0);
-  const { draftFilters, appliedFilters, revision: filterRevision, setDraftFilters, commitFilters, resetFilters } = useCommittedFilters(defaultFilters);
+  const { draftFilters, appliedFilters, revision: filterRevision, setDraftFilters, commitFilters, resetFilters } = useCommittedFilters(defaultFilters, {
+    urlSync: true,
+    codecs: {
+      result: listRouteCodecs.string,
+      failReason: listRouteCodecs.string,
+      accessTimeRange: listRouteCodecs.dateArray
+    }
+  });
 
   const {
     currentPage,
@@ -67,7 +75,7 @@ export function AccessLogListPage() {
     pagination,
     handleTableChange,
     renderIndex
-  } = useTemplateListPageData({ rows, sorters: accessLogSorters, resetOn: [filterRevision], total: serverTotal, serverPaging: true });
+  } = useTemplateListPageData({ rows, sorters: accessLogSorters, resetOn: [filterRevision], total: serverTotal, serverPaging: true, urlSync: true });
 
   useEffect(() => {
     getAccessLogList({

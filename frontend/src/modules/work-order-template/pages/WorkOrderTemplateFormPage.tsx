@@ -2,14 +2,15 @@ import { message, Space } from 'antd';
 import type { RuleObject } from 'antd/es/form';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   AdminProFormRichDescription,
   AdminProFormDatePicker,
   AdminProFormSelect,
   AdminProFormText,
   TemplateFormPage,
-  TemplateFormSection
+  TemplateFormSection,
+  usePageReturnNavigation
 } from '../../../components/admin';
 import { mockWorkOrders, workOrderUsers } from '../../work-order/mock';
 import type { WorkOrderRecord } from '../../work-order/types';
@@ -49,7 +50,7 @@ function toInitialValues(source: WorkOrderRecord): Partial<WorkOrderFormValues> 
 }
 
 export function WorkOrderTemplateFormPage({ mode }: { mode: 'create' | 'edit' | 'copy' }) {
-  const navigate = useNavigate();
+  const { returnToSource } = usePageReturnNavigation('/samples/work-order');
   const params = useParams();
   const source = mode === 'create' ? undefined : mockWorkOrders.find((item) => item.id === params.id);
   const initialValues = source ? toInitialValues(source) : undefined;
@@ -66,10 +67,10 @@ export function WorkOrderTemplateFormPage({ mode }: { mode: 'create' | 'edit' | 
           <span className="admin-template-form-page__code">{source.code}</span>
         </Space>
       ) : null}
-      onCancel={() => navigate('/samples/work-order')}
+      onCancel={returnToSource}
       onSubmit={async () => {
         message.success(mode === 'edit' ? '样板工单已更新' : '样板工单已创建');
-        navigate('/samples/work-order');
+        returnToSource();
       }}
     >
       <TemplateFormSection title="基本信息">

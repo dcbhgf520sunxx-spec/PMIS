@@ -15,6 +15,7 @@ type FormPageProps<T extends Record<string, unknown>> = {
   children: ReactNode;
   onSubmit: (values: T) => Promise<void> | void;
   onCancel: () => void;
+  onValuesChange?: () => void;
 };
 
 export function FormPage<T extends Record<string, unknown>>({
@@ -26,7 +27,8 @@ export function FormPage<T extends Record<string, unknown>>({
   showActions = true,
   children,
   onSubmit,
-  onCancel
+  onCancel,
+  onValuesChange
 }: FormPageProps<T>) {
   const [innerForm] = ProForm.useForm<T>();
   const formInstance = form || innerForm;
@@ -62,6 +64,7 @@ export function FormPage<T extends Record<string, unknown>>({
         await onSubmit(values);
         return true;
       }}
+      onValuesChange={onValuesChange}
     >
       {children}
     </ProForm>

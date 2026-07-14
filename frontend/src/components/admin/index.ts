@@ -60,5 +60,6 @@ export * from './DetailLinkCell';
 export * from './DetailNeighborNav';
 export * from './DetailNeighborNav/detailNeighbors';
 export * from './DetailNeighborNav/useDetailNeighbors';
+export * from './PageNavigation';
 export * from './AdminMessageCenter';
 export * from './AdminFloatingAssistant';

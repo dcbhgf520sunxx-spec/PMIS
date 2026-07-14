@@ -73,7 +73,8 @@ export function ArchivePage() {
     renderIndex
   } = useTemplateListPageData({
     rows: archiveRows,
-    resetOn: [selectedTypeId, filterRevision]
+    resetOn: [selectedTypeId, filterRevision],
+    urlSync: true
   });
 
   const loadTypes = async (preferredTypeId?: string) => {
