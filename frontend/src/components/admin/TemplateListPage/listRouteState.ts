@@ -98,6 +98,7 @@ export function encodeListFilters<T extends Record<string, unknown>>(
     if (formatted === undefined || formatted === '') params.delete(param);
     else params.set(param, formatted);
   }
+  params.delete('page');
   return toSearch(params);
 }
 

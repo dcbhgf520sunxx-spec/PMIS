@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { SearchTableProps } from '../SearchTable';
 import { decodeListRouteState, encodeListRouteState } from '../TemplateListPage/listRouteState';
@@ -69,6 +69,7 @@ export function useListPageData<T extends Record<string, unknown>>({
     field: initial.sortField,
     order: initial.sortOrder
   } : {});
+  const resetMountedRef = useRef(false);
 
   const syncRoute = useCallback((next: Partial<{ page: number; pageSize: number; sortState: SortState }>) => {
     if (!urlSync) return;
@@ -119,15 +120,20 @@ export function useListPageData<T extends Record<string, unknown>>({
   }, [rows, serverPaging, sortState, sorters]);
 
   useEffect(() => {
+    if (serverPaging && total === 0 && rows.length === 0) return;
     const maxPage = Math.max(1, Math.ceil((serverPaging ? total || 0 : sortedRows.length) / pageSize));
     if (currentPage > maxPage) {
       setCurrentPage(maxPage);
     }
-  }, [currentPage, pageSize, serverPaging, sortedRows.length, total]);
+  }, [currentPage, pageSize, rows.length, serverPaging, sortedRows.length, total]);
 
   const resetKey = JSON.stringify(resetOn);
 
   useEffect(() => {
+    if (!resetMountedRef.current) {
+      resetMountedRef.current = true;
+      return;
+    }
     setCurrentPage(1);
   }, [resetKey]);
 

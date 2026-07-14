@@ -28,6 +28,11 @@ test('列表只把已提交筛选写入 URL 并保留无关参数', () => {
   assert.equal(search, '?returnTo=%2Fhome&q_keyword=%E6%95%B0%E6%8D%AE%E5%BA%93&q_status=2&q_overdue=1&q_types=1%2C3');
 });
 
+test('重新提交查询时清除旧页码但保留每页条数和排序', () => {
+  const search = encodeListFilters('?page=4&pageSize=50&sort=createdAt&order=descend', { keyword: '任务' }, { keyword: '' });
+  assert.equal(search, '?pageSize=50&sort=createdAt&order=descend&q_keyword=%E4%BB%BB%E5%8A%A1');
+});
+
 test('列表从 URL 恢复筛选类型并对非法值回退默认值', () => {
   const filters = decodeListFilters('?q_keyword=%E4%BB%BB%E5%8A%A1&q_status=bad&q_overdue=1&q_types=1%2C3', {
     keyword: '',

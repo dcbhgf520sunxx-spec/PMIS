@@ -18,7 +18,7 @@ export function useListViewState<T extends string>(defaultView: T, allowedViews:
     setViewState(next);
     if (!urlSync) return;
     const current = decodeListRouteState(location.search, { pageSize: 20, view: defaultView }, [...allowedViews]);
-    const search = encodeListRouteState(location.search, { ...current, page: 1, view: next }, { pageSize: current.pageSize, view: defaultView });
+    const search = encodeListRouteState(location.search, { ...current, page: 1, view: next }, { pageSize: 20, view: defaultView });
     navigate(`${location.pathname}${search}${location.hash}`);
   }, [allowedViews, defaultView, location.hash, location.pathname, location.search, navigate, urlSync]);
 
