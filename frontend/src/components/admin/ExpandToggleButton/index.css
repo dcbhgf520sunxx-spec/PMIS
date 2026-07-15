@@ -21,3 +21,7 @@
 .admin-expand-toggle-button .anticon {
   font-size: 14px;
 }
+
+.admin-expand-toggle-button.is-square .anticon {
+  font-size: 16px;
+}

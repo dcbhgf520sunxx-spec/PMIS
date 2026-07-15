@@ -1671,7 +1671,7 @@ export function DesignSystemPage() {
                 label="处理结果"
                 rules={[{ required: true, message: '请输入处理结果' }]}
               >
-                <AdminTextArea rows={3} placeholder="请输入处理结果" />
+                <AdminTextArea rows={5} maxLength={100} showCount placeholder="请输入处理结果" />
               </AdminFormItem>
             </>
           ) : null

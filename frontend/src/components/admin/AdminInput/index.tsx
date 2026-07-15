@@ -22,6 +22,31 @@ function mergePickerClassNames<T extends { popup?: { root?: string } }>(classNam
   } as T;
 }
 
+type TextAreaStyles = NonNullable<ComponentProps<typeof Input.TextArea>['styles']>;
+type TextAreaStyle = NonNullable<ComponentProps<typeof Input.TextArea>['style']>;
+
+function getTextAreaMinHeight(rows?: number, hasCount = false) {
+  const baseHeight = rows ? Math.max(88, rows * 20 + 16) : 88;
+  return baseHeight + (hasCount ? 20 : 0);
+}
+
+function mergeTextAreaStyle(rows?: number, style?: TextAreaStyle, hasCount = false): TextAreaStyle {
+  return {
+    ...style,
+    minHeight: getTextAreaMinHeight(rows, hasCount)
+  };
+}
+
+function mergeTextAreaStyles(rows?: number, styles?: TextAreaStyles, hasCount = false): TextAreaStyles {
+  return {
+    ...styles,
+    textarea: {
+      ...styles?.textarea,
+      minHeight: getTextAreaMinHeight(rows, hasCount)
+    }
+  };
+}
+
 export function AdminInput({ className, ...props }: ComponentProps<typeof Input>) {
   return (
     <Input
@@ -31,10 +56,17 @@ export function AdminInput({ className, ...props }: ComponentProps<typeof Input>
   );
 }
 
-export function AdminTextArea({ className, ...props }: ComponentProps<typeof Input.TextArea>) {
+export function AdminTextArea({ className, count, rows, showCount, style, styles, ...props }: ComponentProps<typeof Input.TextArea>) {
+  const hasCount = Boolean(showCount || count?.show);
+
   return (
     <Input.TextArea
       {...props}
+      count={count}
+      rows={rows}
+      showCount={showCount}
+      style={mergeTextAreaStyle(rows, style, hasCount)}
+      styles={mergeTextAreaStyles(rows, styles, hasCount)}
       className={['admin-input', 'admin-textarea', className].filter(Boolean).join(' ')}
     />
   );

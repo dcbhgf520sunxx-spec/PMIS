@@ -11,7 +11,7 @@
 }
 
 .admin-input.ant-input:not(textarea),
-.admin-input.ant-input-affix-wrapper,
+.admin-input.ant-input-affix-wrapper:not(.ant-input-textarea-affix-wrapper),
 .admin-input.ant-input-number,
 .admin-input.ant-select,
 .admin-date-picker.ant-picker {
@@ -69,6 +69,15 @@
   padding-top: 7px;
   padding-bottom: 7px;
   resize: vertical;
+}
+
+.admin-textarea.ant-input-textarea-show-count .ant-input-data-count {
+  bottom: 6px;
+  inset-inline-end: 8px;
+}
+
+.admin-textarea.ant-input-textarea-show-count > textarea.ant-input {
+  padding-bottom: 26px;
 }
 
 .admin-input.ant-input:hover,

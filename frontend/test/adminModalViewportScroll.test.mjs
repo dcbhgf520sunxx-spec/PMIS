@@ -5,11 +5,12 @@ import test from 'node:test';
 const modalStyles = readFileSync(new URL('../src/components/admin/AdminModal/index.css', import.meta.url), 'utf8');
 const inputSource = readFileSync(new URL('../src/components/admin/AdminInput/index.tsx', import.meta.url), 'utf8');
 const inputStyles = readFileSync(new URL('../src/components/admin/AdminInput/index.css', import.meta.url), 'utf8');
+const workbenchSource = readFileSync(new URL('../src/modules/design-system/pages/DesignSystemPage.tsx', import.meta.url), 'utf8');
 
 test('AdminModal 将长内容限制在视口内并只滚动正文', () => {
   assert.match(modalStyles, /\.admin-modal \.ant-modal-content\s*\{[\s\S]*max-height:\s*calc\(100(?:dvh|vh)\s*-\s*32px\)/);
   assert.match(modalStyles, /\.admin-modal \.ant-modal-content\s*\{[\s\S]*display:\s*flex[\s\S]*flex-direction:\s*column[\s\S]*overflow:\s*hidden/);
-  assert.match(modalStyles, /\.admin-modal \.ant-modal-body\s*\{[\s\S]*min-height:\s*0[\s\S]*overflow-y:\s*auto/);
+  assert.match(modalStyles, /\.admin-modal \.ant-modal-body\s*\{[\s\S]*flex:\s*0 1 auto[\s\S]*min-height:\s*0[\s\S]*overflow-y:\s*auto/);
   assert.match(modalStyles, /\.admin-modal \.ant-modal-header,[\s\S]*\.admin-modal \.ant-modal-footer\s*\{[\s\S]*flex:\s*0 0 auto/);
   assert.match(modalStyles, /@media[^\{]*(?:max-width|max-height)[\s\S]*\.admin-modal \.ant-modal-content\s*\{[\s\S]*max-height:\s*calc\(100dvh\s*-\s*16px\)/);
 });
@@ -23,4 +24,15 @@ test('日期类浮层挂到页面顶层并在极小视口内滚动', () => {
   assert.equal((inputSource.match(/admin-date-picker-popup/g) || []).length >= 1, true);
   assert.match(inputStyles, /\.admin-date-picker-popup\s*\{[\s\S]*padding-block:\s*8px/);
   assert.match(inputStyles, /\.admin-date-picker-popup \.ant-picker-panel-container\s*\{[\s\S]*max-height:\s*calc\(100dvh\s*-\s*32px\)[\s\S]*overflow:\s*auto/);
+});
+
+test('长文本默认高度不可向上缩小且计数器不制造弹窗溢出', () => {
+  assert.match(inputSource, /function getTextAreaMinHeight\(rows\?: number, hasCount = false\)/);
+  assert.match(inputSource, /return baseHeight \+ \(hasCount \? 20 : 0\)/);
+  assert.match(inputSource, /style=\{mergeTextAreaStyle\(rows, style, hasCount\)\}/);
+  assert.match(inputSource, /styles=\{mergeTextAreaStyles\(rows, styles, hasCount\)\}/);
+  assert.match(inputStyles, /\.admin-textarea\.ant-input-textarea-show-count \.ant-input-data-count\s*\{[\s\S]*bottom:\s*6px/);
+  assert.match(inputStyles, /\.admin-textarea\.ant-input-textarea-show-count > textarea\.ant-input\s*\{[\s\S]*padding-bottom:\s*26px/);
+  assert.match(inputStyles, /\.admin-input\.ant-input-affix-wrapper:not\(\.ant-input-textarea-affix-wrapper\)[\s\S]*height:\s*32px/);
+  assert.match(workbenchSource, /<AdminTextArea rows=\{5\} maxLength=\{100\} showCount placeholder="请输入处理结果" \/>/);
 });

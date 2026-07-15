@@ -231,6 +231,20 @@ export function BaseSection() {
               <AdminIconAction label="加载中" loading />
               <ExpandToggleButton expanded={false} onClick={(event) => event.preventDefault()} />
               <ExpandToggleButton expanded onClick={(event) => event.preventDefault()} />
+              <ExpandToggleButton
+                expanded={false}
+                expandLabel="展开层级"
+                collapseLabel="收起层级"
+                variant="square"
+                onClick={(event) => event.preventDefault()}
+              />
+              <ExpandToggleButton
+                expanded
+                expandLabel="展开层级"
+                collapseLabel="收起层级"
+                variant="square"
+                onClick={(event) => event.preventDefault()}
+              />
               <AdminEditIconAction onClick={(event) => event.preventDefault()} />
               <AdminToggleStatusIconAction
                 active
