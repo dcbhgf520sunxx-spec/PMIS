@@ -1,24 +1,76 @@
-import { useState } from 'react';
+import type { ProColumns } from '@ant-design/pro-components';
+import { useMemo, useState } from 'react';
 import {
   AdminButton,
   AdminSegmented,
+  AdminTextAction,
   DetailNeighborNav,
+  DetailLinkCell,
   DetailMetaList,
   HistoryTimelineSection,
+  OperationColumnActions,
   StatusTag,
   TemplateDetailPage,
-  TemplateDetailSection
+  TemplateDetailSection,
+  TemplateDetailTableSection
 } from '../../../../components/admin';
 import { ComponentEntry } from '../components/ComponentEntry';
 
+type RelatedRecord = {
+  id: string;
+  name: string;
+  ownerName: string;
+  typeName: string;
+  priority: string;
+  status: 'pending' | 'processing' | 'success';
+};
+
+type RelatedTableMode = 'display' | 'linked' | 'managed' | 'empty';
+
+const relatedRecords: RelatedRecord[] = [
+  { id: 'related-1', name: '整理权限范围清单', ownerName: '张三', typeName: '资料整理', priority: '中', status: 'success' },
+  { id: 'related-2', name: '复核区域授权边界', ownerName: '李四', typeName: '权限复核', priority: '高', status: 'processing' }
+];
+
 export function DetailTemplateDemo() {
   const [demoState, setDemoState] = useState<'normal' | 'loading' | 'error' | 'notFound'>('normal');
+  const [relatedTableMode, setRelatedTableMode] = useState<RelatedTableMode>('display');
+  const relatedColumns = useMemo<ProColumns<RelatedRecord>[]>(() => [
+    {
+      title: '记录名称',
+      dataIndex: 'name',
+      width: 220,
+      render: (_, record) => relatedTableMode === 'display' || relatedTableMode === 'empty'
+        ? record.name
+        : <DetailLinkCell onClick={() => {}}>{record.name}</DetailLinkCell>
+    },
+    { title: '负责人', dataIndex: 'ownerName', width: 100 },
+    { title: '类型', dataIndex: 'typeName', width: 110 },
+    { title: '优先级', dataIndex: 'priority', width: 80 },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 100,
+      render: (_, record) => <StatusTag status={record.status} text={record.status === 'success' ? '已完成' : undefined} />
+    },
+    ...(relatedTableMode === 'managed' ? [{
+      title: '操作',
+      valueType: 'option' as const,
+      width: 110,
+      render: () => (
+        <OperationColumnActions>
+          <AdminTextAction>编辑</AdminTextAction>
+          <AdminTextAction>指派</AdminTextAction>
+        </OperationColumnActions>
+      )
+    }] : [])
+  ], [relatedTableMode]);
 
   return (
     <div className="design-system-page__layout-pattern-template">
       <div className="design-system-page__input-panel-head">
         <h3>TemplateDetailPage</h3>
-        <ComponentEntry name="TemplateDetailPage / DetailNeighborNav / TemplateDetailSection / DetailMetaList" />
+        <ComponentEntry name="TemplateDetailPage / DetailNeighborNav / TemplateDetailSection / DetailMetaList / TemplateDetailTableSection" />
         <p>详情页统一从这个入口接入。标题标签、上一条/下一条、记录操作和状态操作分别由模板固定位置。</p>
         <div className="design-system-page__template-mode-switch">
           <AdminSegmented
@@ -31,6 +83,20 @@ export function DetailTemplateDemo() {
               { label: '记录不存在', value: 'notFound' }
             ]}
             onChange={(value) => setDemoState(value as typeof demoState)}
+          />
+        </div>
+        <div className="design-system-page__template-mode-switch">
+          <span>关联数据：</span>
+          <AdminSegmented
+            size="small"
+            value={relatedTableMode}
+            options={[
+              { label: '纯展示', value: 'display' },
+              { label: '可查看', value: 'linked' },
+              { label: '可管理', value: 'managed' },
+              { label: '空数据', value: 'empty' }
+            ]}
+            onChange={(value) => setRelatedTableMode(value as RelatedTableMode)}
           />
         </div>
       </div>
@@ -80,6 +146,17 @@ export function DetailTemplateDemo() {
               ]}
             />
           </TemplateDetailSection>
+          <TemplateDetailTableSection<RelatedRecord>
+            title="关联数据"
+            sectionKey="related"
+            summary={relatedTableMode === 'empty' ? '共 0 条' : '已完成 1 / 共 2 条'}
+            extra={relatedTableMode === 'managed' ? <AdminButton size="small" type="primary">新增关联记录</AdminButton> : undefined}
+            table={{
+              columns: relatedColumns,
+              dataSource: relatedTableMode === 'empty' ? [] : relatedRecords,
+              scroll: { x: relatedTableMode === 'managed' ? 720 : 610 }
+            }}
+          />
           <TemplateDetailSection title="权限范围" sectionKey="permissions">
             <DetailMetaList
               items={[

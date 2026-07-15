@@ -75,6 +75,7 @@ API 接入保持统一：
 - 序号使用 `renderIndex(index)`，按过滤后的全量数据位置计算。
 - 排序交给 `useTemplateListPageData`，先排序过滤后的全量数据，再分页。
 - 分页配置通过 `TemplateListPage.pagination` 传入，不在业务页直接放 `TablePagination`。
+- 主子任务等低频层级列表继续使用 `TemplateListPage`，名称列通过 `HierarchyListCell` 统一方框开关、主子标识和子级缩进，不使用表格原生展开列，也不新增业务专用树表组件。父子数据按展示组平铺返回，父级记录分页，子级跟随父级且默认收起；父子关系校验、状态联动、进度汇总、权限和删除限制仍由业务模块处理。
 - 普通列表不传选择列、批量操作和已选数量，分页保持在右侧。
 - 批量列表必须显式声明 `mode="batch"`，并通过 `batch` 传入已选数量和批量操作。
 - 筛选区使用 `CompactFilterBar`，表格区和底部分页区由模板承接。
@@ -120,10 +121,12 @@ API 接入保持统一：
 - 返回列表通过 `TemplateDetailPage.onBack` 传入，业务页不重复创建“返回列表”按钮和操作栏外壳。
 - 接口失败或记录不存在时，通过模板的 `error`、`notFound`、`onRetry` 展示统一状态，不能无限显示加载中。
 - 基础信息、单据信息、历史记录等使用详情分组和 `DetailMetaList`；使用 `HistoryTimeline` 的详情分组统一命名为“变更历史”，不得继续使用“操作历史”“操作记录”等旧名称。
+- 详情页中的子任务、明细和关联记录等结构化数据统一使用 `TemplateDetailTableSection`，不得在 `TemplateDetailSection` 中直接放置 `SearchTable`、原生表格或复用 `TemplateListPage embedded`，也不得通过业务包装组件绕过；严格组件审计必须阻断这些直接和间接调用。组件默认只做纯数据展示，不自动增加详情链接和操作列；需要查看或管理时，由业务列显式声明 `DetailLinkCell` 和 `OperationColumnActions`。筛选、批量操作或复杂分页较多时，应进入独立列表页或 `TemplateDrawerTable`，不能把完整列表页工具栏塞进详情分组。
+- `TemplateDetailSection.inlineExtra` 只承接标题后的统计或轻量上下文，右侧主要业务动作通过 `extra` 传入；`TemplateDetailTableSection.summary` 和 `extra` 分别承接关联数据摘要与新增等操作。
 - 详情页变更历史统一使用 `HistoryTimelineSection`，由它把“全部展开/全部收起”紧跟在“变更历史”标题之后并承接单条展开；业务页面不得使用 `TemplateDetailSection + HistoryTimeline` 拼装，不得维护 `expandedKeys`、`onExpandedKeysChange` 或通过 `inlineExtra` 重复实现。
 - 同一次保存或状态变更产生的多字段日志必须共享 `pms_op_log.operation_id`，历史接口按该标识聚合为一个节点；聚合节点内的字段顺序必须复用对应详情页的字段顺序，禁止按日志写入顺序、数据库返回顺序或字段名排序。没有 `operation_id` 的历史日志按单条兼容展示，不能按“同一秒”猜测聚合。
 - 变更历史进入 `HistoryTimeline` 前必须完成转译，使用中文字段名和业务展示值：人员和关联对象 ID 转为名称，枚举和状态码转为中文含义，日期使用页面统一格式。后端优先复用 `formatHistoryChanges` 并显式声明 `fieldLabels`、`valueLookups` 和 `dateFields`；不得把 `field_name`、`*_id`、枚举编码等数据库原始值直接交给前端或组件。
-- 长详情页存在较多分类且需要快速定位时，必须使用 `TemplateDetailPage.sectionNavigation` 和 `TemplateDetailSection.sectionKey` 提供的顶部分类导航；开启分类导航后，每个参与导航的 `TemplateDetailSection` 都必须声明唯一 `sectionKey`。不得在业务页重复维护分类数组、自建锚点或滚动监听，窄屏下拉定位由模板自动承接。
+- 长详情页存在较多分类且需要快速定位时，必须使用 `TemplateDetailPage.sectionNavigation` 以及 `TemplateDetailSection.sectionKey` / `TemplateDetailTableSection.sectionKey` 提供的顶部分类导航；开启分类导航后，每个参与导航的详情分组都必须声明唯一 `sectionKey`。不得在业务页重复维护分类数组、自建锚点或滚动监听，窄屏下拉定位由模板自动承接。
 - 详情页返回、编辑等动作通过 `ActionBar` 和现有按钮组件组合。
 - 不在业务页临时重做详情卡片、字段栅格、状态展示和历史记录样式。
 

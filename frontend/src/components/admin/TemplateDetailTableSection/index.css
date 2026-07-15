@@ -1,0 +1,29 @@
+.admin-template-detail-table-section__summary {
+  color: var(--app-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 22px;
+}
+
+.admin-template-detail-table-section__table .ant-table-container {
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+}
+
+.admin-template-detail-table-section__table .ant-table-thead > tr > th {
+  padding-block: 8px;
+  padding-inline: 10px;
+  white-space: nowrap;
+}
+
+.admin-template-detail-table-section__table .ant-table-tbody > tr > td {
+  padding-block: 7px;
+  padding-inline: 10px;
+}
+
+.admin-template-detail-table-section__table .ant-table-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

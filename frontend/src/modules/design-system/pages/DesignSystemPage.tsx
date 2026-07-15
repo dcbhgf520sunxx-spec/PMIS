@@ -47,6 +47,7 @@ import {
   DeleteConfirmAction,
   DetailMetaList,
   HistoryTimeline,
+  HierarchyListCell,
   listSorters,
   MetricCard,
   OperationColumnActions,
@@ -85,6 +86,11 @@ import {
 import './DesignSystemPage.css';
 
 type DrawerTableRecord = WorkOrderRecord;
+
+type HierarchyWorkOrderRecord = WorkOrderRecord & {
+  hierarchyParentId?: string;
+  hierarchyChildCount: number;
+};
 
 const categoryDemoTones = defineCategoryToneMap({
   typeA: 'blue',
@@ -133,6 +139,37 @@ const listTemplateSorters = createListSorters<WorkOrderRecord>({
   submitTime: listSorters.date((row) => row.submitTime),
   expectedResolveDate: listSorters.date((row) => row.expectedResolveDate)
 });
+
+const hierarchyTemplateRows: HierarchyWorkOrderRecord[] = [
+  {
+    ...mockWorkOrders[0],
+    id: 'hierarchy-parent-1',
+    problemDesc: '完成生产环境登录链路优化',
+    hierarchyChildCount: 2
+  },
+  {
+    ...mockWorkOrders[1],
+    id: 'hierarchy-child-1',
+    problemDesc: '排查认证服务日志',
+    hierarchyParentId: 'hierarchy-parent-1',
+    hierarchyChildCount: 0
+  },
+  {
+    ...mockWorkOrders[2],
+    id: 'hierarchy-child-2',
+    problemDesc: '验证网关超时配置',
+    hierarchyParentId: 'hierarchy-parent-1',
+    hierarchyChildCount: 0
+  },
+  {
+    ...mockWorkOrders[3],
+    id: 'hierarchy-parent-2',
+    problemDesc: '完成角色权限刷新优化',
+    hierarchyChildCount: 0
+  }
+];
+
+const hierarchyTemplateParentCount = hierarchyTemplateRows.filter((row) => !row.hierarchyParentId).length;
 
 function toDateText(value: unknown) {
   if (!value) return '';
@@ -485,10 +522,11 @@ export function DesignSystemPage() {
   const [tableDrawerOpen, setTableDrawerOpen] = useState(false);
   const [statusFlowOpen, setStatusFlowOpen] = useState(false);
   const [statusFlowTarget, setStatusFlowTarget] = useState<WorkOrderStatus | undefined>();
-  const [listTemplateMode, setListTemplateMode] = useState<'standard' | 'batch'>('standard');
+  const [listTemplateMode, setListTemplateMode] = useState<'standard' | 'batch' | 'hierarchy'>('standard');
   const [listTemplateFilterExpanded, setListTemplateFilterExpanded] = useState(false);
   const [listTemplateSelectedRowKeys, setListTemplateSelectedRowKeys] = useState<Key[]>([]);
   const [listTemplateSelectedRows, setListTemplateSelectedRows] = useState<WorkOrderRecord[]>([]);
+  const [expandedHierarchyParentIds, setExpandedHierarchyParentIds] = useState<Set<string>>(() => new Set());
   const [listTemplateFilterRevision, setListTemplateFilterRevision] = useState(0);
   const [tableDrawerFilterExpanded, setTableDrawerFilterExpanded] = useState(false);
   const [tableDrawerDraftFilters, setTableDrawerDraftFilters] = useState<DrawerTableFilters>(defaultDrawerTableFilters);
@@ -580,7 +618,7 @@ export function DesignSystemPage() {
   });
 
   useEffect(() => {
-    if (listTemplateMode === 'standard') {
+    if (listTemplateMode !== 'batch') {
       setListTemplateSelectedRowKeys([]);
       setListTemplateSelectedRows([]);
     }
@@ -888,6 +926,46 @@ export function DesignSystemPage() {
     }
   ], []);
 
+  const toggleHierarchyParent = (parentId: string) => {
+    setExpandedHierarchyParentIds((current) => {
+      const next = new Set(current);
+      if (next.has(parentId)) next.delete(parentId);
+      else next.add(parentId);
+      return next;
+    });
+  };
+
+  const visibleHierarchyTemplateRows = useMemo(
+    () => hierarchyTemplateRows.filter((row) => (
+      !row.hierarchyParentId || expandedHierarchyParentIds.has(row.hierarchyParentId)
+    )),
+    [expandedHierarchyParentIds]
+  );
+
+  const hierarchyDisplayColumns = useMemo<ProColumns<HierarchyWorkOrderRecord>[]>(() => (
+    displayTableColumns.map((column) => column.dataIndex === 'problemDesc'
+      ? {
+        ...column,
+        render: (_, row) => (
+          <HierarchyListCell
+            level={row.hierarchyParentId ? 'child' : row.hierarchyChildCount > 0 ? 'parent' : undefined}
+            hasChildren={row.hierarchyChildCount > 0}
+            expanded={expandedHierarchyParentIds.has(row.id)}
+            expandLabel={`展开 ${row.problemDesc} 的子任务`}
+            collapseLabel={`收起 ${row.problemDesc} 的子任务`}
+            onToggle={() => toggleHierarchyParent(row.id)}
+            trailing={row.isOverdue ? renderOverdue(true) : null}
+          >
+            <AdminTextAction className="design-system-page__display-table-link" title={row.problemDesc}>
+              {row.problemDesc}
+            </AdminTextAction>
+          </HierarchyListCell>
+        )
+      }
+      : column
+    ) as ProColumns<HierarchyWorkOrderRecord>[]
+  ), [displayTableColumns, expandedHierarchyParentIds]);
+
   const listTemplateFilter = (
     <CompactFilterBar
       items={listTemplateFilterItems}
@@ -929,14 +1007,16 @@ export function DesignSystemPage() {
             value={listTemplateMode}
             options={[
               { label: '普通列表', value: 'standard' },
-              { label: '批量列表', value: 'batch' }
+              { label: '批量列表', value: 'batch' },
+              { label: '层级列表', value: 'hierarchy' }
             ]}
-            onChange={(value) => setListTemplateMode(value as 'standard' | 'batch')}
+            onChange={(value) => setListTemplateMode(value as 'standard' | 'batch' | 'hierarchy')}
           />
         </div>
         <div className="design-system-page__template-mode-list">
           <span>普通列表：用户、角色，不传选择列和批量操作</span>
           <span>批量列表：运维工单，使用 mode=&quot;batch&quot; 和 batch.actions</span>
+          <span>层级列表：使用 HierarchyListCell，方框开关、主子标识和子级缩进保持统一</span>
         </div>
       </div>
       <div className="design-system-page__template-demo is-list">
@@ -967,6 +1047,26 @@ export function DesignSystemPage() {
               )
             }}
             pagination={listTemplatePagination}
+          />
+        ) : listTemplateMode === 'hierarchy' ? (
+          <TemplateListPage<HierarchyWorkOrderRecord>
+            key="hierarchy"
+            mode="standard"
+            title="列表模板：主子任务"
+            actions={<AdminButton type="primary">新增任务</AdminButton>}
+            table={{
+              ...listTemplateTableBase,
+              columns: hierarchyDisplayColumns,
+              dataSource: visibleHierarchyTemplateRows,
+              onChange: undefined
+            }}
+            pagination={{
+              current: 1,
+              pageSize: 20,
+              total: hierarchyTemplateParentCount,
+              onChange: () => undefined,
+              onShowSizeChange: () => undefined
+            }}
           />
         ) : (
           <TemplateListPage<WorkOrderRecord>

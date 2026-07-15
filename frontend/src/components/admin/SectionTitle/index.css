@@ -10,6 +10,10 @@
   justify-content: flex-start;
 }
 
+.admin-section-title.is-inline-extra-after-title.has-extra {
+  justify-content: space-between;
+}
+
 .admin-section-title.is-inline-extra-after-title > .admin-section-title__content {
   flex: 0 0 auto;
   width: auto;

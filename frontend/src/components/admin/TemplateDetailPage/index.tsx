@@ -49,8 +49,11 @@ type TemplateDetailSectionProps = {
   sectionKey?: string;
   inlineExtra?: ReactNode;
   inlineExtraPlacement?: 'after-title';
+  extra?: ReactNode;
   children: ReactNode;
 };
+
+export const templateDetailSectionMarker = Symbol('template-detail-section');
 
 type DetailSectionNavigationItem = {
   key: string;
@@ -67,7 +70,8 @@ function collectSectionNavigationItems(children: ReactNode): DetailSectionNaviga
       const section = child as ReactElement<{ sectionKey?: string }>;
       return section.props.sectionKey ? [{ key: section.props.sectionKey, title: '变更历史' }] : [];
     }
-    if (child.type !== TemplateDetailSection) return [];
+    const componentType = child.type as { [templateDetailSectionMarker]?: boolean };
+    if (child.type !== TemplateDetailSection && !componentType[templateDetailSectionMarker]) return [];
     const section = child as ReactElement<TemplateDetailSectionProps>;
     return section.props.sectionKey ? [{ key: section.props.sectionKey, title: section.props.title }] : [];
   });
@@ -217,14 +221,26 @@ export function TemplateDetailPage({
   );
 }
 
-export function TemplateDetailSection({ title, sectionKey, inlineExtra, inlineExtraPlacement, children }: TemplateDetailSectionProps) {
+export function TemplateDetailSection({
+  title,
+  sectionKey,
+  inlineExtra,
+  inlineExtraPlacement,
+  extra,
+  children
+}: TemplateDetailSectionProps) {
   return (
     <section
       id={sectionKey ? `detail-section-${sectionKey}` : undefined}
       data-detail-section-key={sectionKey}
       className="admin-template-detail-page__panel"
     >
-      <SectionTitle title={title} inlineExtra={inlineExtra} inlineExtraPlacement={inlineExtraPlacement} />
+      <SectionTitle
+        title={title}
+        inlineExtra={inlineExtra}
+        inlineExtraPlacement={inlineExtraPlacement}
+        extra={extra}
+      />
       {children}
     </section>
   );

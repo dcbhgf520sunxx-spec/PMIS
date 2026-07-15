@@ -169,21 +169,92 @@ function finding(file, sourceFile, node, reason, token = jsxTagName(node, source
   };
 }
 
-function resolveImportedComponentSource(file, sourceFile, componentName) {
+function resolveImportedComponent(file, sourceFile, componentName) {
   for (const statement of sourceFile.statements) {
     if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) continue;
     const modulePath = statement.moduleSpecifier.text;
     if (!modulePath.startsWith('.')) continue;
-    const namedImports = statement.importClause?.namedBindings;
-    if (!namedImports || !ts.isNamedImports(namedImports)) continue;
-    const importsComponent = namedImports.elements.some((element) => element.name.text === componentName);
-    if (!importsComponent) continue;
+    const importClause = statement.importClause;
+    const namedImports = importClause?.namedBindings;
+    const namedImport = namedImports && ts.isNamedImports(namedImports)
+      ? namedImports.elements.find((element) => element.name.text === componentName)
+      : undefined;
+    const exportName = importClause?.name?.text === componentName
+      ? 'default'
+      : namedImport?.propertyName?.text || namedImport?.name.text;
+    if (!exportName) continue;
     const basePath = resolve(dirname(file), modulePath);
     const candidates = [`${basePath}.tsx`, `${basePath}.ts`, join(basePath, 'index.tsx'), join(basePath, 'index.ts')];
     const componentFile = candidates.find((candidate) => existsSync(candidate));
-    return componentFile ? readFileSync(componentFile, 'utf8') : '';
+    return componentFile ? { componentFile, exportName } : undefined;
   }
-  return '';
+  return undefined;
+}
+
+function resolveImportedComponentFile(file, sourceFile, componentName) {
+  return resolveImportedComponent(file, sourceFile, componentName)?.componentFile || '';
+}
+
+function resolveImportedComponentSource(file, sourceFile, componentName) {
+  const componentFile = resolveImportedComponentFile(file, sourceFile, componentName);
+  return componentFile ? readFileSync(componentFile, 'utf8') : '';
+}
+
+function importedComponentUsesDetailTablePrimitive(file, sourceFile, componentName, visited = new Set()) {
+  const importedComponent = resolveImportedComponent(file, sourceFile, componentName);
+  if (!importedComponent) return false;
+  const { componentFile, exportName } = importedComponent;
+  const visitKey = `${componentFile}:${exportName}`;
+  if (visited.has(visitKey)) return false;
+  visited.add(visitKey);
+
+  const componentSource = readFileSync(componentFile, 'utf8');
+  const componentSourceFile = ts.createSourceFile(
+    componentFile,
+    componentSource,
+    ts.ScriptTarget.Latest,
+    true,
+    componentFile.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS
+  );
+  const isDefaultExport = (node) => node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword);
+  let componentDeclaration;
+  for (const statement of componentSourceFile.statements) {
+    if ((ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement))
+      && ((exportName === 'default' && isDefaultExport(statement)) || statement.name?.text === exportName)) {
+      componentDeclaration = statement;
+      break;
+    }
+    if (ts.isVariableStatement(statement)) {
+      const declaration = statement.declarationList.declarations.find((item) => (
+        ts.isIdentifier(item.name) && item.name.text === exportName
+      ));
+      if (declaration) {
+        componentDeclaration = declaration;
+        break;
+      }
+    }
+  }
+  if (!componentDeclaration) return false;
+
+  let usesPrimitive = false;
+  const inspect = (node) => {
+    if (usesPrimitive) return;
+    if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const name = jsxTagName(node, componentSourceFile);
+      if (['SearchTable', 'TemplateListPage', 'ProTable', 'table'].includes(name)) {
+        usesPrimitive = true;
+        return;
+      }
+      if (/^[A-Z]/.test(name)
+        && importedComponentUsesDetailTablePrimitive(componentFile, componentSourceFile, name, visited)) {
+        usesPrimitive = true;
+        return;
+      }
+    }
+    ts.forEachChild(node, inspect);
+  };
+  inspect(componentDeclaration);
+  return usesPrimitive;
 }
 
 function collectSemanticViolations(files) {
@@ -333,12 +404,34 @@ function collectSemanticViolations(files) {
           if (/Status(?:Confirm|Change)Action|StatusFlowModal/.test(actionsSource)) {
             violations.push(finding(file, sourceFile, node, '详情状态操作不得放在右上角 actions，必须放入 statusAction'));
           }
+          const inspectDetailTableContent = (child) => {
+            if (ts.isJsxElement(child) || ts.isJsxSelfClosingElement(child)) {
+              const childName = jsxTagName(child, sourceFile);
+              const isDirectPrimitive = ['SearchTable', 'TemplateListPage', 'ProTable', 'table'].includes(childName);
+              const isBusinessWrapper = /^[A-Z]/.test(childName)
+                && childName !== 'TemplateDetailTableSection'
+                && importedComponentUsesDetailTablePrimitive(file, sourceFile, childName);
+              if (isDirectPrimitive || isBusinessWrapper) {
+                violations.push(finding(
+                  file,
+                  sourceFile,
+                  child,
+                  '详情页结构化数据必须使用 TemplateDetailTableSection，不得直接调用表格、复用列表页或通过业务包装组件绕过'
+                ));
+                if (isBusinessWrapper) return;
+              }
+            }
+            ts.forEachChild(child, inspectDetailTableContent);
+          };
+          ts.forEachChild(node, inspectDetailTableContent);
           if (attribute(node, 'sectionNavigation')) {
             const inspectNavigationSections = (child) => {
-              if ((ts.isJsxElement(child) || ts.isJsxSelfClosingElement(child))
-                && jsxTagName(child, sourceFile) === 'TemplateDetailSection'
-                && !attribute(child, 'sectionKey')) {
-                violations.push(finding(file, sourceFile, child, '开启详情分类导航后，每个 TemplateDetailSection 必须声明唯一 sectionKey'));
+              if (ts.isJsxElement(child) || ts.isJsxSelfClosingElement(child)) {
+                const childName = jsxTagName(child, sourceFile);
+                if (['TemplateDetailSection', 'TemplateDetailTableSection'].includes(childName)
+                  && !attribute(child, 'sectionKey')) {
+                  violations.push(finding(file, sourceFile, child, `开启详情分类导航后，每个 ${childName} 必须声明唯一 sectionKey`));
+                }
               }
               ts.forEachChild(child, inspectNavigationSections);
             };

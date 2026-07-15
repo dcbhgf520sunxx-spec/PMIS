@@ -15,6 +15,7 @@ export type SearchTableProps<
 > = ProTableProps<T, P> & {
   columns: ProColumns<T>[];
   preferenceKey?: string;
+  customizable?: boolean;
 };
 
 type ResizeHeaderCellProps = React.ThHTMLAttributes<HTMLTableCellElement> & {
@@ -127,7 +128,16 @@ export function SearchTable<
   T extends Record<string, unknown>,
   P extends Record<string, unknown> = Record<string, unknown>
 >(props: SearchTableProps<T, P>) {
-  const { className, columns, components, locale, pagination, preferenceKey, ...restProps } = props;
+  const {
+    className,
+    columns,
+    components,
+    customizable = true,
+    locale,
+    pagination,
+    preferenceKey,
+    ...restProps
+  } = props;
   const location = useLocation();
   const userId = useAuthStore((state) => state.user?.id);
   const tablePreferenceKey = useMemo(
@@ -137,8 +147,12 @@ export function SearchTable<
   const columnWidthsKey = `${tablePreferenceKey}:column-widths`;
   const tableSizeKey = `${tablePreferenceKey}:density`;
   const columnsStateKey = `${tablePreferenceKey}:columns-state`;
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => readTableJson(columnWidthsKey, {}));
-  const [tableSize, setTableSize] = useState<TableDensitySize>(() => readTableJson(tableSizeKey, 'small'));
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => (
+    customizable ? readTableJson(columnWidthsKey, {}) : {}
+  ));
+  const [tableSize, setTableSize] = useState<TableDensitySize>(() => (
+    customizable ? readTableJson(tableSizeKey, 'small') : 'small'
+  ));
   const fixedColumnsSignature = columns.map((column, index) => `${getColumnKey(column, index)}:${column.fixed || ''}`).join('|');
   const fixedColumns = useMemo(() => columns.map((column, index) => ({
     key: getColumnKey(column, index),
@@ -146,7 +160,7 @@ export function SearchTable<
   })), [fixedColumnsSignature]);
   const [columnState, setColumnState] = useState<Record<string, ColumnStateEntry>>(() => enforceFixedColumnState(
     fixedColumns,
-    readTableJson(columnsStateKey, {})
+    customizable ? readTableJson(columnsStateKey, {}) : {}
   ));
   const hasCustomColumnWidths = Object.keys(columnWidths).length > 0;
   const paginationConfig = typeof pagination === 'object' ? pagination : {};
@@ -168,10 +182,16 @@ export function SearchTable<
   }, []);
 
   useEffect(() => {
+    if (!customizable) {
+      setColumnWidths({});
+      setTableSize('small');
+      setColumnState(enforceFixedColumnState(fixedColumns, {}));
+      return;
+    }
     setColumnWidths(readTableJson(columnWidthsKey, {}));
     setTableSize(readTableJson(tableSizeKey, 'small'));
     setColumnState(enforceFixedColumnState(fixedColumns, readTableJson(columnsStateKey, {})));
-  }, [columnWidthsKey, columnsStateKey, fixedColumns, tableSizeKey]);
+  }, [columnWidthsKey, columnsStateKey, customizable, fixedColumns, tableSizeKey]);
 
   const handleColumnStateChange = (nextState: Record<string, ColumnStateEntry>) => {
     const enforcedState = enforceFixedColumnState(fixedColumns, nextState);
@@ -192,6 +212,8 @@ export function SearchTable<
 
   const resizableColumns = useMemo<ProColumns<T>[]>(() => columns.map((column, index) => {
     const columnKey = getColumnKey(column, index);
+    if (!customizable) return { ...column, key: columnKey };
+
     const rawWidth = columnWidths[columnKey] ?? column.width;
     const width = typeof rawWidth === 'number' ? rawWidth : Number(rawWidth);
     const canLockWidth = Number.isFinite(width) && !column.hideInTable && column.valueType === 'option';
@@ -244,7 +266,7 @@ export function SearchTable<
         }
       })
     } as ProColumns<T>;
-  }), [columnWidths, columnWidthsKey, columns]);
+  }), [columnWidths, columnWidthsKey, columns, customizable]);
 
   const adjustedColumns = useMemo<ProColumns<T>[]>(() => {
     if (!scrollX) return resizableColumns;
@@ -296,13 +318,13 @@ export function SearchTable<
       className={['admin-search-table', className].filter(Boolean).join(' ')}
       columns={adjustedColumns}
       search={{ labelWidth: 88, defaultCollapsed: true }}
-      options={{
+      options={customizable ? {
         density: true,
         fullScreen: true,
         reload: false,
         setting: { settingIcon: <TableOutlined /> }
-      }}
-      optionsRender={(_, defaultDoms) => [
+      } : false}
+      optionsRender={customizable ? ((_, defaultDoms) => [
         <Popover
           key="table-settings"
           trigger="click"
@@ -330,22 +352,22 @@ export function SearchTable<
             label="表格设置"
           />
         </Popover>
-      ]}
+      ]) : undefined}
       locale={{ emptyText: '暂无数据', ...locale }}
       pagination={mergedPagination}
-      columnsState={{
+      columnsState={customizable ? {
         value: columnState,
         onChange: handleColumnStateChange
-      }}
-      defaultSize={tableSize}
-      onSizeChange={handleTableSizeChange}
-      components={{
+      } : undefined}
+      size={customizable ? tableSize : 'small'}
+      onSizeChange={customizable ? handleTableSizeChange : undefined}
+      components={customizable ? {
         ...components,
         header: {
           ...components?.header,
           cell: ResizeHeaderCell
         }
-      }}
+      } : components}
       {...restProps}
     />
   );

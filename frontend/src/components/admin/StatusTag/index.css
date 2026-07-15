@@ -16,6 +16,10 @@
   margin-inline-end: 4px;
 }
 
+.admin-status-tag.ant-tag .anticon + span {
+  margin-inline-start: 0;
+}
+
 .admin-status-tag--positive.ant-tag {
   background: color-mix(in srgb, var(--app-success) 8%, var(--app-surface));
   color: var(--app-success);

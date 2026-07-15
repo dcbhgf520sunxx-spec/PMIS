@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
 import { App } from 'antd';
 import { useParams } from 'react-router-dom';
-import { AdminTextAction, DeleteConfirmAction, DetailLinkCell, DetailMetaList, DetailNeighborNav, HistoryTimelineSection, OperationColumnActions, PermissionButton, RichTextViewer, SearchTable, TemplateDetailPage, TemplateDetailSection, useDetailNeighbors, usePageReturnNavigation } from '../../../components/admin';
+import { AdminTextAction, DeleteConfirmAction, DetailLinkCell, DetailMetaList, DetailNeighborNav, HistoryTimelineSection, OperationColumnActions, PermissionButton, RichTextViewer, TemplateDetailPage, TemplateDetailSection, TemplateDetailTableSection, useDetailNeighbors, usePageReturnNavigation } from '../../../components/admin';
 import { deleteTask, getSubtasks, getTask, getTaskHistory, getTaskNeighbors, updateTaskStatus } from '../../../api/taskApi';
 import type { TaskRecord } from '../types';
 import { TaskStatusChangeAction } from '../components/TaskStatusChangeAction';
@@ -93,7 +93,7 @@ export function TaskDetailPage() {
     {row ? <>
       <TemplateDetailSection title="基本信息"><DetailMetaList items={[{ label: '任务名称', value: row.name, wide: true }, { label: '任务描述', value: <RichTextViewer value={row.description || '暂无描述'} />, wide: true }, { label: '任务层级', value: row.parentTaskId ? '子任务' : '主任务' }, ...(row.parentTaskId ? [{ label: '所属主任务', value: <DetailLinkCell title={row.parentTaskName} onClick={() => navigateWithReturn(`/tasks/${row.parentTaskId}`)}>{row.parentTaskName}</DetailLinkCell> }] : []), { label: '关联类型', value: row.sourceType === 1 ? '项目' : '需求' }, { label: '关联对象', value: row.sourceType === 1 ? row.projectName : row.requirementName }, { label: '任务类型', value: row.taskTypeName }]} /></TemplateDetailSection>
       <TemplateDetailSection title="处理信息"><DetailMetaList items={[{ label: '负责人', value: row.ownerName }, { label: '启动时间', value: row.startTime || '-' }, { label: '预计完成时间', value: row.expectedEndTime || '-' }, { label: '实际完成时间', value: row.actualEndTime || '-' }, { label: '暂停时间', value: row.suspendTime || '-' }]} /></TemplateDetailSection>
-      {!row.parentTaskId ? <TemplateDetailSection title={`子任务（已完成 ${row.completedChildCount} / 共 ${row.childCount}）`} inlineExtra={<PermissionButton permission="task" size="small" type="primary" onClick={() => navigateWithReturn(`/tasks/${row.id}/subtasks/new`)}>新增子任务</PermissionButton>}><SearchTable<TaskRecord> rowKey="id" columns={subtaskColumns} dataSource={subtasks} search={false} pagination={false} scroll={{ x: 960 }} /></TemplateDetailSection> : null}
+      {!row.parentTaskId ? <TemplateDetailTableSection<TaskRecord> title="子任务" summary={`已完成 ${row.completedChildCount} / 共 ${row.childCount}`} extra={<PermissionButton permission="task" size="small" type="primary" onClick={() => navigateWithReturn(`/tasks/${row.id}/subtasks/new`)}>新增子任务</PermissionButton>} table={{ rowKey: 'id', columns: subtaskColumns, dataSource: subtasks, scroll: { x: 960 } }} /> : null}
       <HistoryTimelineSection items={history} />
     </> : null}
   </TemplateDetailPage>;
