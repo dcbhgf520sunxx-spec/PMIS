@@ -10,7 +10,11 @@ type SectionTitleProps = {
 
 export function SectionTitle({ title, description, inlineExtra, inlineExtraPlacement, extra }: SectionTitleProps) {
   return (
-    <div className={['admin-section-title', inlineExtraPlacement === 'after-title' ? 'is-inline-extra-after-title' : ''].filter(Boolean).join(' ')}>
+    <div className={[
+      'admin-section-title',
+      inlineExtraPlacement === 'after-title' ? 'is-inline-extra-after-title' : '',
+      extra ? 'has-extra' : ''
+    ].filter(Boolean).join(' ')}>
       <div className="admin-section-title__content">
         <div className="admin-section-title__text">
           <span>{title}</span>
