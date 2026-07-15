@@ -89,3 +89,16 @@
   border-color: var(--app-primary) !important;
   box-shadow: 0 0 0 2px var(--app-glow) !important;
 }
+
+.admin-date-picker-popup {
+  padding-block: 8px;
+}
+
+.admin-date-picker-popup .ant-picker-panel-container {
+  max-width: calc(100vw - 16px);
+  max-width: calc(100dvw - 16px);
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
