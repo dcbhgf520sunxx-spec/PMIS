@@ -69,7 +69,12 @@
   display: flex;
   align-items: center;
   min-width: 0;
-  gap: 6px;
+  gap: 2px;
+}
+
+.task-source-cell > .ant-tag {
+  margin-inline-end: 0;
+  flex: none;
 }
 
 .task-source-cell > span:last-child {

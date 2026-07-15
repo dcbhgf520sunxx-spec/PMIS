@@ -1,3 +1,4 @@
-.bug-source-cell { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.bug-source-cell { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.bug-source-cell > .ant-tag { margin-inline-end: 0; flex: none; }
 .bug-source-cell > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bug-batch-assign-confirm { display: grid; gap: 8px; color: var(--app-text-secondary); line-height: 1.7; }
