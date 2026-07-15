@@ -74,7 +74,6 @@ export function useWorkOrderBatchActions({
             size="small"
             workOrder={selectedRecords[0]}
             statusOptions={batchStatusOptions}
-            preserveCompletedValues={false}
             onConfirm={async (target, values) => {
               await Promise.all(selectedRecords.map((row) => updateWorkOrderStatus(row.id, buildStatusPayload(target, values))));
               await reload();

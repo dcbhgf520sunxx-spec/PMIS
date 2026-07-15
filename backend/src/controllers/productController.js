@@ -117,8 +117,9 @@ exports.remove = async (req, res) => {
   try {
     const product = await db.prepare('SELECT name FROM pms_product WHERE id = ? AND is_deleted = 0').get(req.params.id)
     if (!product) return fail(res, 404, 404, '产品不存在')
-    const reference = await db.prepare('SELECT COUNT(*) count FROM pms_project WHERE product_id = ? AND is_deleted = 0').get(req.params.id)
-    if (Number(reference.count)) return fail(res, 400, 400, '该产品已被项目引用，无法删除')
+    const projectReference = await db.prepare('SELECT COUNT(*) count FROM pms_project WHERE product_id = ? AND is_deleted = 0').get(req.params.id)
+    const workOrderReference = await db.prepare('SELECT COUNT(*) count FROM pms_work_order WHERE product_id = ? AND is_deleted = 0').get(req.params.id)
+    if (Number(projectReference.count) || Number(workOrderReference.count)) return fail(res, 400, 400, '该产品已被项目或运维工单引用，无法删除')
     await db.prepare('UPDATE pms_product SET is_deleted = 1, updater_id = ?, updated_at = NOW() WHERE id = ?').run(req.user.id, req.params.id)
     await db.writeLog(req.user.id, '删除', '产品', req.params.id, 'is_deleted', 0, 1, req.ip, product.name)
     ok(res, null)

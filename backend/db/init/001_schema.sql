@@ -63,9 +63,22 @@ CREATE TABLE IF NOT EXISTS pms_role_menu (
   UNIQUE (role_id, menu_id)
 );
 
+CREATE TABLE IF NOT EXISTS pms_product (
+  id BIGSERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  owner_id BIGINT NOT NULL REFERENCES pms_user(id) ON DELETE RESTRICT,
+  status SMALLINT NOT NULL DEFAULT 1 CHECK (status IN (0, 1)),
+  creator_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  updater_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  is_deleted SMALLINT NOT NULL DEFAULT 0 CHECK (is_deleted IN (0, 1)),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS pms_work_order (
   id BIGSERIAL PRIMARY KEY,
-  system_id BIGINT NOT NULL,
+  product_id BIGINT NOT NULL REFERENCES pms_product(id) ON DELETE RESTRICT,
   problem_type BIGINT NOT NULL,
   problem_desc TEXT NOT NULL,
   result_desc TEXT,
@@ -82,19 +95,6 @@ CREATE TABLE IF NOT EXISTS pms_work_order (
   creator_id BIGINT,
   updater_id BIGINT,
   is_deleted SMALLINT NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS pms_product (
-  id BIGSERIAL PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  description TEXT,
-  owner_id BIGINT NOT NULL REFERENCES pms_user(id) ON DELETE RESTRICT,
-  status SMALLINT NOT NULL DEFAULT 1 CHECK (status IN (0, 1)),
-  creator_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
-  updater_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
-  is_deleted SMALLINT NOT NULL DEFAULT 0 CHECK (is_deleted IN (0, 1)),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -128,6 +128,32 @@ CREATE TABLE IF NOT EXISTS pms_project_member (
   UNIQUE (project_id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS pms_requirement (
+  id BIGSERIAL PRIMARY KEY,
+  title VARCHAR(200) NOT NULL,
+  description TEXT,
+  requirement_type SMALLINT NOT NULL CHECK (requirement_type IN (1,2,3,4)),
+  product_id BIGINT NOT NULL REFERENCES pms_product(id) ON DELETE RESTRICT,
+  project_id BIGINT REFERENCES pms_project(id) ON DELETE RESTRICT,
+  owner_id BIGINT NOT NULL REFERENCES pms_user(id) ON DELETE RESTRICT,
+  priority SMALLINT NOT NULL DEFAULT 1 CHECK (priority IN (0,1,2)),
+  status SMALLINT NOT NULL,
+  is_overdue SMALLINT CHECK (is_overdue IN (0,1)),
+  submitter_name VARCHAR(50) NOT NULL,
+  submitter_dept VARCHAR(100),
+  submit_date DATE NOT NULL,
+  start_date DATE,
+  expected_end_date DATE,
+  actual_end_date DATE,
+  pause_date DATE,
+  completion_status TEXT,
+  creator_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  updater_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  is_deleted SMALLINT NOT NULL DEFAULT 0 CHECK (is_deleted IN (0,1)),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS pms_archive_type (
   id BIGSERIAL PRIMARY KEY,
   code VARCHAR(50) NOT NULL UNIQUE,
@@ -153,6 +179,52 @@ CREATE TABLE IF NOT EXISTS pms_archive (
   is_deleted SMALLINT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS pms_task (
+  id BIGSERIAL PRIMARY KEY, name VARCHAR(200) NOT NULL, description TEXT,
+  parent_task_id BIGINT REFERENCES pms_task(id) ON DELETE RESTRICT,
+  source_type SMALLINT NOT NULL CHECK (source_type IN (1,2)),
+  project_id BIGINT REFERENCES pms_project(id) ON DELETE RESTRICT,
+  requirement_id BIGINT REFERENCES pms_requirement(id) ON DELETE RESTRICT,
+  owner_id BIGINT NOT NULL REFERENCES pms_user(id) ON DELETE RESTRICT,
+  task_type BIGINT NOT NULL REFERENCES pms_archive(id) ON DELETE RESTRICT,
+  priority SMALLINT NOT NULL DEFAULT 1 CHECK (priority IN (0,1,2)),
+  status SMALLINT NOT NULL DEFAULT 0 CHECK (status IN (0,1,2,3)),
+  is_overdue SMALLINT NOT NULL DEFAULT 0 CHECK (is_overdue IN (0,1)),
+  start_date DATE, expected_end_date DATE, actual_end_date DATE, suspend_date DATE,
+  creator_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  updater_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  is_deleted SMALLINT NOT NULL DEFAULT 0 CHECK (is_deleted IN (0,1)),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK ((source_type=1 AND project_id IS NOT NULL AND requirement_id IS NULL) OR (source_type=2 AND requirement_id IS NOT NULL AND project_id IS NULL))
+);
+
+CREATE TABLE IF NOT EXISTS pms_bug (
+  id BIGSERIAL PRIMARY KEY,
+  source_type SMALLINT NOT NULL CHECK (source_type IN (1,2)),
+  project_id BIGINT REFERENCES pms_project(id) ON DELETE RESTRICT,
+  requirement_id BIGINT REFERENCES pms_requirement(id) ON DELETE RESTRICT,
+  title VARCHAR(200) NOT NULL,
+  description TEXT,
+  bug_type_id BIGINT NOT NULL REFERENCES pms_archive(id) ON DELETE RESTRICT,
+  severity SMALLINT NOT NULL CHECK (severity IN (1,2,3,4)),
+  status SMALLINT NOT NULL DEFAULT 0 CHECK (status IN (0,1,2,3)),
+  assignee_id BIGINT NOT NULL REFERENCES pms_user(id) ON DELETE RESTRICT,
+  resolution_id BIGINT REFERENCES pms_archive(id) ON DELETE RESTRICT,
+  resolved_date DATE,
+  closed_date DATE,
+  activation_reason TEXT,
+  creator_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  updater_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  is_deleted SMALLINT NOT NULL DEFAULT 0 CHECK (is_deleted IN (0,1)),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK ((source_type=1 AND project_id IS NOT NULL AND requirement_id IS NULL) OR (source_type=2 AND requirement_id IS NOT NULL AND project_id IS NULL)),
+  CONSTRAINT chk_bug_resolution_id_status CHECK (status IN (1,2,3) OR resolution_id IS NULL),
+  CONSTRAINT chk_bug_resolved_date_status CHECK (status IN (1,2,3) OR resolved_date IS NULL),
+  CHECK (status = 2 OR closed_date IS NULL),
+  CHECK ((status <> 3 OR activation_reason IS NOT NULL) AND (activation_reason IS NULL OR (btrim(activation_reason) <> '' AND char_length(activation_reason) <= 100)))
 );
 
 CREATE TABLE IF NOT EXISTS pms_op_log (
@@ -226,6 +298,26 @@ CREATE INDEX IF NOT EXISTS idx_project_product_status ON pms_project(product_id,
 CREATE INDEX IF NOT EXISTS idx_project_owner_status ON pms_project(owner_id, status, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_project_expected_end ON pms_project(expected_end_date, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_project_member_user ON pms_project_member(user_id, project_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_requirement_title_active ON pms_requirement(title) WHERE is_deleted = 0;
+CREATE INDEX IF NOT EXISTS idx_requirement_product_status ON pms_requirement(product_id, status, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_requirement_project ON pms_requirement(project_id, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_requirement_owner_status ON pms_requirement(owner_id, status, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_requirement_type_status ON pms_requirement(requirement_type, status, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_requirement_expected_end ON pms_requirement(expected_end_date, is_deleted);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_task_name_active ON pms_task(name) WHERE is_deleted = 0;
+CREATE INDEX IF NOT EXISTS idx_task_project ON pms_task(project_id, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_task_requirement ON pms_task(requirement_id, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_task_parent ON pms_task(parent_task_id, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_task_owner_status ON pms_task(owner_id, status, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_task_type_status ON pms_task(task_type, status, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_task_expected_end ON pms_task(expected_end_date, is_deleted);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_bug_title_active ON pms_bug(title) WHERE is_deleted = 0;
+CREATE INDEX IF NOT EXISTS idx_bug_project ON pms_bug(project_id, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_bug_requirement ON pms_bug(requirement_id, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_bug_assignee_status ON pms_bug(assignee_id, status, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_bug_type_status ON pms_bug(bug_type_id, status, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_bug_severity_status ON pms_bug(severity, status, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_bug_created_at ON pms_bug(created_at DESC, id DESC) WHERE is_deleted = 0;
 CREATE UNIQUE INDEX IF NOT EXISTS uk_work_order_problem_desc_active ON pms_work_order(md5(problem_desc)) WHERE is_deleted = 0;
 CREATE INDEX IF NOT EXISTS idx_archive_type ON pms_archive(archive_type_id, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_op_log_target ON pms_op_log(module, target_id);
@@ -253,7 +345,7 @@ ON CONFLICT (user_id, role_id) DO NOTHING;
 INSERT INTO pms_menu (id, parent_id, name, code, type, path, icon, sort_order, creator_id, updater_id)
 VALUES
   (8, 0, '首页', 'home', 2, '/home', 'HomeOutlined', 5, 1, 1),
-  (1, 0, '运维工单', 'work_order', 2, '/work-orders', 'ToolOutlined', 10, 1, 1),
+  (1, 0, '运维工单', 'work_order', 2, '/work-orders', 'ToolOutlined', 11, 1, 1),
   (2, 0, '基础设置', 'base_settings', 1, NULL, 'SettingOutlined', 20, 1, 1),
   (3, 2, '基础档案', 'archive', 2, '/archive', NULL, 21, 1, 1),
   (4, 0, '用户权限', 'user_auth', 1, NULL, 'UserOutlined', 30, 1, 1),
@@ -270,7 +362,10 @@ VALUES
   (16, 9, '反馈组件', 'design_system_feedback', 2, '/system/design-system?category=feedback', NULL, 47, 1, 1),
   (17, 9, '数据展示', 'design_system_display', 2, '/system/design-system?category=display', NULL, 48, 1, 1),
   (18, 0, '产品管理', 'product', 2, '/products', 'AppstoreOutlined', 6, 1, 1),
-  (19, 0, '项目管理', 'project', 2, '/projects', 'ProjectOutlined', 7, 1, 1)
+  (19, 0, '项目管理', 'project', 2, '/projects', 'ProjectOutlined', 7, 1, 1),
+  (20, 0, '需求管理', 'requirement', 2, '/requirements', 'FileTextOutlined', 8, 1, 1),
+  (21, 0, '任务管理', 'task', 2, '/tasks', 'CheckSquareOutlined', 9, 1, 1),
+  (22, 0, 'BUG管理', 'bug', 2, '/bugs', 'BugOutlined', 10, 1, 1)
 ON CONFLICT (code) DO UPDATE SET
   parent_id = EXCLUDED.parent_id,
   name = EXCLUDED.name,
@@ -288,7 +383,10 @@ ON CONFLICT (role_id, menu_id) DO NOTHING;
 INSERT INTO pms_archive_type (id, code, code_prefix, name, creator_id, updater_id)
 VALUES
   (1, '001', 'SYS', '系统', 1, 1),
-  (2, '002', 'PT', '问题类型', 1, 1)
+  (2, '002', 'PT', '问题类型', 1, 1),
+  (3, 'task_type', 'TT', '任务类型', 1, 1),
+  (4, 'bug_type', 'BT', 'Bug类型', 1, 1),
+  (5, 'bug_resolution', 'BR', 'Bug解决方案', 1, 1)
 ON CONFLICT (code) DO UPDATE SET
   name = EXCLUDED.name,
   code_prefix = EXCLUDED.code_prefix,
@@ -303,6 +401,26 @@ VALUES
   ('PT003', '故障报障', 2, 3, 1, 1),
   ('PT004', '后台维护', 2, 4, 1, 1),
   ('PT005', '其他', 2, 5, 1, 1)
+  ,('TT001', '需求', 3, 1, 1, 1)
+  ,('TT002', '设计', 3, 2, 1, 1)
+  ,('TT003', '开发', 3, 3, 1, 1)
+  ,('TT004', '测试', 3, 4, 1, 1)
+  ,('TT005', '研究', 3, 5, 1, 1)
+  ,('TT006', '讨论', 3, 6, 1, 1)
+  ,('TT007', '事务', 3, 7, 1, 1)
+  ,('TT008', '其他', 3, 8, 1, 1)
+  ,('BT001', '功能', 4, 1, 1, 1)
+  ,('BT002', '界面', 4, 2, 1, 1)
+  ,('BT003', '性能', 4, 3, 1, 1)
+  ,('BT004', '兼容', 4, 4, 1, 1)
+  ,('BT005', '安全', 4, 5, 1, 1)
+  ,('BT006', '其他', 4, 6, 1, 1)
+  ,('BR001', '已修复', 5, 1, 1, 1)
+  ,('BR002', '设计如此', 5, 2, 1, 1)
+  ,('BR003', '无法重现', 5, 3, 1, 1)
+  ,('BR004', '延期处理', 5, 4, 1, 1)
+  ,('BR005', '外部原因', 5, 5, 1, 1)
+  ,('BR006', '重复', 5, 6, 1, 1)
 ON CONFLICT (code) DO NOTHING;
 
 SELECT setval('pms_user_id_seq', COALESCE((SELECT MAX(id) FROM pms_user), 1), true);

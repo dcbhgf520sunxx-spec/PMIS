@@ -1,0 +1,1 @@
+import type{TaskRecord,TaskStatus}from'./types';export const taskStatusLabels:Record<TaskStatus,string>={0:'未启动',1:'进行中',2:'已完成',3:'暂停'};export function allowedTaskStatuses(r:Pick<TaskRecord,'status'|'previousStatus'>):TaskStatus[]{if(r.status===3)return r.previousStatus===undefined?[]:[r.previousStatus];return({0:[1,3],1:[2,3],2:[3]}as Record<number,TaskStatus[]>)[r.status]||[]}

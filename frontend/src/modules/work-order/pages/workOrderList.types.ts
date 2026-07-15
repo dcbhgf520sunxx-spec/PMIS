@@ -4,7 +4,7 @@ export type WorkOrderViewKey = 'all' | 'mine';
 
 export type WorkOrderListFilters = {
   problemDesc: string;
-  systemId?: string;
+  productId?: string;
   problemTypes: WorkOrderRecord['problemType'][];
   urgency?: WorkOrderRecord['urgency'];
   status?: WorkOrderRecord['status'];

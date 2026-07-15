@@ -91,9 +91,9 @@ export function WorkOrderTemplateFormPage({ mode }: { mode: 'create' | 'edit' | 
               <AdminProFormText
                 className="admin-template-form-page__field"
                 formItemProps={{ className: 'admin-template-form-page__field' }}
-                name="systemName"
-                label="所属系统"
-                placeholder="请输入所属系统"
+                name="productName"
+                label="所属产品"
+                placeholder="请输入所属产品"
               />
               <AdminProFormSelect
                 className="admin-template-form-page__field"

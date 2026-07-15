@@ -160,7 +160,7 @@ export function WorkOrderDetailPage() {
             </div>
             <DetailMetaList
               items={[
-                { label: '所属系统', value: detail.systemName },
+                { label: '所属产品', value: detail.productName },
                 { label: '问题类型', value: problemTypeText(detail.problemType, detail.problemTypeName) }
               ]}
             />

@@ -5,8 +5,8 @@ export type WorkOrderProblemType = string;
 export type WorkOrderRecord = Record<string, unknown> & {
   id: string;
   code: string;
-  systemId: string;
-  systemName: string;
+  productId: string;
+  productName: string;
   problemDesc: string;
   problemType: WorkOrderProblemType;
   problemTypeName: string;

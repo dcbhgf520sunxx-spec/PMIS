@@ -30,7 +30,7 @@ type CreateWorkOrderColumnsParams = {
   navigate: (path: string) => void;
   renderIndex: (index: number) => number;
   sortState: SortState;
-  systemOptions: Option[];
+  productOptions: Option[];
   problemTypeOptions: Option[];
   userOptions: Option[];
   viewKey: WorkOrderViewKey;
@@ -43,7 +43,7 @@ export function createWorkOrderColumns({
   navigate,
   renderIndex,
   sortState,
-  systemOptions,
+  productOptions,
   problemTypeOptions,
   userOptions,
   viewKey,
@@ -88,14 +88,14 @@ export function createWorkOrderColumns({
       }
     },
     {
-      title: '所属系统',
-      dataIndex: 'systemName',
+      title: '所属产品',
+      dataIndex: 'productName',
       width: 140,
       ellipsis: true,
       sorter: true,
-      sortOrder: sortState.field === 'systemName' ? sortState.order : null,
-      render: (_, record) => record.systemName || '-',
-      renderFormItem: () => <AdminSelect options={systemOptions} />
+      sortOrder: sortState.field === 'productName' ? sortState.order : null,
+      render: (_, record) => record.productName || '-',
+      renderFormItem: () => <AdminSelect options={productOptions} />
     },
     {
       title: '问题类型',

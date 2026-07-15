@@ -38,7 +38,7 @@ export function WorkOrderListPage() {
   const { draftFilters, appliedFilters, revision: filterRevision, setDraftFilters, commitFilters, resetFilters } = useCommittedFilters(defaultWorkOrderListFilters, {
     urlSync: true,
     codecs: {
-      systemId: listRouteCodecs.string,
+      productId: listRouteCodecs.string,
       problemTypes: listRouteCodecs.stringArray,
       urgency: listRouteCodecs.number,
       status: listRouteCodecs.number,
@@ -54,7 +54,7 @@ export function WorkOrderListPage() {
     viewCounts,
     listData,
     userOptions,
-    systemOptions,
+    productOptions,
     problemTypeOptions,
     error,
     reload
@@ -78,7 +78,7 @@ export function WorkOrderListPage() {
     const expectedRange = appliedFilters.expectedResolveDateRange || [];
     return buildWorkOrderQueryParams({
       problemDesc: appliedFilters.problemDesc || undefined,
-      systemId: appliedFilters.systemId || undefined,
+      productId: appliedFilters.productId || undefined,
       problemType: appliedFilters.problemTypes,
       urgency: appliedFilters.urgency,
       status: appliedFilters.status,
@@ -110,7 +110,7 @@ export function WorkOrderListPage() {
     navigate: navigateWithReturn,
     renderIndex: listData.renderIndex,
     sortState: listData.sortState,
-    systemOptions,
+    productOptions,
     problemTypeOptions,
     userOptions,
     viewKey,
@@ -125,7 +125,7 @@ export function WorkOrderListPage() {
       await reload();
       message.success('工单已删除');
     }
-  }), [listData.renderIndex, listData.sortState, navigateWithReturn, openDetail, problemTypeOptions, reload, systemOptions, userOptions, viewKey]);
+  }), [listData.renderIndex, listData.sortState, navigateWithReturn, openDetail, problemTypeOptions, productOptions, reload, userOptions, viewKey]);
 
   const batch = useWorkOrderBatchActions({
     selectedRecords,
@@ -180,7 +180,7 @@ export function WorkOrderListPage() {
             draftFilters={draftFilters}
             setDraftFilters={setDraftFilters}
             viewKey={viewKey}
-            systemOptions={systemOptions}
+            productOptions={productOptions}
             problemTypeOptions={problemTypeOptions}
             userOptions={userOptions}
             onSearch={handleSearch}

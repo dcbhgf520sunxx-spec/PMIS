@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getArchiveOptionsByTypeName } from '../../../api/archiveApi';
+import { getProductOptions } from '../../../api/productApi';
 import { getUserOptions } from '../../../api/userApi';
 import { getWorkOrderList } from '../../../api/workOrderApi';
 import { useTemplateListPageData } from '../../../components/admin';
@@ -26,7 +27,7 @@ export function useWorkOrderListData({
   const [serverTotal, setServerTotal] = useState(0);
   const [viewCounts, setViewCounts] = useState({ all: 0, mine: 0 });
   const [userOptions, setUserOptions] = useState<Option[]>([]);
-  const [systemOptions, setSystemOptions] = useState<Option[]>([]);
+  const [productOptions, setProductOptions] = useState<Option[]>([]);
   const [problemTypeOptions, setProblemTypeOptions] = useState<Option[]>([]);
   const [error, setError] = useState('');
   const listData = useTemplateListPageData({
@@ -45,7 +46,7 @@ export function useWorkOrderListData({
     const expectedRange = appliedFilters.expectedResolveDateRange || [];
     const result = await getWorkOrderList({
       problemDesc: appliedFilters.problemDesc || undefined,
-      systemId: appliedFilters.systemId || undefined,
+      productId: appliedFilters.productId || undefined,
       problemType: appliedFilters.problemTypes,
       urgency: appliedFilters.urgency,
       status: appliedFilters.status,
@@ -82,7 +83,7 @@ export function useWorkOrderListData({
 
   useEffect(() => {
     getUserOptions().then(setUserOptions);
-    getArchiveOptionsByTypeName('系统').then(setSystemOptions);
+    getProductOptions().then((items) => setProductOptions(items.filter((item) => item.status === 1)));
     getArchiveOptionsByTypeName('问题类型').then(setProblemTypeOptions);
   }, []);
 
@@ -90,7 +91,7 @@ export function useWorkOrderListData({
     viewCounts,
     listData,
     userOptions,
-    systemOptions,
+    productOptions,
     problemTypeOptions,
     error,
     reload: loadWorkOrders

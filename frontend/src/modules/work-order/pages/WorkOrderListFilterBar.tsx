@@ -15,7 +15,7 @@ type WorkOrderListFilterBarProps = {
   draftFilters: WorkOrderListFilters;
   setDraftFilters: Dispatch<SetStateAction<WorkOrderListFilters>>;
   viewKey: WorkOrderViewKey;
-  systemOptions: Option[];
+  productOptions: Option[];
   problemTypeOptions: Option[];
   userOptions: Option[];
   onSearch: () => void;
@@ -26,7 +26,7 @@ export function WorkOrderListFilterBar({
   draftFilters,
   setDraftFilters,
   viewKey,
-  systemOptions,
+  productOptions,
   problemTypeOptions,
   userOptions,
   onSearch,
@@ -47,15 +47,15 @@ export function WorkOrderListFilterBar({
       )
     },
     {
-      key: 'systemId',
-      label: '所属系统',
+      key: 'productId',
+      label: '所属产品',
       node: (
         <AdminSelect
           size="small"
-          value={draftFilters.systemId}
-          options={systemOptions}
+          value={draftFilters.productId}
+          options={productOptions}
           placeholder="全部"
-          onChange={(value) => setDraftFilters((prev) => ({ ...prev, systemId: value }))}
+          onChange={(value) => setDraftFilters((prev) => ({ ...prev, productId: value }))}
         />
       )
     },
@@ -151,7 +151,7 @@ export function WorkOrderListFilterBar({
         <AdminRangePicker
           size="small"
           value={draftFilters.submitTimeRange as never}
-          placeholder={['开始日期', '结束日期']}
+          placeholder={['开始时间', '结束时间']}
           onChange={(value) => setDraftFilters((prev) => ({ ...prev, submitTimeRange: value || [] }))}
         />
       )
@@ -164,7 +164,7 @@ export function WorkOrderListFilterBar({
         <AdminRangePicker
           size="small"
           value={draftFilters.expectedResolveDateRange as never}
-          placeholder={['开始日期', '结束日期']}
+          placeholder={['开始时间', '结束时间']}
           onChange={(value) => setDraftFilters((prev) => ({ ...prev, expectedResolveDateRange: value || [] }))}
         />
       )

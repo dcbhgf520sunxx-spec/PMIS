@@ -18,7 +18,7 @@ const problems = [
 ];
 
 const systems = ['生产环境登录系统', '知识库服务', '报表平台', '权限中心', '基础档案平台'];
-const systemIds = ['1', '2', '3', '4', '5'];
+const productIds = ['1', '2', '3', '4', '5'];
 
 export const mockWorkOrders: WorkOrderRecord[] = Array.from({ length: 56 }, (_, index) => {
   const status = statuses[index % statuses.length];
@@ -30,8 +30,8 @@ export const mockWorkOrders: WorkOrderRecord[] = Array.from({ length: 56 }, (_, 
   return {
     id: String(index + 1),
     code: `RQ-20260630-${String(index + 1).padStart(3, '0')}`,
-    systemId: systemIds[index % systemIds.length],
-    systemName: systems[index % systems.length],
+    productId: productIds[index % productIds.length],
+    productName: systems[index % systems.length],
     problemDesc: problems[index % problems.length],
     problemType: problemTypes[index % problemTypes.length],
     problemTypeName: ['日常操作', '系统优化', '故障报障', '后台维护', '其他'][index % 5],

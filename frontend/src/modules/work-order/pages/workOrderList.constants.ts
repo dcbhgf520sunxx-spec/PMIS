@@ -5,7 +5,7 @@ import { createListSorters, listSorters } from '../../../components/admin';
 
 export const defaultWorkOrderListFilters: WorkOrderListFilters = {
   problemDesc: '',
-  systemId: undefined,
+  productId: undefined,
   problemTypes: [],
   urgency: undefined,
   status: undefined,
@@ -18,7 +18,7 @@ export const defaultWorkOrderListFilters: WorkOrderListFilters = {
 
 export const workOrderSorters = createListSorters<WorkOrderRecord>({
   problemDesc: listSorters.text((row) => row.problemDesc),
-  systemName: listSorters.text((row) => row.systemName),
+  productName: listSorters.text((row) => row.productName),
   problemType: listSorters.text((row) => problemTypeText(row.problemType, row.problemTypeName)),
   followerId: listSorters.text((row) => row.followerName),
   urgency: listSorters.number((row) => row.urgency),

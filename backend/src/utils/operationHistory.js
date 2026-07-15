@@ -15,7 +15,7 @@ function groupOperationLogs(logs, fieldOrder = []) {
       groups.push(group)
       byId.set(key, group)
     }
-    byId.get(key).changes.push(log)
+    if (log.field_name) byId.get(key).changes.push(log)
   }
   for (const group of groups) {
     group.changes.sort((a, b) => (order.get(a.field_name) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.field_name) ?? Number.MAX_SAFE_INTEGER))

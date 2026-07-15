@@ -1,7 +1,10 @@
 import {
   DownOutlined,
   AppstoreOutlined,
+  BugOutlined,
   ExperimentOutlined,
+  FileTextOutlined,
+  CheckSquareOutlined,
   HomeOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -49,6 +52,21 @@ const businessMenuItems: AdminMenuItems = [
     key: '/projects',
     icon: <ProjectOutlined />,
     label: '项目管理'
+  },
+  {
+    key: '/requirements',
+    icon: <FileTextOutlined />,
+    label: '需求管理'
+  },
+  {
+    key: '/tasks',
+    icon: <CheckSquareOutlined />,
+    label: '任务管理'
+  },
+  {
+    key: '/bugs',
+    icon: <BugOutlined />,
+    label: 'BUG管理'
   },
   {
     key: '/work-orders',

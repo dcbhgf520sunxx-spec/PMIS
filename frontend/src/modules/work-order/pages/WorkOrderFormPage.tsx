@@ -15,13 +15,14 @@ import {
 } from '../../../components/admin';
 import { getUserOptions } from '../../../api/userApi';
 import { getArchiveOptionsByTypeName } from '../../../api/archiveApi';
+import { getProductOptions } from '../../../api/productApi';
 import { createWorkOrder, getWorkOrder, updateWorkOrder, type WorkOrderFormPayload } from '../../../api/workOrderApi';
 import type { WorkOrderRecord } from '../types';
 import { urgencyOptions } from '../helpers';
 
 type WorkOrderFormValues = Record<string, unknown> & {
   problemDesc: string;
-  systemId: string;
+  productId: string;
   problemType: string;
   urgency: number;
   followerId: string;
@@ -41,7 +42,7 @@ function isRichTextEmpty(value?: string) {
 function toInitialValues(source: WorkOrderRecord): Partial<WorkOrderFormValues> {
   return {
     problemDesc: source.problemDesc,
-    systemId: source.systemId,
+    productId: source.productId,
     problemType: source.problemType,
     urgency: source.urgency,
     followerId: source.followerId,
@@ -55,7 +56,7 @@ function toInitialValues(source: WorkOrderRecord): Partial<WorkOrderFormValues> 
 function toPayload(values: WorkOrderFormValues): WorkOrderFormPayload {
   return {
     problemDesc: values.problemDesc,
-    systemId: values.systemId,
+    productId: values.productId,
     problemType: values.problemType,
     urgency: Number(values.urgency),
     followerId: values.followerId,
@@ -72,7 +73,7 @@ export function WorkOrderFormPage({ mode }: { mode: 'create' | 'edit' | 'copy' }
   const { message } = App.useApp();
   const [source, setSource] = useState<WorkOrderRecord>();
   const [userOptions, setUserOptions] = useState<Array<{ label: string; value: string }>>([]);
-  const [systemOptions, setSystemOptions] = useState<Array<{ label: string; value: string }>>([]);
+  const [productOptions, setProductOptions] = useState<Array<{ label: string; value: string }>>([]);
   const [problemTypeOptions, setProblemTypeOptions] = useState<Array<{ label: string; value: string }>>([]);
   const [loading, setLoading] = useState(mode !== 'create');
   const [loadError, setLoadError] = useState('');
@@ -87,7 +88,7 @@ export function WorkOrderFormPage({ mode }: { mode: 'create' | 'edit' | 'copy' }
     setNotFound(false);
     Promise.all([
       getUserOptions().then(setUserOptions),
-      getArchiveOptionsByTypeName('系统').then(setSystemOptions),
+      getProductOptions().then((items) => setProductOptions(items.filter((item) => item.status === 1))),
       getArchiveOptionsByTypeName('问题类型').then(setProblemTypeOptions),
       mode !== 'create' && params.id ? getWorkOrder(params.id).then(setSource) : Promise.resolve()
     ]).catch((error) => {
@@ -144,11 +145,11 @@ export function WorkOrderFormPage({ mode }: { mode: 'create' | 'edit' | 'copy' }
                 />
                 <AdminProFormSelect
                   className="admin-template-form-page__field"
-                  name="systemId"
-                  label="所属系统"
-                  options={systemOptions}
-                  placeholder="请选择所属系统"
-                  rules={[{ required: true, message: '请选择所属系统' }]}
+                  name="productId"
+                  label="所属产品"
+                  options={productOptions}
+                  placeholder="请选择所属产品"
+                  rules={[{ required: true, message: '请选择所属产品' }]}
                 />
                 <AdminProFormSelect
                   className="admin-template-form-page__field"

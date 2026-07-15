@@ -16,7 +16,7 @@ function requireValidBody(res, body, schema) {
 
 const workOrderFormSchema = {
   problem_type: { required: true, type: 'number', label: '问题类型' },
-  system_id: { required: true, type: 'number', label: '所属系统' },
+  product_id: { required: true, type: 'number', label: '所属产品' },
   problem_desc: { required: true, label: '问题描述' },
   follower_id: { required: true, type: 'number', label: '跟进人' },
   urgency: { required: true, type: 'enum', values: [0, 1, 2], label: '紧急程度' },
@@ -41,7 +41,7 @@ function isProblemDescriptionUniqueViolation(error) {
 }
 
 const WORK_ORDER_SORT_MAP = {
-  problem_desc: 'w.problem_desc', system_id: 'sys.name', problem_type: 'pt.name', urgency: 'w.urgency', status: 'w.status',
+  problem_desc: 'w.problem_desc', product_id: 'p.name', problem_type: 'pt.name', urgency: 'w.urgency', status: 'w.status',
   is_overdue: 'w.is_overdue', follower_name: 'w.follower_id', follower_id: 'w.follower_id',
   submitter_name: 'w.submitter_name', submitter_dept: 'w.submitter_dept', submit_time: 'w.submit_time',
   expected_resolve_date: 'w.expected_resolve_date', creator_name: 'u1.real_name', created_at: 'w.created_at'
@@ -49,12 +49,12 @@ const WORK_ORDER_SORT_MAP = {
 
 function withJoins(sql) {
   return `SELECT ${sql}, u1.real_name as creator_name, u2.real_name as updater_name, u3.real_name as follower_name,
-      sys.name as system_name, pt.name as problem_type_name
+      p.name as product_name, pt.name as problem_type_name
     FROM pms_work_order w
     LEFT JOIN pms_user u1 ON w.creator_id = u1.id
     LEFT JOIN pms_user u2 ON w.updater_id = u2.id
     LEFT JOIN pms_user u3 ON w.follower_id = u3.id
-    LEFT JOIN pms_archive sys ON w.system_id = sys.id
+    LEFT JOIN pms_product p ON w.product_id = p.id
     LEFT JOIN pms_archive pt ON w.problem_type = pt.id`
 }
 
@@ -63,7 +63,7 @@ function buildWhereClause(q) {
   let sql = ' WHERE w.is_deleted = 0'
   const params = []
   if (q.problem_desc) { sql += ' AND w.problem_desc LIKE ?'; params.push(`%${q.problem_desc}%`) }
-  if (q.system_id) { sql += ' AND w.system_id = ?'; params.push(q.system_id) }
+  if (q.product_id) { sql += ' AND w.product_id = ?'; params.push(q.product_id) }
   if (q.problem_type !== undefined && q.problem_type !== '') {
     const problemTypes = String(q.problem_type).split(',').map(Number).filter(Number.isFinite)
     if (problemTypes.length > 1) {
@@ -115,7 +115,7 @@ exports.list = async (req, res) => {
   try {
     const q = { ...req.query }
     const { page, pageSize, offset } = parsePagination(q)
-    let sql = withJoins('COUNT(*) OVER() as total, w.id, w.system_id, w.problem_type, w.problem_desc, w.result_desc, w.follower_id, w.urgency, w.status, w.is_overdue, w.expected_resolve_date, w.resolve_date, w.close_date, w.submitter_name, w.submitter_dept, w.submit_time, w.created_at')
+    let sql = withJoins('COUNT(*) OVER() as total, w.id, w.product_id, w.problem_type, w.problem_desc, w.result_desc, w.follower_id, w.urgency, w.status, w.is_overdue, w.expected_resolve_date, w.resolve_date, w.close_date, w.submitter_name, w.submitter_dept, w.submit_time, w.created_at')
     const { filters, views, viewKey } = buildWorkOrderViewContext(q)
     const { sql: whereSql, params } = buildWhereClause(buildViewQuery(filters, views[viewKey]))
     sql += whereSql
@@ -163,7 +163,7 @@ exports.refreshOverdue = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const sql = withJoins('w.id, w.system_id, w.problem_type, w.problem_desc, w.result_desc, w.follower_id, w.urgency, w.status, w.is_overdue, w.expected_resolve_date, w.resolve_date, w.close_date, w.submitter_name, w.submitter_dept, w.submit_time, w.creator_id, w.updater_id, w.created_at, w.updated_at')
+    const sql = withJoins('w.id, w.product_id, w.problem_type, w.problem_desc, w.result_desc, w.follower_id, w.urgency, w.status, w.is_overdue, w.expected_resolve_date, w.resolve_date, w.close_date, w.submitter_name, w.submitter_dept, w.submit_time, w.creator_id, w.updater_id, w.created_at, w.updated_at')
     const row = await db.prepare(sql + ' WHERE w.id = ? AND w.is_deleted = 0').get(req.params.id)
     if (!row) return res.status(404).json({ code: 404, message: '工单不存在', data: null })
     res.json({ code: 0, message: 'success', data: row })
@@ -176,7 +176,7 @@ exports.getById = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     if (!requireValidBody(res, req.body, workOrderFormSchema)) return
-    const { system_id, problem_type, problem_desc, follower_id, urgency, status, expected_resolve_date, submitter_name, submitter_dept, submit_time } = req.body
+    const { product_id, problem_type, problem_desc, follower_id, urgency, status, expected_resolve_date, submitter_name, submitter_dept, submit_time } = req.body
     const operatorId = req.user.id
 
     // Validate problem_desc uniqueness
@@ -189,10 +189,10 @@ exports.create = async (req, res) => {
     const is_overdue = calcOverdue(expected_resolve_date, finalStatus)
 
     const result = await db.prepare(
-      'INSERT INTO pms_work_order (system_id, problem_type, problem_desc, follower_id, urgency, status, is_overdue, expected_resolve_date, submitter_name, submitter_dept, submit_time, creator_id, updater_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(system_id || null, problem_type || null, problem_desc || null, follower_id || null, urgency ?? 1, finalStatus, is_overdue, expected_resolve_date || null, submitter_name || null, submitter_dept || null, submit_time || null, operatorId, operatorId)
+      'INSERT INTO pms_work_order (product_id, problem_type, problem_desc, follower_id, urgency, status, is_overdue, expected_resolve_date, submitter_name, submitter_dept, submit_time, creator_id, updater_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(product_id || null, problem_type || null, problem_desc || null, follower_id || null, urgency ?? 1, finalStatus, is_overdue, expected_resolve_date || null, submitter_name || null, submitter_dept || null, submit_time || null, operatorId, operatorId)
 
-    await db.writeLog(operatorId, '新增', '运维工单', result.lastInsertRowid, null, null, JSON.stringify({ system_id, problem_type, follower_id, urgency }), req.ip)
+    await db.writeLog(operatorId, '新增', '运维工单', result.lastInsertRowid, null, null, JSON.stringify({ product_id, problem_type, follower_id, urgency }), req.ip)
     ok(res, { id: result.lastInsertRowid })
   } catch (err) {
     if (isProblemDescriptionUniqueViolation(err)) {
@@ -206,7 +206,7 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     if (!requireValidBody(res, req.body, workOrderFormSchema)) return
-    const { system_id, problem_type, problem_desc, result_desc, follower_id, urgency, status, expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time } = req.body
+    const { product_id, problem_type, problem_desc, result_desc, follower_id, urgency, status, expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time } = req.body
     const operatorId = req.user.id
 
     if (problem_desc) {
@@ -214,10 +214,10 @@ exports.update = async (req, res) => {
       if (exists) return failField(res, 'problem_desc', '问题描述已存在，请勿重复创建')
     }
 
-    const old = await db.prepare('SELECT system_id, problem_type, problem_desc, result_desc, follower_id, urgency, status, expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time FROM pms_work_order WHERE id = ?').get(req.params.id)
+    const old = await db.prepare('SELECT product_id, problem_type, problem_desc, result_desc, follower_id, urgency, status, expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time FROM pms_work_order WHERE id = ?').get(req.params.id)
 
     const changes = []
-    const trackedFields = ['problem_desc', 'system_id', 'problem_type', 'urgency', 'status', 'is_overdue', 'follower_id', 'submitter_name', 'submitter_dept', 'submit_time', 'expected_resolve_date', 'resolve_date', 'close_date', 'result_desc']
+    const trackedFields = ['problem_desc', 'product_id', 'problem_type', 'urgency', 'status', 'is_overdue', 'follower_id', 'submitter_name', 'submitter_dept', 'submit_time', 'expected_resolve_date', 'resolve_date', 'close_date', 'result_desc']
     // Date fields that may come as YYYY-MM-DD from frontend but stored as YYYY-MM-DD 00:00:00 in DB
     const dateFields = new Set(['expected_resolve_date', 'resolve_date', 'close_date', 'submit_time'])
     for (const key of trackedFields) {
@@ -238,7 +238,7 @@ exports.update = async (req, res) => {
     const params = []
 
     const fieldMap = {
-      system_id, problem_type, problem_desc, result_desc, follower_id, urgency,
+      product_id, problem_type, problem_desc, result_desc, follower_id, urgency,
       expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time,
     }
 
@@ -471,7 +471,7 @@ exports.getNeighbors = async (req, res) => {
 
 /** Field name mapping: database field → Chinese label */
 const FIELD_LABEL = {
-  system_id: '所属系统', problem_type: '问题类型', problem_desc: '问题描述', result_desc: '处置结果', follower_id: '跟进人',
+  product_id: '所属产品', problem_type: '问题类型', problem_desc: '问题描述', result_desc: '处置结果', follower_id: '跟进人',
   urgency: '紧急程度', status: '状态', is_overdue: '逾期', expected_resolve_date: '预计完成时间',
   resolve_date: '实际修复时间', close_date: '关闭时间', submitter_name: '提出人', submitter_dept: '提出组织',
   submit_time: '提出时间',
@@ -479,7 +479,7 @@ const FIELD_LABEL = {
 
 /** Sort order for display (matches detail page field order) */
 const DETAIL_FIELD_ORDER = [
-  'problem_desc', 'system_id', 'problem_type', 'urgency', 'status',
+  'problem_desc', 'product_id', 'problem_type', 'urgency', 'status',
   'is_overdue', 'follower_id', 'submitter_name', 'submitter_dept', 'submit_time',
   'expected_resolve_date', 'resolve_date', 'result_desc', 'close_date',
 ]
@@ -509,19 +509,24 @@ exports.getHistory = async (req, res) => {
        ORDER BY l.created_at DESC`
     ).all(orderId)
     const followerIds = new Set()
+    const productIds = new Set()
     const archiveIds = new Set()
     for (const log of logs) {
       if (log.field_name === 'follower_id') [log.old_value, log.new_value].forEach(value => value && value !== '空' && followerIds.add(Number(value)))
-      if (log.field_name === 'system_id' || log.field_name === 'problem_type') [log.old_value, log.new_value].forEach(value => value && value !== '空' && archiveIds.add(Number(value)))
+      if (log.field_name === 'product_id') [log.old_value, log.new_value].forEach(value => value && value !== '空' && productIds.add(Number(value)))
+      if (log.field_name === 'problem_type') [log.old_value, log.new_value].forEach(value => value && value !== '空' && archiveIds.add(Number(value)))
     }
     const userLookupQuery = buildIdInQuery(followerIds, 'SELECT id, real_name', 'pms_user')
+    const productLookupQuery = buildIdInQuery(productIds, 'SELECT id, name', 'pms_product')
     const archiveLookupQuery = buildIdInQuery(archiveIds, 'SELECT id, name', 'pms_archive')
-    const [users, archives] = await Promise.all([
+    const [users, products, archives] = await Promise.all([
       userLookupQuery.promise,
+      productLookupQuery.promise,
       archiveLookupQuery.promise
     ])
     const lookups = {
       users: new Map(users.map(row => [String(row.id), row.real_name])),
+      products: new Map(products.map(row => [String(row.id), row.name])),
       archives: new Map(archives.map(row => [String(row.id), row.name]))
     }
 
@@ -541,7 +546,7 @@ exports.getHistory = async (req, res) => {
         dateFields: HISTORY_DATE_FIELDS,
         valueLookups: {
           follower_id: lookups.users,
-          system_id: lookups.archives,
+          product_id: lookups.products,
           problem_type: lookups.archives,
           urgency: new Map([['0', '低'], ['1', '中'], ['2', '高']]),
           status: new Map([['0', '待处理'], ['1', '处理中'], ['2', '已完成'], ['3', '已关闭']]),

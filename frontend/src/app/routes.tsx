@@ -106,6 +106,15 @@ const ProductDetailPage = lazy(() => import('../modules/product/pages/ProductDet
 const ProjectListPage = lazy(() => import('../modules/project/pages/ProjectListPage').then((module) => ({ default: module.ProjectListPage })));
 const ProjectFormPage = lazy(() => import('../modules/project/pages/ProjectFormPage').then((module) => ({ default: module.ProjectFormPage })));
 const ProjectDetailPage = lazy(() => import('../modules/project/pages/ProjectDetailPage').then((module) => ({ default: module.ProjectDetailPage })));
+const RequirementListPage = lazy(() => import('../modules/requirement/pages/RequirementListPage').then((module) => ({ default: module.RequirementListPage })));
+const RequirementFormPage = lazy(() => import('../modules/requirement/pages/RequirementFormPage').then((module) => ({ default: module.RequirementFormPage })));
+const RequirementDetailPage = lazy(() => import('../modules/requirement/pages/RequirementDetailPage').then((module) => ({ default: module.RequirementDetailPage })));
+const TaskListPage = lazy(() => import('../modules/task/pages/TaskListPage').then((module) => ({ default: module.TaskListPage })));
+const TaskFormPage = lazy(() => import('../modules/task/pages/TaskFormPage').then((module) => ({ default: module.TaskFormPage })));
+const TaskDetailPage = lazy(() => import('../modules/task/pages/TaskDetailPage').then((module) => ({ default: module.TaskDetailPage })));
+const BugListPage = lazy(() => import('../modules/bug/pages/BugListPage').then((module) => ({ default: module.BugListPage })));
+const BugFormPage = lazy(() => import('../modules/bug/pages/BugFormPage').then((module) => ({ default: module.BugFormPage })));
+const BugDetailPage = lazy(() => import('../modules/bug/pages/BugDetailPage').then((module) => ({ default: module.BugDetailPage })));
 
 export const routes: RouteObject[] = [
   {
@@ -127,6 +136,21 @@ export const routes: RouteObject[] = [
       { path: 'projects/new', element: withRouteSuspense(<ProjectFormPage mode="create" />) },
       { path: 'projects/:id/edit', element: withRouteSuspense(<ProjectFormPage mode="edit" />) },
       { path: 'projects/:id', element: withRouteSuspense(<ProjectDetailPage />) },
+      { path: 'requirements', element: withRouteSuspense(<RequirementListPage />) },
+      { path: 'requirements/new', element: withRouteSuspense(<RequirementFormPage mode="create" />) },
+      { path: 'requirements/:id/edit', element: withRouteSuspense(<RequirementFormPage mode="edit" />) },
+      { path: 'requirements/:id', element: withRouteSuspense(<RequirementDetailPage />) },
+      { path: 'tasks', element: withRouteSuspense(<TaskListPage />) },
+      { path: 'tasks/new', element: withRouteSuspense(<TaskFormPage mode="create" />) },
+      { path: 'tasks/:id/subtasks/new', element: withRouteSuspense(<TaskFormPage mode="create-subtask" />) },
+      { path: 'tasks/:id/copy', element: withRouteSuspense(<TaskFormPage mode="copy" />) },
+      { path: 'tasks/:id/edit', element: withRouteSuspense(<TaskFormPage mode="edit" />) },
+      { path: 'tasks/:id', element: withRouteSuspense(<TaskDetailPage />) },
+      { path: 'bugs', element: withRouteSuspense(<BugListPage />) },
+      { path: 'bugs/new', element: withRouteSuspense(<BugFormPage mode="create" />) },
+      { path: 'bugs/:id/copy', element: withRouteSuspense(<BugFormPage mode="copy" />) },
+      { path: 'bugs/:id/edit', element: withRouteSuspense(<BugFormPage mode="edit" />) },
+      { path: 'bugs/:id', element: withRouteSuspense(<BugDetailPage />) },
       { path: 'roles', element: withRouteSuspense(<RoleListPage />) },
       { path: 'roles/new', element: withRouteSuspense(<RoleFormPage mode="create" />) },
       { path: 'roles/:id/edit', element: withRouteSuspense(<RoleFormPage mode="edit" />) },

@@ -44,7 +44,7 @@ test('工单列表保留服务端视图总数', () => {
 test('工单 neighbors 复用列表查询参数口径', () => {
   const params = buildWorkOrderQueryParams({
     problemDesc: '数据库',
-    systemId: '2',
+    productId: '2',
     problemType: ['1', '3'],
     urgency: 2,
     status: 1,
@@ -64,7 +64,7 @@ test('工单 neighbors 复用列表查询参数口径', () => {
 
   assert.deepEqual(params, {
     problem_desc: '数据库',
-    system_id: '2',
+    product_id: '2',
     problem_type: '1,3',
     urgency: 2,
     status: 1,

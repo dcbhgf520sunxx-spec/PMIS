@@ -50,3 +50,12 @@ test('历史明细统一转成中文字段名和业务展示值', () => {
     { field_name: '预计完成时间', old_value: '2026-07-09', new_value: '2026-07-15' }
   ])
 })
+
+test('新增等动作日志没有字段名时不生成空变更明细', () => {
+  const groups = groupOperationLogs([
+    { id: 1, operation_id: null, user_id: 1, action: '新增', field_name: null, old_value: null, new_value: null }
+  ], ['name', 'status'])
+
+  assert.equal(groups.length, 1)
+  assert.deepEqual(groups[0].changes, [])
+})

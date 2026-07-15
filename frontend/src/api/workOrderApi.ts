@@ -7,8 +7,8 @@ import { buildWorkOrderQueryParams, type WorkOrderListParams } from './workOrder
 
 type WorkOrderResponse = {
   id: number;
-  system_id?: number;
-  system_name?: string;
+  product_id?: number;
+  product_name?: string;
   problem_type: number;
   problem_type_name?: string;
   problem_desc: string;
@@ -57,7 +57,7 @@ const workOrderPageContract = (value: unknown): value is PageResponse<WorkOrderR
 export type { WorkOrderListParams };
 
 export type WorkOrderFormPayload = {
-  systemId: string;
+  productId: string;
   problemDesc: string;
   problemType: string;
   urgency: number;
@@ -83,8 +83,8 @@ export function toWorkOrderRecord(row: WorkOrderResponse): WorkOrderRecord {
   return {
     id: String(row.id),
     code: `WO-${String(row.id).padStart(5, '0')}`,
-    systemId: row.system_id ? String(row.system_id) : '',
-    systemName: row.system_name || '-',
+    productId: row.product_id ? String(row.product_id) : '',
+    productName: row.product_name || '-',
     problemDesc: row.problem_desc,
     problemType: String(row.problem_type),
     problemTypeName: row.problem_type_name || '-',
@@ -162,7 +162,7 @@ export async function batchAssignWorkOrders(ids: string[], followerId: string) {
 function toPayload(values: WorkOrderFormPayload) {
   return {
     problem_type: values.problemType,
-    system_id: Number(values.systemId),
+    product_id: Number(values.productId),
     problem_desc: values.problemDesc,
     follower_id: Number(values.followerId),
     urgency: values.urgency,

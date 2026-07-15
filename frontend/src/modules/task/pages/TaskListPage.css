@@ -1,0 +1,84 @@
+.task-name-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 2px;
+}
+
+.task-name-cell__toggle.admin-expand-toggle-button.ant-btn-sm {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  flex: none;
+  align-self: center;
+}
+
+.task-name-cell__toggle.admin-expand-toggle-button .ant-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.task-name-cell__toggle.admin-expand-toggle-button.is-square .anticon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  vertical-align: 0;
+}
+
+.task-name-cell__toggle.admin-expand-toggle-button.is-square .anticon svg {
+  display: block;
+}
+
+.task-name-cell > .ant-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  padding: 0;
+  margin-inline-end: 0;
+  border-radius: 3px;
+  font-size: 10px;
+  line-height: 16px;
+  flex: none;
+}
+
+.task-name-cell--subtask {
+  padding-left: 20px;
+}
+
+.task-name-cell__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-name-cell__tag {
+  flex: none;
+  margin-left: auto;
+}
+
+.task-source-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+}
+
+.task-source-cell > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-batch-assign-confirm {
+  display: grid;
+  gap: 8px;
+}

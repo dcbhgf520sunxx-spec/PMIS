@@ -80,6 +80,12 @@
   padding-bottom: 26px;
 }
 
+.admin-textarea.ant-input-affix-wrapper {
+  height: auto;
+  min-height: 88px;
+  align-items: flex-start;
+}
+
 .admin-input.ant-input:hover,
 .admin-input.ant-input-affix-wrapper:hover,
 .admin-input.ant-input-number:hover,

@@ -32,10 +32,10 @@ test('active project is overdue after expected end date', () => {
   assert.equal(calculateProjectOverdue('2026-07-11', 1, '2026-07-11'), 0)
 })
 
-test('project status transitions reject cross-level and restore paused status', () => {
+test('project status transitions allow every state to pause and pause to every other state', () => {
   assert.deepEqual(allowedProjectStatuses(0), [1, 3])
   assert.deepEqual(allowedProjectStatuses(1), [2, 3])
   assert.deepEqual(allowedProjectStatuses(2), [3])
-  assert.deepEqual(allowedProjectStatuses(3, 1), [1])
-  assert.deepEqual(allowedProjectStatuses(3), [0, 1])
+  assert.deepEqual(allowedProjectStatuses(3, 1), [0, 1, 2])
+  assert.deepEqual(allowedProjectStatuses(3), [0, 1, 2])
 })

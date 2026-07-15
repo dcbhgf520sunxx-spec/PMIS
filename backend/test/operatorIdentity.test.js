@@ -53,7 +53,7 @@ test('work order creation ignores a forged creator_id and records the authentica
 
   const req = {
     body: {
-      system_id: 1,
+      product_id: 1,
       problem_type: 2,
       problem_desc: 'identity regression test',
       follower_id: 2,

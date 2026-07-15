@@ -62,7 +62,7 @@ exports.list = async (req, res) => {
   try {
     const { page, pageSize, offset } = parsePagination(req.query)
     const condition = where(req.query)
-    const sortMap = { name: 'p.name', productName: 'product.name', ownerName: 'owner.real_name', status: 'p.status', isOverdue: 'p.is_overdue', expectedEndDate: 'p.expected_end_date', members: "COALESCE((SELECT STRING_AGG(u.real_name, '、' ORDER BY u.real_name) FROM pms_project_member pm JOIN pms_user u ON u.id = pm.user_id WHERE pm.project_id = p.id), '')", creatorName: 'creator.real_name', createdAt: 'p.created_at' }
+    const sortMap = { name: 'p.name', productName: 'product.name', ownerName: 'owner.real_name', status: 'p.status', startDate: 'p.start_date', expectedEndDate: 'p.expected_end_date', members: "COALESCE((SELECT STRING_AGG(u.real_name, '、' ORDER BY u.real_name) FROM pms_project_member pm JOIN pms_user u ON u.id = pm.user_id WHERE pm.project_id = p.id), '')", creatorName: 'creator.real_name', createdAt: 'p.created_at' }
     const sort = sortMap[req.query.sort_field] || 'p.created_at'
     const direction = getSortDirection(req.query.sort_order)
     const rows = await db.prepare(baseSelect(`COUNT(*) OVER() total, ${fields}`) + condition.sql + ` ORDER BY ${sort} ${direction}, p.id ${direction} LIMIT ? OFFSET ?`).all(...condition.params, pageSize, offset)
@@ -74,6 +74,11 @@ exports.list = async (req, res) => {
     } : { all: 0, mine: 0, joined: 0 }
     ok(res, { list: rows, total: Number(rows[0]?.total || 0), page, pageSize, viewCounts })
   } catch (error) { console.error(error); fail(res, 500, 500, '查询失败') }
+}
+
+exports.options = async (_req, res) => {
+  try { ok(res, await db.prepare('SELECT id, name, product_id FROM pms_project WHERE is_deleted = 0 ORDER BY name').all()) }
+  catch (error) { console.error(error); fail(res, 500, 500, '查询失败') }
 }
 
 exports.getById = async (req, res) => {
@@ -160,13 +165,12 @@ exports.toggleStatus = async (req, res) => {
     if (validation) return fail(res, 400, 400, validation)
     const old = await db.prepare('SELECT name, status, expected_end_date, actual_end_date, suspend_date FROM pms_project WHERE id = ? AND is_deleted = 0').get(req.params.id)
     if (!old) return fail(res, 404, 404, '项目不存在')
-    let previousStatus
-    if (Number(old.status) === 3) {
-      const previous = await db.prepare("SELECT old_value FROM pms_op_log WHERE module = '项目' AND target_id = ? AND action = '状态变更' AND field_name = 'status' AND new_value = '3' ORDER BY created_at DESC LIMIT 1").get(req.params.id)
-      previousStatus = previous?.old_value === undefined ? undefined : Number(previous.old_value)
-    }
-    if (!allowedProjectStatuses(old.status, previousStatus).includes(status)) return fail(res, 400, 400, '不允许执行该状态流转')
-    const actualEndDate = status === 2 ? req.body.actual_end_date : null
+    if (!allowedProjectStatuses(old.status).includes(status)) return fail(res, 400, 400, '不允许执行该状态流转')
+    const actualEndDate = status === 2
+      ? req.body.actual_end_date
+      : Number(old.status) === 2 && status === 3
+        ? old.actual_end_date
+        : null
     const suspendDate = status === 3 ? req.body.suspend_date : null
     const overdue = calculateProjectOverdue(old.expected_end_date, status)
     await db.prepare('UPDATE pms_project SET status = ?, is_overdue = ?, actual_end_date = ?, suspend_date = ?, updater_id = ?, updated_at = NOW() WHERE id = ?').run(status, overdue, actualEndDate, suspendDate, req.user.id, req.params.id)
@@ -182,6 +186,10 @@ exports.remove = async (req, res) => {
   try {
     const project = await db.prepare('SELECT name FROM pms_project WHERE id = ? AND is_deleted = 0').get(req.params.id)
     if (!project) return fail(res, 404, 404, '项目不存在')
+    const taskCount = Number((await db.prepare('SELECT COUNT(*) count FROM pms_task WHERE project_id = ? AND is_deleted = 0').get(req.params.id))?.count || 0)
+    if (taskCount > 0) return fail(res, 400, 400, `该项目下还有 ${taskCount} 个任务，无法删除`)
+    const bugCount = Number((await db.prepare('SELECT COUNT(*) count FROM pms_bug WHERE project_id = ? AND is_deleted = 0').get(req.params.id))?.count || 0)
+    if (bugCount > 0) return fail(res, 400, 400, `该项目下还有 ${bugCount} 个 BUG，无法删除`)
     await db.prepare('UPDATE pms_project SET is_deleted = 1, updater_id = ?, updated_at = NOW() WHERE id = ?').run(req.user.id, req.params.id)
     await db.writeLog(req.user.id, '删除', '项目', req.params.id, 'is_deleted', 0, 1, req.ip, project.name)
     ok(res, null)

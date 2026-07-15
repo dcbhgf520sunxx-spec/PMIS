@@ -13,10 +13,16 @@ const categoryToneColors: Record<CategoryTone, string> = {
   magenta: 'magenta'
 };
 
+const cyanTagStyle = {
+  color: '#0ea5e9',
+  backgroundColor: 'rgba(14, 165, 233, 0.1)',
+  borderColor: 'rgba(14, 165, 233, 0.35)'
+};
+
 export type CategoryTagProps = Omit<ComponentProps<typeof Tag>, 'color'> & {
   tone: CategoryTone;
 };
 
-export function CategoryTag({ tone, ...props }: CategoryTagProps) {
-  return <Tag {...props} color={categoryToneColors[tone]} />;
+export function CategoryTag({ tone, style, ...props }: CategoryTagProps) {
+  return <Tag {...props} color={tone === 'cyan' ? undefined : categoryToneColors[tone]} style={tone === 'cyan' ? { ...cyanTagStyle, ...style } : style} />;
 }

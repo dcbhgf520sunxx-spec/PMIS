@@ -6,7 +6,7 @@ export const statusTransitions: Record<Exclude<ProjectStatus, 3>, ProjectStatus[
   2: [3]
 };
 
-export function allowedProjectStatuses(project: Pick<ProjectRecord, 'status' | 'previousStatus'>): ProjectStatus[] {
-  if (project.status === 3) return project.previousStatus === undefined ? [0, 1] : [project.previousStatus];
+export function allowedProjectStatuses(project: Pick<ProjectRecord, 'status'>): ProjectStatus[] {
+  if (project.status === 3) return [0, 1, 2];
   return statusTransitions[project.status];
 }

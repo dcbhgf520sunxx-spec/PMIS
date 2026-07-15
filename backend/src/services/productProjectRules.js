@@ -14,11 +14,9 @@ function calculateProjectOverdue(expectedEndDate, status, today = new Date().toI
   return String(expectedEndDate).slice(0, 10) < today ? 1 : 0
 }
 
-function allowedProjectStatuses(currentStatus, previousStatus) {
+function allowedProjectStatuses(currentStatus) {
   const current = Number(currentStatus)
-  if (current === 3) {
-    return [0, 1, 2].includes(Number(previousStatus)) ? [Number(previousStatus)] : [0, 1]
-  }
+  if (current === 3) return [0, 1, 2]
   return { 0: [1, 3], 1: [2, 3], 2: [3] }[current] || []
 }
 

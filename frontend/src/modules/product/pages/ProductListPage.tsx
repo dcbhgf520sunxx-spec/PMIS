@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
-import { useNavigate } from 'react-router-dom';
 import {
   ActionBar, AdminInput, AdminSelect, AdminTextAction, CompactFilterBar,
   DeleteConfirmAction, DetailLinkCell, OperationColumnActions, PermissionButton,
-  StatusConfirmAction, StatusTag, TemplateListPage, useCommittedFilters,
-  useTemplateListPageData
+  StatusConfirmAction, StatusTag, TemplateListPage, listRouteCodecs, useCommittedFilters,
+  usePageReturnNavigation, useTemplateListPageData
 } from '../../../components/admin';
 import { deleteProduct, getProductList, updateProductStatus } from '../../../api/productApi';
 import { getUserOptions } from '../../../api/userApi';
@@ -14,12 +13,12 @@ import type { ProductRecord } from '../types';
 const defaults = { name: '', ownerIds: [] as string[], status: undefined as number | undefined };
 
 export function ProductListPage() {
-  const navigate = useNavigate();
+  const { navigateWithReturn: navigate } = usePageReturnNavigation('/products');
   const [rows, setRows] = useState<ProductRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [users, setUsers] = useState<Array<{ label: string; value: string }>>([]);
-  const filters = useCommittedFilters(defaults);
-  const list = useTemplateListPageData({ rows, total, serverPaging: true, resetOn: [filters.revision] });
+  const filters = useCommittedFilters(defaults, { urlSync: true, codecs: { name: listRouteCodecs.string, ownerIds: listRouteCodecs.stringArray, status: listRouteCodecs.number } });
+  const list = useTemplateListPageData({ rows, total, serverPaging: true, resetOn: [filters.revision], urlSync: true });
 
   const load = async () => {
     const result = await getProductList({

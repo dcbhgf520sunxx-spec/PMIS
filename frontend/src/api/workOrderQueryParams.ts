@@ -1,6 +1,6 @@
 export type WorkOrderListParams = {
   problemDesc?: string;
-  systemId?: string;
+  productId?: string;
   problemType?: string | string[];
   urgency?: number;
   status?: number;
@@ -22,7 +22,7 @@ export type WorkOrderListParams = {
 export function toWorkOrderSortField(field?: string) {
   const sortMap: Record<string, string> = {
     problemDesc: 'problem_desc',
-    systemName: 'system_id',
+    productName: 'product_id',
     problemType: 'problem_type',
     followerId: 'follower_id',
     urgency: 'urgency',
@@ -41,7 +41,7 @@ export function toWorkOrderSortField(field?: string) {
 export function buildWorkOrderQueryParams(params: WorkOrderListParams = {}) {
   return {
     problem_desc: params.problemDesc,
-    system_id: params.systemId,
+    product_id: params.productId,
     problem_type: Array.isArray(params.problemType) ? params.problemType.join(',') : params.problemType,
     urgency: params.urgency,
     status: params.status,

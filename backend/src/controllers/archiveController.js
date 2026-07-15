@@ -42,16 +42,27 @@ async function generateCode(archiveTypeId) {
 async function getArchiveReferenceMessage(archiveId) {
   const workOrderRefs = await db.prepare(
     `SELECT
-      SUM(CASE WHEN system_id = ? THEN 1 ELSE 0 END) as system_count,
-      SUM(CASE WHEN problem_type = ? THEN 1 ELSE 0 END) as problem_type_count
+      COUNT(*) as problem_type_count
     FROM pms_work_order
     WHERE is_deleted = 0
-      AND (system_id = ? OR problem_type = ?)`
-  ).get(archiveId, archiveId, archiveId, archiveId)
+      AND problem_type = ?`
+  ).get(archiveId)
 
   const referencedFields = []
-  if (Number(workOrderRefs?.system_count || 0) > 0) referencedFields.push('所属系统')
   if (Number(workOrderRefs?.problem_type_count || 0) > 0) referencedFields.push('问题类型')
+
+  const taskCount = Number((await db.prepare('SELECT COUNT(*) count FROM pms_task WHERE task_type = ? AND is_deleted = 0').get(archiveId))?.count || 0)
+  if (taskCount > 0) return `该档案已被 ${taskCount} 个任务引用，不能删除`
+
+  const bugRefs = await db.prepare('SELECT COUNT(*) FILTER (WHERE bug_type_id = ?) bug_type_count, COUNT(*) FILTER (WHERE resolution_id = ?) resolution_count FROM pms_bug WHERE is_deleted = 0').get(archiveId, archiveId)
+  const bugTypeCount = Number(bugRefs?.bug_type_count || 0)
+  const resolutionCount = Number(bugRefs?.resolution_count || 0)
+  if (bugTypeCount > 0 || resolutionCount > 0) {
+    const fields = []
+    if (bugTypeCount > 0) fields.push(`Bug类型 ${bugTypeCount} 条`)
+    if (resolutionCount > 0) fields.push(`Bug解决方案 ${resolutionCount} 条`)
+    return `该档案已被 ${fields.join('、')} BUG 引用，不能删除`
+  }
 
   if (referencedFields.length === 0) return ''
   return `该档案已被运维工单的${referencedFields.join('、')}引用，不能删除`

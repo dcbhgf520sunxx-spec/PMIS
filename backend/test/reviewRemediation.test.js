@@ -6,22 +6,23 @@ const test = require('node:test')
 const root = join(__dirname, '..', '..')
 const read = (path) => readFileSync(join(root, path), 'utf8')
 
-test('用户和工单后端契约要求手机号与所属系统必填', () => {
+test('用户和工单后端契约要求手机号与所属产品必填', () => {
   const users = read('backend/src/controllers/userController.js')
   const workOrders = read('backend/src/controllers/workOrderController.js')
 
   assert.match(users, /phone:\s*\{\s*required:\s*true/)
-  assert.match(workOrders, /system_id:\s*\{\s*required:\s*true/)
+  assert.match(workOrders, /product_id:\s*\{\s*required:\s*true/)
 })
 
 test('初始化结构和新增迁移保持必填字段与菜单顺序一致', () => {
   const schema = read('backend/db/init/001_schema.sql')
   const migration = read('backend/db/migrations/20260711_enforce_required_fields_and_menu_order.sql')
+  const productMigration = read('backend/db/migrations/20260713_work_order_product.sql')
 
   assert.match(schema, /phone VARCHAR\(20\) NOT NULL UNIQUE/)
-  assert.match(schema, /system_id BIGINT NOT NULL/)
+  assert.match(schema, /product_id BIGINT NOT NULL/)
   assert.match(migration, /ALTER COLUMN phone SET NOT NULL/)
-  assert.match(migration, /ALTER COLUMN system_id SET NOT NULL/)
+  assert.match(productMigration, /ALTER COLUMN product_id SET NOT NULL/)
   assert.match(migration, /code = 'base_settings'[\s\S]*sort_order = 20|sort_order = 20[\s\S]*code = 'base_settings'/)
 })
 
