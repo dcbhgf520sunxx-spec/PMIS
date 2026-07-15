@@ -33,22 +33,6 @@
   display: block;
 }
 
-.task-name-cell > .ant-tag {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  width: 18px;
-  height: 18px;
-  min-width: 18px;
-  padding: 0;
-  margin-inline-end: 0;
-  border-radius: 3px;
-  font-size: 10px;
-  line-height: 16px;
-  flex: none;
-}
-
 .task-name-cell--subtask {
   padding-left: 20px;
 }

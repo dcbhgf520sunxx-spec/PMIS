@@ -1,5 +1,6 @@
 import { AdminTag, CategoryTag, defineCategoryToneMap, OverdueTag, PriorityTag, StatusTag } from '../../components/admin';
 import type { TaskPriority, TaskStatus } from './types';
+import './TaskLevel.css';
 
 const taskSourceTypeTones = defineCategoryToneMap({ 1: 'blue', 2: 'cyan' });
 const taskMainLevelTones = defineCategoryToneMap({ main: 'indigo' });
@@ -20,7 +21,7 @@ export function renderTaskSourceType(sourceType: 1 | 2) {
 }
 
 export function renderTaskLevel(parentTaskId?: string) {
-  return parentTaskId ? <AdminTag>子</AdminTag> : <CategoryTag tone={taskMainLevelTones.main}>主</CategoryTag>;
+  return parentTaskId ? <AdminTag className="task-level-tag">子</AdminTag> : <CategoryTag className="task-level-tag" tone={taskMainLevelTones.main}>主</CategoryTag>;
 }
 
 export function renderTaskOverdue(isOverdue: boolean, expectedEndTime?: string) {
