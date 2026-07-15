@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Key } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
 import { App } from 'antd';
-import { ActionBar, AdminButton, AdminInput, AdminRangePicker, AdminSelect, AdminTextAction, CompactFilterBar, createDetailNeighborContext, createListFilterItems, DeleteConfirmAction, DetailLinkCell, ExpandToggleButton, OperationColumnActions, PermissionButton, saveDetailNeighborContext, TemplateListPage, useCommittedFilters, useTemplateListPageData, ViewTabs , listRouteCodecs, useListViewState, usePageReturnNavigation } from '../../../components/admin';
+import { ActionBar, AdminButton, AdminInput, AdminRangePicker, AdminSelect, AdminTextAction, CompactFilterBar, createDetailNeighborContext, createListFilterItems, DeleteConfirmAction, DetailLinkCell, ExpandToggleButton, OperationColumnActions, PermissionButton, saveDetailNeighborContext, TemplateListPage, useCommittedFilters, useTemplateServerListData, ViewTabs , listRouteCodecs, useListViewState, usePageReturnNavigation } from '../../../components/admin';
 import { deleteTask, getTaskList, getTaskProjectOptions, getTaskRequirementOptions, updateTaskStatus } from '../../../api/taskApi';
 import { getUserOptions } from '../../../api/userApi';
 import { getArchiveOptionsByTypeName } from '../../../api/archiveApi';
@@ -32,22 +32,27 @@ export function TaskListPage() {
   const { currentPath, navigateWithReturn: navigate } = usePageReturnNavigation('/tasks');
   const { message, modal } = App.useApp();
   const [view, setView] = useListViewState<'all' | 'mine'>('mine', ['all', 'mine'], true);
-  const [rows, setRows] = useState<TaskRecord[]>([]);
-  const [total, setTotal] = useState(0);
-  const [counts, setCounts] = useState({ all: 0, mine: 0 });
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
   const [expandedParentIds, setExpandedParentIds] = useState<Set<string>>(() => new Set());
   const [projects, setProjects] = useState<Option[]>([]);
   const [requirements, setRequirements] = useState<Option[]>([]);
   const [users, setUsers] = useState<Option[]>([]);
   const [taskTypes, setTaskTypes] = useState<Option[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [optionsError, setOptionsError] = useState('');
   const [optionsRevision, setOptionsRevision] = useState(0);
-  const requestVersion = useRef(0);
   const filters = useCommittedFilters(defaults, { urlSync: true, codecs: { name: listRouteCodecs.string, sourceType: listRouteCodecs.number, projectId: listRouteCodecs.string, requirementId: listRouteCodecs.string, taskType: listRouteCodecs.string, priority: listRouteCodecs.number, status: listRouteCodecs.number, isOverdue: listRouteCodecs.number, ownerId: listRouteCodecs.string, expectedEndTimeRange: listRouteCodecs.dateArray } });
-  const list = useTemplateListPageData({ rows, total, serverPaging: true, resetOn: [filters.revision, view], urlSync: true });
+  const list = useTemplateServerListData<TaskRecord, { viewCounts: { all: number; mine: number } }>({
+    queryKey: ['tasks', filters.appliedFilters, filters.revision, view],
+    request: async ({ current, pageSize, sortField, sortOrder }) => {
+      const expectedRange = filters.appliedFilters.expectedEndTimeRange || [];
+      const ownerId = view === 'all' ? filters.appliedFilters.ownerId : undefined;
+      const result = await getTaskList({ view, name: filters.appliedFilters.name || undefined, source_type: filters.appliedFilters.sourceType, project_id: filters.appliedFilters.projectId, requirement_id: filters.appliedFilters.requirementId, task_type: filters.appliedFilters.taskType, priority: filters.appliedFilters.priority, status: filters.appliedFilters.status, is_overdue: filters.appliedFilters.isOverdue, owner_id: ownerId, filter_owner_id: ownerId, expected_end_date_from: date(expectedRange[0]), expected_end_date_to: date(expectedRange[1]), sort_field: sortField, sort_order: sortOrder, page: current, pageSize });
+      return { list: result.list, total: result.total, meta: { viewCounts: result.viewCounts } };
+    },
+    urlSync: true
+  });
+  const load = list.reload;
+  const counts = list.meta?.viewCounts ?? { all: 0, mine: 0 };
 
   useEffect(() => {
     let cancelled = false;
@@ -88,24 +93,6 @@ export function TaskListPage() {
     };
   };
 
-  const load = async () => {
-    const version = ++requestVersion.current;
-    setLoading(true);
-    setError('');
-    try {
-      const result = await getTaskList({ ...buildQuery(), page: list.currentPage, pageSize: list.pageSize });
-      if (version !== requestVersion.current) return;
-      setRows(result.list);
-      setTotal(result.total);
-      setCounts(result.viewCounts);
-    } catch (loadError) {
-      if (version === requestVersion.current) setError(loadError instanceof Error ? loadError.message : '任务列表加载失败');
-    } finally {
-      if (version === requestVersion.current) setLoading(false);
-    }
-  };
-  useEffect(() => { void load(); }, [filters.appliedFilters, view, list.currentPage, list.pageSize, list.sortState.field, list.sortState.order]);
-
   const selectedRecords = useMemo(() => {
     const rowMap = new Map(list.sortedRows.map((row) => [row.id, row]));
     return selectedRowKeys.map((key) => rowMap.get(String(key))).filter((row): row is TaskRecord => Boolean(row));
@@ -127,7 +114,7 @@ export function TaskListPage() {
       return next;
     });
     if (!nextExpanded) {
-      const childIds = new Set(rows.filter((row) => row.parentTaskId === parentTaskId).map((row) => row.id));
+      const childIds = new Set(list.pagedRows.filter((row) => row.parentTaskId === parentTaskId).map((row) => row.id));
       setSelectedRowKeys((current) => current.filter((key) => !childIds.has(String(key))));
     }
   };
@@ -181,12 +168,12 @@ export function TaskListPage() {
     <TemplateListPage<TaskRecord>
       mode="batch"
       title="任务管理"
-      error={error || optionsError}
+      error={list.error || optionsError}
       onRetry={handleRetry}
       titleExtra={<ViewTabs showCounts value={view} onChange={handleViewChange} items={[{ label: '全部任务', value: 'all', count: counts.all }, { label: '我的任务', value: 'mine', count: counts.mine }]} />}
       actions={<ActionBar><PermissionButton permission="task" type="primary" onClick={() => navigate('/tasks/new')}>新增任务</PermissionButton></ActionBar>}
       filter={<CompactFilterBar visibleCount={4} items={items} onSearch={handleSearch} onReset={handleReset} />}
-      table={{ columns, dataSource: visibleRows, loading, pagination: false, search: false, rowSelection: { selectedRowKeys, onChange: setSelectedRowKeys }, tableAlertRender: false, onChange: list.handleTableChange, scroll: { x: 1650 } }}
+      table={{ columns, dataSource: visibleRows, loading: list.loading, pagination: false, search: false, rowSelection: { selectedRowKeys, onChange: setSelectedRowKeys }, tableAlertRender: false, onChange: list.handleTableChange, scroll: { x: 1650 } }}
       batch={{
         selectedCount: selectedRecords.length,
         actions: <>

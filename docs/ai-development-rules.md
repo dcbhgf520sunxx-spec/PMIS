@@ -59,7 +59,7 @@ API 接入保持统一：
 
 ### 列表页
 
-列表页统一使用 `TemplateListPage` 和 `useTemplateListPageData`。
+列表页统一使用 `TemplateListPage`；本地数据使用 `useTemplateListPageData`，服务端分页数据使用 `useTemplateServerListData`。
 
 必须保持以下规则：
 
@@ -73,7 +73,8 @@ API 接入保持统一：
 - 删除不得使用通用 `ConfirmAction danger` 或业务自建 `Modal`；启用、停用等二态确认使用 `StatusConfirmAction`。
 - `ConfirmAction`、`StatusConfirmAction`、`DeleteConfirmAction` 和 `BubbleConfirmAction` 默认负责成功提示；业务页需要自定义静态文案时传 `successMessage`，需要根据接口结果动态提示时传 `successMessage={false}` 后自行提示，同一次操作不得由组件和业务页重复提示。
 - 序号使用 `renderIndex(index)`，按过滤后的全量数据位置计算。
-- 排序交给 `useTemplateListPageData`，先排序过滤后的全量数据，再分页。
+- 本地数据排序交给 `useTemplateListPageData`，先排序过滤后的全量数据，再分页。
+- 服务端分页列表必须通过 `useTemplateServerListData` 请求数据，并把全部已提交筛选、当前视图和其他数据范围参数放入 `queryKey`。组件以查询上下文、分页和排序共同组成请求标识：上下文切换时立即隔离旧数据，统一输出加载和错误状态，只接收当前请求结果以避免请求乱序覆盖，并将页码原子重置为第一页。业务页面不得继续使用 `useEffect + setRows` 自行维护服务端列表，也不得只靠切换时清空数组遮盖问题。
 - 分页配置通过 `TemplateListPage.pagination` 传入，不在业务页直接放 `TablePagination`。
 - 主子任务等低频层级列表继续使用 `TemplateListPage`，名称列通过 `HierarchyListCell` 统一方框开关、主子标识和子级缩进，不使用表格原生展开列，也不新增业务专用树表组件。父子数据按展示组平铺返回，父级记录分页，子级跟随父级且默认收起；父子关系校验、状态联动、进度汇总、权限和删除限制仍由业务模块处理。
 - 普通列表不传选择列、批量操作和已选数量，分页保持在右侧。
@@ -121,7 +122,7 @@ API 接入保持统一：
 - 返回列表通过 `TemplateDetailPage.onBack` 传入，业务页不重复创建“返回列表”按钮和操作栏外壳。
 - 接口失败或记录不存在时，通过模板的 `error`、`notFound`、`onRetry` 展示统一状态，不能无限显示加载中。
 - 基础信息、单据信息、历史记录等使用详情分组和 `DetailMetaList`；使用 `HistoryTimeline` 的详情分组统一命名为“变更历史”，不得继续使用“操作历史”“操作记录”等旧名称。
-- 详情页中的子任务、明细和关联记录等结构化数据统一使用 `TemplateDetailTableSection`，不得在 `TemplateDetailSection` 中直接放置 `SearchTable`、原生表格或复用 `TemplateListPage embedded`，也不得通过业务包装组件绕过；严格组件审计必须阻断这些直接和间接调用。组件默认只做纯数据展示，不自动增加详情链接和操作列；需要查看或管理时，由业务列显式声明 `DetailLinkCell` 和 `OperationColumnActions`。筛选、批量操作或复杂分页较多时，应进入独立列表页或 `TemplateDrawerTable`，不能把完整列表页工具栏塞进详情分组。
+- 详情页中的子任务、明细和关联记录等结构化数据统一使用 `TemplateDetailTableSection`，不得在 `TemplateDetailSection` 中直接放置 `SearchTable`、原生表格或复用 `TemplateListPage embedded`，也不得通过业务包装组件绕过；严格组件审计必须阻断这些直接和间接调用。组件默认只做纯数据展示，不自动增加详情链接和操作列；需要查看或管理时，由业务列显式声明 `DetailLinkCell` 和 `OperationColumnActions`。传入 `table.scroll.x` 后，组件在横向滚动时自动固定首个业务列，并为滚动条预留底部空间，业务页不重复设置相关样式。筛选、批量操作或复杂分页较多时，应进入独立列表页或 `TemplateDrawerTable`，不能把完整列表页工具栏塞进详情分组。
 - `TemplateDetailSection.inlineExtra` 只承接标题后的统计或轻量上下文，右侧主要业务动作通过 `extra` 传入；`TemplateDetailTableSection.summary` 和 `extra` 分别承接关联数据摘要与新增等操作。
 - 详情页变更历史统一使用 `HistoryTimelineSection`，由它把“全部展开/全部收起”紧跟在“变更历史”标题之后并承接单条展开；业务页面不得使用 `TemplateDetailSection + HistoryTimeline` 拼装，不得维护 `expandedKeys`、`onExpandedKeysChange` 或通过 `inlineExtra` 重复实现。
 - 同一次保存或状态变更产生的多字段日志必须共享 `pms_op_log.operation_id`，历史接口按该标识聚合为一个节点；聚合节点内的字段顺序必须复用对应详情页的字段顺序，禁止按日志写入顺序、数据库返回顺序或字段名排序。没有 `operation_id` 的历史日志按单条兼容展示，不能按“同一秒”猜测聚合。
@@ -158,7 +159,7 @@ API 接入保持统一：
 ## 查询和下拉规则
 
 - 查询区输入只更新草稿条件，点击“查询”或文本回车后才提交筛选。
-- 标准列表必须为 `useCommittedFilters` 和 `useTemplateListPageData` 启用 `urlSync: true`；只把已提交筛选、当前视图、分页和排序写入 URL。输入草稿、勾选行、弹窗状态不进入 URL，列宽、列显隐和密度继续使用用户偏好。
+- 标准列表必须为 `useCommittedFilters` 以及对应的 `useTemplateListPageData` / `useTemplateServerListData` 启用 `urlSync: true`；只把已提交筛选、当前视图、分页和排序写入 URL。输入草稿、勾选行、弹窗状态不进入 URL，列宽、列显隐和密度继续使用用户偏好。
 - 列表进入详情、新增、编辑或复制必须使用 `usePageReturnNavigation.navigateWithReturn` 携带完整列表来源；详情和表单必须使用 `returnToSource` 返回。保存、取消、删除和“返回列表”使用替换历史，禁止硬编码 `navigate('/模块列表')`。
 - `returnTo` 只允许当前模块内的站内相对地址；非法、跨模块或外部地址必须回退到模块默认列表。详情相邻记录切换必须保留当前 `returnTo`，无来源的直接访问不得复用旧列表上下文。
 - `TemplateFormPage` 统一启用未保存离开保护，覆盖取消、菜单跳转、浏览器前进后退、刷新和关闭；保存成功后清除保护。业务页不得重复弹确认框或绕开模板。

@@ -4,7 +4,7 @@ import {
   ActionBar, AdminInput, AdminSelect, AdminTextAction, CompactFilterBar,
   DeleteConfirmAction, DetailLinkCell, OperationColumnActions, PermissionButton,
   StatusConfirmAction, StatusTag, TemplateListPage, listRouteCodecs, useCommittedFilters,
-  usePageReturnNavigation, useTemplateListPageData
+  usePageReturnNavigation, useTemplateServerListData
 } from '../../../components/admin';
 import { deleteProduct, getProductList, updateProductStatus } from '../../../api/productApi';
 import { getUserOptions } from '../../../api/userApi';
@@ -14,27 +14,23 @@ const defaults = { name: '', ownerIds: [] as string[], status: undefined as numb
 
 export function ProductListPage() {
   const { navigateWithReturn: navigate } = usePageReturnNavigation('/products');
-  const [rows, setRows] = useState<ProductRecord[]>([]);
-  const [total, setTotal] = useState(0);
   const [users, setUsers] = useState<Array<{ label: string; value: string }>>([]);
   const filters = useCommittedFilters(defaults, { urlSync: true, codecs: { name: listRouteCodecs.string, ownerIds: listRouteCodecs.stringArray, status: listRouteCodecs.number } });
-  const list = useTemplateListPageData({ rows, total, serverPaging: true, resetOn: [filters.revision], urlSync: true });
-
-  const load = async () => {
-    const result = await getProductList({
+  const list = useTemplateServerListData<ProductRecord>({
+    queryKey: ['products', filters.appliedFilters, filters.revision],
+    request: async ({ current, pageSize, sortField, sortOrder }) => getProductList({
       name: filters.appliedFilters.name || undefined,
       owner_ids: filters.appliedFilters.ownerIds.join(',') || undefined,
       status: filters.appliedFilters.status,
-      page: list.currentPage,
-      pageSize: list.pageSize,
-      sort_field: list.sortState.field,
-      sort_order: list.sortState.order
-    });
-    setRows(result.list);
-    setTotal(result.total);
-  };
+      page: current,
+      pageSize,
+      sort_field: sortField,
+      sort_order: sortOrder
+    }),
+    urlSync: true
+  });
+  const load = list.reload;
 
-  useEffect(() => { load(); }, [filters.appliedFilters, list.currentPage, list.pageSize, list.sortState.field, list.sortState.order]);
   useEffect(() => { getUserOptions().then(setUsers); }, []);
 
   const columns: ProColumns<ProductRecord>[] = [
@@ -60,13 +56,15 @@ export function ProductListPage() {
   return (
     <TemplateListPage<ProductRecord>
       title="产品管理"
+      error={list.error}
+      onRetry={load}
       actions={<ActionBar><PermissionButton permission="product" type="primary" onClick={() => navigate('/products/new')}>新增产品</PermissionButton></ActionBar>}
       filter={<CompactFilterBar items={[
         { key: 'name', label: '产品名称', node: <AdminInput size="small" value={filters.draftFilters.name} onChange={(event) => filters.setDraftFilters((prev) => ({ ...prev, name: event.target.value }))} onPressEnter={filters.commitFilters} /> },
         { key: 'owner', label: '负责人', node: <AdminSelect size="small" mode="multiple" value={filters.draftFilters.ownerIds} options={users} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, ownerIds: value }))} /> },
         { key: 'status', label: '状态', node: <AdminSelect size="small" value={filters.draftFilters.status} options={[{ label: '启用', value: 1 }, { label: '停用', value: 0 }]} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, status: value }))} /> }
       ]} onSearch={filters.commitFilters} onReset={filters.resetFilters} />}
-      table={{ columns, dataSource: list.pagedRows, pagination: false, search: false, onChange: list.handleTableChange, tableAlertRender: false, scroll: { x: 1240 } }}
+      table={{ columns, dataSource: list.pagedRows, loading: list.loading, pagination: false, search: false, onChange: list.handleTableChange, tableAlertRender: false, scroll: { x: 1240 } }}
       pagination={list.pagination}
     />
   );

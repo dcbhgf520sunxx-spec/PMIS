@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Key } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
 import { App } from 'antd';
-import { ActionBar, AdminButton, AdminInput, AdminRangePicker, AdminSelect, AdminTextAction, CompactFilterBar, createDetailNeighborContext, createListFilterItems, DeleteConfirmAction, DetailLinkCell, OperationColumnActions, PermissionButton, saveDetailNeighborContext, TemplateListPage, useCommittedFilters, useTemplateListPageData, ViewTabs , listRouteCodecs, useListViewState, usePageReturnNavigation } from '../../../components/admin';
+import { ActionBar, AdminButton, AdminInput, AdminRangePicker, AdminSelect, AdminTextAction, CompactFilterBar, createDetailNeighborContext, createListFilterItems, DeleteConfirmAction, DetailLinkCell, OperationColumnActions, PermissionButton, saveDetailNeighborContext, TemplateListPage, useCommittedFilters, useTemplateServerListData, ViewTabs , listRouteCodecs, useListViewState, usePageReturnNavigation } from '../../../components/admin';
 import { deleteBug, getBugList, getBugProjectOptions, getBugRequirementOptions, updateBugStatus } from '../../../api/bugApi';
 import { getUserOptions } from '../../../api/userApi';
 import { getArchiveOptionsByTypeName } from '../../../api/archiveApi';
@@ -19,10 +19,22 @@ const date = (value: any) => value?.format?.('YYYY-MM-DD');
 
 export function BugListPage() {
   const { currentPath, navigateWithReturn: navigate } = usePageReturnNavigation('/bugs'); const { message } = App.useApp();
-  const [view, setView] = useListViewState<'all' | 'mine'>('mine', ['all', 'mine'], true); const [rows, setRows] = useState<BugRecord[]>([]); const [total, setTotal] = useState(0); const [counts, setCounts] = useState({ all: 0, mine: 0 });
+  const [view, setView] = useListViewState<'all' | 'mine'>('mine', ['all', 'mine'], true);
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]); const [projects, setProjects] = useState<Option[]>([]); const [requirements, setRequirements] = useState<Option[]>([]); const [users, setUsers] = useState<Option[]>([]); const [bugTypes, setBugTypes] = useState<Option[]>([]); const [resolutions, setResolutions] = useState<Option[]>([]);
-  const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [optionsError, setOptionsError] = useState(''); const [optionsRevision, setOptionsRevision] = useState(0); const requestVersion = useRef(0);
-  const filters = useCommittedFilters(defaults, { urlSync: true, codecs: { title: listRouteCodecs.string, sourceType: listRouteCodecs.number, projectId: listRouteCodecs.string, requirementId: listRouteCodecs.string, bugTypeId: listRouteCodecs.string, severity: listRouteCodecs.number, status: listRouteCodecs.number, assigneeId: listRouteCodecs.string, creatorId: listRouteCodecs.string, createdAtRange: listRouteCodecs.dateArray } }); const list = useTemplateListPageData({ rows, total, serverPaging: true, resetOn: [filters.revision, view], urlSync: true });
+  const [optionsError, setOptionsError] = useState(''); const [optionsRevision, setOptionsRevision] = useState(0);
+  const filters = useCommittedFilters(defaults, { urlSync: true, codecs: { title: listRouteCodecs.string, sourceType: listRouteCodecs.number, projectId: listRouteCodecs.string, requirementId: listRouteCodecs.string, bugTypeId: listRouteCodecs.string, severity: listRouteCodecs.number, status: listRouteCodecs.number, assigneeId: listRouteCodecs.string, creatorId: listRouteCodecs.string, createdAtRange: listRouteCodecs.dateArray } });
+  const list = useTemplateServerListData<BugRecord, { viewCounts: { all: number; mine: number } }>({
+    queryKey: ['bugs', filters.appliedFilters, filters.revision, view],
+    request: async ({ current, pageSize, sortField, sortOrder }) => {
+      const range = filters.appliedFilters.createdAtRange || [];
+      const assigneeId = view === 'all' ? filters.appliedFilters.assigneeId : undefined;
+      const result = await getBugList({ view, title: filters.appliedFilters.title || undefined, source_type: filters.appliedFilters.sourceType, project_id: filters.appliedFilters.projectId, requirement_id: filters.appliedFilters.requirementId, bug_type_id: filters.appliedFilters.bugTypeId, severity: filters.appliedFilters.severity, status: filters.appliedFilters.status, assignee_id: assigneeId, filter_assignee_id: assigneeId, creator_id: filters.appliedFilters.creatorId, created_at_from: date(range[0]), created_at_to: date(range[1]), sort_field: sortField, sort_order: sortOrder, page: current, pageSize });
+      return { list: result.list, total: result.total, meta: { viewCounts: result.viewCounts } };
+    },
+    urlSync: true
+  });
+  const load = list.reload;
+  const counts = list.meta?.viewCounts ?? { all: 0, mine: 0 };
 
   useEffect(() => {
     let cancelled = false;
@@ -33,8 +45,6 @@ export function BugListPage() {
   }, [optionsRevision]);
 
   const buildQuery = () => { const range = filters.appliedFilters.createdAtRange || []; const assigneeId = view === 'all' ? filters.appliedFilters.assigneeId : undefined; return { view, title: filters.appliedFilters.title || undefined, source_type: filters.appliedFilters.sourceType, project_id: filters.appliedFilters.projectId, requirement_id: filters.appliedFilters.requirementId, bug_type_id: filters.appliedFilters.bugTypeId, severity: filters.appliedFilters.severity, status: filters.appliedFilters.status, assignee_id: assigneeId, filter_assignee_id: assigneeId, creator_id: filters.appliedFilters.creatorId, created_at_from: date(range[0]), created_at_to: date(range[1]), sort_field: list.sortState.field, sort_order: list.sortState.order }; };
-  const load = async () => { const version = ++requestVersion.current; setLoading(true); setError(''); try { const result = await getBugList({ ...buildQuery(), page: list.currentPage, pageSize: list.pageSize }); if (version !== requestVersion.current) return; setRows(result.list); setTotal(result.total); setCounts(result.viewCounts); } catch (cause) { if (version === requestVersion.current) setError(cause instanceof Error ? cause.message : 'BUG列表加载失败'); } finally { if (version === requestVersion.current) setLoading(false); } };
-  useEffect(() => { void load(); }, [filters.appliedFilters, view, list.currentPage, list.pageSize, list.sortState.field, list.sortState.order]);
   const selectedRecords = useMemo(() => { const map = new Map(list.sortedRows.map((row) => [row.id, row])); return selectedRowKeys.map((key) => map.get(String(key))).filter((row): row is BugRecord => Boolean(row)); }, [selectedRowKeys, list.sortedRows]);
   const sameStatus = selectedRecords.length > 0 && selectedRecords.every((row) => row.status === selectedRecords[0].status); const clearSelection = () => setSelectedRowKeys([]); const batch = useBugBatchActions({ selectedRecords, users, clearSelection, reload: load });
   const openDetail = (row: BugRecord) => { saveDetailNeighborContext(createDetailNeighborContext({ moduleKey: 'bug', routeBase: '/bugs', sourcePath: currentPath, params: buildQuery() })); navigate(`/bugs/${row.id}`); };
@@ -67,11 +77,11 @@ export function BugListPage() {
     { key: 'createdAtRange', label: '创建时间', wide: true, node: <AdminRangePicker size="small" value={filters.draftFilters.createdAtRange as never} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, createdAtRange: value || [] }))} /> }
   ]);
   const retry = () => { setOptionsRevision((value) => value + 1); void load(); };
-  return <><TemplateListPage<BugRecord> mode="batch" title="BUG管理" error={error || optionsError} onRetry={retry}
+  return <><TemplateListPage<BugRecord> mode="batch" title="BUG管理" error={list.error || optionsError} onRetry={retry}
     titleExtra={<ViewTabs showCounts value={view} onChange={(next) => { setView(next); clearSelection(); }} items={[{ label: '全部BUG', value: 'all', count: counts.all }, { label: '我的BUG', value: 'mine', count: counts.mine }]} />}
     actions={<ActionBar><PermissionButton permission="bug" type="primary" onClick={() => navigate('/bugs/new')}>新增BUG</PermissionButton></ActionBar>}
     filter={<CompactFilterBar visibleCount={4} items={items} onSearch={() => { filters.commitFilters(); clearSelection(); }} onReset={() => { filters.resetFilters(); clearSelection(); }} />}
-    table={{ columns, dataSource: list.pagedRows, loading, pagination: false, search: false, rowSelection: { selectedRowKeys, onChange: setSelectedRowKeys }, tableAlertRender: false, onChange: list.handleTableChange, scroll: { x: 1450 } }}
+    table={{ columns, dataSource: list.pagedRows, loading: list.loading, pagination: false, search: false, rowSelection: { selectedRowKeys, onChange: setSelectedRowKeys }, tableAlertRender: false, onChange: list.handleTableChange, scroll: { x: 1450 } }}
     batch={{ selectedCount: selectedRecords.length, actions: <>{batch.assignAction}{sameStatus ? <BugStatusChangeAction size="small" bug={selectedRecords[0]} resolutionOptions={resolutions} onConfirm={async (status, values) => { await Promise.all(selectedRecords.map((row) => updateBugStatus(row.id, status, statusExtra(values)))); message.success(`成功变更 ${selectedRecords.length} 项 BUG 状态`); clearSelection(); await load(); }}>批量状态变更</BugStatusChangeAction> : <AdminButton size="small" disabled title="请选择状态相同的 BUG">批量状态变更</AdminButton>}{batch.deleteAction}</> }} pagination={list.pagination}
   />{batch.assignModal}</>;
 }

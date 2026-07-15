@@ -27,3 +27,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.admin-template-detail-table-section__table.has-horizontal-scroll .ant-table-content,
+.admin-template-detail-table-section__table.has-horizontal-scroll .ant-table-body {
+  padding-bottom: 16px;
+}

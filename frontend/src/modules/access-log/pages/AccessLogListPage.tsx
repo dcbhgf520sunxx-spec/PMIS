@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
 import {
   AdminInput,
@@ -12,7 +12,7 @@ import {
   StatusTag,
   TemplateListPage,
   useCommittedFilters,
-  useTemplateListPageData
+  useTemplateServerListData
 } from '../../../components/admin';
 import { getAccessLogList } from '../../../api/accessLogApi';
 import type { AccessLogFilters, AccessLogRecord } from '../../../api/accessLogApi';
@@ -55,8 +55,6 @@ function toDateRange(value: unknown): DateLike[] {
 }
 
 export function AccessLogListPage() {
-  const [rows, setRows] = useState<AccessLogRecord[]>([]);
-  const [serverTotal, setServerTotal] = useState(0);
   const { draftFilters, appliedFilters, revision: filterRevision, setDraftFilters, commitFilters, resetFilters } = useCommittedFilters(defaultFilters, {
     urlSync: true,
     codecs: {
@@ -67,28 +65,26 @@ export function AccessLogListPage() {
   });
 
   const {
-    currentPage,
-    pageSize,
     pagedRows,
     sortState,
-    total,
     pagination,
     handleTableChange,
-    renderIndex
-  } = useTemplateListPageData({ rows, sorters: accessLogSorters, resetOn: [filterRevision], total: serverTotal, serverPaging: true, urlSync: true });
-
-  useEffect(() => {
-    getAccessLogList({
+    renderIndex,
+    loading,
+    error,
+    reload
+  } = useTemplateServerListData({
+    queryKey: ['access-logs', appliedFilters, filterRevision],
+    request: ({ current, pageSize, sortField, sortOrder }) => getAccessLogList({
       ...appliedFilters,
-      current: currentPage,
+      current,
       pageSize,
-      sortField: sortState.field,
-      sortOrder: sortState.order || undefined
-    }).then((result) => {
-      setRows(result.list);
-      setServerTotal(result.total);
-    });
-  }, [appliedFilters, currentPage, pageSize, sortState.field, sortState.order]);
+      sortField,
+      sortOrder
+    }),
+    sorters: accessLogSorters,
+    urlSync: true
+  });
 
   const filterItems = useMemo(() => createListFilterItems([
     {
@@ -306,6 +302,8 @@ export function AccessLogListPage() {
 
   return (
     <TemplateListPage<AccessLogRecord>
+      error={error}
+      onRetry={reload}
       title="访问日志"
       filter={(
         <CompactFilterBar
@@ -322,6 +320,7 @@ export function AccessLogListPage() {
       table={{
         columns,
         dataSource: pagedRows,
+        loading,
         pagination: false,
         search: false,
         onChange: handleTableChange,

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
 import { App } from 'antd';
-import { ActionBar, AdminInput, AdminRangePicker, AdminSelect, AdminTextAction, CompactFilterBar, createDetailNeighborContext, createListFilterItems, DeleteConfirmAction, DetailLinkCell, OperationColumnActions, PermissionButton, saveDetailNeighborContext, TemplateListPage, useCommittedFilters, useTemplateListPageData, ViewTabs , listRouteCodecs, useListViewState, usePageReturnNavigation } from '../../../components/admin';
+import { ActionBar, AdminInput, AdminRangePicker, AdminSelect, AdminTextAction, CompactFilterBar, createDetailNeighborContext, createListFilterItems, DeleteConfirmAction, DetailLinkCell, OperationColumnActions, PermissionButton, saveDetailNeighborContext, TemplateListPage, useCommittedFilters, useTemplateServerListData, ViewTabs , listRouteCodecs, useListViewState, usePageReturnNavigation } from '../../../components/admin';
 import { deleteRequirement, getProjectOptions, getRequirementList, updateRequirementStatus } from '../../../api/requirementApi';
 import { getProductOptions } from '../../../api/productApi';
 import { getUserOptions } from '../../../api/userApi';
@@ -18,27 +18,19 @@ export function RequirementListPage() {
   const { currentPath, navigateWithReturn: navigate } = usePageReturnNavigation('/requirements');
   const { message } = App.useApp();
   const [view, setView] = useListViewState<'all' | 'mine'>('mine', ['all', 'mine'], true);
-  const [rows, setRows] = useState<RequirementRecord[]>([]);
-  const [total, setTotal] = useState(0);
-  const [counts, setCounts] = useState({ all: 0, mine: 0 });
   const [products,setProducts]=useState<any[]>([]),[projects,setProjects]=useState<any[]>([]),[users,setUsers]=useState<any[]>([]);
-  const [loading,setLoading]=useState(true);
-  const [error,setError]=useState('');
   const filters = useCommittedFilters(defaults, { urlSync: true, codecs: { title: listRouteCodecs.string, requirementType: listRouteCodecs.number, status: listRouteCodecs.number, priority: listRouteCodecs.number, isOverdue: listRouteCodecs.number, productId: listRouteCodecs.string, projectId: listRouteCodecs.string, ownerId: listRouteCodecs.string, submitterName: listRouteCodecs.string, submitDateRange: listRouteCodecs.dateArray, expectedEndDateRange: listRouteCodecs.dateArray } });
-  const list = useTemplateListPageData({ rows, total, serverPaging: true, resetOn: [filters.revision, view], urlSync: true });
-
-  const load = async () => {
-    setLoading(true);
-    setError('');
-    try {
+  const list = useTemplateServerListData<RequirementRecord, { viewCounts: { all: number; mine: number } }>({
+    queryKey: ['requirements', filters.appliedFilters, filters.revision, view],
+    request: async ({ current, pageSize, sortField, sortOrder }) => {
       const submitRange=filters.appliedFilters.submitDateRange||[],expectedRange=filters.appliedFilters.expectedEndDateRange||[];
-      const result = await getRequirementList({ title:filters.appliedFilters.title||undefined, requirement_type: filters.appliedFilters.requirementType, status:filters.appliedFilters.status, priority:filters.appliedFilters.priority, is_overdue: filters.appliedFilters.isOverdue, product_id:filters.appliedFilters.productId, project_id:filters.appliedFilters.projectId, filter_owner_id:view==='all'?filters.appliedFilters.ownerId:undefined, owner_id:view==='all'?filters.appliedFilters.ownerId:undefined, submitter_name:filters.appliedFilters.submitterName||undefined, submit_date_from:date(submitRange[0]),submit_date_to:date(submitRange[1]),expected_end_date_from:date(expectedRange[0]),expected_end_date_to:date(expectedRange[1]), view, page: list.currentPage, pageSize: list.pageSize, sort_field: list.sortState.field, sort_order: list.sortState.order });
-      setRows(result.list); setTotal(result.total); setCounts(result.viewCounts);
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : '需求列表加载失败');
-    } finally { setLoading(false); }
-  };
-  useEffect(() => { void load(); }, [filters.appliedFilters, view, list.currentPage, list.pageSize, list.sortState.field, list.sortState.order]);
+      const result = await getRequirementList({ title:filters.appliedFilters.title||undefined, requirement_type: filters.appliedFilters.requirementType, status:filters.appliedFilters.status, priority:filters.appliedFilters.priority, is_overdue: filters.appliedFilters.isOverdue, product_id:filters.appliedFilters.productId, project_id:filters.appliedFilters.projectId, filter_owner_id:view==='all'?filters.appliedFilters.ownerId:undefined, owner_id:view==='all'?filters.appliedFilters.ownerId:undefined, submitter_name:filters.appliedFilters.submitterName||undefined, submit_date_from:date(submitRange[0]),submit_date_to:date(submitRange[1]),expected_end_date_from:date(expectedRange[0]),expected_end_date_to:date(expectedRange[1]), view, page: current, pageSize, sort_field: sortField, sort_order: sortOrder });
+      return { list: result.list, total: result.total, meta: { viewCounts: result.viewCounts } };
+    },
+    urlSync: true
+  });
+  const load = list.reload;
+  const counts = list.meta?.viewCounts ?? { all: 0, mine: 0 };
   useEffect(()=>{getProductOptions().then(items=>setProducts(items.filter(item=>item.status===1)));getProjectOptions().then(setProjects);getUserOptions().then(setUsers)},[]);
   const sortOrder = (field: string) => list.sortState.field === field ? list.sortState.order : null;
   const submitStatus = async (row: RequirementRecord, status: RequirementStatus, values: any) => {
@@ -76,5 +68,5 @@ export function RequirementListPage() {
     ,{key:'submitDateRange',label:'提出时间',wide:true,node:<AdminRangePicker size="small" value={filters.draftFilters.submitDateRange as never} onChange={value=>filters.setDraftFilters(prev=>({...prev,submitDateRange:value||[]}))}/>}
     ,{key:'expectedEndDateRange',label:'预计完成时间',wide:true,node:<AdminRangePicker size="small" value={filters.draftFilters.expectedEndDateRange as never} onChange={value=>filters.setDraftFilters(prev=>({...prev,expectedEndDateRange:value||[]}))}/>}
   ]);
-  return <TemplateListPage<RequirementRecord> title="需求管理" error={error} onRetry={load} titleExtra={<ViewTabs showCounts value={view} onChange={setView} items={[{ label: '全部需求', value: 'all', count: counts.all }, { label: '我负责的', value: 'mine', count: counts.mine }]} />} actions={<ActionBar><PermissionButton permission="requirement" type="primary" onClick={() => navigate('/requirements/new')}>新增需求</PermissionButton></ActionBar>} filter={<CompactFilterBar visibleCount={4} items={items} onSearch={filters.commitFilters} onReset={filters.resetFilters} />} table={{ columns, dataSource: list.pagedRows, loading, pagination: false, search: false, onChange: list.handleTableChange, tableAlertRender: false, scroll: { x: 1870 } }} pagination={list.pagination} />;
+  return <TemplateListPage<RequirementRecord> title="需求管理" error={list.error} onRetry={load} titleExtra={<ViewTabs showCounts value={view} onChange={setView} items={[{ label: '全部需求', value: 'all', count: counts.all }, { label: '我负责的', value: 'mine', count: counts.mine }]} />} actions={<ActionBar><PermissionButton permission="requirement" type="primary" onClick={() => navigate('/requirements/new')}>新增需求</PermissionButton></ActionBar>} filter={<CompactFilterBar visibleCount={4} items={items} onSearch={filters.commitFilters} onReset={filters.resetFilters} />} table={{ columns, dataSource: list.pagedRows, loading: list.loading, pagination: false, search: false, onChange: list.handleTableChange, tableAlertRender: false, scroll: { x: 1870 } }} pagination={list.pagination} />;
 }

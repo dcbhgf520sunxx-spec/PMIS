@@ -19,7 +19,7 @@ import {
   TemplateListPage,
   useCommittedFilters,
   usePageReturnNavigation,
-  useTemplateListPageData
+  useTemplateServerListData
 } from '../../../components/admin';
 import { getUserList, resetUserPassword, toggleUserStatus } from '../../../api/userApi';
 import { getRoleOptions } from '../../../api/roleApi';
@@ -53,8 +53,6 @@ const userSorters = createListSorters<UserRecord>({
 
 export function UserListPage() {
   const { navigateWithReturn } = usePageReturnNavigation('/users');
-  const [rows, setRows] = useState<UserRecord[]>([]);
-  const [serverTotal, setServerTotal] = useState(0);
   const { draftFilters, appliedFilters, revision: filterRevision, setDraftFilters, commitFilters, resetFilters } = useCommittedFilters(defaultFilters, {
     urlSync: true,
     codecs: { roleIds: listRouteCodecs.stringArray, status: listRouteCodecs.string }
@@ -62,31 +60,26 @@ export function UserListPage() {
   const [roleOptions, setRoleOptions] = useState<Array<{ label: string; value: string }>>([]);
 
   const {
-    currentPage,
-    pageSize,
     pagedRows,
     sortState,
-    total,
     pagination,
     handleTableChange,
-    renderIndex
-  } = useTemplateListPageData({ rows, sorters: userSorters, resetOn: [filterRevision], total: serverTotal, serverPaging: true, urlSync: true });
-
-  const loadRows = async () => {
-    const result = await getUserList({
+    renderIndex,
+    loading,
+    error,
+    reload
+  } = useTemplateServerListData({
+    queryKey: ['users', appliedFilters, filterRevision],
+    request: ({ current, pageSize, sortField, sortOrder }) => getUserList({
       ...appliedFilters,
-      current: currentPage,
+      current,
       pageSize,
-      sortField: sortState.field,
-      sortOrder: sortState.order || undefined
-    });
-    setRows(result.list);
-    setServerTotal(result.total);
-  };
-
-  useEffect(() => {
-    loadRows();
-  }, [appliedFilters, currentPage, pageSize, sortState.field, sortState.order]);
+      sortField,
+      sortOrder
+    }),
+    sorters: userSorters,
+    urlSync: true
+  });
 
   useEffect(() => {
     getRoleOptions().then(setRoleOptions);
@@ -254,7 +247,7 @@ export function UserListPage() {
             targetName={record.realName}
             onConfirm={async () => {
               await toggleUserStatus(record.id, record.status === 'enabled' ? 'disabled' : 'enabled');
-              await loadRows();
+              await reload();
             }}
           >
             {record.status === 'enabled' ? '停用' : '启用'}
@@ -276,6 +269,8 @@ export function UserListPage() {
 
   return (
     <TemplateListPage<UserRecord>
+      error={error}
+      onRetry={reload}
       title="用户管理"
       actions={
         <ActionBar>
@@ -299,6 +294,7 @@ export function UserListPage() {
       table={{
         columns,
         dataSource: pagedRows,
+        loading,
         pagination: false,
         search: false,
         onChange: handleTableChange,

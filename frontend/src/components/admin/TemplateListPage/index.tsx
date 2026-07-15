@@ -107,6 +107,8 @@ export function TemplateListPage<
 }
 
 export const useTemplateListPageData = useListPageData;
+export { useTemplateServerListData } from './useTemplateServerListData';
+export type { TemplateServerListRequest, TemplateServerListResult } from './useTemplateServerListData';
 export { useCommittedFilters } from './useCommittedFilters';
 export { useListViewState } from './useListViewState';
 export * from './listRouteState';

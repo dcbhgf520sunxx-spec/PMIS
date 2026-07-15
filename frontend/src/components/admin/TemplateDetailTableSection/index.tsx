@@ -27,7 +27,20 @@ function TemplateDetailTableSectionComponent<
   T extends Record<string, unknown>,
   P extends Record<string, unknown> = Record<string, unknown>
 >({ title, sectionKey, summary, extra, table }: TemplateDetailTableSectionProps<T, P>) {
-  const { className, ...tableProps } = table;
+  const { className, columns, scroll, ...tableProps } = table;
+  const hasHorizontalScroll = typeof scroll === 'object' && scroll !== null && Boolean(scroll.x);
+  const firstBusinessColumnIndex = hasHorizontalScroll
+    ? columns.findIndex((column) => (
+      !column.hideInTable
+      && column.valueType !== 'index'
+      && column.valueType !== 'option'
+    ))
+    : -1;
+  const detailColumns = firstBusinessColumnIndex < 0 ? columns : columns.map((column, index) => (
+    index === firstBusinessColumnIndex && !column.fixed
+      ? { ...column, fixed: 'left' as const }
+      : column
+  ));
   const summaryNode = summary === undefined || summary === null ? undefined : (
     <span className="admin-template-detail-table-section__summary">{summary}</span>
   );
@@ -42,12 +55,18 @@ function TemplateDetailTableSectionComponent<
     >
       <SearchTable<T, P>
         {...tableProps}
-        className={['admin-template-detail-table-section__table', className].filter(Boolean).join(' ')}
+        className={[
+          'admin-template-detail-table-section__table',
+          hasHorizontalScroll ? 'has-horizontal-scroll' : '',
+          className
+        ].filter(Boolean).join(' ')}
+        columns={detailColumns}
         cardProps={false}
         customizable={false}
         options={false}
         pagination={false}
         search={false}
+        scroll={scroll}
         tableAlertRender={false}
         toolBarRender={false}
       />

@@ -154,7 +154,7 @@ export function DetailTemplateDemo() {
             table={{
               columns: relatedColumns,
               dataSource: relatedTableMode === 'empty' ? [] : relatedRecords,
-              scroll: { x: relatedTableMode === 'managed' ? 720 : 610 }
+              scroll: { x: 1100 }
             }}
           />
           <TemplateDetailSection title="权限范围" sectionKey="permissions">

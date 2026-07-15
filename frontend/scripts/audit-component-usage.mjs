@@ -66,6 +66,16 @@ function walk(dir) {
   });
 }
 
+function walkSourceFiles(dir) {
+  return readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    const stat = statSync(path);
+    if (stat.isDirectory()) return walkSourceFiles(path);
+    if (!/\.tsx?$/.test(path)) return [];
+    return [path];
+  });
+}
+
 function lineNumber(source, index) {
   return source.slice(0, index).split('\n').length;
 }
@@ -134,8 +144,22 @@ function collectPageTemplateViolations(files) {
         reason: '标准列表必须通过 urlSync: true 同步已提交筛选、分页和排序状态'
       });
     }
-
     return violations;
+  });
+}
+
+function collectServerListDataViolations(files) {
+  return files.flatMap((file) => {
+    const source = readFileSync(file, 'utf8');
+    const match = /useTemplateListPageData\s*\(\s*\{[\s\S]*?serverPaging\s*:\s*true[\s\S]*?\}\s*\)/.exec(source);
+    if (!match) return [];
+    return [{
+      level: 'BLOCK',
+      file: relative(rootDir, file),
+      line: lineNumber(source, match.index),
+      token: 'useTemplateListPageData',
+      reason: '服务端分页列表必须使用 useTemplateServerListData，统一处理旧数据失效、加载状态和请求乱序'
+    }];
   });
 }
 
@@ -601,10 +625,15 @@ const files = walk(modulesDir).filter((file) => {
   const normalized = relative(modulesDir, file).split('/');
   return !excludedPathParts.includes(normalized[0]);
 });
+const sourceFiles = walkSourceFiles(modulesDir).filter((file) => {
+  const normalized = relative(modulesDir, file).split('/');
+  return !excludedPathParts.includes(normalized[0]);
+});
 
 const blocking = collectMatches(files, blockingRules, 'BLOCK');
 const listTemplateBlocking = collectMatches(files, listTemplateRules, 'BLOCK');
 const pageTemplateBlocking = collectPageTemplateViolations(files);
+const serverListDataBlocking = collectServerListDataViolations(sourceFiles);
 const semanticBlocking = collectSemanticViolations(files);
 const listColumnContractBlocking = collectListColumnContractViolations(files);
 const listCreationColumnBlocking = collectListCreationColumnViolations(files);
@@ -613,13 +642,13 @@ const warnings = collectMatches(files, warningRules, 'WARN');
 
 console.log('组件接入审计');
 console.log(`扫描文件：${files.length}`);
-console.log(`阻断项：${blocking.length + listTemplateBlocking.length + pageTemplateBlocking.length + semanticBlocking.length + listColumnContractBlocking.length + listCreationColumnBlocking.length + listViewTabContractBlocking.length}`);
+console.log(`阻断项：${blocking.length + listTemplateBlocking.length + pageTemplateBlocking.length + serverListDataBlocking.length + semanticBlocking.length + listColumnContractBlocking.length + listCreationColumnBlocking.length + listViewTabContractBlocking.length}`);
 console.log(`提醒项：${warnings.length}`);
 
-for (const item of [...blocking, ...listTemplateBlocking, ...pageTemplateBlocking, ...semanticBlocking, ...listColumnContractBlocking, ...listCreationColumnBlocking, ...listViewTabContractBlocking, ...warnings]) {
+for (const item of [...blocking, ...listTemplateBlocking, ...pageTemplateBlocking, ...serverListDataBlocking, ...semanticBlocking, ...listColumnContractBlocking, ...listCreationColumnBlocking, ...listViewTabContractBlocking, ...warnings]) {
   console.log(`${item.level} ${item.file}:${item.line} ${item.token} ${item.reason}`);
 }
 
-if (strict && (blocking.length > 0 || listTemplateBlocking.length > 0 || pageTemplateBlocking.length > 0 || semanticBlocking.length > 0 || listColumnContractBlocking.length > 0 || listCreationColumnBlocking.length > 0 || listViewTabContractBlocking.length > 0)) {
+if (strict && (blocking.length > 0 || listTemplateBlocking.length > 0 || pageTemplateBlocking.length > 0 || serverListDataBlocking.length > 0 || semanticBlocking.length > 0 || listColumnContractBlocking.length > 0 || listCreationColumnBlocking.length > 0 || listViewTabContractBlocking.length > 0)) {
   process.exitCode = 1;
 }

@@ -53,6 +53,19 @@ test('详情表格关闭列个性化时不启用偏好状态和列宽拖拽', ()
   assert.doesNotMatch(searchTable, /defaultSize=\{customizable \? tableSize : 'small'\}/);
 });
 
+test('详情表格横向滚动时固定首个业务列并为滚动条预留空间', () => {
+  assert.match(component, /firstBusinessColumnIndex/);
+  assert.match(component, /fixed:\s*'left'/);
+  assert.match(component, /has-horizontal-scroll/);
+  assert.match(
+    componentStyles,
+    /has-horizontal-scroll \.ant-table-content[\s\S]*has-horizontal-scroll \.ant-table-body[\s\S]*padding-bottom:\s*16px/
+  );
+  assert.match(workbenchDemo, /scroll:\s*\{ x:\s*1100 \}/);
+  assert.match(developmentRules, /横向滚动时自动固定首个业务列/);
+  assert.match(developmentRules, /滚动条预留底部空间/);
+});
+
 test('组件工作台页面模式详情页展示纯展示、可查看、可管理和空数据状态', () => {
   assert.match(componentExports, /export \* from '\.\/TemplateDetailTableSection'/);
   assert.match(workbenchDemo, /TemplateDetailTableSection/);
