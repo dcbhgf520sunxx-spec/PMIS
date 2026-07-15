@@ -327,6 +327,40 @@ test('组件审计允许列行为完整的标准列表', () => {
   assert.equal(result.status, 0, result.stdout);
 });
 
+test('组件审计阻断服务端分页列表绕过统一异步列表能力', () => {
+  const result = runStrictAudit(
+    `export function CustomerListPage() {
+      const listData = useTemplateListPageData({ rows: [], total: 0, serverPaging: true, urlSync: true });
+      return <TemplateListPage table={{ columns: [], dataSource: listData.pagedRows, pagination: false }} pagination={listData.pagination} />;
+    }`,
+    'CustomerListPage.tsx'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /useTemplateServerListData/);
+});
+
+test('组件审计允许服务端分页列表使用统一异步列表能力', () => {
+  const result = runStrictAudit(
+    `export function CustomerListPage() {
+      const listData = useTemplateServerListData({ queryKey: ['customer', {}], request: async () => ({ list: [], total: 0 }), urlSync: true });
+      return <TemplateListPage table={{ columns: [], dataSource: listData.pagedRows, loading: listData.loading, pagination: false }} pagination={listData.pagination} />;
+    }`,
+    'CustomerListPage.tsx'
+  );
+  assert.doesNotMatch(result.stdout, /useTemplateServerListData/);
+});
+
+test('组件审计阻断数据 Hook 文件绕过统一服务端列表能力', () => {
+  const result = runStrictAudit(
+    `export function useCustomerListData() {
+      return useTemplateListPageData({ rows: [], total: 0, serverPaging: true, urlSync: true });
+    }`,
+    'useCustomerListData.ts'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /useTemplateServerListData/);
+});
+
 test('组件审计阻断标准列表缺少末尾创建字段或字段顺序错误', () => {
   const missing = runStrictAudit(
     `export function CustomerListPage() {

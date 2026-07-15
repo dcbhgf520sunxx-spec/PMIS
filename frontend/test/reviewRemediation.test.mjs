@@ -51,11 +51,15 @@ test('统一门禁自动发现前端测试文件', () => {
   assert.doesNotMatch(gate, /'test\/aiSemanticRules\.test\.mjs'/);
 });
 
-test('工单列表提供错误状态和重试且移除冗余返回值', () => {
+test('工单列表通过统一服务端列表能力提供加载、错误和重试状态', () => {
   const page = read('../src/modules/work-order/pages/WorkOrderListPage.tsx');
   const hook = read('../src/modules/work-order/pages/useWorkOrderListData.ts');
   assert.match(page, /error=\{error\}/);
   assert.match(page, /onRetry=\{reload\}/);
+  assert.match(page, /loading:\s*listData\.loading/);
   assert.doesNotMatch(page, /\bworkOrders,|\bserverTotal,/);
-  assert.match(hook, /setError/);
+  assert.match(hook, /useTemplateServerListData/);
+  assert.match(hook, /error:\s*listData\.error/);
+  assert.match(hook, /reload:\s*listData\.reload/);
+  assert.doesNotMatch(hook, /setError|setWorkOrders|setServerTotal/);
 });

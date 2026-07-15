@@ -190,6 +190,7 @@ export function WorkOrderListPage() {
         table={{
           columns,
           dataSource: listData.pagedRows,
+          loading: listData.loading,
           pagination: false,
           search: false,
           rowSelection: {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
 import {
   ActionBar,
@@ -15,7 +15,7 @@ import {
   TemplateListPage,
   useCommittedFilters,
   usePageReturnNavigation,
-  useTemplateListPageData
+  useTemplateServerListData
 } from '../../../components/admin';
 import { deleteRole, getRoleList, type RoleRecord } from '../../../api/roleApi';
 
@@ -40,36 +40,29 @@ const roleSorters = createListSorters<RoleRecord>({
 
 export function RoleListPage() {
   const { navigateWithReturn } = usePageReturnNavigation('/roles');
-  const [rows, setRows] = useState<RoleRecord[]>([]);
-  const [serverTotal, setServerTotal] = useState(0);
   const { draftFilters, appliedFilters, revision: filterRevision, setDraftFilters, commitFilters, resetFilters } = useCommittedFilters(defaultFilters, { urlSync: true });
 
   const {
-    currentPage,
-    pageSize,
     pagedRows,
     sortState,
-    total,
     pagination,
     handleTableChange,
-    renderIndex
-  } = useTemplateListPageData({ rows, sorters: roleSorters, resetOn: [filterRevision], total: serverTotal, serverPaging: true, urlSync: true });
-
-  const loadRows = async () => {
-    const result = await getRoleList({
+    renderIndex,
+    loading,
+    error,
+    reload
+  } = useTemplateServerListData({
+    queryKey: ['roles', appliedFilters, filterRevision],
+    request: ({ current, pageSize, sortField, sortOrder }) => getRoleList({
       ...appliedFilters,
-      current: currentPage,
+      current,
       pageSize,
-      sortField: sortState.field,
-      sortOrder: sortState.order || undefined
-    });
-    setRows(result.list);
-    setServerTotal(result.total);
-  };
-
-  useEffect(() => {
-    loadRows();
-  }, [appliedFilters, currentPage, pageSize, sortState.field, sortState.order]);
+      sortField,
+      sortOrder
+    }),
+    sorters: roleSorters,
+    urlSync: true
+  });
 
   const filterItems = createListFilterItems([
     {
@@ -181,7 +174,7 @@ export function RoleListPage() {
             targetName={record.name}
             onConfirm={async () => {
               await deleteRole(record.id);
-              await loadRows();
+              await reload();
             }}
           >
             删除
@@ -193,6 +186,8 @@ export function RoleListPage() {
 
   return (
     <TemplateListPage<RoleRecord>
+      error={error}
+      onRetry={reload}
       title="角色管理"
       actions={
         <ActionBar>
@@ -216,6 +211,7 @@ export function RoleListPage() {
       table={{
         columns,
         dataSource: pagedRows,
+        loading,
         pagination: false,
         search: false,
         onChange: handleTableChange,
