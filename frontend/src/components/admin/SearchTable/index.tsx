@@ -1,10 +1,11 @@
 import type { ProColumns, ProTableProps } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { SettingOutlined, UndoOutlined } from '@ant-design/icons';
-import { Button, Popover, Space, Tooltip } from 'antd';
+import { SettingOutlined, TableOutlined, UndoOutlined } from '@ant-design/icons';
+import { Popover, Space } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../../stores/authStore';
+import { AdminIconAction } from '../AdminIconAction';
 import './index.css';
 import { enforceFixedColumnState, type ColumnStateEntry } from './columnState';
 
@@ -295,7 +296,12 @@ export function SearchTable<
       className={['admin-search-table', className].filter(Boolean).join(' ')}
       columns={adjustedColumns}
       search={{ labelWidth: 88, defaultCollapsed: true }}
-      options={{ density: true, fullScreen: true, reload: false, setting: true }}
+      options={{
+        density: true,
+        fullScreen: true,
+        reload: false,
+        setting: { settingIcon: <TableOutlined /> }
+      }}
       optionsRender={(_, defaultDoms) => [
         <Popover
           key="table-settings"
@@ -303,17 +309,13 @@ export function SearchTable<
           placement="bottomRight"
           content={(
             <Space size={10} className="admin-table-settings-popover">
-              <Tooltip title="重置列宽">
-                <Button
-                  aria-label="重置列宽"
-                  className="admin-table-settings-popover__reset"
-                  disabled={!hasCustomColumnWidths}
-                  icon={<UndoOutlined />}
-                  size="small"
-                  type="text"
-                  onClick={() => handleColumnWidthsChange({})}
-                />
-              </Tooltip>
+              <AdminIconAction
+                className="admin-table-settings-popover__reset"
+                disabled={!hasCustomColumnWidths}
+                icon={<UndoOutlined />}
+                label="重置列宽"
+                onClick={() => handleColumnWidthsChange({})}
+              />
               {defaultDoms.map((item, index) => (
                 <span className="admin-table-settings-popover__item" key={index}>
                   {item}
@@ -322,7 +324,11 @@ export function SearchTable<
             </Space>
           )}
         >
-          <Button aria-label="表格设置" className="admin-table-settings-trigger" icon={<SettingOutlined />} type="text" />
+          <AdminIconAction
+            className="admin-table-settings-trigger"
+            icon={<SettingOutlined />}
+            label="表格设置"
+          />
         </Popover>
       ]}
       locale={{ emptyText: '暂无数据', ...locale }}
