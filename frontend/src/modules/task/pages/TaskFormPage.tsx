@@ -71,7 +71,7 @@ export function TaskFormPage({ mode }: { mode: Mode }) {
           expectedEndTime: row.expectedEndTime || undefined
         });
       } else {
-        setInitial({ sourceType: 1, priority: 1 });
+        setInitial({ sourceType: 1 });
       }
     }).catch((loadError) => {
       if (cancelled) return;
