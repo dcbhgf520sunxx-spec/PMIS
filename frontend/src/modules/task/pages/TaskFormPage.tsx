@@ -119,7 +119,7 @@ export function TaskFormPage({ mode }: { mode: Mode }) {
       <div className="admin-template-form-page__grid">
         <AdminProFormText name="name" label="任务名称" rules={nameRules} fieldProps={{ maxLength: 200 }} formItemProps={{ className: 'admin-template-form-page__field is-full' }} />
         <AdminProFormRichDescription name="description" label="任务描述" className="admin-template-form-page__field is-full" />
-        {subtaskMode || sourceTask?.parentTaskId ? <AdminProFormText name="parentTaskName" label="所属主任务" fieldProps={{ disabled: subtaskMode || Boolean(sourceTask?.parentTaskId) }} /> : null}
+        {subtaskMode || sourceTask?.parentTaskId ? <AdminProFormText name="parentTaskName" label="所属主任务" disabled={subtaskMode || Boolean(sourceTask?.parentTaskId)} /> : null}
         <AdminProFormSelect name="sourceType" label="关联类型" options={[{ label: '项目', value: 1 }, { label: '需求', value: 2 }]} rules={[{ required: true, message: '请选择关联类型' }]} fieldProps={{ disabled: associationLocked }} />
         {sourceType === 2
           ? <AdminProFormSelect name="requirementId" label="关联需求" options={requirements} rules={[{ required: true, message: '请选择关联需求' }]} fieldProps={{ disabled: associationLocked }} />
