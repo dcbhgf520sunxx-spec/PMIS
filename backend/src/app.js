@@ -43,11 +43,13 @@ app.get('/api/health', async (req, res) => {
   }
 })
 
-// 需要登录的接口
+// 所有登录用户共用的下拉选项和个人消息接口，不对应独立菜单权限。
 app.get('/api/user-options', verifyToken, userController.options)
 app.get('/api/role-options', verifyToken, roleController.options)
 app.get('/api/archive-options/by-type-name', verifyToken, archiveController.getByTypeName)
 app.use('/api/messages', verifyToken, messageRoutes)
+
+// 业务接口必须先验证登录，再检查对应功能权限。
 app.use('/api/users', verifyToken, checkPermission('/users'), userRoutes)
 app.use('/api/roles', verifyToken, checkPermission('/roles'), roleRoutes)
 // 菜单列表用于角色授权配置，复用“角色管理”页面权限，不单独暴露菜单管理入口。

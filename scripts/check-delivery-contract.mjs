@@ -1,6 +1,14 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+const PUBLIC_API_PATHS = new Set(['/api/auth', '/api/health']);
+const AUTHENTICATED_ONLY_API_PATHS = new Set([
+  '/api/user-options',
+  '/api/role-options',
+  '/api/archive-options/by-type-name',
+  '/api/messages'
+]);
+
 function read(rootDir, file) {
   const path = join(rootDir, file);
   return existsSync(path) ? readFileSync(path, 'utf8') : '';
@@ -23,6 +31,9 @@ export function checkDeliveryContract(rootDir, { changedFiles = [], changedRoute
 
   if (!flow) errors.push('缺少 docs/ai-delivery-flow.md');
   if (!agents.includes('docs/ai-delivery-flow.md')) errors.push('AGENTS.md 未声明 AI 交付流程入口');
+  if (!flow.includes('业务接口必须同时挂载 `verifyToken` 和 `checkPermission`')) {
+    errors.push('AI 交付流程未声明业务接口双重鉴权规则');
+  }
   if (!deployReadme.includes('PostgreSQL')) errors.push('部署说明未声明 PostgreSQL');
   if (/^\s*[-*]?\s*MySQL\s*(?:>=|\d)/mi.test(deployReadme) || /mysql\s+-u\s+/i.test(deployReadme)) {
     errors.push('部署说明仍包含过期的 MySQL 配置');
@@ -45,6 +56,28 @@ export function checkDeliveryContract(rootDir, { changedFiles = [], changedRoute
   }
   for (const permission of permissionPaths) {
     if (!schemaPaths.has(permission)) errors.push(`权限路径 ${permission} 未配置 pms_menu.path`);
+  }
+  const apiMountPattern = /app\.(?:use|get|post|put|patch|delete|all|head|options|route)\(\s*['"]([^'"]+)['"]/g;
+  for (const apiMount of app.matchAll(apiMountPattern)) {
+    const apiPath = apiMount[1];
+    if (!(apiPath === '/api' || apiPath.startsWith('/api/')) || PUBLIC_API_PATHS.has(apiPath)) continue;
+
+    const lineEnd = app.indexOf('\n', apiMount.index);
+    const line = app.slice(apiMount.index, lineEnd === -1 ? app.length : lineEnd);
+
+    const verifyIndex = line.indexOf('verifyToken');
+    if (verifyIndex === -1) {
+      errors.push(`业务接口 ${apiPath} 缺少 verifyToken`);
+      continue;
+    }
+    if (AUTHENTICATED_ONLY_API_PATHS.has(apiPath)) continue;
+
+    const permissionIndex = line.indexOf('checkPermission(');
+    if (permissionIndex === -1) {
+      errors.push(`业务接口 ${apiPath} 缺少 checkPermission`);
+    } else if (verifyIndex > permissionIndex) {
+      errors.push(`业务接口 ${apiPath} 的 verifyToken 必须在 checkPermission 之前`);
+    }
   }
   if (existsSync(routeDirectory)) {
     for (const file of readdirSync(routeDirectory).filter((name) => name.endsWith('.js'))) {
