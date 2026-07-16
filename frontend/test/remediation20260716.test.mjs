@@ -54,6 +54,22 @@ test('关键登录流程接入独立数据库的浏览器自动验收', () => {
   assert.match(workflow, /npm run test:e2e/);
 });
 
+test('远程门禁不为同一修复提交重复运行并取消过期检查', () => {
+  const workflow = read('../../.github/workflows/verify.yml');
+
+  assert.match(workflow, /push:\s*\n\s+branches:\s*\[master\]/);
+  assert.match(workflow, /pull_request:\s*\n\s+branches:\s*\[master\]/);
+  assert.match(workflow, /concurrency:\s*\n\s+group:\s*verify-/);
+  assert.match(workflow, /cancel-in-progress:\s*true/);
+});
+
+test('AI 交付流程说明远程门禁的唯一触发时机', () => {
+  const flow = read('../../docs/ai-delivery-flow.md');
+
+  assert.match(flow, /修复分支只在合并请求创建或更新时运行远程门禁/);
+  assert.match(flow, /合入 `master` 后再运行一次/);
+});
+
 test('生产构建产物有可重复执行的体积预算', () => {
   const scriptUrl = new URL('../scripts/check-build-budget.mjs', import.meta.url);
   assert.equal(existsSync(scriptUrl), true);
