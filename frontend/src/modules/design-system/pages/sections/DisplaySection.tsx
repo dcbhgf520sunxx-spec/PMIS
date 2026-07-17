@@ -224,7 +224,7 @@ export function DisplaySection() {
                   <div className="design-system-page__input-panel-head">
                     <h3>详情信息</h3>
                     <ComponentEntry name="DetailMetaList" />
-                    <p>用于单条记录字段阅读。字段名完整，字段值对齐，普通文本字段不使用标签样式。</p>
+                    <p>用于单条记录字段阅读。聚合字段最多显示两行，超出省略，悬浮查看完整内容。</p>
                   </div>
                   <DetailMetaList
                     columns={4}
@@ -236,6 +236,7 @@ export function DisplaySection() {
                       { label: '跟进人', value: '管理员' },
                       { label: '提出人', value: '张三' },
                       { label: '提出组织', value: '运维部' },
+                      { label: '协作角色', value: '系统管理员、业务管理员、运维管理员、审计管理员、数据管理员、安全管理员、项目管理员、需求管理员、任务管理员、质量管理员', aggregate: true },
                       { label: '提出时间', value: '2026-06-01 09:30' },
                       { label: '预计完成时间', value: '2026-06-01' }
                     ]}

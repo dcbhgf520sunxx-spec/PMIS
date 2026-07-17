@@ -122,6 +122,7 @@ API 接入保持统一：
 - 返回列表通过 `TemplateDetailPage.onBack` 传入，业务页不重复创建“返回列表”按钮和操作栏外壳。
 - 接口失败或记录不存在时，通过模板的 `error`、`notFound`、`onRetry` 展示统一状态，不能无限显示加载中。
 - 基础信息、单据信息、历史记录等使用详情分组和 `DetailMetaList`；使用 `HistoryTimeline` 的详情分组统一命名为“变更历史”，不得继续使用“操作历史”“操作记录”等旧名称。
+- 角色、权限、人员、区域等聚合字段通过 `DetailMetaList` 的 `aggregate` 声明，原内容最多显示两行，超出显示省略号并悬浮展示完整内容；不显示数量，不提供展开/收起，业务页面不得自行实现另一套截断和提示逻辑。
 - 详情页中的子任务、明细和关联记录等结构化数据统一使用 `TemplateDetailTableSection`，不得在 `TemplateDetailSection` 中直接放置 `SearchTable`、原生表格或复用 `TemplateListPage embedded`，也不得通过业务包装组件绕过；严格组件审计必须阻断这些直接和间接调用。组件默认只做纯数据展示，不自动增加详情链接和操作列；需要查看或管理时，由业务列显式声明 `DetailLinkCell` 和 `OperationColumnActions`。传入 `table.scroll.x` 后，组件在横向滚动时自动固定首个业务列，并为滚动条预留底部空间，业务页不重复设置相关样式。筛选、批量操作或复杂分页较多时，应进入独立列表页或 `TemplateDrawerTable`，不能把完整列表页工具栏塞进详情分组。
 - `TemplateDetailSection.inlineExtra` 只承接标题后的统计或轻量上下文，右侧主要业务动作通过 `extra` 传入；`TemplateDetailTableSection.summary` 和 `extra` 分别承接关联数据摘要与新增等操作。
 - 详情页变更历史统一使用 `HistoryTimelineSection`，由它把“全部展开/全部收起”紧跟在“变更历史”标题之后并承接单条展开；业务页面不得使用 `TemplateDetailSection + HistoryTimeline` 拼装，不得维护 `expandedKeys`、`onExpandedKeysChange` 或通过 `inlineExtra` 重复实现。

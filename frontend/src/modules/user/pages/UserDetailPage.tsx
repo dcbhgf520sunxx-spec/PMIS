@@ -91,7 +91,7 @@ export function UserDetailPage() {
               { label: '工号', value: user.employeeNo },
               { label: '姓名', value: user.realName || '-' },
               { label: '手机号', value: user.phone || '-' },
-              { label: '所属角色', value: user.roleName || '-' }
+              { label: '所属角色', value: user.roleName || '-', aggregate: true }
             ]}
           />
         </TemplateDetailSection>

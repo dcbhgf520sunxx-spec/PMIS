@@ -143,7 +143,7 @@ export function DetailTemplateDemo() {
                 { label: '工号', value: '10086' },
                 { label: '姓名', value: '张三' },
                 { label: '手机号', value: '13800000000' },
-                { label: '所属角色', value: '系统管理员 / 业务管理员' }
+                { label: '所属角色', value: '系统管理员 / 业务管理员 / 运维管理员 / 数据管理员 / 审计管理员 / 安全管理员', aggregate: true }
               ]}
             />
           </TemplateDetailSection>
@@ -161,7 +161,7 @@ export function DetailTemplateDemo() {
           <TemplateDetailSection title="权限范围" sectionKey="permissions">
             <DetailMetaList
               items={[
-                { label: '管理范围', value: '用户、角色、运维工单', wide: true },
+                { label: '管理范围', value: '用户、角色、运维工单、基础档案、访问日志、组件工作台、页面样板、基础组件、输入组件、反馈组件、数据展示', wide: true, aggregate: true },
                 { label: '数据权限', value: '本部门及下级部门' },
                 { label: '账号来源', value: 'HR 同步' }
               ]}

@@ -48,6 +48,14 @@
   white-space: normal;
 }
 
+.admin-detail-meta-list__item dd.is-aggregate {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 @media (max-width: 1180px) {
   .admin-detail-meta-list.is-columns-4,
   .admin-detail-meta-list.is-columns-3 {
