@@ -138,6 +138,7 @@ export const routes: RouteObject[] = [
       { path: 'projects/:id', element: withRouteSuspense(<ProjectDetailPage />) },
       { path: 'requirements', element: withRouteSuspense(<RequirementListPage />) },
       { path: 'requirements/new', element: withRouteSuspense(<RequirementFormPage mode="create" />) },
+      { path: 'requirements/:id/copy', element: withRouteSuspense(<RequirementFormPage mode="copy" />) },
       { path: 'requirements/:id/edit', element: withRouteSuspense(<RequirementFormPage mode="edit" />) },
       { path: 'requirements/:id', element: withRouteSuspense(<RequirementDetailPage />) },
       { path: 'tasks', element: withRouteSuspense(<TaskListPage />) },

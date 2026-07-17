@@ -29,7 +29,7 @@
 - Consumes: `getRequirement(id)`、`createRequirement(values)`、`usePageReturnNavigation('/requirements')`
 - Produces: `/requirements/:id/copy` 路由和 `RequirementFormPage` 的 `mode: 'copy'`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```js
 test('需求列表复制动作进入复制表单并创建新需求', () => {
@@ -41,23 +41,23 @@ test('需求列表复制动作进入复制表单并创建新需求', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test frontend/test/requirementPageStructure.test.mjs`
 
 Expected: FAIL because the copy route and form mode do not exist.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Add the copy action after status change, register the copy route, load source data whenever the mode is not `create`, show title “复制需求”, and call `createRequirement` for both `create` and `copy` modes.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `node --test frontend/test/requirementPageStructure.test.mjs`
 
 Expected: all requirement structure tests PASS.
 
-- [ ] **Step 5: Verify delivery gates and browser flow**
+- [x] **Step 5: Verify delivery gates and browser flow**
 
 Run: `node scripts/verify-change.mjs`
 
