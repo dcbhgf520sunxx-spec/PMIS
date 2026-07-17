@@ -22,12 +22,16 @@ test('完成和暂停要求对应时间', () => {
   assert.equal(validateTaskStatusChange(2, { actual_end_date: '2026-07-13' }), null)
 })
 
-test('状态字段按目标状态更新', () => {
-  assert.deepEqual(resolveTaskStatusFields({ actual_end_date: '2026-01-01', suspend_date: null }, 3, { suspend_date: '2026-07-13' }), {
+test('暂停任务恢复时按目标状态清理时间字段', () => {
+  assert.deepEqual(resolveTaskStatusFields({ status: 2, actual_end_date: '2026-01-01', suspend_date: null }, 3, { suspend_date: '2026-07-13' }), {
     actualEndDate: '2026-01-01', suspendDate: '2026-07-13'
   })
-  assert.deepEqual(resolveTaskStatusFields({ actual_end_date: null, suspend_date: '2026-07-13' }, 1, {}), {
+  const paused = { status: 3, actual_end_date: '2026-01-01', suspend_date: '2026-07-13' }
+  assert.deepEqual(resolveTaskStatusFields(paused, 1, {}), {
     actualEndDate: null, suspendDate: null
+  })
+  assert.deepEqual(resolveTaskStatusFields(paused, 2, { actual_end_date: '2026-07-14' }), {
+    actualEndDate: '2026-07-14', suspendDate: null
   })
 })
 

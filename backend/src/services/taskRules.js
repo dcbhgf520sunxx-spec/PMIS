@@ -12,7 +12,11 @@ function validateTaskStatusChange(target, body = {}) {
 function resolveTaskStatusFields(old, target, body = {}) {
   const status = Number(target)
   return {
-    actualEndDate: status === 2 ? body.actual_end_date : old.actual_end_date || null,
+    actualEndDate: status === 2
+      ? body.actual_end_date
+      : Number(old.status) === 2 && status === 3
+        ? old.actual_end_date || null
+        : null,
     suspendDate: status === 3 ? body.suspend_date : null,
   }
 }
