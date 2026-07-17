@@ -11,6 +11,7 @@ import {
   ThunderboltOutlined,
   UserOutlined
 } from '@ant-design/icons';
+import { logoutAccessSession } from '../../../api/accessLogApi';
 import { derivePermissions, getUserPreference, login } from '../../../api/authApi';
 import { PasswordChangeModal } from '../../account/components/PasswordChangeModal';
 import { useAuthStore } from '../../../stores/authStore';
@@ -33,6 +34,8 @@ export function LoginPage() {
   const setPreference = useAuthStore((state) => state.setPreference);
   const mustChangePassword = useAuthStore((state) => state.mustChangePassword);
   const setMustChangePassword = useAuthStore((state) => state.setMustChangePassword);
+  const accessSessionId = useAuthStore((state) => state.accessSessionId);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
   const [focusedField, setFocusedField] = useState<FocusedField>(null);
@@ -45,6 +48,14 @@ export function LoginPage() {
     setPreference(preference);
     message.success('登录成功');
     navigate(preference.default_route || '/home', { replace: true });
+  };
+
+  const handleForcedPasswordExit = () => {
+    const logoutPromise = logoutAccessSession(accessSessionId).catch(() => undefined);
+    clearAuth();
+    setAccount('');
+    setPassword('');
+    void logoutPromise;
   };
 
   const createRipple = (event: MouseEvent<HTMLElement>) => {
@@ -217,6 +228,7 @@ export function LoginPage() {
       <PasswordChangeModal
         open={mustChangePassword}
         forced
+        onForcedExit={handleForcedPasswordExit}
         onSuccess={() => {
           setMustChangePassword(false);
           void enterPreferredPage();

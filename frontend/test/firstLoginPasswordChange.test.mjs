@@ -21,3 +21,12 @@ test('首次登录改密弹窗不能被关闭或绕过', () => {
   assert.match(passwordModal, /keyboard=\{!forced\}/);
   assert.match(passwordModal, /changeCurrentPassword/);
 });
+
+test('首次登录改密弹窗允许退出当前登录后切换账号', () => {
+  assert.match(passwordModal, /onForcedExit\?: \(\) => void/);
+  assert.match(passwordModal, /cancelText=\{forced \? '退出登录' : '取消'\}/);
+  assert.match(passwordModal, /if \(forced\) \{[\s\S]*onForcedExit\?\.\(\)/);
+  assert.match(loginPage, /logoutAccessSession\(accessSessionId\)/);
+  assert.match(loginPage, /clearAuth\(\)/);
+  assert.match(loginPage, /<PasswordChangeModal[\s\S]*onForcedExit=/);
+});

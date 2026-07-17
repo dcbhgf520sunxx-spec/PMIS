@@ -14,6 +14,7 @@ type PasswordChangeModalProps = {
   open: boolean;
   forced?: boolean;
   onCancel?: () => void;
+  onForcedExit?: () => void;
   onSuccess?: () => void;
 };
 
@@ -21,6 +22,7 @@ export function PasswordChangeModal({
   open,
   forced = false,
   onCancel,
+  onForcedExit,
   onSuccess
 }: PasswordChangeModalProps) {
   const { message } = App.useApp();
@@ -32,7 +34,11 @@ export function PasswordChangeModal({
   }, [form, open]);
 
   const handleCancel = () => {
-    if (forced) return;
+    if (forced) {
+      form.resetFields();
+      onForcedExit?.();
+      return;
+    }
     form.resetFields();
     onCancel?.();
   };
@@ -63,7 +69,7 @@ export function PasswordChangeModal({
       closable={!forced}
       maskClosable={!forced}
       keyboard={!forced}
-      cancelButtonProps={forced ? { style: { display: 'none' } } : undefined}
+      cancelText={forced ? '退出登录' : '取消'}
       confirmLoading={saving}
       okText={forced ? '确认修改并进入系统' : '确认'}
       onCancel={handleCancel}
