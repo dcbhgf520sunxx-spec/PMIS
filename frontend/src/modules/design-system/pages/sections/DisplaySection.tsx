@@ -224,12 +224,12 @@ export function DisplaySection() {
                   <div className="design-system-page__input-panel-head">
                     <h3>详情信息</h3>
                     <ComponentEntry name="DetailMetaList" />
-                    <p>用于单条记录字段阅读。聚合字段最多显示两行，超出省略，悬浮查看完整内容。</p>
+                    <p>用于单条记录字段阅读。普通文本字段最多显示两行，超出省略，悬浮查看完整内容；长文本和富文本完整展示。</p>
                   </div>
                   <DetailMetaList
                     columns={4}
                     items={[
-                      { label: '问题描述', value: '生产环境登录偶发超时，需要排查认证链路和网关日志', wide: true },
+                      { label: '问题描述', value: '生产环境登录偶发超时，需要排查认证链路和网关日志', wide: true, longText: true },
                       { label: '工单编号', value: 'RQ-20260630-001' },
                       { label: '所属系统', value: '生产环境登录系统' },
                       { label: '问题类型', value: '日常操作' },

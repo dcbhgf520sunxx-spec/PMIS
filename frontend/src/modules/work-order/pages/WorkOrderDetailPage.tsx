@@ -176,7 +176,7 @@ export function WorkOrderDetailPage() {
                 { label: '预计完成时间', value: detail.expectedResolveDate },
                 { label: '实际修复时间', value: detail.resolveDate || '-' },
                 { label: '关闭时间', value: detail.closeDate || '-' },
-                { label: '处置结果', value: detail.resultDesc || '-', wide: true }
+                { label: '处置结果', value: detail.resultDesc || '-', wide: true, longText: true }
               ]}
             />
           </TemplateDetailSection>
