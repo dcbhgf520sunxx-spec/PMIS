@@ -30,7 +30,7 @@ exports.create = async (req, res) => {
     const { code_prefix, name } = req.body
     const operatorId = req.user.id
     // Auto-generate code: 3-digit sequence based on active records only
-    const maxSeq = await db.prepare("SELECT MAX(CAST(code AS INTEGER)) as max_seq FROM pms_archive_type WHERE is_deleted = 0").get()
+    const maxSeq = await db.prepare("SELECT MAX(CAST(code AS INTEGER)) as max_seq FROM pms_archive_type WHERE is_deleted = 0 AND code ~ '^[0-9]+$'").get()
     const nextSeq = (maxSeq?.max_seq || 0) + 1
     const code = String(nextSeq).padStart(3, '0')
 

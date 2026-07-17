@@ -70,6 +70,15 @@ test('软删除后角色和档案类型编码可复用且工单关联有外键',
   assert.doesNotMatch(roleTable, /code VARCHAR\(50\) NOT NULL UNIQUE/)
 })
 
+test('新增档案类型生成序号时忽略业务英文编码', () => {
+  const archiveTypes = read('backend/src/controllers/archiveTypeController.js')
+
+  assert.match(
+    archiveTypes,
+    /SELECT MAX\(CAST\(code AS INTEGER\)\)[^\n]*WHERE is_deleted = 0 AND code ~ '\^\[0-9\]\+\$'/
+  )
+})
+
 test('工单后端校验固定选项、启用跟进人和严格状态顺序', () => {
   const workOrders = read('backend/src/controllers/workOrderController.js')
   assert.match(workOrders, /validateActiveProduct\(product_id\)/)
