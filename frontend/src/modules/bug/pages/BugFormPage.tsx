@@ -38,7 +38,7 @@ export function BugFormPage({ mode }: { mode: Mode }) {
       }).catch((cause) => {
         if (cancelled) return;
         const text = cause instanceof Error ? cause.message : '加载失败';
-        text.includes('不存在') ? setNotFound(true) : setError(text);
+        if (text.includes('不存在')) setNotFound(true); else setError(text);
       }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [mode, params.id, revision]);
@@ -50,7 +50,7 @@ export function BugFormPage({ mode }: { mode: Mode }) {
     formId="bug-form" form={form} initialValues={initial} loading={loading} error={error} notFound={notFound}
     onRetry={() => setRevision((value) => value + 1)} onCancel={returnToSource}
     fieldNameMap={{ source_type: 'sourceType', project_id: 'projectId', requirement_id: 'requirementId', bug_type_id: 'bugTypeId', assignee_id: 'assigneeId' }}
-    onSubmit={async (values) => { mode === 'edit' && params.id ? await updateBug(params.id, values) : await createBug(values); message.success(mode === 'edit' ? '保存成功' : '新增成功'); returnToSource(); }}
+    onSubmit={async (values) => { if (mode === 'edit' && params.id) await updateBug(params.id, values); else await createBug(values); message.success(mode === 'edit' ? '保存成功' : '新增成功'); returnToSource(); }}
   >
     <TemplateFormSection title="基本信息"><div className="admin-template-form-page__grid">
       <AdminProFormText name="title" label="Bug标题" rules={titleRules} fieldProps={{ maxLength: 200 }} formItemProps={{ className: 'admin-template-form-page__field is-full' }} />

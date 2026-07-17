@@ -61,8 +61,11 @@ export function useListPageData<T extends Record<string, unknown>>({
 }: UseListPageDataOptions<T>) {
   const location = useLocation();
   const navigate = useNavigate();
-  const initialRouteState = () => decodeListRouteState(location.search, { pageSize: defaultPageSize });
-  const initial = initialRouteState();
+  const readRouteState = useCallback(
+    () => decodeListRouteState(location.search, { pageSize: defaultPageSize }),
+    [defaultPageSize, location.search]
+  );
+  const initial = readRouteState();
   const [currentPage, setCurrentPageState] = useState(urlSync ? initial.page : 1);
   const [pageSize, setPageSizeState] = useState(urlSync ? initial.pageSize : defaultPageSize);
   const [sortState, setSortStateState] = useState<SortState>(urlSync ? {
@@ -100,11 +103,11 @@ export function useListPageData<T extends Record<string, unknown>>({
 
   useEffect(() => {
     if (!urlSync) return;
-    const route = initialRouteState();
+    const route = readRouteState();
     setCurrentPageState(route.page);
     setPageSizeState(route.pageSize);
     setSortStateState({ field: route.sortField, order: route.sortOrder });
-  }, [location.search, urlSync]);
+  }, [readRouteState, urlSync]);
 
   const sortedRows = useMemo(() => {
     if (serverPaging) return rows;
@@ -125,7 +128,7 @@ export function useListPageData<T extends Record<string, unknown>>({
     if (currentPage > maxPage) {
       setCurrentPage(maxPage);
     }
-  }, [currentPage, pageSize, rows.length, serverPaging, sortedRows.length, total]);
+  }, [currentPage, pageSize, rows.length, serverPaging, setCurrentPage, sortedRows.length, total]);
 
   const resetKey = JSON.stringify(resetOn);
 
@@ -135,7 +138,7 @@ export function useListPageData<T extends Record<string, unknown>>({
       return;
     }
     setCurrentPage(1);
-  }, [resetKey]);
+  }, [resetKey, setCurrentPage]);
 
   const pagedRows = useMemo(() => {
     const start = (currentPage - 1) * pageSize;

@@ -8,15 +8,9 @@ test('工单详情邻居与列表使用相同的升序口径', async () => {
   let neighborListSql = ''
 
   db.prepare = (sql) => {
-    if (sql.startsWith('SELECT created_at, id FROM pms_work_order')) {
-      return { get: async () => ({ id: 2, created_at: '2026-07-11 10:00:00' }) }
-    }
-    if (sql.startsWith('SELECT id FROM pms_work_order w WHERE w.id = ?')) {
-      return { get: async () => ({ id: 2 }) }
-    }
-    if (sql.includes('FROM pms_work_order w') && sql.includes('ORDER BY')) {
+    if (sql.includes('WITH ordered AS') && sql.includes('ORDER BY')) {
       neighborListSql = sql
-      return { all: async () => [{ id: 1 }, { id: 2 }, { id: 3 }] }
+      return { get: async () => ({ prev_id: 1, next_id: 3, total: '3', ordinal: '2' }) }
     }
     throw new Error(`Unexpected SQL: ${sql}`)
   }

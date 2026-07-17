@@ -57,6 +57,7 @@ function toUserSortField(field?: string) {
     employeeNo: 'employee_no',
     realName: 'real_name',
     phone: 'phone',
+    roleName: 'roles',
     status: 'status',
     creatorName: 'creator_name',
     createdAt: 'created_at'

@@ -44,45 +44,46 @@ export function useTemplateServerListData<T extends Record<string, unknown>, M =
     serverPaging: true,
     urlSync
   });
+  const { currentPage, pageSize, setCurrentPage, sortState } = listData;
   const pendingQueryReset = queryContextChanged || pendingQueryContextRef.current === queryContextSignature;
-  const requestPage = pendingQueryReset ? 1 : listData.currentPage;
+  const requestPage = pendingQueryReset ? 1 : currentPage;
   const serverQueryKey = useMemo(() => [
     'template-server-list',
     ...queryKey,
     requestPage,
-    listData.pageSize,
-    listData.sortState.field,
-    listData.sortState.order
-  ], [queryKey, requestPage, listData.pageSize, listData.sortState.field, listData.sortState.order]);
+    pageSize,
+    sortState.field,
+    sortState.order
+  ], [queryKey, requestPage, pageSize, sortState.field, sortState.order]);
   const query = useQuery({
     queryKey: serverQueryKey,
     queryFn: () => request({
       current: requestPage,
-      pageSize: listData.pageSize,
-      sortField: listData.sortState.field,
-      sortOrder: listData.sortState.order
+      pageSize,
+      sortField: sortState.field,
+      sortOrder: sortState.order
     })
   });
   useEffect(() => {
     if (queryContextChanged) {
       previousQueryContextRef.current = queryContextSignature;
-      pendingQueryContextRef.current = listData.currentPage === 1 ? undefined : queryContextSignature;
-      if (!urlSync && listData.currentPage !== 1) listData.setCurrentPage(1);
+      pendingQueryContextRef.current = currentPage === 1 ? undefined : queryContextSignature;
+      if (currentPage !== 1) setCurrentPage(1);
       return;
     }
-    if (pendingQueryContextRef.current === queryContextSignature && listData.currentPage === 1) {
+    if (pendingQueryContextRef.current === queryContextSignature && currentPage === 1) {
       pendingQueryContextRef.current = undefined;
     }
-  }, [listData.currentPage, listData.setCurrentPage, queryContextChanged, queryContextSignature, urlSync]);
+  }, [currentPage, queryContextChanged, queryContextSignature, setCurrentPage]);
 
   const rows = query.data?.list ?? [];
   const total = query.data?.total ?? 0;
 
   useEffect(() => {
     if (!query.data) return;
-    const maxPage = Math.max(1, Math.ceil(total / listData.pageSize));
-    if (requestPage > maxPage) listData.setCurrentPage(maxPage);
-  }, [listData.pageSize, listData.setCurrentPage, query.data, requestPage, total]);
+    const maxPage = Math.max(1, Math.ceil(total / pageSize));
+    if (requestPage > maxPage) setCurrentPage(maxPage);
+  }, [pageSize, query.data, requestPage, setCurrentPage, total]);
 
   return {
     ...listData,

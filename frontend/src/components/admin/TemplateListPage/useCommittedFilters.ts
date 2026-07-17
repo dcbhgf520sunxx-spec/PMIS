@@ -52,9 +52,9 @@ export function useCommittedFilters<T extends Record<string, unknown>>(
   }, [draftFilters, syncUrl]);
 
   const resetFilters = useCallback(() => {
-    const nextFilters = cloneFilters(defaultFilters);
+    const nextFilters = cloneFilters(defaultsRef.current);
     setDraftFilters(nextFilters);
-    setAppliedFilters(cloneFilters(defaultFilters));
+    setAppliedFilters(cloneFilters(nextFilters));
     setRevision((value) => value + 1);
     syncUrl(nextFilters);
   }, [syncUrl]);

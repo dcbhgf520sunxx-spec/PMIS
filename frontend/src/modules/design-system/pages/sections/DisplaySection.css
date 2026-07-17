@@ -1,0 +1,102 @@
+.design-system-page__display-table {
+  min-width: 0;
+}
+
+.design-system-page__display-table-footer-demo {
+  overflow: hidden;
+  border-top: 1px solid rgba(220, 232, 247, 0.72);
+}
+
+.design-system-page__display-table-footer-demo .admin-table-footer-bar {
+  box-shadow: none;
+}
+
+.design-system-page__display-keypoints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.design-system-page__display-keypoints span {
+  padding: 3px 8px;
+  border: 1px solid rgba(31, 111, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(31, 111, 255, 0.06);
+  color: var(--app-primary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.design-system-page__display-table .ant-pro-card {
+  background: transparent;
+}
+
+.design-system-page__display-table .ant-table-cell {
+  white-space: nowrap;
+}
+
+.design-system-page__display-problem-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.design-system-page__display-problem-cell .ant-btn {
+  min-width: 0;
+}
+
+.design-system-page__display-problem-tag {
+  flex: 0 0 auto;
+}
+
+.design-system-page__display-table-link {
+  height: 22px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.design-system-page__display-list-title {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--app-text);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.design-system-page__display-badge-row,
+.design-system-page__display-avatar-row {
+  align-items: center;
+}
+
+.design-system-page__display-avatar-row .ant-avatar {
+  box-shadow: 0 4px 10px rgba(31, 111, 255, 0.08);
+}
+
+.design-system-page__display .admin-history-timeline {
+  margin-top: 2px;
+}
+
+.design-system-page__display-popover-card {
+  display: grid;
+  gap: 6px;
+  min-width: 180px;
+  color: var(--app-text);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.design-system-page__display-popover-card strong {
+  color: var(--app-text);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.design-system-page__display-popover-card span {
+  color: var(--app-muted);
+}

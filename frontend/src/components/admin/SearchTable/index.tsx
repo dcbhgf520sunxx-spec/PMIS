@@ -1,7 +1,7 @@
 import type { ProColumns, ProTableProps } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { SettingOutlined, TableOutlined, UndoOutlined } from '@ant-design/icons';
-import { Popover, Space } from 'antd';
+import { ColumnHeightOutlined, SettingOutlined, TableOutlined, UndoOutlined } from '@ant-design/icons';
+import { Dropdown, Popover, Space } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../../stores/authStore';
@@ -153,11 +153,14 @@ export function SearchTable<
   const [tableSize, setTableSize] = useState<TableDensitySize>(() => (
     customizable ? readTableJson(tableSizeKey, 'small') : 'small'
   ));
-  const fixedColumnsSignature = columns.map((column, index) => `${getColumnKey(column, index)}:${column.fixed || ''}`).join('|');
-  const fixedColumns = useMemo(() => columns.map((column, index) => ({
+  const fixedColumnsSignature = JSON.stringify(columns.map((column, index) => ({
     key: getColumnKey(column, index),
     fixed: column.fixed
-  })), [fixedColumnsSignature]);
+  })));
+  const fixedColumns = useMemo(
+    () => JSON.parse(fixedColumnsSignature) as Array<{ key: string; fixed?: ProColumns<T>['fixed'] }>,
+    [fixedColumnsSignature]
+  );
   const [columnState, setColumnState] = useState<Record<string, ColumnStateEntry>>(() => enforceFixedColumnState(
     fixedColumns,
     customizable ? readTableJson(columnsStateKey, {}) : {}
@@ -319,7 +322,7 @@ export function SearchTable<
       columns={adjustedColumns}
       search={{ labelWidth: 88, defaultCollapsed: true }}
       options={customizable ? {
-        density: true,
+        density: false,
         fullScreen: true,
         reload: false,
         setting: { settingIcon: <TableOutlined /> }
@@ -338,6 +341,23 @@ export function SearchTable<
                 label="重置列宽"
                 onClick={() => handleColumnWidthsChange({})}
               />
+              <Dropdown
+                menu={{
+                  items: [
+                    { key: 'large', label: '宽松' },
+                    { key: 'middle', label: '中等' },
+                    { key: 'small', label: '紧凑' }
+                  ],
+                  selectedKeys: [tableSize],
+                  onClick: ({ key }) => handleTableSizeChange(key as TableDensitySize)
+                }}
+                trigger={['click']}
+              >
+                <AdminIconAction
+                  icon={<ColumnHeightOutlined />}
+                  label="表格密度"
+                />
+              </Dropdown>
               {defaultDoms.map((item, index) => (
                 <span className="admin-table-settings-popover__item" key={index}>
                   {item}

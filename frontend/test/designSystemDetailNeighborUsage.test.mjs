@@ -3,9 +3,9 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const detailDemoSource = readFileSync(new URL('../src/modules/design-system/pages/demos/DetailTemplateDemo.tsx', import.meta.url), 'utf8');
-const designSystemSource = readFileSync(new URL('../src/modules/design-system/pages/DesignSystemPage.tsx', import.meta.url), 'utf8');
+const displaySectionSource = readFileSync(new URL('../src/modules/design-system/pages/sections/DisplaySection.tsx', import.meta.url), 'utf8');
 const baseSectionSource = readFileSync(new URL('../src/modules/design-system/pages/sections/BaseSection.tsx', import.meta.url), 'utf8');
-const designSystemStyles = readFileSync(new URL('../src/modules/design-system/pages/DesignSystemPage.css', import.meta.url), 'utf8');
+const designSystemStyles = readFileSync(new URL('../src/modules/design-system/pages/DesignSystemShared.css', import.meta.url), 'utf8');
 
 test('详情页模板示例展示中间位置的上一条下一条切换', () => {
   assert.ok(detailDemoSource.includes('DetailNeighborNav'), '详情页模板示例应展示 DetailNeighborNav');
@@ -26,7 +26,7 @@ test('组件工作台在基础组件的切换组件下展示详情条目切换',
     baseSectionSource.includes('ComponentEntry name="DetailNeighborNav / useDetailNeighbors"'),
     '组件入口应标明 DetailNeighborNav / useDetailNeighbors'
   );
-  assert.equal(designSystemSource.includes('<h3>详情条目切换</h3>'), false, '数据展示区不应重复展示详情条目切换');
+  assert.equal(displaySectionSource.includes('<h3>详情条目切换</h3>'), false, '数据展示区不应重复展示详情条目切换');
 });
 
 test('详情条目切换说明复用紧凑的组件说明字号和间距', () => {

@@ -38,68 +38,70 @@ export function sanitizeRichText(html = '') {
   const template = document.createElement('template');
   template.innerHTML = html;
 
-  const walk = (node: Node) => {
-    Array.from(node.childNodes).forEach((child) => {
-      if (child.nodeType === Node.ELEMENT_NODE) {
-        const element = child as HTMLElement;
-        const tag = element.tagName;
+  const sanitizeNode = (node: Node) => {
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return;
+    }
 
-        if (!allowedTags.has(tag)) {
-          element.replaceWith(...Array.from(element.childNodes));
-          return;
-        }
+    const element = node as HTMLElement;
+    const tag = element.tagName;
 
-        Array.from(element.attributes).forEach((attribute) => {
-          const allowed = allowedAttributes[tag]?.has(attribute.name);
-          if (!allowed) {
-            element.removeAttribute(attribute.name);
-          }
-        });
+    if (!allowedTags.has(tag)) {
+      const children = Array.from(element.childNodes);
+      element.replaceWith(...children);
+      children.forEach(sanitizeNode);
+      return;
+    }
 
-        if (tag === 'A') {
-          const href = element.getAttribute('href') || '';
-          if (!/^https?:\/\//i.test(href)) {
-            element.removeAttribute('href');
-          }
-          element.setAttribute('target', '_blank');
-          element.setAttribute('rel', 'noreferrer');
-        }
-
-        if (tag === 'IMG') {
-          const src = element.getAttribute('src') || '';
-          if (!/^data:image\//i.test(src) && !/^https?:\/\//i.test(src)) {
-            element.remove();
-            return;
-          }
-          const width = Number(element.getAttribute('width'));
-          if (Number.isFinite(width) && width > 0) {
-            element.setAttribute('width', String(Math.min(Math.max(width, 120), 960)));
-          } else {
-            element.removeAttribute('width');
-          }
-          element.setAttribute('alt', element.getAttribute('alt') || '图片');
-        }
-
-        if (tag === 'SPAN') {
-          const style = element.getAttribute('style') || '';
-          const safeStyle = style
-            .split(';')
-            .map((item) => item.trim())
-            .filter((item) => /^(color|background-color|font-weight):/i.test(item))
-            .join('; ');
-          if (safeStyle) {
-            element.setAttribute('style', safeStyle);
-          } else {
-            element.removeAttribute('style');
-          }
-        }
+    Array.from(element.attributes).forEach((attribute) => {
+      const allowed = allowedAttributes[tag]?.has(attribute.name);
+      if (!allowed) {
+        element.removeAttribute(attribute.name);
       }
-
-      walk(child);
     });
+
+    if (tag === 'A') {
+      const href = element.getAttribute('href') || '';
+      if (!/^https?:\/\//i.test(href)) {
+        element.removeAttribute('href');
+      }
+      element.setAttribute('target', '_blank');
+      element.setAttribute('rel', 'noreferrer');
+    }
+
+    if (tag === 'IMG') {
+      const src = element.getAttribute('src') || '';
+      if (!/^data:image\//i.test(src) && !/^https?:\/\//i.test(src)) {
+        element.remove();
+        return;
+      }
+      const width = Number(element.getAttribute('width'));
+      if (Number.isFinite(width) && width > 0) {
+        element.setAttribute('width', String(Math.min(Math.max(width, 120), 960)));
+      } else {
+        element.removeAttribute('width');
+      }
+      element.setAttribute('alt', element.getAttribute('alt') || '图片');
+    }
+
+    if (tag === 'SPAN') {
+      const style = element.getAttribute('style') || '';
+      const safeStyle = style
+        .split(';')
+        .map((item) => item.trim())
+        .filter((item) => /^(color|background-color|font-weight):/i.test(item))
+        .join('; ');
+      if (safeStyle) {
+        element.setAttribute('style', safeStyle);
+      } else {
+        element.removeAttribute('style');
+      }
+    }
+
+    Array.from(element.childNodes).forEach(sanitizeNode);
   };
 
-  walk(template.content);
+  Array.from(template.content.childNodes).forEach(sanitizeNode);
   return template.innerHTML;
 }
 

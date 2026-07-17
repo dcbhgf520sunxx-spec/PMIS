@@ -81,7 +81,7 @@ export function ArchiveRecordTable({
       title: '',
       width: 42,
       search: false,
-      render: (_, record, index) => (
+      render: (_, record) => (
         <HolderOutlined
           className="archive-page__drag-handle"
           draggable

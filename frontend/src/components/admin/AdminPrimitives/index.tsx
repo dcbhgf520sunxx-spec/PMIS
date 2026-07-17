@@ -37,7 +37,7 @@ export const AdminButton = forwardRef<ComponentRef<typeof Button>, AdminButtonPr
   { adminVariant, className, ...props },
   ref
 ) {
-  return <Button {...props} className={['admin-button', adminVariant ? `is-${adminVariant}` : '', className].filter(Boolean).join(' ')} />;
+  return <Button ref={ref} {...props} className={['admin-button', adminVariant ? `is-${adminVariant}` : '', className].filter(Boolean).join(' ')} />;
 });
 
 export function AdminCard({ className, ...props }: ComponentProps<typeof Card>) {

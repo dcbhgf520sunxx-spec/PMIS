@@ -1,0 +1,63 @@
+.design-system-page__layout-patterns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.design-system-page__layout-pattern {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.34fr) minmax(0, 0.66fr);
+  gap: 16px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(220, 232, 247, 0.92);
+  border-radius: 6px;
+  background: var(--app-surface);
+}
+
+.design-system-page__layout-pattern__content {
+  min-width: 0;
+}
+
+.design-system-page__layout-pattern__content h3 {
+  margin: 0 0 6px;
+  color: var(--app-text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.design-system-page__layout-pattern__content p {
+  margin: 0 0 10px;
+  color: var(--app-muted);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.design-system-page__layout-pattern__content ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.design-system-page__layout-pattern__content li {
+  position: relative;
+  padding-left: 12px;
+  color: var(--app-text);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.design-system-page__layout-pattern__content li::before {
+  position: absolute;
+  top: 8px;
+  left: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--app-primary);
+  content: '';
+}
+

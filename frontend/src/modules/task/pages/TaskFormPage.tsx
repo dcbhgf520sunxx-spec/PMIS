@@ -76,12 +76,12 @@ export function TaskFormPage({ mode }: { mode: Mode }) {
     }).catch((loadError) => {
       if (cancelled) return;
       const text = loadError instanceof Error ? loadError.message : '加载失败';
-      text.includes('不存在') ? setNotFound(true) : setError(text);
+      if (text.includes('不存在')) setNotFound(true); else setError(text);
     }).finally(() => {
       if (!cancelled) setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [mode, params.id, revision]);
+  }, [mode, params.id, revision, subtaskMode]);
 
   const nameRules = [
     { required: true, message: '请输入任务名称' },

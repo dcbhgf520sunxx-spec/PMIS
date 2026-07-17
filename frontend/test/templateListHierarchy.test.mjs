@@ -11,7 +11,7 @@ const hierarchyCell = readIfPresent('src/components/admin/HierarchyListCell/inde
 const hierarchyCellStyles = readIfPresent('src/components/admin/HierarchyListCell/index.css');
 const componentExports = readIfPresent('src/components/admin/index.ts');
 const templateListSource = readIfPresent('src/components/admin/TemplateListPage/index.tsx');
-const workbenchSource = readIfPresent('src/modules/design-system/pages/DesignSystemPage.tsx');
+const layoutSectionSource = readIfPresent('src/modules/design-system/pages/sections/layout/ListTemplateDemo.tsx');
 const developmentRules = readIfPresent('../docs/ai-development-rules.md');
 
 test('层级列表把方框开关和主子标识固定在名称单元格内', () => {
@@ -39,11 +39,11 @@ test('层级列表作为公共单元格导出，不再使用表格原生展开�
 });
 
 test('组件工作台按 PMIS 的平铺分组方式展示并默认收起子项', () => {
-  assert.match(workbenchSource, /HierarchyListCell/);
-  assert.match(workbenchSource, /expandedHierarchyParentIds/);
-  assert.match(workbenchSource, /visibleHierarchyTemplateRows/);
-  assert.match(workbenchSource, /level=\{row\.hierarchyParentId \? 'child' : row\.hierarchyChildCount > 0 \? 'parent' : undefined\}/);
-  assert.match(workbenchSource, /hasChildren=\{row\.hierarchyChildCount > 0\}/);
+  assert.match(layoutSectionSource, /HierarchyListCell/);
+  assert.match(layoutSectionSource, /expandedHierarchyParentIds/);
+  assert.match(layoutSectionSource, /visibleHierarchyTemplateRows/);
+  assert.match(layoutSectionSource, /level=\{row\.hierarchyParentId \? 'child' : row\.hierarchyChildCount > 0 \? 'parent' : undefined\}/);
+  assert.match(layoutSectionSource, /hasChildren=\{row\.hierarchyChildCount > 0\}/);
   assert.match(developmentRules, /HierarchyListCell/);
   assert.match(developmentRules, /方框开关、主子标识和子级缩进/);
 });

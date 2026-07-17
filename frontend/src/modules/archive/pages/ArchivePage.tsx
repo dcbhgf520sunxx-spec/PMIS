@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
 import { App, Form } from 'antd';
 import { AdminButton, AdminEmptyState, AdminText, PageShell, useTemplateListPageData } from '../../../components/admin';
@@ -48,6 +48,11 @@ export function ArchivePage() {
   const [archiveSubmitting, setArchiveSubmitting] = useState(false);
   const [draggingId, setDraggingId] = useState<string>();
   const [sidebarWidth, setSidebarWidth] = useState(MIN_ARCHIVE_SIDEBAR_WIDTH);
+  const archiveFiltersRef = useRef(archiveFilters);
+
+  useEffect(() => {
+    archiveFiltersRef.current = archiveFilters;
+  }, [archiveFilters]);
 
   const selectedType = useMemo(
     () => typeList.find((item) => item.id === selectedTypeId),
@@ -77,7 +82,7 @@ export function ArchivePage() {
     urlSync: true
   });
 
-  const loadTypes = async (preferredTypeId?: string) => {
+  const loadTypes = useCallback(async (preferredTypeId?: string) => {
     setLoadingTypes(true);
     try {
       const result = await getArchiveTypes({ pageSize: 1000 });
@@ -92,9 +97,9 @@ export function ArchivePage() {
     } finally {
       setLoadingTypes(false);
     }
-  };
+  }, [message]);
 
-  const loadArchives = async (archiveTypeId?: string, filters = archiveFilters) => {
+  const loadArchives = useCallback(async (archiveTypeId?: string, filters = archiveFiltersRef.current) => {
     if (!archiveTypeId) {
       setArchiveRows([]);
       return;
@@ -115,15 +120,15 @@ export function ArchivePage() {
     } finally {
       setLoadingArchives(false);
     }
-  };
+  }, [message]);
 
   useEffect(() => {
     void loadTypes();
-  }, []);
+  }, [loadTypes]);
 
   useEffect(() => {
     void loadArchives(selectedTypeId);
-  }, [selectedTypeId]);
+  }, [loadArchives, selectedTypeId]);
 
   const handleSearchArchives = () => {
     setFilterRevision((value) => value + 1);

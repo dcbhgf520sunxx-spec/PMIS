@@ -17,21 +17,29 @@
 2. AI 按样板和组件规则实现；涉及路由、菜单、权限、接口或数据库时同步处理对应层。
 3. AI 运行 `node scripts/verify-change.mjs`，完成组件扫描、JSX 语义审计、接口运行时契约审计和本地后端运行态新鲜度检查；后端源码晚于当前服务启动时间时必须重启后端并重新执行门禁，未通过不得交付。随后使用浏览器实际打开受影响页面，完成对应的列表、查询、表单、权限拒绝或接口错误冒烟检查。
 4. AI 输出 `docs/ai-delivery-template.md` 规定的交付单，并标明是否需要表结构确认。
-5. 用户确认表结构后，AI 执行 `cd backend && npm run db:migrate`，再验证接口读写。
+5. 用户确认表结构后，AI 执行 `cd backend && npm run db:migrate -- --apply --user-approved`，再验证接口读写。
 6. AI 提供可验收环境；用户完成最终业务验收并确认发布后，AI 部署并验证线上健康检查和核心流程。
 
 ## 自动门禁
+
+远程检查只保留两个明确时机：修复分支只在合并请求创建或更新时运行远程门禁，合入 `master` 后再运行一次。同一合并请求出现新提交时，自动取消仍在运行的旧检查，避免同一份代码重复排队和过期结果阻塞合并。
 
 | 变更范围 | AI 必须检查 |
 |---|---|
 | 所有变更 | 路由、菜单、权限、部署说明和流程入口的静态一致性；后端测试；前端组件审查和构建；新能力的正常/异常/边界测试及业务接入层防绕过门禁 |
 | 页面变更 | 样板/组件规范、JSX 语义审计、加载/空/错误/权限状态及浏览器核心流程 |
 | 路由、菜单、权限变更 | 前端路由、侧栏菜单、包含查询参数的完整菜单地址与后端 `checkPermission` 一致；组件工作台子页逐项授权，父菜单不放开兄弟菜单；接口复用既有业务权限时说明归属 |
-| 接口变更 | 路由挂载、鉴权、前端 API 字段转换、读写结果运行时字段契约和核心读写验证 |
+| 接口变更 | 路由挂载、鉴权、前端 API 字段转换、读写结果运行时字段契约和核心读写验证；业务接口必须同时挂载 `verifyToken` 和 `checkPermission`，且先验证登录、再检查功能权限 |
 | 后端代码变更 | 本地后端运行态新鲜度；服务启动时间不得早于 `backend/src` 最新修改时间，避免源码已修复但运行进程仍使用旧代码 |
 | 多状态业务变更 | 模块级 `statusTransitions` 测试覆盖允许/禁止流转、附加字段和前后端一致性 |
 | 数据库变更 | 初始化 SQL、增量 migration、后端 SQL/测试、表结构 Markdown/Excel；先确认表结构再执行 migration |
 | 发布变更 | PostgreSQL/React 部署配置、构建产物、健康检查和核心接口检查 |
+
+接口鉴权例外必须明确列出，不能通过漏写中间件形成隐形例外：
+
+- `/api/auth`、`/api/health` 是公开接口。
+- `/api/user-options`、`/api/role-options`、`/api/archive-options/by-type-name`、`/api/messages` 是所有登录用户共用的下拉选项或个人消息接口，只要求登录。
+- 其他 `/api` 业务接口必须同时挂载 `verifyToken` 和 `checkPermission`。如确需新增例外，必须先说明用途和影响，再同步修改门禁白名单与本文档。
 
 ## 状态
 
@@ -48,10 +56,10 @@
 node scripts/verify-change.mjs
 node scripts/check-backend-runtime-freshness.mjs
 cd backend && npm run db:migrate -- --check
-cd backend && npm run db:migrate
+cd backend && npm run db:migrate -- --apply --user-approved
 ```
 
-`--check` 只显示待执行 migration；不改数据库。`db:migrate` 只能在用户已确认本次表结构后执行，并将已执行文件记录到 `pms_migrations`。
+无参数或 `--check` 只显示待执行 migration，不改数据库。真正执行必须同时携带 `--apply` 和 `--user-approved`，只能在用户已确认本次表结构后使用，并将已执行文件记录到 `pms_migrations`。
 
 ## 浏览器冒烟验收
 

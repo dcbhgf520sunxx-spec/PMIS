@@ -36,7 +36,7 @@ async function refreshOverdueStatus() {
 /**
  * 每天凌晨 0:30 执行
  * 每天刷新运维工单和任务的 is_overdue 字段。
- * 规则：预计完成时间 < 当天 且状态不是已完成/已关闭 -> is_overdue = 1，否则 = 0
+ * 规则：预计完成时间 < 当天且未进入已解决/已完成/已关闭终态时，is_overdue = 1，否则 = 0。
  */
 function start() {
   cron.schedule('30 0 * * *', async () => {

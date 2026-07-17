@@ -60,7 +60,6 @@ type AccessLogResponse = {
   created_at?: string;
 };
 
-const accessLogContract = objectContract<AccessLogResponse>(['id', 'event_type', 'result']);
 const accessLogPageContract = objectContract<PageResponse<AccessLogResponse>>(['list', 'total', 'page', 'pageSize']);
 
 function formatDate(value?: string) {

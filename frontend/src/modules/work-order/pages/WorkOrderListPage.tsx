@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { Key } from 'react';
 import { message } from 'antd';
 import {
@@ -64,6 +64,7 @@ export function WorkOrderListPage() {
     filterRevision,
     viewKey
   });
+  const { current: currentPage, pageSize } = listData.pagination;
 
   const selectedRecords = useMemo(() => {
     const rowMap = new Map(listData.sortedRows.map((row) => [row.id, row]));
@@ -73,13 +74,15 @@ export function WorkOrderListPage() {
   }, [selectedRowKeys, listData.sortedRows]);
 
   const clearSelection = () => setSelectedRowKeys([]);
-  const buildCurrentNeighborParams = () => {
+  const openDetail = useCallback((record: WorkOrderRecord) => {
     const submitTimeRange = appliedFilters.submitTimeRange || [];
     const expectedRange = appliedFilters.expectedResolveDateRange || [];
-    return buildWorkOrderQueryParams({
+    const params = buildWorkOrderQueryParams({
       problemDesc: appliedFilters.problemDesc || undefined,
       productId: appliedFilters.productId || undefined,
       problemType: appliedFilters.problemTypes,
+      current: currentPage,
+      pageSize,
       urgency: appliedFilters.urgency,
       status: appliedFilters.status,
       isOverdue: appliedFilters.isOverdue,
@@ -94,17 +97,14 @@ export function WorkOrderListPage() {
       sortField: listData.sortState.field,
       sortOrder: listData.sortState.order || undefined
     });
-  };
-
-  const openDetail = (record: WorkOrderRecord) => {
     saveDetailNeighborContext(createDetailNeighborContext({
       moduleKey: 'work-order',
       routeBase: '/work-orders',
-      params: buildCurrentNeighborParams(),
+      params,
       sourcePath: currentPath
     }));
     navigateWithReturn(`/work-orders/${record.id}`);
-  };
+  }, [appliedFilters, currentFollowerId, currentPage, currentPath, listData.sortState.field, listData.sortState.order, navigateWithReturn, pageSize, viewKey]);
 
   const columns = useMemo(() => createWorkOrderColumns({
     navigate: navigateWithReturn,

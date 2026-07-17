@@ -39,6 +39,9 @@ test('work order creation ignores a forged creator_id and records the authentica
 
   db.prepare = (sql) => {
     if (sql.startsWith('SELECT id FROM pms_work_order')) return { get: async () => undefined }
+    if (sql.includes('FROM pms_archive a')) return { get: async () => ({ id: 1 }) }
+    if (sql.startsWith('SELECT id FROM pms_product')) return { get: async () => ({ id: 1 }) }
+    if (sql.startsWith('SELECT id FROM pms_user')) return { get: async () => ({ id: 2 }) }
     if (sql.startsWith('INSERT INTO pms_work_order')) {
       return {
         run: async (...args) => {

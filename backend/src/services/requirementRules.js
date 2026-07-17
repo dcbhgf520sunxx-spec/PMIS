@@ -17,7 +17,7 @@ function resolveRequirementTypeChange(oldType, oldStatus, nextType) {
   if ([30, 31, 32, 33, 34, 35].includes(Number(oldStatus))) return { allowed: false, status: Number(oldStatus) }
   return { allowed: true, status: initialRequirementStatus(nextType) }
 }
-function allowedRequirementStatuses(type, current, previous) {
+function allowedRequirementStatuses(type, current, _previous) {
   if (Number(current) === 35) return PATH_STATUSES[Number(type)] || []
   return TRANSITIONS[`${Number(type)}_${Number(current)}`] || TRANSITIONS[`_${Number(current)}`] || []
 }

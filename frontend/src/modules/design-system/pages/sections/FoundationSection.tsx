@@ -1,5 +1,6 @@
 import { AdminCard } from '../../../../components/admin';
 import { ComponentEntry } from '../components/ComponentEntry';
+import './FoundationSection.css';
 
 const foundationColorGroups = [
   {

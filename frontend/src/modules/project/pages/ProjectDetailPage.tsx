@@ -3,7 +3,7 @@ import { App } from 'antd';
 import { useParams } from 'react-router-dom';
 import { DeleteConfirmAction, DetailMetaList, HistoryTimelineSection, PermissionButton, RichTextViewer, TemplateDetailPage, TemplateDetailSection , usePageReturnNavigation } from '../../../components/admin';
 import { deleteProject, getProject, getProjectHistory, updateProjectStatus } from '../../../api/projectApi';
-import type { ProjectRecord, ProjectStatus } from '../types';
+import type { ProjectRecord } from '../types';
 import { renderProjectOverdue } from '../helpers';
 import { ProjectStatusChangeAction, renderProjectStatus } from '../components/ProjectStatusChangeAction';
 

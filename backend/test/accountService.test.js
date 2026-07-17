@@ -5,6 +5,7 @@ const {
   normalizePreference,
   validatePhoneChangePayload,
   validatePasswordChangePayload,
+  validateNewPassword,
   toAvatarResponse,
   validateAvatarPayload
 } = require('../src/services/accountService')
@@ -106,4 +107,16 @@ test('rejects password change when new password equals old password', () => {
     () => validatePasswordChangePayload({ oldPassword: 'vv123456', newPassword: 'vv123456' }),
     /新密码不能与原密码一致/
   )
+})
+
+test('rejects password shorter than 6 characters', () => {
+  assert.throws(
+    () => validatePasswordChangePayload({ oldPassword: 'old-password', newPassword: '12345' }),
+    /密码至少需要 6 位/
+  )
+})
+
+test('validates every newly assigned password with the same minimum length', () => {
+  assert.throws(() => validateNewPassword('12345'), /密码至少需要 6 位/)
+  assert.equal(validateNewPassword('123456'), '123456')
 })

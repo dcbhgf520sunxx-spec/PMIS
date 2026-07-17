@@ -3,16 +3,10 @@ const { calcOverdue } = require('../utils/calcOverdue')
 const { refreshOverdueStatus } = require('../services/overdueCron')
 const { getSortDirection, parsePagination } = require('../utils/pagination')
 const { fail, failField, ok } = require('../utils/response')
-const { validateBody } = require('../utils/validation')
+const { requireValidBody } = require('../utils/requestValidation')
 const { buildViewQuery, calculateViewCounts } = require('../utils/viewCounts')
 const { formatHistoryChanges, groupOperationLogs } = require('../utils/operationHistory')
-
-function requireValidBody(res, body, schema) {
-  const result = validateBody(body, schema)
-  if (result.ok) return true
-  fail(res, 400, 400, result.message)
-  return false
-}
+const { sanitizeRichText } = require('../services/richTextSanitizer')
 
 const workOrderFormSchema = {
   problem_type: { required: true, type: 'number', label: '问题类型' },
@@ -34,6 +28,39 @@ const workOrderStatusSchema = {
 const workOrderBatchAssignSchema = {
   ids: { required: true, type: 'array', label: '工单' },
   follower_id: { required: true, type: 'number', label: '跟进人' }
+}
+
+const WORK_ORDER_STATUS_TRANSITIONS = {
+  0: [1],
+  1: [2],
+  2: [3],
+  3: []
+}
+
+async function validateActiveArchive(archiveId, codePrefix, label) {
+  const row = await db.prepare(`
+    SELECT a.id
+    FROM pms_archive a
+    INNER JOIN pms_archive_type t ON t.id = a.archive_type_id
+    WHERE a.id = ? AND t.code_prefix = ?
+      AND a.status = 1 AND a.is_deleted = 0
+      AND t.status = 1 AND t.is_deleted = 0
+  `).get(archiveId, codePrefix)
+  return row ? '' : `${label}不存在、已停用或类型不正确`
+}
+
+async function validateActiveFollower(followerId) {
+  const row = await db.prepare(
+    'SELECT id FROM pms_user WHERE id = ? AND status = 1 AND is_deleted = 0'
+  ).get(followerId)
+  return row ? '' : '跟进人不存在或已停用'
+}
+
+async function validateActiveProduct(productId) {
+  const row = await db.prepare(
+    'SELECT id FROM pms_product WHERE id = ? AND status = 1 AND is_deleted = 0'
+  ).get(productId)
+  return row ? '' : '所属产品不存在或已停用'
 }
 
 function isProblemDescriptionUniqueViolation(error) {
@@ -115,9 +142,10 @@ exports.list = async (req, res) => {
   try {
     const q = { ...req.query }
     const { page, pageSize, offset } = parsePagination(q)
-    let sql = withJoins('COUNT(*) OVER() as total, w.id, w.product_id, w.problem_type, w.problem_desc, w.result_desc, w.follower_id, w.urgency, w.status, w.is_overdue, w.expected_resolve_date, w.resolve_date, w.close_date, w.submitter_name, w.submitter_dept, w.submit_time, w.created_at')
+    let sql = withJoins('w.id, w.product_id, w.problem_type, w.problem_desc, w.result_desc, w.follower_id, w.urgency, w.status, w.is_overdue, w.expected_resolve_date, w.resolve_date, w.close_date, w.submitter_name, w.submitter_dept, w.submit_time, w.created_at')
     const { filters, views, viewKey } = buildWorkOrderViewContext(q)
-    const { sql: whereSql, params } = buildWhereClause(buildViewQuery(filters, views[viewKey]))
+    const currentQuery = buildViewQuery(filters, views[viewKey])
+    const { sql: whereSql, params } = buildWhereClause(currentQuery)
     sql += whereSql
 
     // 支持排序参数（与 neighbors 逻辑一致）
@@ -134,7 +162,9 @@ exports.list = async (req, res) => {
     params.push(pageSize, offset)
 
     const rows = await db.prepare(sql).all(...params)
-    const currentTotal = Number(rows[0]?.total || 0)
+    const currentCountQuery = buildWorkOrderCountSql(currentQuery)
+    const currentCount = await db.prepare(currentCountQuery.sql).get(...currentCountQuery.params)
+    const currentTotal = Number(currentCount?.total || 0)
     const viewCounts = q.current_user_id ? await calculateViewCounts({
       filters,
       views,
@@ -178,19 +208,31 @@ exports.create = async (req, res) => {
     if (!requireValidBody(res, req.body, workOrderFormSchema)) return
     const { product_id, problem_type, problem_desc, follower_id, urgency, status, expected_resolve_date, submitter_name, submitter_dept, submit_time } = req.body
     const operatorId = req.user.id
+    const safeProblemDesc = sanitizeRichText(problem_desc)
+    if (!safeProblemDesc.trim()) return failField(res, 'problem_desc', '问题描述不能为空')
 
     // Validate problem_desc uniqueness
-    if (problem_desc) {
-      const exists = await db.prepare('SELECT id FROM pms_work_order WHERE problem_desc = ? AND is_deleted = 0').get(problem_desc)
+    if (safeProblemDesc) {
+      const exists = await db.prepare('SELECT id FROM pms_work_order WHERE problem_desc = ? AND is_deleted = 0').get(safeProblemDesc)
       if (exists) return failField(res, 'problem_desc', '问题描述已存在，请勿重复创建')
     }
 
-    const finalStatus = status !== undefined ? status : 0
+    const productError = await validateActiveProduct(product_id)
+    if (productError) return failField(res, 'product_id', productError)
+    const problemTypeError = await validateActiveArchive(problem_type, 'PT', '问题类型')
+    if (problemTypeError) return failField(res, 'problem_type', problemTypeError)
+    const followerError = await validateActiveFollower(follower_id)
+    if (followerError) return failField(res, 'follower_id', followerError)
+    if (status !== undefined && Number(status) !== 0) {
+      return failField(res, 'status', '新建工单必须从待处理开始')
+    }
+
+    const finalStatus = 0
     const is_overdue = calcOverdue(expected_resolve_date, finalStatus)
 
     const result = await db.prepare(
       'INSERT INTO pms_work_order (product_id, problem_type, problem_desc, follower_id, urgency, status, is_overdue, expected_resolve_date, submitter_name, submitter_dept, submit_time, creator_id, updater_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(product_id || null, problem_type || null, problem_desc || null, follower_id || null, urgency ?? 1, finalStatus, is_overdue, expected_resolve_date || null, submitter_name || null, submitter_dept || null, submit_time || null, operatorId, operatorId)
+    ).run(product_id || null, problem_type || null, safeProblemDesc || null, follower_id || null, urgency ?? 1, finalStatus, is_overdue, expected_resolve_date || null, submitter_name || null, submitter_dept || null, submit_time || null, operatorId, operatorId)
 
     await db.writeLog(operatorId, '新增', '运维工单', result.lastInsertRowid, null, null, JSON.stringify({ product_id, problem_type, follower_id, urgency }), req.ip)
     ok(res, { id: result.lastInsertRowid })
@@ -208,13 +250,33 @@ exports.update = async (req, res) => {
     if (!requireValidBody(res, req.body, workOrderFormSchema)) return
     const { product_id, problem_type, problem_desc, result_desc, follower_id, urgency, status, expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time } = req.body
     const operatorId = req.user.id
+    const safeProblemDesc = sanitizeRichText(problem_desc)
+    const safeResultDesc = result_desc === undefined ? undefined : sanitizeRichText(result_desc)
+    if (!safeProblemDesc.trim()) return failField(res, 'problem_desc', '问题描述不能为空')
 
-    if (problem_desc) {
-      const exists = await db.prepare('SELECT id FROM pms_work_order WHERE problem_desc = ? AND is_deleted = 0 AND id <> ?').get(problem_desc, req.params.id)
+    if (safeProblemDesc) {
+      const exists = await db.prepare('SELECT id FROM pms_work_order WHERE problem_desc = ? AND is_deleted = 0 AND id <> ?').get(safeProblemDesc, req.params.id)
       if (exists) return failField(res, 'problem_desc', '问题描述已存在，请勿重复创建')
     }
 
-    const old = await db.prepare('SELECT product_id, problem_type, problem_desc, result_desc, follower_id, urgency, status, expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time FROM pms_work_order WHERE id = ?').get(req.params.id)
+    const old = await db.prepare('SELECT product_id, problem_type, problem_desc, result_desc, follower_id, urgency, status, is_overdue, expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time FROM pms_work_order WHERE id = ? AND is_deleted = 0').get(req.params.id)
+    if (!old) return fail(res, 404, 404, '数据不存在或已被删除')
+
+    if (Number(product_id) !== Number(old.product_id)) {
+      const productError = await validateActiveProduct(product_id)
+      if (productError) return failField(res, 'product_id', productError)
+    }
+    if (Number(problem_type) !== Number(old.problem_type)) {
+      const problemTypeError = await validateActiveArchive(problem_type, 'PT', '问题类型')
+      if (problemTypeError) return failField(res, 'problem_type', problemTypeError)
+    }
+    if (Number(follower_id) !== Number(old.follower_id)) {
+      const followerError = await validateActiveFollower(follower_id)
+      if (followerError) return failField(res, 'follower_id', followerError)
+    }
+    if (status !== undefined && Number(status) !== Number(old.status)) {
+      return failField(res, 'status', '请通过状态变更操作按顺序流转')
+    }
 
     const changes = []
     const trackedFields = ['problem_desc', 'product_id', 'problem_type', 'urgency', 'status', 'is_overdue', 'follower_id', 'submitter_name', 'submitter_dept', 'submit_time', 'expected_resolve_date', 'resolve_date', 'close_date', 'result_desc']
@@ -223,7 +285,11 @@ exports.update = async (req, res) => {
     for (const key of trackedFields) {
       if (req.body[key] === undefined) continue
       let oldVal = old[key]
-      const newVal = req.body[key]
+      const newVal = key === 'problem_desc'
+        ? safeProblemDesc
+        : key === 'result_desc'
+          ? safeResultDesc
+          : req.body[key]
       // Normalize date comparison: strip trailing 00:00:00 if new value is date-only
       if (dateFields.has(key) && oldVal && !String(newVal ?? '').includes(' ')) {
         oldVal = String(oldVal).slice(0, 10)
@@ -238,7 +304,7 @@ exports.update = async (req, res) => {
     const params = []
 
     const fieldMap = {
-      product_id, problem_type, problem_desc, result_desc, follower_id, urgency,
+      product_id, problem_type, problem_desc: safeProblemDesc, result_desc: safeResultDesc, follower_id, urgency,
       expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time,
     }
 
@@ -248,14 +314,8 @@ exports.update = async (req, res) => {
       params.push(val === null ? null : val)
     }
 
-    // Handle status if provided
-    if (status !== undefined) {
-      setParts.push('status = ?')
-      params.push(status)
-    }
-
     // Recalculate is_overdue
-    const finalStatus = status !== undefined ? status : old.status
+    const finalStatus = old.status
     const finalExpectedDate = expected_resolve_date !== undefined ? expected_resolve_date : old.expected_resolve_date
     const is_overdue = calcOverdue(finalExpectedDate, finalStatus)
     if (is_overdue !== old.is_overdue) {
@@ -264,7 +324,7 @@ exports.update = async (req, res) => {
     setParts.push('is_overdue = ?')
     params.push(is_overdue)
 
-    setParts.push('updater_id = ?')
+    setParts.push('updater_id = ?', 'updated_at = NOW()')
     params.push(operatorId)
     params.push(req.params.id)
 
@@ -287,8 +347,20 @@ exports.toggleStatus = async (req, res) => {
   try {
     if (!requireValidBody(res, req.body, workOrderStatusSchema)) return
     const { status, resolve_date, close_date, result_desc } = req.body
+    const safeResultDesc = result_desc === undefined ? undefined : sanitizeRichText(result_desc)
     const operatorId = req.user.id
-    const old = await db.prepare('SELECT status, is_overdue, expected_resolve_date, resolve_date, close_date, result_desc FROM pms_work_order WHERE id = ?').get(req.params.id)
+    const old = await db.prepare('SELECT status, is_overdue, expected_resolve_date, resolve_date, close_date, result_desc FROM pms_work_order WHERE id = ? AND is_deleted = 0').get(req.params.id)
+    if (!old) return fail(res, 404, 404, '数据不存在或已被删除')
+    const allowedTargets = WORK_ORDER_STATUS_TRANSITIONS[Number(old.status)] || []
+    if (!allowedTargets.includes(Number(status))) {
+      return fail(res, 400, 400, '工单状态必须按待处理、处理中、已解决、已关闭的顺序流转')
+    }
+    if (Number(status) === 2 && (!resolve_date || !String(safeResultDesc || '').trim())) {
+      return fail(res, 400, 400, '标记为已解决时必须填写实际解决时间和处理结果')
+    }
+    if (Number(status) === 3 && !close_date) {
+      return fail(res, 400, 400, '关闭工单时必须填写关闭时间')
+    }
     const changes = []
 
     const statusDateFields = new Set(['resolve_date', 'close_date'])
@@ -310,46 +382,21 @@ exports.toggleStatus = async (req, res) => {
     const is_overdue = calcOverdue(old?.expected_resolve_date, status)
     addChange('is_overdue', old?.is_overdue, is_overdue)
 
-    // 已关闭恢复到非已完成：关闭时间、实际修复时间、处置结果都清空。
-    // 已关闭恢复到已完成：关闭时间清空，实际修复时间和处置结果以弹窗提交值为准。
-    // 已完成变已关闭：保留实际修复时间和处置结果，只更新关闭时间。
-    let finalResolveDate
-    if (old?.status === 3 && status !== 2 && status !== 3) {
-      finalResolveDate = null
-    } else if (old?.status === 2 && status !== 2 && status !== 3) {
-      finalResolveDate = null
-    } else if (status === 2 && resolve_date !== undefined) {
-      finalResolveDate = resolve_date || null
-    } else {
-      finalResolveDate = old?.resolve_date || null
-    }
+    const finalResolveDate = Number(status) === 2 ? resolve_date : (old.resolve_date || null)
     addChange('resolve_date', old?.resolve_date, finalResolveDate)
 
-    let finalCloseDate
-    if (old?.status === 3 && status !== 3) {
-      finalCloseDate = null
-    } else if (status === 3 && close_date !== undefined) {
-      finalCloseDate = close_date || null
-    } else {
-      finalCloseDate = old?.close_date || null
-    }
+    const finalCloseDate = Number(status) === 3 ? close_date : (old.close_date || null)
     addChange('close_date', old?.close_date, finalCloseDate)
 
-    let finalResultDesc
-    if (old?.status === 3 && status !== 2 && status !== 3) {
-      finalResultDesc = null
-    } else if (old?.status === 2 && status !== 2 && status !== 3) {
-      finalResultDesc = null
-    } else if (result_desc !== undefined) {
-      finalResultDesc = result_desc || null
-    } else {
-      finalResultDesc = old?.result_desc || null
-    }
+    const finalResultDesc = Number(status) === 2 ? String(safeResultDesc).trim() : (old.result_desc || null)
     addChange('result_desc', old?.result_desc, finalResultDesc)
 
-    await db.prepare(
-      'UPDATE pms_work_order SET status = ?, is_overdue = ?, resolve_date = ?, close_date = ?, result_desc = ?, updater_id = ? WHERE id = ?'
-    ).run(status, is_overdue, finalResolveDate, finalCloseDate, finalResultDesc, operatorId, req.params.id)
+    const updateResult = await db.prepare(
+      'UPDATE pms_work_order SET status = ?, is_overdue = ?, resolve_date = ?, close_date = ?, result_desc = ?, updater_id = ?, updated_at = NOW() WHERE id = ? AND status = ? AND is_deleted = 0'
+    ).run(status, is_overdue, finalResolveDate, finalCloseDate, finalResultDesc, operatorId, req.params.id, old.status)
+    if (updateResult.changes === 0) {
+      return fail(res, 409, 409, '工单状态已被其他人修改，请刷新后重试')
+    }
 
     await db.writeLogs(operatorId, '状态变更', '运维工单', req.params.id, changes.map((change) => ({
       ...change,
@@ -413,7 +460,9 @@ exports.batchAssign = async (req, res) => {
 exports.remove = async (req, res) => {
   try {
     const operatorId = req.user.id
-    await db.prepare('UPDATE pms_work_order SET is_deleted = 1, updater_id = ? WHERE id = ?').run(operatorId, req.params.id)
+    const workOrder = await db.prepare('SELECT id FROM pms_work_order WHERE id = ? AND is_deleted = 0').get(req.params.id)
+    if (!workOrder) return fail(res, 404, 404, '数据不存在或已被删除')
+    await db.prepare('UPDATE pms_work_order SET is_deleted = 1, updater_id = ?, updated_at = NOW() WHERE id = ?').run(operatorId, req.params.id)
     await db.writeLog(operatorId, '删除', '运维工单', req.params.id, 'is_deleted', '0', '1', req.ip)
     ok(res, null)
   } catch (err) {
@@ -432,15 +481,6 @@ exports.getNeighbors = async (req, res) => {
     const { filters, views, viewKey } = buildWorkOrderViewContext(q)
     const { sql: whereSql, params: whereParams } = buildWhereClause(buildViewQuery(filters, views[viewKey]))
 
-    const current = await db.prepare('SELECT created_at, id FROM pms_work_order WHERE id = ? AND is_deleted = 0').get(id)
-    if (!current) return res.json({ code: 0, data: { prevId: null, nextId: null } })
-
-    // Check if current record matches the filter
-    const checkSql = 'SELECT id FROM pms_work_order w WHERE w.id = ?' + whereSql.replace(/^ WHERE/, ' AND')
-    const checkParams = [id, ...whereParams]
-    const inFilter = await db.prepare(checkSql).get(...checkParams)
-    if (!inFilter) return res.json({ code: 0, data: { prevId: null, nextId: null } })
-
     // Map frontend sort field to DB column
     let sortCol = 'w.created_at'
     let sortDir = 'DESC'
@@ -453,16 +493,31 @@ exports.getNeighbors = async (req, res) => {
     }
 
     const orderClause = `ORDER BY ${sortCol} ${sortDir}, w.id ${sortDir}`
+    const neighborSql = `
+      WITH ordered AS (
+        ${withJoins(`w.id,
+          LAG(w.id) OVER (${orderClause}) AS prev_id,
+          LEAD(w.id) OVER (${orderClause}) AS next_id,
+          ROW_NUMBER() OVER (${orderClause}) AS ordinal,
+          COUNT(*) OVER() AS total`)}
+        ${whereSql}
+      )
+      SELECT prev_id, next_id, total, ordinal
+      FROM ordered
+      WHERE id = ?`
+    const neighbor = await db.prepare(neighborSql).get(...whereParams, id)
+    if (!neighbor) return res.json({ code: 0, data: { prevId: null, nextId: null } })
 
-    const listSql = withJoins('w.id') + whereSql + ' ' + orderClause
-    const allRows = await db.prepare(listSql).all(...whereParams)
-    const idx = allRows.findIndex(r => String(r.id) === String(id))
-    if (idx < 0) return res.json({ code: 0, data: { prevId: null, nextId: null } })
-
-    const prevId = idx > 0 ? allRows[idx - 1].id : null
-    const nextId = idx < allRows.length - 1 ? allRows[idx + 1].id : null
-
-    res.json({ code: 0, message: 'success', data: { prevId, nextId, total: allRows.length, ordinal: idx + 1 } })
+    res.json({
+      code: 0,
+      message: 'success',
+      data: {
+        prevId: neighbor.prev_id ?? null,
+        nextId: neighbor.next_id ?? null,
+        total: Number(neighbor.total),
+        ordinal: Number(neighbor.ordinal)
+      }
+    })
   } catch (err) {
     console.error(err)
     res.status(500).json({ code: 500, message: '查询失败', data: null })
@@ -487,7 +542,7 @@ const HISTORY_DATE_FIELDS = new Set(['expected_resolve_date', 'resolve_date', 'c
 
 function resolveHistoryStatus(value) {
   if (value === null || value === undefined || value === '空') return ''
-  return { 0: '待处理', 1: '处理中', 2: '已完成', 3: '已关闭' }[String(value)] || String(value)
+  return { 0: '待处理', 1: '处理中', 2: '已解决', 3: '已关闭' }[String(value)] || String(value)
 }
 
 function buildIdInQuery(ids, selectSql, tableName) {
@@ -549,7 +604,7 @@ exports.getHistory = async (req, res) => {
           product_id: lookups.products,
           problem_type: lookups.archives,
           urgency: new Map([['0', '低'], ['1', '中'], ['2', '高']]),
-          status: new Map([['0', '待处理'], ['1', '处理中'], ['2', '已完成'], ['3', '已关闭']]),
+          status: new Map([['0', '待处理'], ['1', '处理中'], ['2', '已解决'], ['3', '已关闭']]),
           is_overdue: new Map([['0', '未逾期'], ['1', '逾期']])
         }
       }).map((change) => ({ field: change.field_name, oldVal: change.old_value, newVal: change.new_value }))

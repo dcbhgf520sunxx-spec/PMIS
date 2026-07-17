@@ -76,11 +76,17 @@ function validatePhoneChangePayload(payload = {}) {
 
 function validatePasswordChangePayload(payload = {}) {
   if (!payload.oldPassword || !payload.newPassword) throw createValidationError('参数不完整')
+  validateNewPassword(payload.newPassword)
   if (payload.oldPassword === payload.newPassword) throw createValidationError('新密码不能与原密码一致')
   return {
     oldPassword: payload.oldPassword,
     newPassword: payload.newPassword
   }
+}
+
+function validateNewPassword(password) {
+  if (!password || password.length < 6) throw createValidationError('密码至少需要 6 位')
+  return password
 }
 
 async function getCurrentUser(userId) {
@@ -115,18 +121,7 @@ async function getCurrentUser(userId) {
   return { ...row, roles }
 }
 
-async function updateProfile(userId, payload = {}) {
-  const phone = payload.phone || null
-  if (phone) {
-    const exists = await db.prepare('SELECT id FROM pms_user WHERE phone = ? AND id != ? AND is_deleted = 0').get(phone, userId)
-    if (exists) {
-      const error = new Error('手机号已存在')
-      error.statusCode = 400
-      throw error
-    }
-  }
-
-  await db.prepare('UPDATE pms_user SET phone = ?, updater_id = ?, updated_at = NOW() WHERE id = ?').run(phone, userId, userId)
+async function updateProfile(userId) {
   return getCurrentUser(userId)
 }
 
@@ -213,6 +208,7 @@ module.exports = {
   normalizePreference,
   validatePhoneChangePayload,
   validatePasswordChangePayload,
+  validateNewPassword,
   toAvatarResponse,
   validateAvatarPayload,
   getCurrentUser,

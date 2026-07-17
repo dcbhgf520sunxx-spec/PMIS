@@ -14,7 +14,7 @@ function write(root, file, content) {
 function createProject({ sidebar = true } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'delivery-contract-'));
   write(root, 'AGENTS.md', '所有业务变更必须遵守 docs/ai-delivery-flow.md。');
-  write(root, 'docs/ai-delivery-flow.md', '# flow');
+  write(root, 'docs/ai-delivery-flow.md', '业务接口必须同时挂载 `verifyToken` 和 `checkPermission`。');
   write(root, 'frontend/src/app/routes.tsx', "{ path: 'orders', element: <Orders /> }");
   write(root, 'frontend/src/layouts/AdminLayout/index.tsx', sidebar ? "{ key: '/orders', label: '订单' }" : 'const menu = [];');
   write(root, 'backend/src/routes/orders.js', 'module.exports = {}');
@@ -69,6 +69,57 @@ test('requires a migration when a new business route is added', () => {
   assert.ok(errors.includes('新增业务路由 /orders 未同时新增 migration'));
 });
 
+test('requires a migration when the database initialization schema changes', () => {
+  const root = createProject();
+  const errors = checkDeliveryContract(root, {
+    changedFiles: ['backend/db/init/001_schema.sql']
+  });
+
+  assert.ok(errors.includes('初始化数据库脚本已变更，但未同时新增 migration'));
+});
+
+test('requires the database initialization schema when a migration is added', () => {
+  const root = createProject();
+  write(root, 'backend/db/migrations/20260716_orders.sql', 'ALTER TABLE pms_order ADD COLUMN remark TEXT;');
+  const errors = checkDeliveryContract(root, {
+    changedFiles: ['backend/db/migrations/20260716_orders.sql']
+  });
+
+  assert.ok(errors.includes('新增 migration，但未同步修改初始化数据库脚本'));
+});
+
+test('requires both database structure documents for a structural migration', () => {
+  const root = createProject();
+  write(root, 'backend/db/migrations/20260716_orders.sql', 'ALTER TABLE pms_order ADD COLUMN remark TEXT;');
+  const errors = checkDeliveryContract(root, {
+    changedFiles: [
+      'backend/db/init/001_schema.sql',
+      'backend/db/migrations/20260716_orders.sql'
+    ]
+  });
+
+  assert.ok(errors.includes('数据库结构已变更，但未同步修改 docs/数据库表结构.md'));
+  assert.ok(errors.includes('数据库结构已变更，但未同步修改 docs/数据库表结构.xlsx'));
+});
+
+test('ignores structural SQL keywords that only appear in comments', () => {
+  const root = createProject();
+  write(root, 'backend/db/migrations/20260716_orders.sql', [
+    '-- ALTER TABLE pms_order ADD COLUMN remark TEXT;',
+    '/* DROP TABLE pms_order; */',
+    'SELECT 1;'
+  ].join('\n'));
+  const errors = checkDeliveryContract(root, {
+    changedFiles: [
+      'backend/db/init/001_schema.sql',
+      'backend/db/migrations/20260716_orders.sql'
+    ]
+  });
+
+  assert.ok(!errors.includes('数据库结构已变更，但未同步修改 docs/数据库表结构.md'));
+  assert.ok(!errors.includes('数据库结构已变更，但未同步修改 docs/数据库表结构.xlsx'));
+});
+
 test('requires the new route path inside its migration', () => {
   const root = createProject();
   write(root, 'backend/db/migrations/20260710_orders.sql', 'SELECT 1;');
@@ -78,4 +129,74 @@ test('requires the new route path inside its migration', () => {
   });
 
   assert.ok(errors.includes('新增业务路由 /orders 的 migration 未写入对应 pms_menu.path'));
+});
+
+test('reports a business API that only checks login', () => {
+  const root = createProject();
+  write(root, 'backend/src/routes/invoices.js', 'module.exports = {}');
+  write(root, 'backend/src/app.js', [
+    "const ordersRoutes = require('./routes/orders')",
+    "const invoicesRoutes = require('./routes/invoices')",
+    "app.use('/api/orders', verifyToken, checkPermission('/orders'), ordersRoutes)",
+    "app.use('/api/invoices', verifyToken, invoicesRoutes)"
+  ].join('\n'));
+
+  assert.ok(checkDeliveryContract(root).includes('业务接口 /api/invoices 缺少 checkPermission'));
+});
+
+test('reports a business API that does not check login', () => {
+  const root = createProject();
+  write(root, 'backend/src/app.js', [
+    "const ordersRoutes = require('./routes/orders')",
+    "app.use('/api/orders', ordersRoutes)"
+  ].join('\n'));
+
+  assert.ok(checkDeliveryContract(root).includes('业务接口 /api/orders 缺少 verifyToken'));
+});
+
+test('allows explicit public and login-only shared APIs', () => {
+  const root = createProject();
+  write(root, 'backend/src/app.js', [
+    "const authRoutes = require('./routes/auth')",
+    "const ordersRoutes = require('./routes/orders')",
+    "const messageRoutes = require('./routes/messages')",
+    "app.use('/api/auth', authRoutes)",
+    "app.get('/api/health', healthController)",
+    "app.get('/api/user-options', verifyToken, userController.options)",
+    "app.get('/api/role-options', verifyToken, roleController.options)",
+    "app.get('/api/archive-options/by-type-name', verifyToken, archiveController.getByTypeName)",
+    "app.use('/api/messages', verifyToken, messageRoutes)",
+    "app.use('/api/orders', verifyToken, checkPermission('/orders'), ordersRoutes)"
+  ].join('\n'));
+
+  assert.deepEqual(checkDeliveryContract(root), []);
+});
+
+test('requires login middleware to run before permission middleware', () => {
+  const root = createProject();
+  write(root, 'backend/src/app.js', [
+    "const ordersRoutes = require('./routes/orders')",
+    "app.use('/api/orders', checkPermission('/orders'), verifyToken, ordersRoutes)"
+  ].join('\n'));
+
+  assert.ok(checkDeliveryContract(root).includes('业务接口 /api/orders 的 verifyToken 必须在 checkPermission 之前'));
+});
+
+test('does not allow multiline formatting to hide missing API middleware', () => {
+  const root = createProject();
+  write(root, 'backend/src/app.js', [
+    "const ordersRoutes = require('./routes/orders')",
+    'app.use(',
+    "  '/api/orders', ordersRoutes",
+    ')'
+  ].join('\n'));
+
+  assert.ok(checkDeliveryContract(root).includes('业务接口 /api/orders 缺少 verifyToken'));
+});
+
+test('requires the AI delivery flow to state the API permission rule', () => {
+  const root = createProject();
+  write(root, 'docs/ai-delivery-flow.md', '# flow');
+
+  assert.ok(checkDeliveryContract(root).includes('AI 交付流程未声明业务接口双重鉴权规则'));
 });

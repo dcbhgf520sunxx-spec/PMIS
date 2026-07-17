@@ -5,7 +5,7 @@ import test from 'node:test';
 const modalStyles = readFileSync(new URL('../src/components/admin/AdminModal/index.css', import.meta.url), 'utf8');
 const inputSource = readFileSync(new URL('../src/components/admin/AdminInput/index.tsx', import.meta.url), 'utf8');
 const inputStyles = readFileSync(new URL('../src/components/admin/AdminInput/index.css', import.meta.url), 'utf8');
-const workbenchSource = readFileSync(new URL('../src/modules/design-system/pages/DesignSystemPage.tsx', import.meta.url), 'utf8');
+const feedbackOverlaysSource = readFileSync(new URL('../src/modules/design-system/pages/sections/feedback/FeedbackOverlays.tsx', import.meta.url), 'utf8');
 
 test('AdminModal 将长内容限制在视口内并只滚动正文', () => {
   assert.match(modalStyles, /\.admin-modal \.ant-modal-content\s*\{[\s\S]*max-height:\s*calc\(100(?:dvh|vh)\s*-\s*32px\)/);
@@ -34,5 +34,5 @@ test('长文本默认高度不可向上缩小且计数器不制造弹窗溢出',
   assert.match(inputStyles, /\.admin-textarea\.ant-input-textarea-show-count \.ant-input-data-count\s*\{[\s\S]*bottom:\s*6px/);
   assert.match(inputStyles, /\.admin-textarea\.ant-input-textarea-show-count > textarea\.ant-input\s*\{[\s\S]*padding-bottom:\s*26px/);
   assert.match(inputStyles, /\.admin-input\.ant-input-affix-wrapper:not\(\.ant-input-textarea-affix-wrapper\)[\s\S]*height:\s*32px/);
-  assert.match(workbenchSource, /<AdminTextArea rows=\{5\} maxLength=\{100\} showCount placeholder="请输入处理结果" \/>/);
+  assert.match(feedbackOverlaysSource, /<AdminTextArea rows=\{5\} maxLength=\{100\} showCount placeholder="请输入处理结果" \/>/);
 });

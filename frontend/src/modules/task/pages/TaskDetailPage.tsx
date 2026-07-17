@@ -45,7 +45,7 @@ export function TaskDetailPage() {
       } catch (cause) {
         if (cancelled) return;
         const text = cause instanceof Error ? cause.message : '加载失败';
-        text.includes('不存在') ? setNotFound(true) : setError(text);
+        if (text.includes('不存在')) setNotFound(true); else setError(text);
       } finally {
         if (!cancelled) setLoading(false);
       }

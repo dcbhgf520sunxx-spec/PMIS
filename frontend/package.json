@@ -3,9 +3,15 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "lint": "eslint . --max-warnings=0",
+    "test:e2e": "playwright test",
+    "audit:build-budget": "node scripts/check-build-budget.mjs",
     "audit:components": "node scripts/audit-component-usage.mjs",
     "audit:components:strict": "node scripts/audit-component-usage.mjs --strict",
     "audit:api-contracts": "node scripts/audit-api-contracts.mjs",
@@ -25,11 +31,17 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.61.1",
     "@types/node": "^25.0.3",
     "@types/react": "^18.3.27",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^5.1.2",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^16.5.0",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.64.0",
     "vite": "^8.0.12"
   },
   "overrides": {

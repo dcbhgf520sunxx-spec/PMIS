@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Key } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
 import {
@@ -148,11 +148,8 @@ export function WorkOrderTemplatePage() {
   }), [appliedFilters, viewKey, visibleRows]);
 
   const {
-    currentPage,
-    pageSize,
     pagedRows,
     sortState,
-    total,
     pagination,
     handleTableChange,
     renderIndex
@@ -290,7 +287,7 @@ export function WorkOrderTemplatePage() {
         )
       }
     ]);
-  }, [draftFilters, viewKey]);
+  }, [commitFilters, draftFilters, setDraftFilters, viewKey]);
 
   const columns = useMemo<ProColumns<WorkOrderRecord>[]>(() => [
     {

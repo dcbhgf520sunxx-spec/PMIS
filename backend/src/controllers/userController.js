@@ -2,14 +2,8 @@ const db = require('../db')
 const bcrypt = require('bcryptjs')
 const { getSortDirection, parsePagination } = require('../utils/pagination')
 const { fail, failField, ok } = require('../utils/response')
-const { validateBody } = require('../utils/validation')
-
-function requireValidBody(res, body, schema) {
-  const result = validateBody(body, schema)
-  if (result.ok) return true
-  fail(res, 400, 400, result.message)
-  return false
-}
+const { validateNewPassword } = require('../services/accountService')
+const { requireValidBody } = require('../utils/requestValidation')
 
 const userFormSchema = {
   employee_no: { required: true, label: '工号' },
@@ -30,50 +24,71 @@ function isUniqueViolation(error) {
   return error?.code === '23505'
 }
 
+async function validateActiveRoleIds(roleIds = []) {
+  const ids = [...new Set(roleIds.map(Number).filter(Number.isInteger))]
+  if (ids.length !== roleIds.length) return false
+  if (ids.length === 0) return true
+  const rows = await db.prepare(
+    `SELECT id FROM pms_role r WHERE r.id IN (${ids.map(() => '?').join(',')}) AND r.is_deleted = 0`
+  ).all(...ids)
+  return rows.length === ids.length
+}
+
 exports.list = async (req, res) => {
   try {
     const { employee_no, real_name, phone, status, role_ids } = req.query
     const { page, pageSize, offset } = parsePagination(req.query)
-    let baseSql = withCreatorUpdater('COUNT(*) OVER() as total, pms_user.id, pms_user.employee_no, pms_user.real_name, pms_user.phone, pms_user.status, pms_user.creator_id, pms_user.updater_id, pms_user.created_at, pms_user.updated_at')
-
-    let sql, params = []
     const ids = role_ids ? (Array.isArray(role_ids) ? role_ids : role_ids.split(',').map(Number).filter(Boolean)) : []
-
+    let whereSql = ' WHERE pu.is_deleted = 0'
+    const filterParams = []
     if (ids.length > 0) {
       const placeholders = ids.map(() => '?').join(',')
-      sql = `SELECT pu.*, COUNT(*) OVER() as total, u1.real_name as creator_name, u2.real_name as updater_name FROM pms_user pu
-        INNER JOIN pms_user_role ur ON pu.id = ur.user_id
-        LEFT JOIN pms_user u1 ON pu.creator_id = u1.id
-        LEFT JOIN pms_user u2 ON pu.updater_id = u2.id
-        WHERE pu.is_deleted = 0 AND ur.role_id IN (${placeholders})`
-      params.push(...ids)
-      if (employee_no) { sql += ' AND pu.employee_no LIKE ?'; params.push(`%${employee_no}%`) }
-      if (real_name) { sql += ' AND pu.real_name LIKE ?'; params.push(`%${real_name}%`) }
-      if (phone) { sql += ' AND pu.phone LIKE ?'; params.push(`%${phone}%`) }
-      if (status !== undefined && status !== '') { sql += ' AND pu.status = ?'; params.push(status) }
-    } else {
-      sql = baseSql + ' WHERE pms_user.is_deleted = 0'
-      if (employee_no) { sql += ' AND pms_user.employee_no LIKE ?'; params.push(`%${employee_no}%`) }
-      if (real_name) { sql += ' AND pms_user.real_name LIKE ?'; params.push(`%${real_name}%`) }
-      if (phone) { sql += ' AND pms_user.phone LIKE ?'; params.push(`%${phone}%`) }
-      if (status !== undefined && status !== '') { sql += ' AND pms_user.status = ?'; params.push(status) }
+      whereSql += ` AND EXISTS (SELECT 1 FROM pms_user_role ur WHERE ur.user_id = pu.id AND ur.role_id IN (${placeholders}))`
+      filterParams.push(...ids)
     }
+    if (employee_no) { whereSql += ' AND pu.employee_no LIKE ?'; filterParams.push(`%${employee_no}%`) }
+    if (real_name) { whereSql += ' AND pu.real_name LIKE ?'; filterParams.push(`%${real_name}%`) }
+    if (phone) { whereSql += ' AND pu.phone LIKE ?'; filterParams.push(`%${phone}%`) }
+    if (status !== undefined && status !== '') { whereSql += ' AND pu.status = ?'; filterParams.push(status) }
 
-    const prefix = ids.length > 0 ? 'pu' : 'pms_user'
     const sortMap = {
-      employee_no: `${prefix}.employee_no`, real_name: `${prefix}.real_name`, phone: `${prefix}.phone`,
-      status: `${prefix}.status`, creator_name: 'creator_name', created_at: `${prefix}.created_at`,
+      employee_no: 'pu.employee_no', real_name: 'pu.real_name', phone: 'pu.phone',
+      roles: `(SELECT STRING_AGG(r.name, '、' ORDER BY r.id)
+        FROM pms_user_role ur
+        INNER JOIN pms_role r ON r.id = ur.role_id AND r.is_deleted = 0
+        WHERE ur.user_id = pu.id)`,
+      status: 'pu.status', creator_name: 'creator_name', created_at: 'pu.created_at',
     }
-    const sortField = sortMap[req.query.sort_field] || `${prefix}.created_at`
+    const sortField = sortMap[req.query.sort_field] || 'pu.created_at'
     const sortDirection = getSortDirection(req.query.sort_order)
-    sql += ` ORDER BY ${sortField} ${sortDirection}, ${prefix}.id ${sortDirection} LIMIT ? OFFSET ?`
-    params.push(pageSize, offset)
+    const sql = `SELECT pu.*, u1.real_name as creator_name, u2.real_name as updater_name
+      FROM pms_user pu
+      LEFT JOIN pms_user u1 ON pu.creator_id = u1.id
+      LEFT JOIN pms_user u2 ON pu.updater_id = u2.id
+      ${whereSql}
+      ORDER BY ${sortField} ${sortDirection}, pu.id ${sortDirection} LIMIT ? OFFSET ?`
 
-    const rows = await db.prepare(sql).all(...params)
-    const getRoles = db.prepare(`SELECT r.id, r.name FROM pms_user_role ur LEFT JOIN pms_role r ON ur.role_id = r.id WHERE ur.user_id = ? ORDER BY r.id`)
-    for (const row of rows) { row.roles = await getRoles.all(row.id) }
+    const rows = await db.prepare(sql).all(...filterParams, pageSize, offset)
+    const countRow = await db.prepare(`SELECT COUNT(*) as total FROM pms_user pu${whereSql}`).get(...filterParams)
+    const rolesByUser = new Map()
+    if (rows.length > 0) {
+      const userIds = rows.map((row) => row.id)
+      const roleRows = await db.prepare(`
+        SELECT ur.user_id, r.id, r.name
+        FROM pms_user_role ur
+        INNER JOIN pms_role r ON ur.role_id = r.id
+        WHERE ur.user_id IN (${userIds.map(() => '?').join(',')}) AND r.is_deleted = 0
+        ORDER BY ur.user_id, r.id
+      `).all(...userIds)
+      for (const role of roleRows) {
+        const userRoles = rolesByUser.get(String(role.user_id)) || []
+        userRoles.push({ id: role.id, name: role.name })
+        rolesByUser.set(String(role.user_id), userRoles)
+      }
+    }
+    for (const row of rows) row.roles = rolesByUser.get(String(row.id)) || []
 
-    res.json({ code: 0, message: 'success', data: { list: rows, total: Number(rows[0]?.total || 0), page, pageSize } })
+    res.json({ code: 0, message: 'success', data: { list: rows, total: Number(countRow?.total || 0), page, pageSize } })
   } catch (err) {
     console.error(err)
     res.status(500).json({ code: 500, message: '查询失败', data: null })
@@ -119,13 +134,15 @@ exports.create = async (req, res) => {
     if (!requireValidBody(res, req.body, userFormSchema)) return
     const { employee_no, real_name, phone, password, status, role_ids } = req.body
     const operatorId = req.user.id
+    if (!await validateActiveRoleIds(role_ids || [])) return failField(res, 'role_ids', '包含不存在或已删除的角色')
+    if (password) validateNewPassword(password)
 
     if (employee_no) {
-      const exists = await db.prepare('SELECT id FROM pms_user WHERE employee_no = ? AND is_deleted = 0').get(employee_no)
+      const exists = await db.prepare('SELECT id FROM pms_user WHERE employee_no = ?').get(employee_no)
       if (exists) return failField(res, 'employee_no', '工号已存在')
     }
     if (phone) {
-      const exists = await db.prepare('SELECT id FROM pms_user WHERE phone = ? AND is_deleted = 0').get(phone)
+      const exists = await db.prepare('SELECT id FROM pms_user WHERE phone = ?').get(phone)
       if (exists) return failField(res, 'phone', '手机号已存在')
     }
 
@@ -145,7 +162,7 @@ exports.create = async (req, res) => {
         }
       }
 
-      await db.writeLog(operatorId, '新增', '用户', userId, null, null, JSON.stringify({ employee_no, real_name, phone }), req.ip)
+      await conn.writeLog(operatorId, '新增', '用户', userId, null, null, JSON.stringify({ employee_no, real_name, phone }), req.ip)
     })
 
     ok(res, { id: userId })
@@ -164,11 +181,14 @@ exports.update = async (req, res) => {
     if (!requireValidBody(res, req.body, userFormSchema)) return
     const { employee_no, real_name, phone, password, status, role_ids } = req.body
     const operatorId = req.user.id
+    if (!await validateActiveRoleIds(role_ids || [])) return failField(res, 'role_ids', '包含不存在或已删除的角色')
+    if (password) validateNewPassword(password)
 
-    const old = await db.prepare('SELECT employee_no, real_name, phone, status FROM pms_user WHERE id = ?').get(req.params.id)
+    const old = await db.prepare('SELECT employee_no, real_name, phone, status FROM pms_user WHERE id = ? AND is_deleted = 0').get(req.params.id)
+    if (!old) return fail(res, 404, 404, '数据不存在或已被删除')
 
     if (phone) {
-      const exists = await db.prepare('SELECT id FROM pms_user WHERE phone = ? AND is_deleted = 0 AND id != ?').get(phone, req.params.id)
+      const exists = await db.prepare('SELECT id FROM pms_user WHERE phone = ? AND id != ?').get(phone, req.params.id)
       if (exists) return failField(res, 'phone', '手机号已存在')
     }
 
@@ -205,7 +225,7 @@ exports.update = async (req, res) => {
         assignments.push('status = ?')
         params.push(status)
       }
-      assignments.push('updater_id = ?')
+      assignments.push('updater_id = ?', 'updated_at = NOW()')
       params.push(operatorId, req.params.id)
       await conn.prepare(`UPDATE pms_user SET ${assignments.join(', ')} WHERE id = ?`).run(...params)
 
@@ -231,6 +251,8 @@ exports.remove = async (req, res) => {
   try {
     const operatorId = req.user.id
     const userId = req.params.id
+    const user = await db.prepare('SELECT id FROM pms_user WHERE id = ? AND is_deleted = 0').get(userId)
+    if (!user) return fail(res, 404, 404, '数据不存在或已被删除')
 
     // 检查是否有角色关联
     const roleRef = await db.prepare('SELECT COUNT(*) as cnt FROM pms_user_role WHERE user_id = ?').get(userId)
@@ -244,7 +266,7 @@ exports.remove = async (req, res) => {
       return fail(res, 400, 400, '该用户已被运维工单引用为跟踪人，无法删除')
     }
 
-    await db.prepare('UPDATE pms_user SET is_deleted = 1, updater_id = ? WHERE id = ?').run(operatorId, userId)
+    await db.prepare('UPDATE pms_user SET is_deleted = 1, updater_id = ?, updated_at = NOW() WHERE id = ?').run(operatorId, userId)
     await db.writeLog(operatorId, '删除', '用户', userId, 'is_deleted', '0', '1', req.ip)
     ok(res, null)
   } catch (err) {
@@ -258,8 +280,9 @@ exports.toggleStatus = async (req, res) => {
     if (!requireValidBody(res, req.body, { status: { required: true, type: 'enum', values: [0, 1], label: '状态' } })) return
     const { status } = req.body
     const operatorId = req.user.id
-    const oldStatus = await db.prepare('SELECT status FROM pms_user WHERE id = ?').get(req.params.id)
-    await db.prepare('UPDATE pms_user SET status = ?, updater_id = ? WHERE id = ?').run(status, operatorId, req.params.id)
+    const oldStatus = await db.prepare('SELECT status FROM pms_user WHERE id = ? AND is_deleted = 0').get(req.params.id)
+    if (!oldStatus) return fail(res, 404, 404, '数据不存在或已被删除')
+    await db.prepare('UPDATE pms_user SET status = ?, updater_id = ?, updated_at = NOW() WHERE id = ?').run(status, operatorId, req.params.id)
     await db.writeLog(operatorId, '状态变更', '用户', req.params.id, 'status', String(oldStatus?.status ?? ''), String(status), req.ip)
     ok(res, null)
   } catch (err) {
@@ -271,9 +294,11 @@ exports.toggleStatus = async (req, res) => {
 exports.resetPassword = async (req, res) => {
   try {
     const operatorId = req.user.id
+    const user = await db.prepare('SELECT id FROM pms_user WHERE id = ? AND is_deleted = 0').get(req.params.id)
+    if (!user) return fail(res, 404, 404, '数据不存在或已被删除')
     const hashed = await bcrypt.hash('vv123456', 10)
-    await db.prepare('UPDATE pms_user SET password = ?, updater_id = ? WHERE id = ?').run(hashed, operatorId, req.params.id)
-    await db.writeLog(operatorId, '重置密码', '用户', req.params.id, 'password', '***', 'vv123456', req.ip)
+    await db.prepare('UPDATE pms_user SET password = ?, first_login = 1, updater_id = ?, updated_at = NOW() WHERE id = ?').run(hashed, operatorId, req.params.id)
+    await db.writeLog(operatorId, '重置密码', '用户', req.params.id, 'password', '***', '***', req.ip)
     ok(res, null)
   } catch (err) {
     console.error(err)
@@ -285,7 +310,7 @@ exports.checkPhone = async (req, res) => {
   try {
     const { phone, excludeId } = req.query
     if (!phone) return res.json({ code: 0, message: 'success', data: { available: true } })
-    let sql = 'SELECT id FROM pms_user WHERE phone = ? AND is_deleted = 0'
+    let sql = 'SELECT id FROM pms_user WHERE phone = ?'
     const params = [phone]
     if (excludeId) { sql += ' AND id != ?'; params.push(excludeId) }
     const exists = await db.prepare(sql).get(...params)
@@ -300,7 +325,7 @@ exports.checkEmployeeNo = async (req, res) => {
   try {
     const { employee_no, excludeId } = req.query
     if (!employee_no) return res.json({ code: 0, message: 'success', data: { available: true } })
-    let sql = 'SELECT id FROM pms_user WHERE employee_no = ? AND is_deleted = 0'
+    let sql = 'SELECT id FROM pms_user WHERE employee_no = ?'
     const params = [employee_no]
     if (excludeId) { sql += ' AND id != ?'; params.push(excludeId) }
     const exists = await db.prepare(sql).get(...params)

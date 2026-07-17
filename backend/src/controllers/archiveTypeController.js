@@ -1,5 +1,5 @@
 const db = require('../db')
-const { failField } = require('../utils/response')
+const { fail, failField } = require('../utils/response')
 
 function withCreatorUpdater(sql) {
   return `SELECT ${sql}, u1.real_name as creator_name, u2.real_name as updater_name
@@ -45,6 +45,7 @@ exports.create = async (req, res) => {
   } catch (err) {
     console.error(err)
     if (err.code === '23505' && String(err.constraint || '').includes('code_prefix')) return failField(res, 'code_prefix', '编码前缀已存在')
+    if (err.code === '23505' && String(err.constraint || '').includes('code_active')) return failField(res, 'code_prefix', '档案类型编码生成冲突，请重试')
     res.status(500).json({ code: 500, message: '创建失败', data: null })
   }
 }
@@ -53,11 +54,12 @@ exports.update = async (req, res) => {
   try {
     const { name } = req.body
     const operatorId = req.user.id
-    const old = await db.prepare('SELECT name, code_prefix FROM pms_archive_type WHERE id = ?').get(req.params.id)
+    const old = await db.prepare('SELECT name, code_prefix FROM pms_archive_type WHERE id = ? AND is_deleted = 0').get(req.params.id)
+    if (!old) return fail(res, 404, 404, '数据不存在或已被删除')
     const changes = []
     if (name !== undefined && String(old.name) !== String(name)) changes.push({ field: 'name', oldVal: old.name, newVal: name })
     await db.prepare(
-      'UPDATE pms_archive_type SET name = ?, updater_id = ? WHERE id = ?'
+      'UPDATE pms_archive_type SET name = ?, updater_id = ?, updated_at = NOW() WHERE id = ?'
     ).run(name || old.name, operatorId, req.params.id)
     if (changes.length > 0) await db.writeLogs(operatorId, '编辑', '档案类型', req.params.id, changes, req.ip)
     res.json({ code: 0, message: 'success', data: null })
@@ -71,8 +73,9 @@ exports.toggleStatus = async (req, res) => {
   try {
     const { status } = req.body
     const operatorId = req.user.id
-    const oldStatus = await db.prepare('SELECT status FROM pms_archive_type WHERE id = ?').get(req.params.id)
-    await db.prepare('UPDATE pms_archive_type SET status = ?, updater_id = ? WHERE id = ?').run(status, operatorId, req.params.id)
+    const oldStatus = await db.prepare('SELECT status FROM pms_archive_type WHERE id = ? AND is_deleted = 0').get(req.params.id)
+    if (!oldStatus) return fail(res, 404, 404, '数据不存在或已被删除')
+    await db.prepare('UPDATE pms_archive_type SET status = ?, updater_id = ?, updated_at = NOW() WHERE id = ?').run(status, operatorId, req.params.id)
     await db.writeLog(operatorId, '状态变更', '档案类型', req.params.id, 'status', String(oldStatus?.status ?? ''), String(status), req.ip)
     res.json({ code: 0, message: 'success', data: null })
   } catch (err) {
@@ -99,11 +102,13 @@ exports.checkPrefix = async (req, res) => {
 exports.remove = async (req, res) => {
   try {
     const operatorId = req.user.id
+    const archiveType = await db.prepare('SELECT id FROM pms_archive_type WHERE id = ? AND is_deleted = 0').get(req.params.id)
+    if (!archiveType) return fail(res, 404, 404, '数据不存在或已被删除')
     const refCount = await db.prepare('SELECT COUNT(*) as cnt FROM pms_archive WHERE archive_type_id = ? AND is_deleted = 0').get(req.params.id)
     if (refCount?.cnt > 0) {
       return res.status(400).json({ code: 400, message: '该类型下已有档案数据，不可删除', data: null })
     }
-    await db.prepare('UPDATE pms_archive_type SET is_deleted = 1, updater_id = ? WHERE id = ?').run(operatorId, req.params.id)
+    await db.prepare('UPDATE pms_archive_type SET is_deleted = 1, updater_id = ?, updated_at = NOW() WHERE id = ?').run(operatorId, req.params.id)
     await db.writeLog(operatorId, '删除', '档案类型', req.params.id, 'is_deleted', '0', '1', req.ip)
     res.json({ code: 0, message: 'success', data: null })
   } catch (err) {

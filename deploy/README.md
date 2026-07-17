@@ -4,7 +4,7 @@
 
 ## 1. 环境要求
 
-- Node.js >= 18
+- Node.js >= 22.18
 - PostgreSQL 16
 - Nginx
 - PM2
@@ -43,15 +43,28 @@ DB_USER=pms
 DB_PASSWORD=你的密码
 DB_NAME=pmis
 JWT_SECRET=请替换为随机密钥
-ALLOWED_ORIGIN=http://你的域名或IP
+ALLOWED_ORIGIN=https://你的域名或IP
 ```
 
-新环境可通过 Docker Compose 初始化 PostgreSQL；已有数据库在用户确认表结构后执行迁移：
+环境文件包含数据库密码和 JWT 密钥，创建后必须限制为仅部署账号可读写：
+
+```bash
+chmod 600 backend/.env
+```
+
+新环境通过当前版本 Docker Compose 初始化 PostgreSQL 后，只登记已包含在初始化脚本中的迁移基线：
+
+```bash
+cd backend
+npm run db:migrate -- --baseline
+```
+
+`--baseline` 只用于当前初始化脚本新建的空白环境。已有业务数据库仍应在用户确认表结构后按顺序检查并执行增量迁移：
 
 ```bash
 cd backend
 npm run db:migrate -- --check
-npm run db:migrate
+npm run db:migrate -- --apply --user-approved
 ```
 
 ## 4. 安装依赖
@@ -148,7 +161,7 @@ curl http://localhost:3103/api/auth/login \
 浏览器访问：
 
 ```txt
-http://你的域名或IP/
+https://你的域名或IP/
 ```
 
 React 使用 history 路由，Nginx 必须保留 `try_files $uri $uri/ /index.html;`，否则刷新业务页面会返回 404。

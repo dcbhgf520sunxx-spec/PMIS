@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { message } from 'antd';
 import { useParams } from 'react-router-dom';
 import {
@@ -15,7 +15,7 @@ import {
 } from '../../../components/admin';
 import { WorkOrderStatusChangeAction } from '../components/WorkOrderStatusChangeAction';
 import { deleteWorkOrder, getWorkOrder, getWorkOrderHistory, getWorkOrderNeighbors, updateWorkOrderStatus } from '../../../api/workOrderApi';
-import type { WorkOrderHistoryItem, WorkOrderRecord, WorkOrderStatus } from '../types';
+import type { WorkOrderHistoryItem, WorkOrderRecord } from '../types';
 import {
   problemTypeText,
   renderOverdue,
@@ -42,7 +42,7 @@ export function WorkOrderDetailPage() {
     fetchNeighbors: getWorkOrderNeighbors
   });
 
-  const loadDetail = async () => {
+  const loadDetail = useCallback(async () => {
     if (!params.id) return;
     setLoading(true);
     setLoadError('');
@@ -62,11 +62,11 @@ export function WorkOrderDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id]);
 
   useEffect(() => {
-    loadDetail();
-  }, [params.id]);
+    void loadDetail();
+  }, [loadDetail]);
 
   if (!detail) {
     return (

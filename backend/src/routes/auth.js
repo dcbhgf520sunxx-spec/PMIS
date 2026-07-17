@@ -17,12 +17,13 @@ const LOCKOUT_MS = 15 * 60 * 1000 // 15 minutes
 const CLEANUP_MS = 60 * 60 * 1000 // 1 hour
 
 // 定期清理超过 1 小时未活动的条目，防止内存泄漏
-setInterval(() => {
+const cleanupTimer = setInterval(() => {
   const now = Date.now()
   for (const [ip, data] of loginAttempts) {
     if (now - data.lastAttempt > CLEANUP_MS) loginAttempts.delete(ip)
   }
 }, CLEANUP_MS)
+cleanupTimer.unref()
 
 async function safeRecordLoginFailure(payload) {
   try {
@@ -63,8 +64,8 @@ router.post('/login', async (req, res) => {
     }
 
     const row = await db.prepare(
-      'SELECT id, employee_no, real_name, phone, avatar_url, password, status, first_login FROM pms_user WHERE (employee_no = ? OR phone = ? OR real_name = ?) AND is_deleted = 0'
-    ).get(account, account, account)
+      'SELECT id, employee_no, real_name, phone, avatar_url, password, status, first_login FROM pms_user WHERE (employee_no = ? OR phone = ?) AND is_deleted = 0'
+    ).get(account, account)
     if (!row) {
       attempts.count++
       attempts.lastAttempt = Date.now()

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { message } from 'antd';
 import { useParams } from 'react-router-dom';
 import {
@@ -13,7 +12,6 @@ import {
 } from '../../../components/admin';
 import { WorkOrderStatusChangeAction } from '../../work-order/components/WorkOrderStatusChangeAction';
 import { mockWorkOrderHistory, mockWorkOrders } from '../../work-order/mock';
-import type { WorkOrderStatus } from '../../work-order/types';
 import {
   problemTypeText,
   renderOverdue,

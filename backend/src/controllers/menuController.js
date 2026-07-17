@@ -28,7 +28,7 @@ exports.saveRoleMenus = async (req, res) => {
       if (hasChanged) {
         const oldValue = oldMenuIds.join('、') || '无'
         const newValue = newMenuIds.join('、') || '无'
-        await db.writeLog(operatorId, '分配权限', '角色', roleId, 'menu_ids', oldValue, newValue, req.ip)
+        await conn.writeLog(operatorId, '分配权限', '角色', roleId, 'menu_ids', oldValue, newValue, req.ip)
       }
     })
     res.json({ code: 0, message: 'success', data: null })

@@ -28,7 +28,7 @@ export function BugDetailPage() {
         time: String(item.created_at).slice(0, 19).replace('T', ' '),
         changes: (item.changes || []).map((change: any) => ({ field: change.field_name || '-', before: change.old_value, after: change.new_value }))
       })));
-    }).catch((cause) => { if (cancelled) return; const text = cause instanceof Error ? cause.message : '加载失败'; text.includes('不存在') ? setNotFound(true) : setError(text); }).finally(() => { if (!cancelled) setLoading(false); });
+    }).catch((cause) => { if (cancelled) return; const text = cause instanceof Error ? cause.message : '加载失败'; if (text.includes('不存在')) setNotFound(true); else setError(text); }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [params.id, revision]);
   const date = (value: any) => value?.format?.('YYYY-MM-DD');

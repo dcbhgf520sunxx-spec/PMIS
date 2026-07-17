@@ -1,13 +1,6 @@
 const db = require('../db')
 const { fail, ok } = require('../utils/response')
-const { validateBody } = require('../utils/validation')
-
-function requireValidBody(res, body, schema) {
-  const result = validateBody(body, schema)
-  if (result.ok) return true
-  fail(res, 400, 400, result.message)
-  return false
-}
+const { requireValidBody } = require('../utils/requestValidation')
 
 const archiveCreateSchema = {
   archive_type_id: { required: true, type: 'number', label: '档案类型' },
@@ -116,12 +109,13 @@ exports.update = async (req, res) => {
     if (!requireValidBody(res, req.body, archiveUpdateSchema)) return
     const { name, sort_order } = req.body
     const operatorId = req.user.id
-    const old = await db.prepare('SELECT name, sort_order, archive_type_id FROM pms_archive WHERE id = ?').get(req.params.id)
+    const old = await db.prepare('SELECT name, sort_order, archive_type_id FROM pms_archive WHERE id = ? AND is_deleted = 0').get(req.params.id)
+    if (!old) return fail(res, 404, 404, '数据不存在或已被删除')
     const changes = []
     if (name !== undefined && String(old.name) !== String(name)) changes.push({ field: 'name', oldVal: old.name, newVal: name })
     if (sort_order !== undefined && Number(old.sort_order) !== Number(sort_order)) changes.push({ field: 'sort_order', oldVal: old.sort_order, newVal: sort_order })
     await db.prepare(
-      'UPDATE pms_archive SET name = ?, sort_order = ?, updater_id = ? WHERE id = ?'
+      'UPDATE pms_archive SET name = ?, sort_order = ?, updater_id = ?, updated_at = NOW() WHERE id = ?'
     ).run(name || old.name, sort_order !== undefined ? sort_order : old.sort_order, operatorId, req.params.id)
     if (changes.length > 0) await db.writeLogs(operatorId, '编辑', '档案', req.params.id, changes, req.ip)
     ok(res, null)
@@ -136,8 +130,9 @@ exports.toggleStatus = async (req, res) => {
     if (!requireValidBody(res, req.body, { status: { required: true, type: 'enum', values: [0, 1], label: '状态' } })) return
     const { status } = req.body
     const operatorId = req.user.id
-    const oldStatus = await db.prepare('SELECT status FROM pms_archive WHERE id = ?').get(req.params.id)
-    await db.prepare('UPDATE pms_archive SET status = ?, updater_id = ? WHERE id = ?').run(status, operatorId, req.params.id)
+    const oldStatus = await db.prepare('SELECT status FROM pms_archive WHERE id = ? AND is_deleted = 0').get(req.params.id)
+    if (!oldStatus) return fail(res, 404, 404, '数据不存在或已被删除')
+    await db.prepare('UPDATE pms_archive SET status = ?, updater_id = ?, updated_at = NOW() WHERE id = ?').run(status, operatorId, req.params.id)
     await db.writeLog(operatorId, '状态变更', '档案', req.params.id, 'status', String(oldStatus?.status ?? ''), String(status), req.ip)
     ok(res, null)
   } catch (err) {
@@ -156,7 +151,7 @@ exports.remove = async (req, res) => {
     const referenceMessage = await getArchiveReferenceMessage(archiveId)
     if (referenceMessage) return fail(res, 400, 400, referenceMessage)
 
-    await db.prepare('UPDATE pms_archive SET is_deleted = 1, updater_id = ? WHERE id = ?').run(operatorId, archiveId)
+    await db.prepare('UPDATE pms_archive SET is_deleted = 1, updater_id = ?, updated_at = NOW() WHERE id = ?').run(operatorId, archiveId)
     await db.writeLog(operatorId, '删除', '档案', archiveId, 'is_deleted', '0', '1', req.ip)
     ok(res, null)
   } catch (err) {

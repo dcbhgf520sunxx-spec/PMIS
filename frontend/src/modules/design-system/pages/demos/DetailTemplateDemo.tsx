@@ -57,6 +57,7 @@ export function DetailTemplateDemo() {
       title: '操作',
       valueType: 'option' as const,
       width: 110,
+      fixed: 'right' as const,
       render: () => (
         <OperationColumnActions>
           <AdminTextAction>编辑</AdminTextAction>

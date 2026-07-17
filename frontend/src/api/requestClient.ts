@@ -9,6 +9,12 @@ export const request = axios.create({
   timeout: 15000
 });
 
+function clearExpiredSession(status?: number) {
+  if (status !== 401) return;
+  const auth = useAuthStore.getState();
+  if (auth.token) auth.clearAuth();
+}
+
 request.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
   if (token) {
@@ -21,12 +27,15 @@ request.interceptors.response.use(
   (response) => {
     const payload = response.data as ApiResponse<unknown>;
     if (payload && typeof payload.code === 'number' && payload.code !== 0) {
+      clearExpiredSession(payload.code);
       return Promise.reject(createApiError(payload));
     }
     return response;
   },
   (error) => {
-    return Promise.reject(createApiError(error?.response?.data, error?.message || '请求失败'));
+    const payload = error?.response?.data as ApiResponse<unknown> | undefined;
+    clearExpiredSession(Number(payload?.code || error?.response?.status));
+    return Promise.reject(createApiError(payload, error?.message || '请求失败'));
   }
 );
 

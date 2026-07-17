@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { forwardRef } from 'react';
+import type { ComponentRef, ReactNode } from 'react';
 import {
   DeleteOutlined,
   EditOutlined,
@@ -17,17 +18,18 @@ type AdminIconActionProps = Omit<ButtonProps, 'children' | 'size' | 'type'> & {
   tooltip?: ReactNode;
 };
 
-export function AdminIconAction({
+export const AdminIconAction = forwardRef<ComponentRef<typeof Button>, AdminIconActionProps>(function AdminIconAction({
   label,
   tooltip,
   className,
   ...props
-}: AdminIconActionProps) {
+}, ref) {
   const actionClassName = ['admin-icon-action', className].filter(Boolean).join(' ');
 
   return (
     <Tooltip title={tooltip || label}>
       <Button
+        ref={ref}
         {...props}
         aria-label={label}
         className={actionClassName}
@@ -36,7 +38,7 @@ export function AdminIconAction({
       />
     </Tooltip>
   );
-}
+});
 
 type AdminConfirmIconActionProps = Omit<ConfirmActionProps, 'children' | 'size' | 'type' | 'tooltip'> & {
   label: string;

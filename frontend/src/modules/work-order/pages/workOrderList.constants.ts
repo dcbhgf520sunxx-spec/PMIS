@@ -31,10 +31,10 @@ export const workOrderSorters = createListSorters<WorkOrderRecord>({
 });
 
 export const statusTransitions: Record<WorkOrderStatus, WorkOrderStatus[]> = {
-  0: [1, 3],
-  1: [2, 3],
+  0: [1],
+  1: [2],
   2: [3],
-  3: [0, 1, 2]
+  3: []
 };
 
 export function toDateText(value: unknown) {

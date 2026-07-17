@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
 import {
   ActionBar,
@@ -82,7 +82,7 @@ export function UserListPage() {
   });
 
   useEffect(() => {
-    getRoleOptions().then(setRoleOptions);
+    getRoleOptions().then(setRoleOptions).catch(() => undefined);
   }, []);
 
   const filterItems = createListFilterItems([
