@@ -7,6 +7,10 @@ const detailMetaStyles = fs.readFileSync(new URL('../src/components/admin/Detail
 const roleDetailSource = fs.readFileSync(new URL('../src/modules/role/pages/RoleDetailPage.tsx', import.meta.url), 'utf8');
 const userDetailSource = fs.readFileSync(new URL('../src/modules/user/pages/UserDetailPage.tsx', import.meta.url), 'utf8');
 const workOrderDetailSource = fs.readFileSync(new URL('../src/modules/work-order/pages/WorkOrderDetailPage.tsx', import.meta.url), 'utf8');
+const productDetailSource = fs.readFileSync(new URL('../src/modules/product/pages/ProductDetailPage.tsx', import.meta.url), 'utf8');
+const projectDetailSource = fs.readFileSync(new URL('../src/modules/project/pages/ProjectDetailPage.tsx', import.meta.url), 'utf8');
+const requirementDetailSource = fs.readFileSync(new URL('../src/modules/requirement/pages/RequirementDetailPage.tsx', import.meta.url), 'utf8');
+const bugDetailSource = fs.readFileSync(new URL('../src/modules/bug/pages/BugDetailPage.tsx', import.meta.url), 'utf8');
 const detailDemoSource = fs.readFileSync(new URL('../src/modules/design-system/pages/demos/DetailTemplateDemo.tsx', import.meta.url), 'utf8');
 const developmentRules = fs.readFileSync(new URL('../../docs/ai-development-rules.md', import.meta.url), 'utf8');
 
@@ -24,6 +28,12 @@ test('详情普通字段默认限制两行，长文本和富文本保持完整�
   assert.match(roleDetailSource, /label: '角色描述',[^\n]*longText: true/);
   assert.match(userDetailSource, /label: '所属角色',[^\n]*aggregate: true/);
   assert.match(workOrderDetailSource, /label: '处置结果',[^\n]*longText: true/);
+  assert.match(productDetailSource, /label: '产品名称', value: row\.name/);
+  assert.doesNotMatch(productDetailSource, /label: '产品名称',[^\n]*longText: true/);
+  assert.match(projectDetailSource, /label: '进度记录',[^\n]*longText: true/);
+  assert.match(projectDetailSource, /label: '风险记录',[^\n]*longText: true/);
+  assert.match(requirementDetailSource, /label:'完成情况',[^\n]*longText:true/);
+  assert.match(bugDetailSource, /label: '激活原因',[^\n]*longText: true/);
   assert.match(detailDemoSource, /label: '所属角色',[^\n]*aggregate: true/);
   assert.match(developmentRules, /普通文本字段[\s\S]*最多显示两行[\s\S]*悬浮展示完整内容/);
   assert.match(developmentRules, /描述、备注、进展、风险[\s\S]*longText/);

@@ -40,7 +40,7 @@ export function BugDetailPage() {
     documentSection={row ? { items: [{ label: '创建人', value: row.creatorName }, { label: '创建时间', value: row.createdAt, wide: true }, { label: '更新人', value: row.updaterName }, { label: '更新时间', value: row.updatedAt, wide: true }] } : null}
   >{row ? <>
     <TemplateDetailSection title="基本信息"><DetailMetaList items={[{ label: 'Bug标题', value: row.title, wide: true }, { label: 'Bug描述', value: <RichTextViewer value={row.description || '暂无描述'} />, wide: true }, { label: '关联类型', value: row.sourceType === 1 ? '项目' : '需求' }, { label: '关联对象', value: row.sourceType === 1 ? row.projectName : row.requirementName }, { label: 'Bug类型', value: row.bugTypeName }]} /></TemplateDetailSection>
-    <TemplateDetailSection title="处理信息"><DetailMetaList items={[{ label: '指派给', value: row.assigneeName }, { label: '修复时间', value: row.resolvedTime || '-' }, { label: '解决方案', value: row.resolutionName }, { label: '关闭时间', value: row.closedTime || '-' }, { label: '激活原因', value: row.activationReason || '-', wide: true }]} /></TemplateDetailSection>
+    <TemplateDetailSection title="处理信息"><DetailMetaList items={[{ label: '指派给', value: row.assigneeName }, { label: '修复时间', value: row.resolvedTime || '-' }, { label: '解决方案', value: row.resolutionName }, { label: '关闭时间', value: row.closedTime || '-' }, { label: '激活原因', value: row.activationReason || '-', wide: true, longText: true }]} /></TemplateDetailSection>
     <HistoryTimelineSection items={history} />
   </> : null}</TemplateDetailPage>;
 }
