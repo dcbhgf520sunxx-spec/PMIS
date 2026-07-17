@@ -1,5 +1,5 @@
-function allowedTaskStatuses(status, previousStatus) {
-  if (Number(status) === 3) return previousStatus === undefined || previousStatus === null ? [] : [Number(previousStatus)]
+function allowedTaskStatuses(status) {
+  if (Number(status) === 3) return [0, 1, 2]
   return { 0: [1, 3], 1: [2, 3], 2: [3] }[Number(status)] || []
 }
 

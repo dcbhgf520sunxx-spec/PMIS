@@ -9,11 +9,11 @@ const {
   canLeaveCompletedSubtask,
 } = require('../src/services/taskRules')
 
-test('任务状态流转保持源系统规则', () => {
+test('任务暂停后可以恢复到任意其他状态', () => {
   assert.deepEqual(allowedTaskStatuses(0), [1, 3])
   assert.deepEqual(allowedTaskStatuses(1), [2, 3])
   assert.deepEqual(allowedTaskStatuses(2), [3])
-  assert.deepEqual(allowedTaskStatuses(3, 1), [1])
+  assert.deepEqual(allowedTaskStatuses(3, 1), [0, 1, 2])
 })
 
 test('完成和暂停要求对应时间', () => {
