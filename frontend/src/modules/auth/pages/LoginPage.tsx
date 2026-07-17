@@ -50,12 +50,11 @@ export function LoginPage() {
     navigate(preference.default_route || '/home', { replace: true });
   };
 
-  const handleForcedPasswordExit = () => {
-    const logoutPromise = logoutAccessSession(accessSessionId).catch(() => undefined);
+  const handleForcedPasswordExit = async () => {
+    await logoutAccessSession(accessSessionId).catch(() => undefined);
     clearAuth();
     setAccount('');
     setPassword('');
-    void logoutPromise;
   };
 
   const createRipple = (event: MouseEvent<HTMLElement>) => {

@@ -318,11 +318,10 @@ export function AdminLayout() {
     const logoutForIdle = async () => {
       if (idleLoggedOutRef.current) return;
       idleLoggedOutRef.current = true;
-      const logoutPromise = logoutAccessSession(accessSessionId, { preserveLastActive: true }).catch(() => undefined);
+      await logoutAccessSession(accessSessionId, { preserveLastActive: true }).catch(() => undefined);
       clearAuth();
       message.warning('长时间未操作，已自动退出');
       navigate('/login', { replace: true });
-      await logoutPromise;
     };
 
     const checkIdle = () => {
@@ -491,10 +490,9 @@ export function AdminLayout() {
                     setAccountDrawer('password');
                   }
                   if (key === 'logout') {
-                    const logoutPromise = logoutAccessSession(accessSessionId).catch(() => undefined);
+                    await logoutAccessSession(accessSessionId).catch(() => undefined);
                     clearAuth();
                     navigate('/login', { replace: true });
-                    await logoutPromise;
                   }
                 }
               }}

@@ -8,6 +8,11 @@ const authStore = readFileSync(new URL('../src/stores/authStore.ts', import.meta
 const adminLayout = readFileSync(new URL('../src/layouts/AdminLayout/index.tsx', import.meta.url), 'utf8');
 const passwordModal = existsSync(modalUrl) ? readFileSync(modalUrl, 'utf8') : '';
 
+function assertLogoutCompletesBeforeAuthClear(source, expectedCount) {
+  const matches = source.match(/await logoutAccessSession\([\s\S]*?\)\.catch\(\(\) => undefined\);\s*clearAuth\(\);/g) || [];
+  assert.equal(matches.length, expectedCount);
+}
+
 test('首次登录必须完成改密后才能进入业务页面', () => {
   assert.match(loginPage, /result\.first_login === 1/);
   assert.match(loginPage, /<PasswordChangeModal[\s\S]*forced/);
@@ -29,4 +34,11 @@ test('首次登录改密弹窗允许退出当前登录后切换账号', () => {
   assert.match(loginPage, /logoutAccessSession\(accessSessionId\)/);
   assert.match(loginPage, /clearAuth\(\)/);
   assert.match(loginPage, /<PasswordChangeModal[\s\S]*onForcedExit=/);
+});
+
+test('退出登录必须在清理本地鉴权前完成服务端会话注销', () => {
+  assertLogoutCompletesBeforeAuthClear(loginPage, 1);
+  assertLogoutCompletesBeforeAuthClear(adminLayout, 2);
+  assert.doesNotMatch(loginPage, /const logoutPromise = logoutAccessSession/);
+  assert.doesNotMatch(adminLayout, /const logoutPromise = logoutAccessSession/);
 });
