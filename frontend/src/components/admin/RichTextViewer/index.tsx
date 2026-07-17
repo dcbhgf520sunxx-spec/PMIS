@@ -8,7 +8,7 @@ type RichTextViewerProps = {
   emptyText?: string;
 };
 
-export function RichTextViewer({ value, emptyText = '暂无内容' }: RichTextViewerProps) {
+export function RichTextViewer({ value, emptyText = '-' }: RichTextViewerProps) {
   const safeHtml = sanitizeRichText(value || '');
   const [previewSrc, setPreviewSrc] = useState('');
 

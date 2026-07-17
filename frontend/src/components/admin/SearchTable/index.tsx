@@ -8,6 +8,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { AdminIconAction } from '../AdminIconAction';
 import './index.css';
 import { enforceFixedColumnState, type ColumnStateEntry } from './columnState';
+import { getListCellTitle, readListCellValue, type ListCellDataIndex } from './listCellTitle';
 
 export type SearchTableProps<
   T extends Record<string, unknown>,
@@ -124,6 +125,36 @@ function getColumnKey<T extends Record<string, unknown>>(column: ProColumns<T>, 
   return `column-${index}`;
 }
 
+function withListCellTitle<T extends Record<string, unknown>>(column: ProColumns<T>): ProColumns<T> {
+  if (
+    column.render
+    || column.valueEnum
+    || column.dataIndex === undefined
+    || column.dataIndex === null
+    || column.valueType === 'index'
+    || column.valueType === 'option'
+  ) {
+    return column;
+  }
+
+  const dataIndex = column.dataIndex as ListCellDataIndex;
+
+  return {
+    ...column,
+    ellipsis: column.ellipsis ?? true,
+    onCell: (record: T, rowIndex?: number) => {
+      const originalCellProps = typeof column.onCell === 'function'
+        ? column.onCell(record, rowIndex)
+        : {};
+
+      return {
+        title: getListCellTitle(readListCellValue(record, dataIndex)),
+        ...originalCellProps
+      };
+    }
+  };
+}
+
 export function SearchTable<
   T extends Record<string, unknown>,
   P extends Record<string, unknown> = Record<string, unknown>
@@ -140,6 +171,7 @@ export function SearchTable<
   } = props;
   const location = useLocation();
   const userId = useAuthStore((state) => state.user?.id);
+  const titledColumns = useMemo(() => columns.map(withListCellTitle), [columns]);
   const tablePreferenceKey = useMemo(
     () => `admin-table:${userId || 'anonymous'}:${preferenceKey || location.pathname}`,
     [location.pathname, preferenceKey, userId]
@@ -213,7 +245,7 @@ export function SearchTable<
     writeTableJson(tableSizeKey, nextSize);
   };
 
-  const resizableColumns = useMemo<ProColumns<T>[]>(() => columns.map((column, index) => {
+  const resizableColumns = useMemo<ProColumns<T>[]>(() => titledColumns.map((column, index) => {
     const columnKey = getColumnKey(column, index);
     if (!customizable) return { ...column, key: columnKey };
 
@@ -269,7 +301,7 @@ export function SearchTable<
         }
       })
     } as ProColumns<T>;
-  }), [columnWidths, columnWidthsKey, columns, customizable]);
+  }), [columnWidths, columnWidthsKey, customizable, titledColumns]);
 
   const adjustedColumns = useMemo<ProColumns<T>[]>(() => {
     if (!scrollX) return resizableColumns;

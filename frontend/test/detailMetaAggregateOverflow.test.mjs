@@ -17,10 +17,10 @@ const developmentRules = fs.readFileSync(new URL('../../docs/ai-development-rule
 test('详情普通字段默认限制两行，长文本和富文本保持完整展示', () => {
   assert.match(detailMetaSource, /aggregate\?: boolean/);
   assert.match(detailMetaSource, /longText\?: boolean/);
-  assert.match(detailMetaSource, /typeof item\.value === 'string'/);
-  assert.match(detailMetaSource, /typeof item\.value === 'number'/);
+  assert.match(detailMetaSource, /typeof value === 'string'/);
+  assert.match(detailMetaSource, /typeof value === 'number'/);
   assert.match(detailMetaSource, /!item\.longText && \(item\.aggregate \|\| isTextValue\)/);
-  assert.match(detailMetaSource, /<Tooltip title=\{item\.value\}>/);
+  assert.match(detailMetaSource, /<Tooltip title=\{value\}>/);
   assert.match(detailMetaSource, /is-clamped/);
   assert.match(detailMetaStyles, /\.admin-detail-meta-list__item dd\.is-clamped[\s\S]*-webkit-line-clamp:\s*2/);
   assert.match(detailMetaStyles, /\.admin-detail-meta-list__item dd\.is-clamped[\s\S]*white-space:\s*normal/);

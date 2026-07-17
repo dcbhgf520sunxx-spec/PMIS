@@ -92,6 +92,12 @@ export function useListPageData<T extends Record<string, unknown>>({
     setCurrentPageState(page);
     syncRoute({ page });
   }, [syncRoute]);
+  const setCurrentPageRef = useRef(setCurrentPage);
+
+  useEffect(() => {
+    setCurrentPageRef.current = setCurrentPage;
+  }, [setCurrentPage]);
+
   const setPageSize = useCallback((size: number) => {
     setPageSizeState(size);
     syncRoute({ pageSize: size });
@@ -137,8 +143,8 @@ export function useListPageData<T extends Record<string, unknown>>({
       resetMountedRef.current = true;
       return;
     }
-    setCurrentPage(1);
-  }, [resetKey, setCurrentPage]);
+    setCurrentPageRef.current(1);
+  }, [resetKey]);
 
   const pagedRows = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
