@@ -48,7 +48,7 @@
   white-space: normal;
 }
 
-.admin-detail-meta-list__item dd.is-aggregate {
+.admin-detail-meta-list__item dd.is-clamped {
   display: -webkit-box;
   overflow: hidden;
   white-space: normal;

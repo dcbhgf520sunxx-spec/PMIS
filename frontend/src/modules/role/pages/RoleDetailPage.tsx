@@ -102,7 +102,7 @@ export function RoleDetailPage() {
                 { label: '角色编码', value: role.code },
                 { label: '角色名称', value: role.name },
                 { label: '权限范围', value: role.permissions || '-', aggregate: true },
-                { label: '角色描述', value: role.description || '-', wide: true }
+                { label: '角色描述', value: role.description || '-', wide: true, longText: true }
               ]}
             />
           </TemplateDetailSection>
