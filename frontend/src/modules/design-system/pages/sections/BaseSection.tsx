@@ -30,6 +30,7 @@ import {
   StatusTag,
   ViewTabs
 } from '../../../../components/admin';
+import { PageNavigationTabsDemo } from '../demos/PageNavigationTabsDemo';
 
 type SpecItem = {
   label: string;
@@ -273,11 +274,11 @@ export function BaseSection() {
           <section className="design-system-page__base-panel is-wide">
             <div className="design-system-page__base-panel-head">
               <h3>切换组件</h3>
-              <p>页面标题区用 ViewTabs 做视图范围切换；抽屉和局部区域用 AdminSegmented filter 变体做轻量分类切换。</p>
+              <p>ViewTabs 用于列表数据视图；页面分类切换复用 DetailSectionNavigation；抽屉和局部区域用 AdminSegmented filter 变体做轻量分类切换。</p>
             </div>
             <div className="design-system-page__switch-demo-grid">
               <div className="design-system-page__button-demo">
-                <h4>页面视图切换</h4>
+                <h4>列表数据视图切换</h4>
                 <ComponentEntry name="ViewTabs" />
                 <ViewTabs
                   showCounts
@@ -303,6 +304,7 @@ export function BaseSection() {
                   onChange={setFilterTab}
                 />
               </div>
+              <PageNavigationTabsDemo />
               <div className="design-system-page__button-demo">
                 <h4>详情条目切换</h4>
                 <ComponentEntry name="DetailNeighborNav / useDetailNeighbors" />

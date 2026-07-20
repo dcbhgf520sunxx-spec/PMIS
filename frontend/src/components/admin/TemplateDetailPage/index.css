@@ -26,6 +26,10 @@
   backdrop-filter: blur(8px);
 }
 
+.admin-template-detail-page__section-navigation.is-static {
+  position: static;
+}
+
 .admin-template-detail-page__section-tabs {
   display: flex;
   min-width: 0;

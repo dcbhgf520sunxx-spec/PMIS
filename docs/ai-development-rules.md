@@ -15,6 +15,19 @@
 
 业务页面只负责传字段、传数据、处理接口和业务动作，不负责重新定义通用视觉、交互节奏、空状态、错误态、按钮样式和下拉样式。
 
+## 能力检索与用户说法映射
+
+用户通常描述界面效果，代码则使用组件名和属性名，两者可能不一样。AI 在判断“底座没有这个能力”之前，必须按“用户说法和同义词 → 下表能力映射 → 组件入口 → 组件工作台示例 → 实际行为和测试”的顺序核对，不能只搜索一个技术关键词。确认已有能力时直接复用；确认缺失时，结论中必须列出已核对的组件入口和工作台示例。
+
+| 用户常用说法 | 底座能力与调用方式 | 实际行为 | 组件工作台示例 |
+|---|---|---|---|
+| 详情页 Tab、顶部页签、详情分类、锚点导航、点击定位 | `TemplateDetailPage.sectionNavigation`；参与导航的 `TemplateDetailSection`、`TemplateDetailTableSection`、`HistoryTimelineSection` 传唯一 `sectionKey` | 顶部生成分类标签，点击后定位到对应详情区域；它不是切换或隐藏内容的页面切换 Tab，窄屏时自动改为下拉定位 | `frontend/src/modules/design-system/pages/demos/DetailTemplateDemo.tsx` |
+| 详情页页面切换、详情子页面、详情路由页签 | 为 `TemplateDetailPage.sectionNavigation` 传入 `items`、`activeKey` 和 `onChange`；业务层在 `onChange` 中更新路由并只传当前页面内容 | 与导航定位使用同一套分类导航样式，点击后切换地址和页面内容，不滚动定位；窄屏时使用同一套下拉切换 | `frontend/src/modules/design-system/pages/demos/DetailTemplateDemo.tsx` |
+| 普通页面分类切换、跨页面分类页签 | 使用 `DetailSectionNavigation`；由业务层在 `onChange` 中调用 `navigate(targetPath)`，并根据当前路由或查询参数传入选中项 | 与详情分类导航保持同一套样式，点击后切换到不同页面或路由，只展示目标页面内容 | `frontend/src/modules/design-system/pages/sections/BaseSection.tsx` 的“页面分类切换”示例 |
+| 列表数据视图 | 使用 `ViewTabs`；根据当前视图传入选中项和真实统计数量 | 切换同一列表的数据范围，不切换页面；必须遵守列表统计规则 | `frontend/src/modules/design-system/pages/sections/BaseSection.tsx` 的“列表数据视图切换”示例 |
+
+判断标准固定为：详情页同一页面内定位时，为 `sectionNavigation` 传 `true` 并让全部分组声明 `sectionKey`；详情页切换页面或路由时，为 `sectionNavigation` 传 `items`、`activeKey` 和 `onChange`，只渲染当前页面内容。普通页面的分类切换直接使用 `DetailSectionNavigation`。这些模式复用同一套分类导航样式；只有列表数据视图使用 `ViewTabs`。不得用 `ViewTabs` 重做分类导航，也不能因为代码名称不是 `Tabs`，就误判底座不支持用户所说的页签效果。
+
 ## 新业务接入样板
 
 新增后台业务模块默认遵循当前架构：React / Vite 前端、Express REST API、PostgreSQL 数据库。常规目录如下：
@@ -130,7 +143,9 @@ API 接入保持统一：
 - 详情页变更历史统一使用 `HistoryTimelineSection`，由它把“全部展开/全部收起”紧跟在“变更历史”标题之后并承接单条展开；业务页面不得使用 `TemplateDetailSection + HistoryTimeline` 拼装，不得维护 `expandedKeys`、`onExpandedKeysChange` 或通过 `inlineExtra` 重复实现。
 - 同一次保存或状态变更产生的多字段日志必须共享 `pms_op_log.operation_id`，历史接口按该标识聚合为一个节点；聚合节点内的字段顺序必须复用对应详情页的字段顺序，禁止按日志写入顺序、数据库返回顺序或字段名排序。没有 `operation_id` 的历史日志按单条兼容展示，不能按“同一秒”猜测聚合。
 - 变更历史进入 `HistoryTimeline` 前必须完成转译，使用中文字段名和业务展示值：人员和关联对象 ID 转为名称，枚举和状态码转为中文含义，日期使用页面统一格式。后端优先复用 `formatHistoryChanges` 并显式声明 `fieldLabels`、`valueLookups` 和 `dateFields`；不得把 `field_name`、`*_id`、枚举编码等数据库原始值直接交给前端或组件。
+- 变更历史中的问题描述、Bug 描述、任务描述、需求描述等描述类富文本统一由 `HistoryTimeline` 生成纯文字摘要；内容包含图片时只追加 `〔图片〕` 标记，不在时间线中直接渲染图片或富文本源码，业务页面不得重复实现字段特判。
 - 长详情页存在较多分类且需要快速定位时，必须使用 `TemplateDetailPage.sectionNavigation` 以及 `TemplateDetailSection.sectionKey` / `TemplateDetailTableSection.sectionKey` 提供的顶部分类导航；开启分类导航后，每个参与导航的详情分组都必须声明唯一 `sectionKey`。不得在业务页重复维护分类数组、自建锚点或滚动监听，窄屏下拉定位由模板自动承接。
+- 详情页需要页面切换时，必须为 `TemplateDetailPage.sectionNavigation` 传入 `items`、`activeKey` 和 `onChange`，由业务层更新路由并且只渲染当前页面内容；页面切换和导航定位必须使用模板提供的同一套分类导航样式，业务页不得另放一套 `ViewTabs` 或自定义页签样式。
 - 详情页返回、编辑等动作通过 `ActionBar` 和现有按钮组件组合。
 - 不在业务页临时重做详情卡片、字段栅格、状态展示和历史记录样式。
 

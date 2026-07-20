@@ -35,3 +35,18 @@ test('详情条目切换说明复用紧凑的组件说明字号和间距', () =>
   assert.ok(designSystemStyles.includes('font-size: 12px'));
   assert.ok(designSystemStyles.includes('line-height: 18px'));
 });
+
+test('切换组件按紧凑高度配对且内容从顶部排列', () => {
+  const listViewIndex = baseSectionSource.indexOf('<h4>列表数据视图切换</h4>');
+  const localFilterIndex = baseSectionSource.indexOf('<h4>局部分类切换</h4>');
+  const pageNavigationIndex = baseSectionSource.indexOf('<PageNavigationTabsDemo />');
+  const detailNeighborIndex = baseSectionSource.indexOf('<h4>详情条目切换</h4>');
+
+  assert.ok(listViewIndex < localFilterIndex, '列表视图和局部分类应放在第一行');
+  assert.ok(localFilterIndex < pageNavigationIndex, '页面分类切换应放在第二行');
+  assert.ok(pageNavigationIndex < detailNeighborIndex, '详情条目切换应与页面分类切换配对');
+  assert.match(
+    designSystemStyles,
+    /\.design-system-page__switch-demo-grid\s*>\s*\.design-system-page__button-demo\s*\{[\s\S]*?align-content:\s*start;/
+  );
+});
