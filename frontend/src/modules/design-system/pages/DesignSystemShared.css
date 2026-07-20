@@ -94,6 +94,10 @@
   gap: 10px 12px;
 }
 
+.design-system-page__switch-demo-grid > .design-system-page__button-demo {
+  align-content: start;
+}
+
 .design-system-page__base-empty {
   display: grid;
   min-height: 120px;
@@ -450,4 +454,3 @@
 .design-system-page__input .ant-transfer {
   max-width: 100%;
 }
-

@@ -9,7 +9,9 @@ const demoSource = read('src/modules/design-system/pages/demos/DetailTemplateDem
 const rulesSource = read('../docs/ai-development-rules.md');
 
 test('详情模板提供可选的顶部分类导航契约', () => {
-  assert.match(templateSource, /sectionNavigation\?: boolean/);
+  assert.match(templateSource, /sectionNavigation\?: boolean \| TemplateDetailNavigationConfig/);
+  assert.match(templateSource, /activeKey: string/);
+  assert.match(templateSource, /onChange: \(key: string\) => void/);
   assert.match(templateSource, /sectionKey\?: string/);
   assert.doesNotMatch(templateSource, /IntersectionObserver/);
   assert.match(templateSource, /syncActiveSection/);
@@ -24,6 +26,16 @@ test('详情模板提供可选的顶部分类导航契约', () => {
   assert.match(templateSource, /admin-template-detail-page__section-navigation/);
 });
 
+test('页面切换和导航定位复用详情模板的同一套分类导航', () => {
+  assert.match(templateSource, /export function DetailSectionNavigation/);
+  assert.match(templateSource, /<DetailSectionNavigation/);
+  assert.match(templateSource, /typeof sectionNavigation === 'object'/);
+  assert.match(templateSource, /controlledNavigation\.onChange\(sectionKey\)/);
+  assert.match(templateSource, /admin-template-detail-page__section-navigation/);
+  assert.match(templateSource, /admin-template-detail-page__section-tabs/);
+  assert.match(templateSource, /admin-template-detail-page__section-select/);
+});
+
 test('详情分类导航在窄屏切换为下拉定位', () => {
   assert.match(templateSource, /AdminSelect/);
   assert.match(templateStyles, /admin-template-detail-page__section-select/);
@@ -36,6 +48,19 @@ test('组件工作台提供长详情分类定位示例', () => {
   assert.ok(sectionKeys.length >= 6, `expected at least 6 sections, received ${sectionKeys.length}`);
 });
 
+test('页面模式通过整体控制切换导航定位和页面切换示例', () => {
+  assert.doesNotMatch(demoSource, /PageNavigationTabsDemo/);
+  assert.match(demoSource, /分类导航：/);
+  assert.match(demoSource, /label: '导航定位'/);
+  assert.match(demoSource, /label: '页面切换'/);
+  assert.match(demoSource, /sectionNavigation=\{navigationMode === 'page'/);
+  assert.match(demoSource, /activePage === 'basic'/);
+  assert.match(demoSource, /activePage === 'permissions'/);
+  const relatedModeIndex = demoSource.indexOf('<span>关联数据：</span>');
+  const navigationModeIndex = demoSource.indexOf('<span>分类导航：</span>');
+  assert.ok(relatedModeIndex >= 0 && navigationModeIndex > relatedModeIndex, '分类导航模式应放在关联数据控制项下面');
+});
+
 test('组件工作台统一使用变更历史和标准时间线', () => {
   assert.match(demoSource, /HistoryTimeline/);
   assert.match(demoSource, /<HistoryTimelineSection[\s\S]*sectionKey="history"/);
@@ -44,4 +69,11 @@ test('组件工作台统一使用变更历史和标准时间线', () => {
 
 test('开发规则要求长详情优先使用模板分类导航', () => {
   assert.match(rulesSource, /长详情页.*顶部分类导航/);
+});
+
+test('开发规则要求详情页面切换复用详情分类导航样式', () => {
+  assert.match(rulesSource, /详情页.*页面切换.*sectionNavigation/);
+  assert.match(rulesSource, /activeKey/);
+  assert.match(rulesSource, /onChange/);
+  assert.match(rulesSource, /同一套分类导航样式/);
 });

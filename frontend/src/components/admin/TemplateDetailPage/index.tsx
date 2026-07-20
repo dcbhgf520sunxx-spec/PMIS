@@ -25,6 +25,12 @@ type TemplateDetailStatusSection = {
   items: DetailMetaItem[];
 };
 
+type TemplateDetailNavigationConfig = {
+  items: DetailSectionNavigationItem[];
+  activeKey: string;
+  onChange: (key: string) => void;
+};
+
 type TemplateDetailPageProps = {
   title: string;
   loading?: boolean;
@@ -40,7 +46,7 @@ type TemplateDetailPageProps = {
   statusAction?: ReactNode;
   documentSection?: TemplateDetailSideSection | null;
   aside?: ReactNode;
-  sectionNavigation?: boolean;
+  sectionNavigation?: boolean | TemplateDetailNavigationConfig;
   children: ReactNode;
 };
 
@@ -55,10 +61,51 @@ type TemplateDetailSectionProps = {
 
 export const templateDetailSectionMarker = Symbol('template-detail-section');
 
-type DetailSectionNavigationItem = {
-  key: string;
+export type DetailSectionNavigationItem<T extends string = string> = {
+  key: T;
   title: string;
 };
+
+type DetailSectionNavigationProps<T extends string = string> = {
+  items: DetailSectionNavigationItem<T>[];
+  activeKey: T;
+  onChange: (key: T) => void;
+  ariaLabel?: string;
+  sticky?: boolean;
+};
+
+export function DetailSectionNavigation<T extends string = string>({
+  items,
+  activeKey,
+  onChange,
+  ariaLabel = '分类导航',
+  sticky = true
+}: DetailSectionNavigationProps<T>) {
+  return (
+    <div className={sticky ? 'admin-template-detail-page__section-navigation' : 'admin-template-detail-page__section-navigation is-static'}>
+      <nav className="admin-template-detail-page__section-tabs" aria-label={ariaLabel}>
+        {items.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            className={item.key === activeKey ? 'is-active' : ''}
+            onClick={() => onChange(item.key)}
+          >
+            {item.title}
+          </button>
+        ))}
+      </nav>
+      <div className="admin-template-detail-page__section-select">
+        <AdminSelect
+          aria-label={ariaLabel}
+          value={activeKey || undefined}
+          options={items.map((item) => ({ label: item.title, value: item.key }))}
+          onChange={(value) => onChange(String(value) as T)}
+        />
+      </div>
+    </div>
+  );
+}
 
 function collectSectionNavigationItems(children: ReactNode): DetailSectionNavigationItem[] {
   return Children.toArray(children).flatMap((child) => {
@@ -97,11 +144,13 @@ export function TemplateDetailPage({
 }: TemplateDetailPageProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const navigationTargetRef = useRef<string | null>(null);
+  const controlledNavigation = typeof sectionNavigation === 'object' ? sectionNavigation : null;
   const navigationItems = useMemo(
-    () => sectionNavigation ? collectSectionNavigationItems(children) : [],
-    [children, sectionNavigation]
+    () => controlledNavigation?.items || (sectionNavigation ? collectSectionNavigationItems(children) : []),
+    [children, controlledNavigation, sectionNavigation]
   );
   const [activeSectionKey, setActiveSectionKey] = useState('');
+  const resolvedActiveSectionKey = controlledNavigation?.activeKey || activeSectionKey;
   const isUnavailable = Boolean(error) || Boolean(notFound);
   const standardAside = statusSection || documentSection ? (
     <>
@@ -125,6 +174,7 @@ export function TemplateDetailPage({
   ) : null;
 
   useEffect(() => {
+    if (controlledNavigation) return;
     if (!navigationItems.length) {
       setActiveSectionKey('');
       return;
@@ -159,7 +209,7 @@ export function TemplateDetailPage({
       root.removeEventListener('scroll', syncActiveSection);
       window.removeEventListener('resize', syncActiveSection);
     };
-  }, [navigationItems]);
+  }, [controlledNavigation, navigationItems]);
 
   const navigateToSection = (sectionKey: string) => {
     navigationTargetRef.current = sectionKey;
@@ -177,6 +227,14 @@ export function TemplateDetailPage({
     }));
   };
 
+  const handleNavigationChange = (sectionKey: string) => {
+    if (controlledNavigation) {
+      controlledNavigation.onChange(sectionKey);
+      return;
+    }
+    navigateToSection(sectionKey);
+  };
+
   return (
     <PageShell title={title} compact titleExtra={resolvedTitleTags} titleCenter={titleCenter} actions={headerActions} loading={loading}>
       {isUnavailable ? (
@@ -188,28 +246,12 @@ export function TemplateDetailPage({
       ) : (
         <div ref={scrollContainerRef} className={standardAside ? 'admin-template-detail-page' : 'admin-template-detail-page is-single'}>
           {navigationItems.length ? (
-            <div className="admin-template-detail-page__section-navigation">
-              <nav className="admin-template-detail-page__section-tabs" aria-label="详情分类导航">
-                {navigationItems.map((item) => (
-                  <button
-                    key={item.key}
-                    type="button"
-                    className={item.key === activeSectionKey ? 'is-active' : ''}
-                    onClick={() => navigateToSection(item.key)}
-                  >
-                    {item.title}
-                  </button>
-                ))}
-              </nav>
-              <div className="admin-template-detail-page__section-select">
-                <AdminSelect
-                  aria-label="详情分类导航"
-                  value={activeSectionKey || undefined}
-                  options={navigationItems.map((item) => ({ label: item.title, value: item.key }))}
-                  onChange={(value) => navigateToSection(String(value))}
-                />
-              </div>
-            </div>
+            <DetailSectionNavigation
+              items={navigationItems}
+              activeKey={resolvedActiveSectionKey}
+              onChange={handleNavigationChange}
+              ariaLabel="详情分类导航"
+            />
           ) : null}
           <div className="admin-template-detail-page__main">
             {children}
