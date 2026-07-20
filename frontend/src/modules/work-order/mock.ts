@@ -2,7 +2,7 @@ import type { WorkOrderHistoryItem, WorkOrderProblemType, WorkOrderRecord, WorkO
 
 const problemTypes: WorkOrderProblemType[] = ['1', '2', '3', '4', '5'];
 const urgencies: WorkOrderUrgency[] = [2, 1, 0];
-const statuses: WorkOrderStatus[] = [0, 1, 2, 3];
+const statuses: WorkOrderStatus[] = [0, 1, 2, 3, 4];
 const followers = [
   { id: '1', employeeNo: 'A001', name: '管理员' },
   { id: '2', employeeNo: 'A002', name: '运维人员' },
@@ -25,7 +25,7 @@ export const mockWorkOrders: WorkOrderRecord[] = Array.from({ length: 56 }, (_, 
   const urgency = urgencies[index % urgencies.length];
   const follower = followers[index % followers.length];
   const expectedDay = (index % 20) + 1;
-  const isOverdue = status < 2 && expectedDay < 15;
+  const isOverdue = ![2, 3].includes(status) && expectedDay < 15;
 
   return {
     id: String(index + 1),
@@ -44,9 +44,10 @@ export const mockWorkOrders: WorkOrderRecord[] = Array.from({ length: 56 }, (_, 
     submitterName: ['张三', '李四', '王五', '赵六'][index % 4],
     submitterDept: ['运维部', '产品部', '财务部', '客服中心'][index % 4],
     submitTime: `2026-06-${String((index % 25) + 1).padStart(2, '0')} 09:30`,
-    resolveDate: status >= 2 ? `2026-06-${String(Math.min(expectedDay + 1, 28)).padStart(2, '0')}` : undefined,
+    resolveDate: [2, 3].includes(status) ? `2026-06-${String(Math.min(expectedDay + 1, 28)).padStart(2, '0')}` : undefined,
     closeDate: status === 3 ? `2026-06-${String(Math.min(expectedDay + 2, 28)).padStart(2, '0')}` : undefined,
-    resultDesc: status >= 2 ? '已完成日志排查、配置修正和回归验证。' : undefined,
+    suspendDate: status === 4 ? `2026-06-${String(Math.min(expectedDay + 1, 28)).padStart(2, '0')}` : undefined,
+    resultDesc: [2, 3].includes(status) ? '已完成日志排查、配置修正和回归验证。' : undefined,
     creatorName: ['管理员', '运维人员'][index % 2],
     createdAt: `2026-06-${String((index % 25) + 1).padStart(2, '0')} 10:00`,
     updaterName: index % 2 === 0 ? '管理员' : '运维人员',

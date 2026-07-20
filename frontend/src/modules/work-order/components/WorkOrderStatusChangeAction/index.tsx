@@ -28,11 +28,12 @@ const toneByStatus: Record<WorkOrderStatus, StatusChangeOption<WorkOrderStatus>[
   0: 'normal',
   1: 'normal',
   2: 'success',
-  3: 'danger'
+  3: 'danger',
+  4: 'danger'
 };
 
-function getTransitionTone(current: WorkOrderStatus, target: WorkOrderStatus) {
-  return target < current ? 'danger' : toneByStatus[target];
+function getTransitionTone(_current: WorkOrderStatus, target: WorkOrderStatus) {
+  return toneByStatus[target];
 }
 
 export function WorkOrderStatusChangeAction({
@@ -48,7 +49,7 @@ export function WorkOrderStatusChangeAction({
       options={statusOptions.map((item) => ({ ...item, tone: getTransitionTone(workOrder.status, item.value) }))}
       renderExtra={(target) => (
         <>
-          {target === 2 ? (
+          {target === 2 || (workOrder.status === 4 && target === 3) ? (
             <Form.Item
               name="actualFixedAt"
               label="实际修复时间"
@@ -66,7 +67,16 @@ export function WorkOrderStatusChangeAction({
               <AdminDatePicker placeholder="请选择关闭时间" />
             </Form.Item>
           ) : null}
-          {target === 2 ? (
+          {target === 4 ? (
+            <Form.Item
+              name="suspendedAt"
+              label="暂停时间"
+              rules={[{ required: true, message: '请选择暂停时间' }]}
+            >
+              <AdminDatePicker placeholder="请选择暂停时间" />
+            </Form.Item>
+          ) : null}
+          {target === 2 || (workOrder.status === 4 && target === 3) ? (
             <Form.Item
               name="result"
               label="处置结果"

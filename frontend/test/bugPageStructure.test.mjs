@@ -57,6 +57,16 @@ test('BUG 详情包含状态区、处理信息、变更历史和上下条', () =
   assert.match(source, /wide:\s*true/);
 });
 
+test('BUG 详情在编辑和删除之间提供复制入口', () => {
+  const source = read('src/modules/bug/pages/BugDetailPage.tsx');
+  const actions = source.slice(source.indexOf('actions='), source.indexOf('statusSection='));
+  const edit = actions.indexOf('>编辑<');
+  const copy = actions.indexOf('>复制<');
+  const remove = actions.indexOf('>删除<');
+  assert.ok(edit >= 0 && copy > edit && remove > copy);
+  assert.match(actions, /navigateWithReturn\(`\/bugs\/\$\{row\.id\}\/copy`\)/);
+});
+
 test('BUG 页面用户可见命名统一使用时间', () => {
   for (const file of ['src/modules/bug/pages/BugListPage.tsx', 'src/modules/bug/pages/BugFormPage.tsx', 'src/modules/bug/pages/BugDetailPage.tsx']) assert.doesNotMatch(read(file), /日期/);
 });

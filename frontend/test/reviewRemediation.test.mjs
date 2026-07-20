@@ -18,10 +18,11 @@ test('角色表单和详情复用菜单树工具', () => {
   assert.match(detail, /from '\.\.\/roleMenuTree'/);
 });
 
-test('状态回退语义由当前和目标状态共同决定', () => {
+test('工单暂停使用危险语义，恢复后的目标状态使用自身语义', () => {
   const action = read('../src/modules/work-order/components/WorkOrderStatusChangeAction/index.tsx');
   assert.match(action, /getTransitionTone/);
-  assert.match(action, /target < current/);
+  assert.match(action, /4:\s*'danger'/);
+  assert.match(action, /return toneByStatus\[target\]/);
 });
 
 test('逾期标签不再硬编码三天', () => {

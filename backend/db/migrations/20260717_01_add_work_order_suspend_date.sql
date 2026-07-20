@@ -1,0 +1,6 @@
+BEGIN;
+
+ALTER TABLE pms_work_order
+  ADD COLUMN IF NOT EXISTS suspend_date TIMESTAMPTZ;
+
+COMMIT;

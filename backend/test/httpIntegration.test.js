@@ -224,6 +224,35 @@ test('真实 HTTP、PostgreSQL 和核心业务流程', { skip: !enabled }, async
       })
       assert.equal(closed.response.status, 200)
 
+      const missingSuspendDate = await request(`/api/work-orders/${workOrderId}/status`, {
+        method: 'PUT', body: { status: 4 }
+      })
+      assert.equal(missingSuspendDate.response.status, 400)
+
+      const paused = await request(`/api/work-orders/${workOrderId}/status`, {
+        method: 'PUT', body: { status: 4, suspend_date: '2026-07-18' }
+      })
+      assert.equal(paused.response.status, 200)
+
+      const pausedDetail = await request(`/api/work-orders/${workOrderId}`)
+      assert.equal(pausedDetail.body.data.status, 4)
+      assert.equal(String(pausedDetail.body.data.suspend_date).slice(0, 10), '2026-07-18')
+      assert.equal(String(pausedDetail.body.data.resolve_date).slice(0, 10), '2026-07-16')
+      assert.equal(String(pausedDetail.body.data.close_date).slice(0, 10), '2026-07-17')
+      assert.match(pausedDetail.body.data.result_desc, /已解决/)
+
+      const resumed = await request(`/api/work-orders/${workOrderId}/status`, {
+        method: 'PUT', body: { status: 1 }
+      })
+      assert.equal(resumed.response.status, 200)
+
+      const resumedDetail = await request(`/api/work-orders/${workOrderId}`)
+      assert.equal(resumedDetail.body.data.status, 1)
+      assert.equal(resumedDetail.body.data.suspend_date, null)
+      assert.equal(resumedDetail.body.data.resolve_date, null)
+      assert.equal(resumedDetail.body.data.close_date, null)
+      assert.equal(resumedDetail.body.data.result_desc, null)
+
       const archiveDelete = await request(`/api/archives/${system.id}`, { method: 'DELETE' })
       assert.equal(archiveDelete.response.status, 400)
       assert.match(archiveDelete.body.message, /引用/)

@@ -21,6 +21,7 @@ type WorkOrderResponse = {
   expected_resolve_date?: string;
   resolve_date?: string;
   close_date?: string;
+  suspend_date?: string;
   submitter_name: string;
   submitter_dept: string;
   submit_time: string;
@@ -72,6 +73,7 @@ export type WorkOrderStatusPayload = {
   status: WorkOrderStatus;
   resolveDate?: string | null;
   closeDate?: string | null;
+  suspendDate?: string | null;
   resultDesc?: string | null;
 };
 
@@ -99,6 +101,7 @@ export function toWorkOrderRecord(row: WorkOrderResponse): WorkOrderRecord {
     submitTime: dateText(row.submit_time).slice(0, 10),
     resolveDate: row.resolve_date ? dateText(row.resolve_date).slice(0, 10) : undefined,
     closeDate: row.close_date ? dateText(row.close_date).slice(0, 10) : undefined,
+    suspendDate: row.suspend_date ? dateText(row.suspend_date).slice(0, 10) : undefined,
     resultDesc: row.result_desc,
     creatorName: row.creator_name || '-',
     createdAt: dateText(row.created_at),
@@ -192,6 +195,7 @@ export async function updateWorkOrderStatus(id: string, payload: WorkOrderStatus
       status: payload.status,
       resolve_date: payload.resolveDate,
       close_date: payload.closeDate,
+      suspend_date: payload.suspendDate,
       result_desc: payload.resultDesc
     };
   return unwrap<null>(request.put(`/work-orders/${id}/status`, data));

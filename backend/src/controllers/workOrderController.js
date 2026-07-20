@@ -7,6 +7,11 @@ const { requireValidBody } = require('../utils/requestValidation')
 const { buildViewQuery, calculateViewCounts } = require('../utils/viewCounts')
 const { formatHistoryChanges, groupOperationLogs } = require('../utils/operationHistory')
 const { sanitizeRichText } = require('../services/richTextSanitizer')
+const {
+  allowedWorkOrderStatuses,
+  resolveWorkOrderResultFields,
+  validateWorkOrderResultFields
+} = require('../services/workOrderStatusRules')
 
 const workOrderFormSchema = {
   problem_type: { required: true, type: 'number', label: '问题类型' },
@@ -14,7 +19,7 @@ const workOrderFormSchema = {
   problem_desc: { required: true, label: '问题描述' },
   follower_id: { required: true, type: 'number', label: '跟进人' },
   urgency: { required: true, type: 'enum', values: [0, 1, 2], label: '紧急程度' },
-  status: { type: 'enum', values: [0, 1, 2, 3], label: '状态' },
+  status: { type: 'enum', values: [0, 1, 2, 3, 4], label: '状态' },
   expected_resolve_date: { required: true, label: '预计完成时间' },
   submitter_name: { required: true, label: '提出人' },
   submitter_dept: { required: true, label: '提出组织' },
@@ -22,19 +27,12 @@ const workOrderFormSchema = {
 }
 
 const workOrderStatusSchema = {
-  status: { required: true, type: 'enum', values: [0, 1, 2, 3], label: '状态' }
+  status: { required: true, type: 'enum', values: [0, 1, 2, 3, 4], label: '状态' }
 }
 
 const workOrderBatchAssignSchema = {
   ids: { required: true, type: 'array', label: '工单' },
   follower_id: { required: true, type: 'number', label: '跟进人' }
-}
-
-const WORK_ORDER_STATUS_TRANSITIONS = {
-  0: [1],
-  1: [2],
-  2: [3],
-  3: []
 }
 
 async function validateActiveArchive(archiveId, codePrefix, label) {
@@ -142,7 +140,7 @@ exports.list = async (req, res) => {
   try {
     const q = { ...req.query }
     const { page, pageSize, offset } = parsePagination(q)
-    let sql = withJoins('w.id, w.product_id, w.problem_type, w.problem_desc, w.result_desc, w.follower_id, w.urgency, w.status, w.is_overdue, w.expected_resolve_date, w.resolve_date, w.close_date, w.submitter_name, w.submitter_dept, w.submit_time, w.created_at')
+    let sql = withJoins('w.id, w.product_id, w.problem_type, w.problem_desc, w.result_desc, w.follower_id, w.urgency, w.status, w.is_overdue, w.expected_resolve_date, w.resolve_date, w.close_date, w.suspend_date, w.submitter_name, w.submitter_dept, w.submit_time, w.created_at')
     const { filters, views, viewKey } = buildWorkOrderViewContext(q)
     const currentQuery = buildViewQuery(filters, views[viewKey])
     const { sql: whereSql, params } = buildWhereClause(currentQuery)
@@ -193,7 +191,7 @@ exports.refreshOverdue = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const sql = withJoins('w.id, w.product_id, w.problem_type, w.problem_desc, w.result_desc, w.follower_id, w.urgency, w.status, w.is_overdue, w.expected_resolve_date, w.resolve_date, w.close_date, w.submitter_name, w.submitter_dept, w.submit_time, w.creator_id, w.updater_id, w.created_at, w.updated_at')
+    const sql = withJoins('w.id, w.product_id, w.problem_type, w.problem_desc, w.result_desc, w.follower_id, w.urgency, w.status, w.is_overdue, w.expected_resolve_date, w.resolve_date, w.close_date, w.suspend_date, w.submitter_name, w.submitter_dept, w.submit_time, w.creator_id, w.updater_id, w.created_at, w.updated_at')
     const row = await db.prepare(sql + ' WHERE w.id = ? AND w.is_deleted = 0').get(req.params.id)
     if (!row) return res.status(404).json({ code: 404, message: '工单不存在', data: null })
     res.json({ code: 0, message: 'success', data: row })
@@ -275,7 +273,7 @@ exports.update = async (req, res) => {
       if (followerError) return failField(res, 'follower_id', followerError)
     }
     if (status !== undefined && Number(status) !== Number(old.status)) {
-      return failField(res, 'status', '请通过状态变更操作按顺序流转')
+      return failField(res, 'status', '请通过状态变更操作调整状态')
     }
 
     const changes = []
@@ -346,24 +344,26 @@ exports.update = async (req, res) => {
 exports.toggleStatus = async (req, res) => {
   try {
     if (!requireValidBody(res, req.body, workOrderStatusSchema)) return
-    const { status, resolve_date, close_date, result_desc } = req.body
+    const { status, resolve_date, close_date, suspend_date, result_desc } = req.body
     const safeResultDesc = result_desc === undefined ? undefined : sanitizeRichText(result_desc)
     const operatorId = req.user.id
-    const old = await db.prepare('SELECT status, is_overdue, expected_resolve_date, resolve_date, close_date, result_desc FROM pms_work_order WHERE id = ? AND is_deleted = 0').get(req.params.id)
+    const old = await db.prepare('SELECT status, is_overdue, expected_resolve_date, resolve_date, close_date, suspend_date, result_desc FROM pms_work_order WHERE id = ? AND is_deleted = 0').get(req.params.id)
     if (!old) return fail(res, 404, 404, '数据不存在或已被删除')
-    const allowedTargets = WORK_ORDER_STATUS_TRANSITIONS[Number(old.status)] || []
+    const allowedTargets = allowedWorkOrderStatuses(old.status)
     if (!allowedTargets.includes(Number(status))) {
-      return fail(res, 400, 400, '工单状态必须按待处理、处理中、已解决、已关闭的顺序流转')
+      return fail(res, 400, 400, '当前工单状态不支持该目标状态')
     }
-    if (Number(status) === 2 && (!resolve_date || !String(safeResultDesc || '').trim())) {
-      return fail(res, 400, 400, '标记为已解决时必须填写实际解决时间和处理结果')
-    }
-    if (Number(status) === 3 && !close_date) {
-      return fail(res, 400, 400, '关闭工单时必须填写关闭时间')
-    }
+    const resultFields = resolveWorkOrderResultFields(status, {
+      resolve_date,
+      close_date,
+      suspend_date,
+      result_desc: safeResultDesc
+    }, old)
+    const resultFieldError = validateWorkOrderResultFields(status, resultFields)
+    if (resultFieldError) return fail(res, 400, 400, resultFieldError)
     const changes = []
 
-    const statusDateFields = new Set(['resolve_date', 'close_date'])
+    const statusDateFields = new Set(['resolve_date', 'close_date', 'suspend_date'])
     const normalizeChangeValue = (field, value) => {
       if (value === null || value === undefined) return ''
       if (statusDateFields.has(field)) return String(value).replace('T', ' ').slice(0, 10)
@@ -382,18 +382,21 @@ exports.toggleStatus = async (req, res) => {
     const is_overdue = calcOverdue(old?.expected_resolve_date, status)
     addChange('is_overdue', old?.is_overdue, is_overdue)
 
-    const finalResolveDate = Number(status) === 2 ? resolve_date : (old.resolve_date || null)
+    const finalResolveDate = resultFields.resolveDate
     addChange('resolve_date', old?.resolve_date, finalResolveDate)
 
-    const finalCloseDate = Number(status) === 3 ? close_date : (old.close_date || null)
+    const finalCloseDate = resultFields.closeDate
     addChange('close_date', old?.close_date, finalCloseDate)
 
-    const finalResultDesc = Number(status) === 2 ? String(safeResultDesc).trim() : (old.result_desc || null)
+    const finalResultDesc = resultFields.resultDesc
     addChange('result_desc', old?.result_desc, finalResultDesc)
 
+    const finalSuspendDate = resultFields.suspendDate
+    addChange('suspend_date', old?.suspend_date, finalSuspendDate)
+
     const updateResult = await db.prepare(
-      'UPDATE pms_work_order SET status = ?, is_overdue = ?, resolve_date = ?, close_date = ?, result_desc = ?, updater_id = ?, updated_at = NOW() WHERE id = ? AND status = ? AND is_deleted = 0'
-    ).run(status, is_overdue, finalResolveDate, finalCloseDate, finalResultDesc, operatorId, req.params.id, old.status)
+      'UPDATE pms_work_order SET status = ?, is_overdue = ?, resolve_date = ?, close_date = ?, result_desc = ?, suspend_date = ?, updater_id = ?, updated_at = NOW() WHERE id = ? AND status = ? AND is_deleted = 0'
+    ).run(status, is_overdue, finalResolveDate, finalCloseDate, finalResultDesc, finalSuspendDate, operatorId, req.params.id, old.status)
     if (updateResult.changes === 0) {
       return fail(res, 409, 409, '工单状态已被其他人修改，请刷新后重试')
     }
@@ -528,7 +531,7 @@ exports.getNeighbors = async (req, res) => {
 const FIELD_LABEL = {
   product_id: '所属产品', problem_type: '问题类型', problem_desc: '问题描述', result_desc: '处置结果', follower_id: '跟进人',
   urgency: '紧急程度', status: '状态', is_overdue: '逾期', expected_resolve_date: '预计完成时间',
-  resolve_date: '实际修复时间', close_date: '关闭时间', submitter_name: '提出人', submitter_dept: '提出组织',
+  resolve_date: '实际修复时间', close_date: '关闭时间', suspend_date: '暂停时间', submitter_name: '提出人', submitter_dept: '提出组织',
   submit_time: '提出时间',
 }
 
@@ -536,13 +539,13 @@ const FIELD_LABEL = {
 const DETAIL_FIELD_ORDER = [
   'problem_desc', 'product_id', 'problem_type', 'urgency', 'status',
   'is_overdue', 'follower_id', 'submitter_name', 'submitter_dept', 'submit_time',
-  'expected_resolve_date', 'resolve_date', 'result_desc', 'close_date',
+  'expected_resolve_date', 'resolve_date', 'result_desc', 'close_date', 'suspend_date',
 ]
-const HISTORY_DATE_FIELDS = new Set(['expected_resolve_date', 'resolve_date', 'close_date', 'submit_time'])
+const HISTORY_DATE_FIELDS = new Set(['expected_resolve_date', 'resolve_date', 'close_date', 'suspend_date', 'submit_time'])
 
 function resolveHistoryStatus(value) {
   if (value === null || value === undefined || value === '空') return ''
-  return { 0: '待处理', 1: '处理中', 2: '已解决', 3: '已关闭' }[String(value)] || String(value)
+  return { 0: '待处理', 1: '处理中', 2: '已解决', 3: '已关闭', 4: '已暂停' }[String(value)] || String(value)
 }
 
 function buildIdInQuery(ids, selectSql, tableName) {
@@ -604,7 +607,7 @@ exports.getHistory = async (req, res) => {
           product_id: lookups.products,
           problem_type: lookups.archives,
           urgency: new Map([['0', '低'], ['1', '中'], ['2', '高']]),
-          status: new Map([['0', '待处理'], ['1', '处理中'], ['2', '已解决'], ['3', '已关闭']]),
+          status: new Map([['0', '待处理'], ['1', '处理中'], ['2', '已解决'], ['3', '已关闭'], ['4', '已暂停']]),
           is_overdue: new Map([['0', '未逾期'], ['1', '逾期']])
         }
       }).map((change) => ({ field: change.field_name, oldVal: change.old_value, newVal: change.new_value }))

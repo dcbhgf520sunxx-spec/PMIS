@@ -13,7 +13,8 @@ export const statusOptions: Array<{ label: string; value: WorkOrderStatus }> = [
   { label: '待处理', value: 0 },
   { label: '处理中', value: 1 },
   { label: '已解决', value: 2 },
-  { label: '已关闭', value: 3 }
+  { label: '已关闭', value: 3 },
+  { label: '已暂停', value: 4 }
 ];
 
 export const urgencyOptions: Array<{ label: string; value: WorkOrderUrgency }> = [
@@ -38,7 +39,8 @@ export function renderWorkOrderStatus(value: WorkOrderStatus) {
   if (value === 0) return <StatusTag status="pending" text="待处理" />;
   if (value === 1) return <StatusTag status="processing" text="处理中" />;
   if (value === 2) return <StatusTag status="success" text="已解决" />;
-  return <StatusTag status="disabled" text="已关闭" />;
+  if (value === 3) return <StatusTag status="disabled" text="已关闭" />;
+  return <StatusTag status="disabled" text="已暂停" />;
 }
 
 export function renderUrgency(value: WorkOrderUrgency) {

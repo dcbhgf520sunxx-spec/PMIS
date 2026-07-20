@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS pms_work_order (
   expected_resolve_date TIMESTAMPTZ,
   resolve_date TIMESTAMPTZ,
   close_date TIMESTAMPTZ,
+  suspend_date TIMESTAMPTZ,
   submitter_name VARCHAR(50) NOT NULL,
   submitter_dept VARCHAR(100) NOT NULL,
   submit_time TIMESTAMPTZ NOT NULL,

@@ -79,15 +79,17 @@ test('新增档案类型生成序号时忽略业务英文编码', () => {
   )
 })
 
-test('工单后端校验固定选项、启用跟进人和严格状态顺序', () => {
+test('工单后端校验固定选项、启用跟进人和暂停状态规则', () => {
   const workOrders = read('backend/src/controllers/workOrderController.js')
+  const statusRules = read('backend/src/services/workOrderStatusRules.js')
   assert.match(workOrders, /validateActiveProduct\(product_id\)/)
   assert.match(workOrders, /validateActiveArchive\(problem_type, 'PT'/)
   assert.match(workOrders, /status = 1 AND [a-z]+\.is_deleted = 0|is_deleted = 0 AND [a-z]+\.status = 1/)
-  assert.match(workOrders, /WORK_ORDER_STATUS_TRANSITIONS/)
-  assert.match(workOrders, /0:\s*\[1\]/)
-  assert.match(workOrders, /1:\s*\[2\]/)
-  assert.match(workOrders, /2:\s*\[3\]/)
+  assert.match(workOrders, /allowedWorkOrderStatuses/)
+  assert.match(statusRules, /0:\s*\[1,\s*4\]/)
+  assert.match(statusRules, /1:\s*\[2,\s*4\]/)
+  assert.match(statusRules, /2:\s*\[3,\s*4\]/)
+  assert.match(statusRules, /4:\s*\[0,\s*1,\s*2,\s*3\]/)
   assert.match(workOrders, /resolve_date[\s\S]*result_desc/)
   assert.match(workOrders, /close_date/)
   assert.match(workOrders, /WHERE id = \? AND status = \? AND is_deleted = 0/)

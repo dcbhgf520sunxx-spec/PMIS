@@ -31,10 +31,11 @@ export const workOrderSorters = createListSorters<WorkOrderRecord>({
 });
 
 export const statusTransitions: Record<WorkOrderStatus, WorkOrderStatus[]> = {
-  0: [1],
-  1: [2],
-  2: [3],
-  3: []
+  0: [1, 4],
+  1: [2, 4],
+  2: [3, 4],
+  3: [4],
+  4: [0, 1, 2, 3]
 };
 
 export function toDateText(value: unknown) {
@@ -53,6 +54,9 @@ export function buildStatusPayload(status: WorkOrderStatus, values: Record<strin
       : undefined,
     closeDate: values.closedAt && typeof values.closedAt === 'object' && 'format' in values.closedAt
       ? (values.closedAt as { format: (format: string) => string }).format('YYYY-MM-DD')
+      : undefined,
+    suspendDate: values.suspendedAt && typeof values.suspendedAt === 'object' && 'format' in values.suspendedAt
+      ? (values.suspendedAt as { format: (format: string) => string }).format('YYYY-MM-DD')
       : undefined,
     resultDesc: typeof values.result === 'string' ? values.result : undefined
   };

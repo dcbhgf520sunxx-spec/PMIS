@@ -88,7 +88,7 @@ export function TaskDetailPage() {
     onBack={returnToSource}
     backText={returnsToTaskDetail ? '返回' : '返回列表'}
     titleCenter={<DetailNeighborNav placement="title" loading={neighbors.loading} prevId={neighbors.prevId} nextId={neighbors.nextId} ordinal={neighbors.ordinal} total={neighbors.total} onNavigate={neighbors.navigateNeighbor} />}
-    actions={row ? <><PermissionButton permission="task" type="primary" onClick={() => navigateWithReturn(`/tasks/${row.id}/edit`)}>编辑</PermissionButton><DeleteConfirmAction entityName="任务" targetName={row.name} onConfirm={async () => { await deleteTask(row.id); returnToSource(); }}>删除</DeleteConfirmAction></> : null}
+    actions={row ? <><PermissionButton permission="task" type="primary" onClick={() => navigateWithReturn(`/tasks/${row.id}/edit`)}>编辑</PermissionButton><PermissionButton permission="task" onClick={() => navigateWithReturn(`/tasks/${row.id}/copy`)}>复制</PermissionButton><DeleteConfirmAction entityName="任务" targetName={row.name} onConfirm={async () => { await deleteTask(row.id); returnToSource(); }}>删除</DeleteConfirmAction></> : null}
     statusSection={row ? { items: [{ label: '任务状态', value: renderTaskStatus(row.status), wide: true }, { label: '优先级', value: renderTaskPriority(row.priority), wide: true }, { label: '逾期状态', value: renderTaskOverdue(row.isOverdue, row.expectedEndTime), wide: true }] } : null}
     statusAction={row ? <TaskStatusChangeAction block type="primary" task={row} onConfirm={(status, values) => changeStatus(row, status, values)} /> : null}
     documentSection={row ? { items: [{ label: '创建人', value: row.creatorName }, { label: '创建时间', value: row.createdAt, wide: true }, { label: '更新人', value: row.updaterName }, { label: '更新时间', value: row.updatedAt, wide: true }] } : null}
