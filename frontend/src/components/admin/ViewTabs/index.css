@@ -4,7 +4,6 @@
   gap: 4px;
   overflow-x: auto;
   overflow-y: hidden;
-  border-bottom: 1px solid var(--app-border);
 }
 
 .admin-view-tabs__item {

@@ -13,3 +13,9 @@ test('ViewTabs 只允许横向滚动，不出现纵向滚动条', () => {
     /\.admin-view-tabs\s*\{[\s\S]*?overflow-x:\s*auto;[\s\S]*?overflow-y:\s*hidden;/
   );
 });
+
+test('ViewTabs 不展示横跨容器的底部分隔线', () => {
+  const rootRule = viewTabsStyles.match(/\.admin-view-tabs\s*\{([\s\S]*?)\}/)?.[1] || '';
+  assert.doesNotMatch(rootRule, /border-bottom\s*:/);
+  assert.match(viewTabsStyles, /\.admin-view-tabs__item\.is-active::after\s*\{[\s\S]*?background:\s*var\(--app-primary\);/);
+});
