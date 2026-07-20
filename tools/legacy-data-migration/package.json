@@ -1,0 +1,13 @@
+{
+  "name": "pmis-legacy-data-migration",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "migrate": "node src/cli.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "mysql2": "3.23.1",
+    "pg": "8.22.0"
+  }
+}

@@ -1,0 +1,24 @@
+[Unit]
+Description=PMIS backend
+After=network.target postgresql-16.service
+Requires=postgresql-16.service
+
+[Service]
+Type=simple
+User=pmis
+Group=pmis
+WorkingDirectory=/opt/pmis/current/backend
+Environment=NODE_ENV=production
+Environment=LD_LIBRARY_PATH=/opt/rh/devtoolset-11/root/usr/lib64
+EnvironmentFile=/opt/pmis/shared/backend.env
+ExecStart=/opt/node-v22.23.1/bin/node /opt/pmis/current/backend/src/server.js
+Restart=always
+RestartSec=3
+TimeoutStopSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/opt/pmis/shared /opt/pmis/current/backend/uploads
+
+[Install]
+WantedBy=multi-user.target

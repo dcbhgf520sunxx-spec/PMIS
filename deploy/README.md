@@ -7,13 +7,14 @@
 - Node.js >= 22.18
 - PostgreSQL 16
 - Nginx
-- PM2
+- systemd
 
-安装 PM2：
+CentOS 7 不能直接运行 Node.js 22 官方二进制包，也没有 PostgreSQL 16 官方仓库包。生产机采用源码安装到独立目录，不替换系统组件：
 
-```bash
-npm install -g pm2
-```
+- Node.js：`/opt/node-v22.23.1`
+- PostgreSQL：`/opt/postgresql-16`
+- PostgreSQL 数据：`/var/lib/pgsql/16/data`
+- PostgreSQL 仅监听 `127.0.0.1:5433`
 
 ## 2. 拉取代码
 
@@ -52,7 +53,7 @@ ALLOWED_ORIGIN=https://你的域名或IP
 chmod 600 backend/.env
 ```
 
-新环境通过当前版本 Docker Compose 初始化 PostgreSQL 后，只登记已包含在初始化脚本中的迁移基线：
+新环境执行 `backend/db/init/001_schema.sql` 初始化 PostgreSQL 后，只登记已包含在初始化脚本中的迁移基线：
 
 ```bash
 cd backend
@@ -96,24 +97,29 @@ npm run build
 frontend/dist
 ```
 
-## 6. 配置 PM2
+## 6. 配置 systemd
 
-确认 `deploy/pm2.config.js` 中端口为 `3103`，并确认 `backend/.env` 指向 PostgreSQL。
-
-启动后端：
+生产配置保存在 `/opt/pmis/shared/backend.env`，权限必须为 `600`。安装服务文件：
 
 ```bash
-cd /path/to/apps/PMIS
-mkdir -p backend/logs
-pm2 start deploy/pm2.config.js
-pm2 save
+sudo cp deploy/postgresql-16.service /etc/systemd/system/
+sudo cp deploy/pmis-backend.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now postgresql-16 pmis-backend
+```
+
+应用使用不可变发布目录和 `current` 软链接：
+
+```bash
+sudo mkdir -p /opt/pmis/releases /opt/pmis/shared/uploads
+sudo ln -sfn /opt/pmis/releases/<release> /opt/pmis/current
 ```
 
 查看状态：
 
 ```bash
-pm2 status
-pm2 logs PMIS-backend --lines 100
+systemctl status pmis-backend postgresql-16
+journalctl -u pmis-backend -n 100 --no-pager
 ```
 
 ## 7. 配置 Nginx
@@ -169,9 +175,9 @@ React 使用 history 路由，Nginx 必须保留 `try_files $uri $uri/ /index.ht
 ## 9. 常用命令
 
 ```bash
-pm2 status
-pm2 restart PMIS-backend
-pm2 logs PMIS-backend --lines 100
+systemctl status pmis-backend postgresql-16
+systemctl restart pmis-backend
+journalctl -u pmis-backend -n 100 --no-pager
 sudo nginx -t
 sudo nginx -s reload
 ```
@@ -185,3 +191,5 @@ sudo nginx -s reload
 - 每个项目实例必须使用独立 `DB_NAME`
 - `backend/.env` 不得提交
 - 默认账号为 `admin / vv123456`
+- 生产数据迁移后沿用旧系统账号和密码哈希，不再使用初始化默认密码
+- PostgreSQL 备份脚本为 `deploy/backup-postgresql.sh`，生产凭据通过 `.pgpass` 提供

@@ -1,0 +1,17 @@
+[Unit]
+Description=PostgreSQL 16 database server for PMIS
+After=network.target
+
+[Service]
+Type=notify
+User=postgres
+Group=postgres
+Environment=PGDATA=/var/lib/pgsql/16/data
+ExecStart=/opt/postgresql-16/bin/postgres -D ${PGDATA}
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=mixed
+KillSignal=SIGINT
+TimeoutSec=0
+
+[Install]
+WantedBy=multi-user.target
