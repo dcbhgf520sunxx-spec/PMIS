@@ -1,0 +1,34 @@
+--- a/deps/v8/src/compiler/wasm-compiler.cc
++++ b/deps/v8/src/compiler/wasm-compiler.cc
+@@ -8620,8 +8620,10 @@
+   auto compile_with_turboshaft = [&]() {
++    wasm::WrapperCompilationInfo wrapper_info{};
++    wrapper_info.code_kind = CodeKind::WASM_TO_JS_FUNCTION;
++    wrapper_info.import_info.import_kind = kind;
++    wrapper_info.import_info.expected_arity = expected_arity;
++    wrapper_info.import_info.suspend = suspend;
+     return Pipeline::GenerateCodeForWasmNativeStubFromTurboshaft(
+-        env->module, sig,
+-        wasm::WrapperCompilationInfo{
+-            .code_kind = CodeKind::WASM_TO_JS_FUNCTION,
+-            .import_info = {kind, expected_arity, suspend}},
+-        func_name, WasmStubAssemblerOptions(), nullptr);
++        env->module, sig, wrapper_info, func_name, WasmStubAssemblerOptions(),
++        nullptr);
+   };
+@@ -8781,8 +8783,10 @@
+   auto compile_with_turboshaft = [&]() {
++    wasm::WrapperCompilationInfo wrapper_info{};
++    wrapper_info.code_kind = CodeKind::WASM_TO_JS_FUNCTION;
++    wrapper_info.import_info.import_kind = kind;
++    wrapper_info.import_info.expected_arity = expected_arity;
++    wrapper_info.import_info.suspend = suspend;
+     std::unique_ptr<turboshaft::TurboshaftCompilationJob> job =
+         Pipeline::NewWasmTurboshaftWrapperCompilationJob(
+-            isolate, sig,
+-            wasm::WrapperCompilationInfo{
+-                .code_kind = CodeKind::WASM_TO_JS_FUNCTION,
+-                .import_info = {kind, expected_arity, suspend}},
+-            nullptr, std::move(name_buffer), WasmAssemblerOptions());
++            isolate, sig, wrapper_info, nullptr, std::move(name_buffer),
++            WasmAssemblerOptions());

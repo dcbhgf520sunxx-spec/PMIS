@@ -16,6 +16,16 @@ CentOS 7 不能直接运行 Node.js 22 官方二进制包，也没有 PostgreSQL
 - PostgreSQL 数据：`/var/lib/pgsql/16/data`
 - PostgreSQL 仅监听 `127.0.0.1:5433`
 
+Node.js 22.23.1 在 CentOS 7 上使用 GCC 11 编译前，需要按顺序应用兼容补丁：
+
+```bash
+cd /path/to/node-v22.23.1
+patch -p1 < /path/to/PMIS/deploy/patches/node-v22-centos7-cares-sys-random.patch
+patch -p1 < /path/to/PMIS/deploy/patches/node-v22-centos7-gcc11-wasm-union.patch
+```
+
+两个补丁分别处理旧内核缺少 `sys/random.h` / `getrandom`，以及 GCC 11 编译 V8 WebAssembly 匿名联合体时的兼容问题。
+
 ## 2. 拉取代码
 
 ```bash

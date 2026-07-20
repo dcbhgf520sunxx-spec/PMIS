@@ -3,7 +3,7 @@ Description=PostgreSQL 16 database server for PMIS
 After=network.target
 
 [Service]
-Type=notify
+Type=simple
 User=postgres
 Group=postgres
 Environment=PGDATA=/var/lib/pgsql/16/data
