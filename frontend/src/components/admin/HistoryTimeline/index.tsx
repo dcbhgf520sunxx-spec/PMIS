@@ -33,7 +33,7 @@ type HistoryTimelineProps = {
 
 function formatHistoryValue(field: string, value?: ReactNode) {
   if (typeof value !== 'string') return value ?? '-';
-  if (field === '问题描述') return richTextToSummary(value) || '-';
+  if (field.endsWith('描述')) return richTextToSummary(value) || '-';
   return value || '-';
 }
 

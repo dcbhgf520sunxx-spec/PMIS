@@ -15,6 +15,16 @@
 
 业务页面只负责传字段、传数据、处理接口和业务动作，不负责重新定义通用视觉、交互节奏、空状态、错误态、按钮样式和下拉样式。
 
+## 能力检索与用户说法映射
+
+用户通常描述界面效果，代码则使用组件名和属性名，两者可能不一样。AI 在判断“底座没有这个能力”之前，必须按“用户说法和同义词 → 下表能力映射 → 组件入口 → 组件工作台示例 → 实际行为和测试”的顺序核对，不能只搜索一个技术关键词。确认已有能力时直接复用；确认缺失时，结论中必须列出已核对的组件入口和工作台示例。
+
+| 用户常用说法 | 底座能力与调用方式 | 实际行为 | 组件工作台示例 |
+|---|---|---|---|
+| 详情页 Tab、顶部页签、详情分类、锚点导航、点击定位 | `TemplateDetailPage.sectionNavigation`；参与导航的 `TemplateDetailSection`、`TemplateDetailTableSection`、`HistoryTimelineSection` 传唯一 `sectionKey` | 顶部生成分类标签，点击后定位到对应详情区域；它不是切换或隐藏内容的传统 Tab，窄屏时自动改为下拉定位 | `frontend/src/modules/design-system/pages/demos/DetailTemplateDemo.tsx` |
+
+用户明确要求“点击后只显示当前内容、隐藏其他内容”时，才属于传统内容切换 Tab；不得因为分类导航的代码名称不是 `Tabs`，就误判底座不支持截图中的顶部页签效果。
+
 ## 新业务接入样板
 
 新增后台业务模块默认遵循当前架构：React / Vite 前端、Express REST API、PostgreSQL 数据库。常规目录如下：
@@ -64,6 +74,7 @@ API 接入保持统一：
 必须保持以下规则：
 
 - 第一列业务值进入详情，操作列不放“详情”。
+- 普通列表字段由 `SearchTable` 统一在超出列宽时显示省略号，并在悬停时展示完整内容；详情入口由 `DetailLinkCell` 自动使用文字内容作为悬停提示。业务页面不重复实现截断和提示；枚举、状态、标签等自定义渲染仍由对应公共组件负责完整内容展示。
 - 每个可见列必须声明数值型 `width`，保证 `SearchTable` 能生成列宽拖拽手柄；包含序号列时，序号列和紧随其后的第一业务列都必须声明 `fixed: 'left'`，不含序号列时固定第一业务列；存在操作列时必须声明 `fixed: 'right'`，只读列表不强制新增操作列。
 - 存在固定列的标准列表必须通过 `TemplateListPage.table.scroll.x` 声明足够的横向宽度；不能只写 `fixed` 而没有横向滚动区域。
 - 固定列属于代码强制结构，优先级高于用户历史列设置；列设置可以保留显示、顺序和非强制列固定偏好，但不得覆盖代码声明的左右固定列。
@@ -74,6 +85,7 @@ API 接入保持统一：
 - 序号使用 `renderIndex(index)`，按过滤后的全量数据位置计算。
 - 本地数据排序交给 `useTemplateListPageData`，先排序过滤后的全量数据，再分页。
 - 服务端分页列表必须通过 `useTemplateServerListData` 请求数据，并把全部已提交筛选、当前视图和其他数据范围参数放入 `queryKey`。组件以查询上下文、分页和排序共同组成请求标识：上下文切换时立即隔离旧数据，统一输出加载和错误状态，只接收当前请求结果以避免请求乱序覆盖，并将页码原子重置为第一页。业务页面不得继续使用 `useEffect + setRows` 自行维护服务端列表，也不得只靠切换时清空数组遮盖问题。
+- 用户只切换页码时必须保留所选页码，不能被筛选重置逻辑拉回第一页；只有已提交筛选、当前视图或其他查询上下文真正变化时才重置为第一页。
 - 分页配置通过 `TemplateListPage.pagination` 传入，不在业务页直接放 `TablePagination`。
 - 主子任务等低频层级列表继续使用 `TemplateListPage`，名称列通过 `HierarchyListCell` 统一方框开关、主子标识和子级缩进，不使用表格原生展开列，也不新增业务专用树表组件。父子数据按展示组平铺返回，父级记录分页，子级跟随父级且默认收起；父子关系校验、状态联动、进度汇总、权限和删除限制仍由业务模块处理。
 - 普通列表不传选择列、批量操作和已选数量，分页保持在右侧。
@@ -121,12 +133,13 @@ API 接入保持统一：
 - 返回列表通过 `TemplateDetailPage.onBack` 传入，业务页不重复创建“返回列表”按钮和操作栏外壳。
 - 接口失败或记录不存在时，通过模板的 `error`、`notFound`、`onRetry` 展示统一状态，不能无限显示加载中。
 - 基础信息、单据信息、历史记录等使用详情分组和 `DetailMetaList`；使用 `HistoryTimeline` 的详情分组统一命名为“变更历史”，不得继续使用“操作历史”“操作记录”等旧名称。
-- `DetailMetaList` 的普通文本字段默认最多显示两行，超出显示省略号并悬浮展示完整内容；角色、权限、人员、区域等聚合字段可继续通过 `aggregate` 显式声明。描述、备注、进展、风险等需要完整阅读的长文本通过 `longText` 声明，富文本继续直接传入 `RichTextViewer`，两者不截断、不提供展开/收起。业务页面不得自行实现另一套截断和提示逻辑。
+- `DetailMetaList` 对 `null`、`undefined`、空字符串和纯空格统一显示 `-`；业务页面直接传原始值，不得自行改成“暂无描述”“暂无内容”等其他空值文案，也无需逐字段编写 `|| '-'`。普通文本字段默认最多显示两行，超出显示省略号并悬浮展示完整内容；角色、权限、人员、区域等聚合字段可继续通过 `aggregate` 显式声明。描述、备注、进展、风险等需要完整阅读的长文本通过 `longText` 声明，富文本继续直接传入 `RichTextViewer`；长文本和富文本的空值同样显示 `-`，有内容时不截断、不提供展开/收起。业务页面不得自行实现另一套截断和提示逻辑。
 - 详情页中的子任务、明细和关联记录等结构化数据统一使用 `TemplateDetailTableSection`，不得在 `TemplateDetailSection` 中直接放置 `SearchTable`、原生表格或复用 `TemplateListPage embedded`，也不得通过业务包装组件绕过；严格组件审计必须阻断这些直接和间接调用。组件默认只做纯数据展示，不自动增加详情链接和操作列；需要查看或管理时，由业务列显式声明 `DetailLinkCell` 和 `OperationColumnActions`。传入 `table.scroll.x` 后，组件在横向滚动时自动固定首个业务列，并为滚动条预留底部空间，业务页不重复设置相关样式。筛选、批量操作或复杂分页较多时，应进入独立列表页或 `TemplateDrawerTable`，不能把完整列表页工具栏塞进详情分组。
 - `TemplateDetailSection.inlineExtra` 只承接标题后的统计或轻量上下文，右侧主要业务动作通过 `extra` 传入；`TemplateDetailTableSection.summary` 和 `extra` 分别承接关联数据摘要与新增等操作。
 - 详情页变更历史统一使用 `HistoryTimelineSection`，由它把“全部展开/全部收起”紧跟在“变更历史”标题之后并承接单条展开；业务页面不得使用 `TemplateDetailSection + HistoryTimeline` 拼装，不得维护 `expandedKeys`、`onExpandedKeysChange` 或通过 `inlineExtra` 重复实现。
 - 同一次保存或状态变更产生的多字段日志必须共享 `pms_op_log.operation_id`，历史接口按该标识聚合为一个节点；聚合节点内的字段顺序必须复用对应详情页的字段顺序，禁止按日志写入顺序、数据库返回顺序或字段名排序。没有 `operation_id` 的历史日志按单条兼容展示，不能按“同一秒”猜测聚合。
 - 变更历史进入 `HistoryTimeline` 前必须完成转译，使用中文字段名和业务展示值：人员和关联对象 ID 转为名称，枚举和状态码转为中文含义，日期使用页面统一格式。后端优先复用 `formatHistoryChanges` 并显式声明 `fieldLabels`、`valueLookups` 和 `dateFields`；不得把 `field_name`、`*_id`、枚举编码等数据库原始值直接交给前端或组件。
+- 变更历史中的问题描述、Bug 描述、任务描述、需求描述等描述类富文本统一由 `HistoryTimeline` 生成纯文字摘要；内容包含图片时只追加 `〔图片〕` 标记，不在时间线中直接渲染图片或富文本源码，业务页面不得重复实现字段特判。
 - 长详情页存在较多分类且需要快速定位时，必须使用 `TemplateDetailPage.sectionNavigation` 以及 `TemplateDetailSection.sectionKey` / `TemplateDetailTableSection.sectionKey` 提供的顶部分类导航；开启分类导航后，每个参与导航的详情分组都必须声明唯一 `sectionKey`。不得在业务页重复维护分类数组、自建锚点或滚动监听，窄屏下拉定位由模板自动承接。
 - 详情页返回、编辑等动作通过 `ActionBar` 和现有按钮组件组合。
 - 不在业务页临时重做详情卡片、字段栅格、状态展示和历史记录样式。
