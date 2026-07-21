@@ -34,7 +34,7 @@
 | 详情页页面切换、详情子页面、详情路由页签 | 为 `TemplateDetailPage.sectionNavigation` 传入 `items`、`activeKey` 和 `onChange`；业务层在 `onChange` 中更新路由并只传当前页面内容 | 与导航定位使用同一套分类导航样式，点击后切换地址和页面内容，不滚动定位；窄屏时使用同一套下拉切换 | `frontend/src/modules/design-system/pages/demos/DetailTemplateDemo.tsx` |
 | 普通页面分类切换、跨页面分类页签 | 使用 `DetailSectionNavigation`；由业务层在 `onChange` 中调用 `navigate(targetPath)`，并根据当前路由或查询参数传入选中项 | 与详情分类导航保持同一套样式，点击后切换到不同页面或路由，只展示目标页面内容 | `frontend/src/modules/design-system/pages/sections/BaseSection.tsx` 的“页面分类切换”示例 |
 | 列表数据视图 | 使用 `ViewTabs`；根据当前视图传入选中项和真实统计数量 | 切换同一列表的数据范围，不切换页面；必须遵守列表统计规则 | `frontend/src/modules/design-system/pages/sections/BaseSection.tsx` 的“列表数据视图切换”示例 |
-| 可编辑表格、动态明细、付款阶段、预算明细、表单中增删多行 | 在 `TemplateFormPage` 内使用 `AdminProFormEditableList`，每列继续组合 `AdminProForm*` 控件 | 电脑端表格化录入，窄屏自动变卡片；底座统一序号、增删和最少行数，明细数组随主表单一起校验提交 | `frontend/src/modules/design-system/pages/sections/input/EditableDetailListExamples.tsx` |
+| 可编辑表格、动态明细、付款阶段、预算明细、表单中增删多行 | 在 `TemplateFormPage` 内使用 `AdminProFormEditableList`，通过 `fields` 组合 `AdminProForm*` 字段控件 | 业务方只定义字段、校验和默认值；底座统一列宽、序号、增删、最少行数、响应式以及保存取消 | `frontend/src/modules/design-system/pages/sections/input/EditableDetailListExamples.tsx` |
 
 判断标准固定为：详情页同一页面内定位时，为 `sectionNavigation` 传 `true` 并让全部分组声明 `sectionKey`；详情页切换页面或路由时，为 `sectionNavigation` 传 `items`、`activeKey` 和 `onChange`，只渲染当前页面内容。普通页面的分类切换直接使用 `DetailSectionNavigation`。这些模式复用同一套分类导航样式；只有列表数据视图使用 `ViewTabs`。不得用 `ViewTabs` 重做分类导航，也不能因为代码名称不是 `Tabs`，就误判底座不支持用户所说的页签效果。
 
@@ -132,9 +132,10 @@ API 接入保持统一：
 - 唯一性等服务端字段校验通过结构化 `fieldErrors` 展示在对应字段下方；没有字段归属的业务错误和网络异常才使用全局消息。
 - 后端已能明确归属到表单字段的校验错误必须使用 `failField` 返回，禁止用普通 `fail` 或手写响应降级为顶部全局提示。
 - 业务页只传 `formId`、初始值、提交回调和业务字段。
+- 业务方只能定义字段、字段顺序、字段控件、选项、校验、默认值以及接口数据转换。标题区、分组外观、字段布局、保存取消、提交状态、错误反馈和未保存保护全部由 `TemplateFormPage` / `TemplateFormSection` 承接；不得在业务页增加第二套保存取消按钮，也不得覆盖公共表单样式。
 - 字段布局优先使用模板内置 grid class，不在业务页另起一套表单布局。
 - 表单控件优先使用 `AdminProForm*` 或项目已沉淀表单组件。
-- 表单中需要新增、删除多行结构化明细时统一使用 `AdminProFormEditableList`。业务页只声明中文表头、列宽、字段控件、校验规则和新增行默认值；自动序号、最少行数、电脑端表格布局和窄屏卡片布局由组件承接。电脑端表格按列的实际总宽度展示，不强制铺满页面；未声明列宽时，单列默认在 160 至 280 像素之间，列较多并超过可用区域时允许横向滚动，并由组件固定左侧序号列和右侧操作列。金额字段统一使用 `AdminProFormMoney`，默认保留两位小数。序号仅用于展示，不得作为业务字段提交。业务页不得直接使用 `ProFormList`、`Form.List` 或 `EditableProTable` 重做同类能力。
+- 表单中需要新增、删除多行结构化明细时统一使用 `AdminProFormEditableList`，并且必须位于 `TemplateFormPage` 内。业务页只通过 `fields` 声明中文字段名、字段控件和校验规则，通过 `creatorRecord` 声明新增行的业务默认值；列宽、新增文案、自动序号、删除方式、最少行数、电脑端表格布局、窄屏卡片布局和保存取消全部由底座固定，不开放业务覆盖。电脑端表格按字段数量和底座标准宽度展示，不强制铺满页面；字段较多并超过可用区域时允许横向滚动，并由组件固定左侧序号列和右侧操作列。金额字段统一使用 `AdminProFormMoney`，默认保留两位小数。序号仅用于展示，不得作为业务字段提交。业务页不得直接使用 `ProFormList`、`Form.List`、`EditableProTable`，也不得向 `AdminProFormEditableList` 传入 `columns`、`addText`、`minRows`、`maxRows`、`readonly`、`className` 或 `style` 改写公共结构。
 
 ### 详情页
 

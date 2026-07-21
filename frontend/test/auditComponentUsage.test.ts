@@ -86,6 +86,42 @@ test('组件审计阻断业务页绕开可编辑明细表单组件', () => {
   }
 });
 
+test('组件审计阻断业务方改写可编辑明细的公共结构', () => {
+  const result = runStrictAudit(
+    `export function ContractEditor() {
+      return <TemplateFormPage>
+        <AdminProFormEditableList
+          name="stages"
+          fields={[]}
+          creatorRecord={{}}
+          addText="新增付款阶段"
+          minRows={2}
+        />
+      </TemplateFormPage>;
+    }`,
+    'ContractEditor.tsx'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /业务方只能定义明细字段/);
+});
+
+test('组件审计阻断可编辑明细脱离统一表单样板', () => {
+  const result = runStrictAudit(
+    'export function ContractEditor() { return <AdminProFormEditableList name="stages" fields={[]} creatorRecord={{}} />; }',
+    'ContractEditor.tsx'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /TemplateFormPage/);
+});
+
+test('组件审计允许统一表单样板只传可编辑明细业务字段', () => {
+  const result = runStrictAudit(
+    'export function ContractEditor() { return <TemplateFormPage><AdminProFormEditableList name="stages" fields={[]} creatorRecord={{}} /></TemplateFormPage>; }',
+    'ContractEditor.tsx'
+  );
+  assert.equal(result.status, 0, result.stdout);
+});
+
 test('组件审计阻断业务页直接使用 antd Button', () => {
   const modulesDir = mkdtempSync(join(tmpdir(), 'component-audit-'));
   const pagePath = join(modulesDir, 'UserDetailPage.tsx');

@@ -16,11 +16,10 @@ type EditableDetailExampleValues = {
   stages?: StageRecord[];
 };
 
-const stageColumns = [
+const stageFields = [
   {
     key: 'stageName',
     title: '阶段名称',
-    width: 280,
     render: () => (
       <AdminProFormText
         name="stageName"
@@ -32,7 +31,6 @@ const stageColumns = [
   {
     key: 'plannedAmount',
     title: '计划金额（元）',
-    width: 220,
     render: () => (
       <AdminProFormMoney
         name="plannedAmount"
@@ -50,10 +48,11 @@ export function EditableDetailListExamples() {
     <AdminCard title="5. 可编辑明细表单">
       <div className="design-system-page__input-panel-head">
         <h3>多行结构化录入</h3>
-        <p>电脑端按表格录入，窄屏自动变为卡片；序号、增删和最少行数由底座统一处理。</p>
+        <p>业务方只定义字段、校验和默认值；列宽、序号、增删、最少行数及保存取消由底座统一处理。</p>
       </div>
       <ComponentEntry name="AdminProFormEditableList" />
       <FormPage<EditableDetailExampleValues>
+        showActions={false}
         initialValues={{
           stages: [
             { stageName: '合同签订', plannedAmount: '300000.00' },
@@ -66,9 +65,8 @@ export function EditableDetailListExamples() {
         <AdminProFormEditableList<StageRecord>
           name="stages"
           label="付款阶段"
-          columns={stageColumns}
+          fields={stageFields}
           creatorRecord={() => ({ stageName: '', plannedAmount: '' })}
-          minRows={1}
         />
       </FormPage>
     </AdminCard>

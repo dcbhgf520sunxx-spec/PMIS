@@ -400,6 +400,34 @@ function collectSemanticViolations(files) {
           }
         }
         if (name === 'OperationColumnActions') inspectOperationChildren(node);
+        if (name === 'AdminProFormEditableList') {
+          const forbiddenProps = ['columns', 'addText', 'minRows', 'maxRows', 'readonly', 'className', 'style'];
+          for (const propName of forbiddenProps) {
+            if (attribute(node, propName)) {
+              violations.push(finding(
+                file,
+                sourceFile,
+                node,
+                `业务方只能定义明细字段，${propName} 属于底座统一结构，不允许覆盖`,
+                `AdminProFormEditableList.${propName}`
+              ));
+            }
+          }
+
+          let parent = node.parent;
+          while (parent && parent !== sourceFile) {
+            if (ts.isJsxElement(parent) && jsxTagName(parent, sourceFile) === 'TemplateFormPage') break;
+            parent = parent.parent;
+          }
+          if (!parent || parent === sourceFile) {
+            violations.push(finding(
+              file,
+              sourceFile,
+              node,
+              '可编辑明细必须放在 TemplateFormPage 内，由底座统一表单布局和保存取消操作'
+            ));
+          }
+        }
         if (name === 'TemplateDetailPage') {
           const statusSection = attribute(node, 'statusSection');
           const titleTags = attribute(node, 'titleTags');
