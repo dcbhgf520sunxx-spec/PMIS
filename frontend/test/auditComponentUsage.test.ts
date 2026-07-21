@@ -75,6 +75,15 @@ test('组件审计阻断业务页直接使用 ProForm.Item', () => {
   }
 });
 
+test('组件审计阻断业务页直接使用原生 Upload 拼附件能力', () => {
+  const result = runStrictAudit(
+    'export function ContractFormPage() { return <TemplateFormPage><Upload multiple /></TemplateFormPage>; }',
+    'ContractEditor.tsx'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /AdminAttachmentUpload/);
+});
+
 test('组件审计阻断业务页绕开可编辑明细表单组件', () => {
   for (const primitive of ['<ProFormList name="stages" />', '<Form.List name="stages" />', '<EditableProTable />']) {
     const result = runStrictAudit(

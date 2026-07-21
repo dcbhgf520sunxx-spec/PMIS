@@ -34,6 +34,7 @@ const blockingRules = [
   { pattern: /<ProFormList(\s|>)/g, reason: '可编辑明细应使用 AdminProFormEditableList' },
   { pattern: /<Form\.List(\s|>)/g, reason: '可编辑明细应使用 AdminProFormEditableList' },
   { pattern: /<EditableProTable(\s|>)/g, reason: '可编辑明细应使用 AdminProFormEditableList' },
+  { pattern: /<Upload(\s|>|\.Dragger)/g, reason: '业务附件应使用 AdminAttachmentUpload 或 AdminAttachmentDragger，统一承接列表、状态、重试、预览、下载和删除确认' },
   { pattern: /<ProTable(\s|>)/g, reason: '表格应优先使用 TemplateListPage / SearchTable' },
   { pattern: /<ProForm(\s|>)/g, reason: '表单容器应优先使用 TemplateFormPage' },
   { pattern: /<ProCard(\s|>)/g, reason: '卡片应优先使用页面样板或 AdminCard' },

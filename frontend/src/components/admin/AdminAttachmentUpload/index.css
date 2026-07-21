@@ -1,0 +1,181 @@
+.admin-attachment-upload {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+
+.admin-attachment-upload .ant-upload-wrapper .ant-upload-drag {
+  min-height: 104px;
+  border-color: var(--app-border);
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.admin-attachment-upload .ant-upload-wrapper .ant-upload-drag:not(.ant-upload-disabled):hover {
+  border-color: var(--app-primary);
+  background: #f7faff;
+}
+
+.admin-attachment-upload__button-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  color: var(--app-muted);
+  font-size: 12px;
+}
+
+.admin-attachment-upload__drop-content {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  color: var(--app-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.admin-attachment-upload__drop-content > .anticon {
+  color: var(--app-primary);
+  font-size: 24px;
+}
+
+.admin-attachment-upload__drop-content strong {
+  color: var(--app-text);
+  font-size: 13px;
+}
+
+.admin-attachment-upload__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-attachment-upload__item {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 8px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+}
+
+.admin-attachment-upload__item.is-done {
+  grid-template-columns: 28px minmax(0, 1fr) auto auto;
+  min-height: 44px;
+  padding-block: 6px;
+}
+
+.admin-attachment-upload__item.is-error {
+  border-color: rgba(217, 45, 32, 0.32);
+  background: #fffafa;
+}
+
+.admin-attachment-upload__file-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--app-steel);
+  background: #f1f4f8;
+}
+
+.admin-attachment-upload__file-icon.is-image { color: #0f8b55; background: #eaf8f1; }
+.admin-attachment-upload__file-icon.is-pdf { color: #d92d20; background: #fff0ee; }
+.admin-attachment-upload__file-icon.is-word { color: #245bdb; background: #eef4ff; }
+.admin-attachment-upload__file-icon.is-excel { color: #168447; background: #edf9f2; }
+.admin-attachment-upload__file-icon.is-ppt { color: #c64d18; background: #fff3eb; }
+.admin-attachment-upload__file-icon.is-archive { color: #7a5af8; background: #f3f0ff; }
+.admin-attachment-upload__file-icon.is-audio,
+.admin-attachment-upload__file-icon.is-video { color: #b54708; background: #fff6e8; }
+
+.admin-attachment-upload__file-main {
+  min-width: 0;
+}
+
+.admin-attachment-upload__file-name {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: hidden;
+  color: var(--app-text);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 20px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+button.admin-attachment-upload__file-name.is-previewable {
+  color: var(--app-primary);
+  cursor: pointer;
+}
+
+button.admin-attachment-upload__file-name.is-previewable:hover {
+  text-decoration: underline;
+}
+
+.admin-attachment-upload__meta,
+.admin-attachment-upload__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-attachment-upload__meta {
+  margin-top: 2px;
+  color: var(--app-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.admin-attachment-upload__size {
+  color: var(--app-muted);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.admin-attachment-upload__item.is-error .admin-attachment-upload__status {
+  color: var(--app-danger);
+}
+
+.admin-attachment-upload__actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .admin-attachment-upload__button-entry {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .admin-attachment-upload__item:not(.is-done) {
+    grid-template-columns: 28px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .admin-attachment-upload__item:not(.is-done) .admin-attachment-upload__actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    padding-top: 2px;
+    border-top: 1px solid rgba(211, 224, 241, 0.72);
+  }
+
+  .admin-attachment-upload__item.is-done {
+    grid-template-columns: 28px minmax(0, 1fr) auto auto;
+    gap: 6px;
+  }
+}

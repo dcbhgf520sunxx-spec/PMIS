@@ -141,7 +141,8 @@
   line-height: 22px;
 }
 
-.design-system-page__input-panel-head p {
+.design-system-page__input-panel-head p,
+.design-system-page__input-demo-description {
   margin: 0;
   color: var(--app-muted);
   font-size: 12px;

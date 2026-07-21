@@ -1,7 +1,8 @@
-import { CloudUploadOutlined } from '@ant-design/icons';
+import { useState } from 'react';
+import type { RcFile } from 'antd/es/upload/interface';
 import {
-  AdminButton, AdminCard, AdminColorPicker, AdminUpload, AdminUploadDragger,
-  RichDescriptionEditor
+  AdminAttachmentDragger, AdminAttachmentUpload, AdminCard, AdminColorPicker,
+  RichDescriptionEditor, useAdminFeedback, type AdminAttachment, type AdminAttachmentUploadProps
 } from '../../../../../components/admin';
 import { ComponentEntry } from '../../components/ComponentEntry';
 
@@ -11,6 +12,41 @@ type AdvancedInputExamplesProps = {
 };
 
 export function AdvancedInputExamples({ richText, setRichText }: AdvancedInputExamplesProps) {
+  const { message } = useAdminFeedback();
+  const [attachments, setAttachments] = useState<AdminAttachment[]>([
+    { id: 'existing-contract', name: '已有附件-合同扫描件.pdf', size: 832_104, status: 'done' },
+    { id: 'existing-image', name: '现场照片.png', size: 1_240_072, status: 'done' },
+    { id: 'existing-sheet', name: '费用明细.xlsx', size: 126_420, status: 'done' }
+  ]);
+  const [dragAttachments, setDragAttachments] = useState<AdminAttachment[]>(() => {
+    const failedFile = Object.assign(
+      new File(['失败重试示例'], '模拟上传失败.txt', { type: 'text/plain' }),
+      { uid: 'demo-upload-error' }
+    ) as RcFile;
+    return [
+      {
+        id: 'demo-upload-error',
+        name: failedFile.name,
+        size: failedFile.size,
+        status: 'error',
+        errorMessage: '网络中断，请重试',
+        rawFile: failedFile
+      }
+    ];
+  });
+
+  const simulateUpload: AdminAttachmentUploadProps['onUpload'] = async (file, { onProgress }) => {
+    for (const percent of [30, 65, 100]) {
+      await new Promise((resolve) => window.setTimeout(resolve, 180));
+      onProgress(percent);
+    }
+    return {
+      id: `demo-${Date.now()}-${file.uid}`,
+      name: file.name,
+      size: file.size
+    };
+  };
+
   return (
     <>
       <AdminCard title="9. 上传">
@@ -23,23 +59,43 @@ export function AdvancedInputExamples({ richText, setRichText }: AdvancedInputEx
             <div className="design-system-page__input-demo-list design-system-page__input-demo-list--stack">
               <div className="design-system-page__input-demo">
                 <h4>基础上传</h4>
-                <ComponentEntry name="AdminUpload" />
-                <AdminUpload beforeUpload={() => false} maxCount={1}>
-                  <AdminButton icon={<CloudUploadOutlined />}>选择文件</AdminButton>
-                </AdminUpload>
+                <ComponentEntry name="AdminAttachmentUpload" />
+                <p className="design-system-page__input-demo-description">
+                  按钮选择文件；已有附件和新附件统一展示，点击名称预览，图标操作用于下载和删除。
+                </p>
+                <AdminAttachmentUpload
+                  value={attachments}
+                  onChange={setAttachments}
+                  onUpload={simulateUpload}
+                  onDownload={(attachment) => {
+                    message.success(`开始下载：${attachment.name}`);
+                  }}
+                  onPreview={(attachment) => {
+                    message.success(`预览：${attachment.name}`);
+                  }}
+                  onRemove={async () => {
+                    await new Promise((resolve) => window.setTimeout(resolve, 180));
+                  }}
+                />
               </div>
               <div className="design-system-page__input-demo is-wide">
                 <h4>拖拽上传</h4>
-                <ComponentEntry name="AdminUploadDragger" />
-                <AdminUploadDragger beforeUpload={() => false} maxCount={1}>
-                  <div className="design-system-page__upload-drag-content">
-                    <p className="ant-upload-text">
-                      <CloudUploadOutlined />
-                      <span>拖拽文件到此处，或点击上传</span>
-                    </p>
-                    <p className="ant-upload-hint">支持图片、文档，单个文件不超过 20MB</p>
-                  </div>
-                </AdminUploadDragger>
+                <ComponentEntry name="AdminAttachmentDragger" />
+                <p className="design-system-page__input-demo-description">
+                  拖拽或点击选择文件；上传完成后不重复显示成功文案，失败时保留原因和重试入口。
+                </p>
+                <AdminAttachmentDragger
+                  value={dragAttachments}
+                  onChange={setDragAttachments}
+                  onUpload={simulateUpload}
+                  onPreview={(attachment) => {
+                    message.success(`预览：${attachment.name}`);
+                  }}
+                  onDownload={(attachment) => {
+                    message.success(`开始下载：${attachment.name}`);
+                  }}
+                  onRemove={async () => undefined}
+                />
               </div>
             </div>
           </section>

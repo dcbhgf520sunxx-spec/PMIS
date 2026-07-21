@@ -2,6 +2,7 @@ import { ReactNode, useState } from 'react';
 import {
   BellOutlined,
   ColumnHeightOutlined,
+  DownloadOutlined,
   FullscreenOutlined,
   PlusOutlined,
   ReloadOutlined,
@@ -228,6 +229,7 @@ export function BaseSection() {
               <AdminIconAction label="全屏" icon={<FullscreenOutlined />} onClick={(event) => event.preventDefault()} />
               <AdminIconAction label="消息" icon={<BellOutlined />} onClick={(event) => event.preventDefault()} />
               <AdminIconAction label="用户" icon={<UserOutlined />} onClick={(event) => event.preventDefault()} />
+              <AdminIconAction label="下载" icon={<DownloadOutlined />} onClick={(event) => event.preventDefault()} />
               <AdminIconAction label="暂无权限" disabled icon={<SettingOutlined />} />
               <AdminIconAction label="加载中" loading />
               <ExpandToggleButton expanded={false} onClick={(event) => event.preventDefault()} />
