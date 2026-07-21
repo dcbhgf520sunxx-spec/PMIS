@@ -6,8 +6,8 @@ const { normalizeMemberIds, validateProjectStatusChange, calculateProjectOverdue
 const { groupOperationLogs } = require('../utils/operationHistory')
 const { formatHistoryChanges, serializeMemberIds } = require('../utils/productProjectHistory')
 
-const DETAIL_FIELD_ORDER = ['name', 'product_id', 'owner_id', 'member_ids', 'description', 'start_date', 'expected_end_date', 'progress_text', 'risk_text', 'status', 'is_overdue', 'actual_end_date', 'suspend_date']
-const HISTORY_FIELD_LABELS = { name: '项目名称', product_id: '所属产品', owner_id: '负责人', member_ids: '项目成员', description: '项目描述', start_date: '启动日期', expected_end_date: '预计完成日期', progress_text: '进度记录', risk_text: '风险记录', status: '状态', is_overdue: '逾期状态', actual_end_date: '实际完成日期', suspend_date: '暂停日期', is_deleted: '删除状态' }
+const DETAIL_FIELD_ORDER = ['name', 'product_id', 'owner_id', 'member_ids', 'description', 'start_date', 'expected_end_date', 'progress_text', 'risk_text', 'status', 'is_overdue', 'actual_end_date', 'suspend_date', 'contract', 'payment']
+const HISTORY_FIELD_LABELS = { name: '项目名称', product_id: '所属产品', owner_id: '负责人', member_ids: '项目成员', description: '项目描述', start_date: '启动日期', expected_end_date: '预计完成日期', progress_text: '进度记录', risk_text: '风险记录', status: '状态', is_overdue: '逾期状态', actual_end_date: '实际完成日期', suspend_date: '暂停日期', contract: '合同信息', payment: '付款记录', is_deleted: '删除状态' }
 const HISTORY_DATE_FIELDS = new Set(['start_date', 'expected_end_date', 'actual_end_date', 'suspend_date'])
 
 const schema = {
@@ -190,6 +190,8 @@ exports.remove = async (req, res) => {
     if (taskCount > 0) return fail(res, 400, 400, `该项目下还有 ${taskCount} 个任务，无法删除`)
     const bugCount = Number((await db.prepare('SELECT COUNT(*) count FROM pms_bug WHERE project_id = ? AND is_deleted = 0').get(req.params.id))?.count || 0)
     if (bugCount > 0) return fail(res, 400, 400, `该项目下还有 ${bugCount} 个 BUG，无法删除`)
+    const contractCount = Number((await db.prepare('SELECT COUNT(*) count FROM pms_project_contract WHERE project_id = ? AND is_deleted = 0').get(req.params.id))?.count || 0)
+    if (contractCount > 0) return fail(res, 400, 400, '该项目已存在合同，无法删除')
     await db.prepare('UPDATE pms_project SET is_deleted = 1, updater_id = ?, updated_at = NOW() WHERE id = ?').run(req.user.id, req.params.id)
     await db.writeLog(req.user.id, '删除', '项目', req.params.id, 'is_deleted', 0, 1, req.ip, project.name)
     ok(res, null)

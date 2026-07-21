@@ -4,6 +4,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
   gap: 10px;
+  align-content: start;
   align-items: start;
   overflow: auto;
 }

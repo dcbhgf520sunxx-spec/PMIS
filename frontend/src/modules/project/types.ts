@@ -9,3 +9,55 @@ export type ProjectRecord = {
   creatorName: string; updaterName: string; createdAt: string; updatedAt: string;
 };
 export type ProjectFormValues = { name: string; productId: string; ownerId: string; memberIds?: string[]; startDate?: string; expectedEndDate: string; description?: string; progressText?: string; riskText?: string };
+
+export type ProjectPaymentStatus = 0 | 1 | 2;
+export type ProjectPaymentStage = {
+  id: string;
+  contractId: string;
+  stageName: string;
+  plannedAmount: number;
+  paidAmount: number;
+  unpaidAmount: number;
+  paymentStatus: ProjectPaymentStatus;
+  sortOrder: number;
+};
+export type ProjectContractRecord = {
+  id: string;
+  projectId: string;
+  projectName: string;
+  contractCode: string;
+  contractName: string;
+  supplierId: string;
+  supplierName: string;
+  signedDate: string;
+  contractAmount: number;
+  paidAmount: number;
+  unpaidAmount: number;
+  stages: ProjectPaymentStage[];
+};
+export type ProjectContractFormValues = {
+  contractCode: string;
+  contractName: string;
+  supplierId: string;
+  signedDate: string;
+  contractAmount: string;
+  stages: Array<{ id?: string; stageName: string; plannedAmount: string }>;
+};
+export type ProjectPaymentRecord = {
+  id: string;
+  stageId: string;
+  paymentAmount: number;
+  paymentMonth: string;
+  handlerId: string;
+  handlerName: string;
+  remark: string;
+  creatorName: string;
+  createdAt: string;
+  updatedAt: string;
+};
+export type ProjectPaymentFormValues = {
+  paymentAmount: string;
+  paymentMonth: string;
+  handlerId: string;
+  remark?: string;
+};

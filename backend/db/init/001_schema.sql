@@ -131,6 +131,49 @@ CREATE TABLE IF NOT EXISTS pms_project_member (
   UNIQUE (project_id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS pms_project_contract (
+  id BIGSERIAL PRIMARY KEY,
+  project_id BIGINT NOT NULL REFERENCES pms_project(id) ON DELETE RESTRICT,
+  contract_code VARCHAR(100) NOT NULL,
+  contract_name VARCHAR(200) NOT NULL,
+  supplier_id BIGINT NOT NULL,
+  signed_date DATE NOT NULL,
+  contract_amount NUMERIC(18,2) NOT NULL CHECK (contract_amount > 0),
+  creator_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  updater_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  is_deleted SMALLINT NOT NULL DEFAULT 0 CHECK (is_deleted IN (0, 1)),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS pms_project_payment_stage (
+  id BIGSERIAL PRIMARY KEY,
+  contract_id BIGINT NOT NULL REFERENCES pms_project_contract(id) ON DELETE RESTRICT,
+  stage_name VARCHAR(100) NOT NULL,
+  planned_amount NUMERIC(18,2) NOT NULL CHECK (planned_amount > 0),
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  creator_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  updater_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  is_deleted SMALLINT NOT NULL DEFAULT 0 CHECK (is_deleted IN (0, 1)),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS pms_project_payment_record (
+  id BIGSERIAL PRIMARY KEY,
+  stage_id BIGINT NOT NULL REFERENCES pms_project_payment_stage(id) ON DELETE RESTRICT,
+  payment_amount NUMERIC(18,2) NOT NULL CHECK (payment_amount > 0),
+  payment_month DATE NOT NULL,
+  handler_id BIGINT NOT NULL REFERENCES pms_user(id) ON DELETE RESTRICT,
+  remark TEXT,
+  creator_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  updater_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  is_deleted SMALLINT NOT NULL DEFAULT 0 CHECK (is_deleted IN (0, 1)),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (payment_month = DATE_TRUNC('month', payment_month)::DATE)
+);
+
 CREATE TABLE IF NOT EXISTS pms_requirement (
   id BIGSERIAL PRIMARY KEY,
   title VARCHAR(200) NOT NULL,
@@ -183,6 +226,19 @@ CREATE TABLE IF NOT EXISTS pms_archive (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_project_contract_supplier'
+      AND conrelid = 'pms_project_contract'::regclass
+  ) THEN
+    ALTER TABLE pms_project_contract
+      ADD CONSTRAINT fk_project_contract_supplier
+      FOREIGN KEY (supplier_id) REFERENCES pms_archive(id) ON DELETE RESTRICT;
+  END IF;
+END $$;
 
 DO $$
 BEGIN
@@ -315,6 +371,12 @@ CREATE INDEX IF NOT EXISTS idx_project_product_status ON pms_project(product_id,
 CREATE INDEX IF NOT EXISTS idx_project_owner_status ON pms_project(owner_id, status, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_project_expected_end ON pms_project(expected_end_date, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_project_member_user ON pms_project_member(user_id, project_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_project_contract_project_active ON pms_project_contract(project_id) WHERE is_deleted = 0;
+CREATE UNIQUE INDEX IF NOT EXISTS uk_project_contract_code_active ON pms_project_contract(contract_code) WHERE is_deleted = 0;
+CREATE INDEX IF NOT EXISTS idx_project_contract_supplier_active ON pms_project_contract(supplier_id) WHERE is_deleted = 0;
+CREATE UNIQUE INDEX IF NOT EXISTS uk_project_payment_stage_name_active ON pms_project_payment_stage(contract_id, stage_name) WHERE is_deleted = 0;
+CREATE INDEX IF NOT EXISTS idx_project_payment_stage_contract ON pms_project_payment_stage(contract_id, sort_order, id) WHERE is_deleted = 0;
+CREATE INDEX IF NOT EXISTS idx_project_payment_record_stage ON pms_project_payment_record(stage_id, payment_month, id) WHERE is_deleted = 0;
 CREATE UNIQUE INDEX IF NOT EXISTS uk_requirement_title_active ON pms_requirement(title) WHERE is_deleted = 0;
 CREATE INDEX IF NOT EXISTS idx_requirement_product_status ON pms_requirement(product_id, status, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_requirement_project ON pms_requirement(project_id, is_deleted);
@@ -405,7 +467,8 @@ VALUES
   (2, '002', 'PT', '问题类型', 1, 1),
   (3, 'task_type', 'TT', '任务类型', 1, 1),
   (4, 'bug_type', 'BT', 'Bug类型', 1, 1),
-  (5, 'bug_resolution', 'BR', 'Bug解决方案', 1, 1)
+  (5, 'bug_resolution', 'BR', 'Bug解决方案', 1, 1),
+  (6, 'supplier', 'SUP', '供应商', 1, 1)
 ON CONFLICT (code) WHERE is_deleted = 0 DO UPDATE SET
   name = EXCLUDED.name,
   code_prefix = EXCLUDED.code_prefix,

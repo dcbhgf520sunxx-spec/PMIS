@@ -33,6 +33,11 @@ async function generateCode(archiveTypeId) {
 }
 
 async function getArchiveReferenceMessage(archiveId) {
+  const contractCount = Number((await db.prepare(
+    'SELECT COUNT(*) count FROM pms_project_contract WHERE supplier_id = ? AND is_deleted = 0'
+  ).get(archiveId))?.count || 0)
+  if (contractCount > 0) return `该档案已被 ${contractCount} 个项目合同引用，不能删除`
+
   const workOrderRefs = await db.prepare(
     `SELECT
       COUNT(*) as problem_type_count

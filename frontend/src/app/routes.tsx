@@ -106,6 +106,8 @@ const ProductDetailPage = lazy(() => import('../modules/product/pages/ProductDet
 const ProjectListPage = lazy(() => import('../modules/project/pages/ProjectListPage').then((module) => ({ default: module.ProjectListPage })));
 const ProjectFormPage = lazy(() => import('../modules/project/pages/ProjectFormPage').then((module) => ({ default: module.ProjectFormPage })));
 const ProjectDetailPage = lazy(() => import('../modules/project/pages/ProjectDetailPage').then((module) => ({ default: module.ProjectDetailPage })));
+const ProjectContractFormPage = lazy(() => import('../modules/project/pages/ProjectContractFormPage').then((module) => ({ default: module.ProjectContractFormPage })));
+const ProjectContractDetailPage = lazy(() => import('../modules/project/pages/ProjectContractDetailPage').then((module) => ({ default: module.ProjectContractDetailPage })));
 const RequirementListPage = lazy(() => import('../modules/requirement/pages/RequirementListPage').then((module) => ({ default: module.RequirementListPage })));
 const RequirementFormPage = lazy(() => import('../modules/requirement/pages/RequirementFormPage').then((module) => ({ default: module.RequirementFormPage })));
 const RequirementDetailPage = lazy(() => import('../modules/requirement/pages/RequirementDetailPage').then((module) => ({ default: module.RequirementDetailPage })));
@@ -135,6 +137,8 @@ export const routes: RouteObject[] = [
       { path: 'projects', element: withRouteSuspense(<ProjectListPage />) },
       { path: 'projects/new', element: withRouteSuspense(<ProjectFormPage mode="create" />) },
       { path: 'projects/:id/edit', element: withRouteSuspense(<ProjectFormPage mode="edit" />) },
+      { path: 'projects/:id/contract', element: withRouteSuspense(<ProjectContractFormPage />) },
+      { path: 'projects/:id/contract-detail', element: withRouteSuspense(<ProjectContractDetailPage />) },
       { path: 'projects/:id', element: withRouteSuspense(<ProjectDetailPage />) },
       { path: 'requirements', element: withRouteSuspense(<RequirementListPage />) },
       { path: 'requirements/new', element: withRouteSuspense(<RequirementFormPage mode="create" />) },

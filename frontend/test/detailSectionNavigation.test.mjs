@@ -34,6 +34,7 @@ test('页面切换和导航定位复用详情模板的同一套分类导航', ()
   assert.match(templateSource, /admin-template-detail-page__section-navigation/);
   assert.match(templateSource, /admin-template-detail-page__section-tabs/);
   assert.match(templateSource, /admin-template-detail-page__section-select/);
+  assert.match(templateStyles, /\.admin-template-detail-page\s*\{[\s\S]*?align-content:\s*start;/);
 });
 
 test('详情分类导航在窄屏切换为下拉定位', () => {
