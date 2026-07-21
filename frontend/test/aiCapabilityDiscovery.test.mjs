@@ -16,6 +16,13 @@ test('AI 判断底座缺少能力前必须完成多入口检索', () => {
   assert.match(deliveryFlowSource, /不得只按[“"]?单一关键词/);
 });
 
+test('新功能开工前必须向用户展示组件支撑情况', () => {
+  assert.match(agentsSource, /新功能[\s\S]*开始实现前[\s\S]*组件支撑情况/);
+  assert.match(deliveryFlowSource, /组件支撑情况[\s\S]*功能需要[\s\S]*支持结论[\s\S]*组件或页面样板[\s\S]*处理方式/);
+  assert.match(deliveryFlowSource, /没有输出[\s\S]*不得开始实现/);
+  assert.match(developmentRulesSource, /全部支持[\s\S]*部分支持[\s\S]*暂不支持[\s\S]*不涉及前端组件/);
+});
+
 test('用户口中的分类导航明确区分同页定位和页面切换', () => {
   assert.match(developmentRulesSource, /详情页 Tab/);
   assert.match(developmentRulesSource, /顶部页签/);

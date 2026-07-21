@@ -41,6 +41,7 @@ export * from './AdminFeedback';
 export * from './AdminPrimitives';
 export * from './AdminSelect';
 export * from './AdminProFormSelect';
+export * from './AdminProFormEditableList';
 export * from './AdminTreeSelect';
 export * from './AdminCascader';
 export * from './StatusFlowModal';

@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react';
-import { ProForm, ProFormDatePicker, ProFormText, ProFormTextArea } from '@ant-design/pro-components';
+import { ProForm, ProFormDatePicker, ProFormDigit, ProFormText, ProFormTextArea } from '@ant-design/pro-components';
 import zhCNDatePicker from 'antd/es/date-picker/locale/zh_CN';
 import { AdminInput, AdminTextArea } from '../AdminInput';
 
@@ -67,6 +67,22 @@ export function AdminProFormTextArea(props: ComponentProps<typeof ProFormTextAre
         placeholder={resolvePlaceholder(placeholder, label)}
       />
     </ProForm.Item>
+  );
+}
+
+export function AdminProFormMoney(props: ComponentProps<typeof ProFormDigit>) {
+  return (
+    <ProFormDigit
+      {...props}
+      fieldProps={{
+        precision: 2,
+        step: 0.01,
+        stringMode: true,
+        controls: false,
+        ...props.fieldProps,
+        style: { width: '100%', ...props.fieldProps?.style }
+      }}
+    />
   );
 }
 

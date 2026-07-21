@@ -1,0 +1,176 @@
+.admin-pro-form-editable-list {
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.admin-pro-form-editable-list__label {
+  margin-bottom: 8px;
+  color: var(--app-text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.admin-pro-form-editable-list__header,
+.admin-pro-form-editable-list__row {
+  display: grid;
+  grid-template-columns: var(--admin-editable-list-columns);
+  min-width: 0;
+}
+
+.admin-pro-form-editable-list__header {
+  border: 1px solid var(--app-border);
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  background: var(--app-surface-tech);
+}
+
+.admin-pro-form-editable-list__header > span {
+  min-width: 0;
+  padding: 9px 10px;
+  color: var(--app-text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.admin-pro-form-editable-list__header > span:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--app-surface-tech);
+  box-shadow: 6px 0 8px -8px rgba(31, 62, 107, 0.45);
+}
+
+.admin-pro-form-editable-list__header > span:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  background: var(--app-surface-tech);
+  box-shadow: -6px 0 8px -8px rgba(31, 62, 107, 0.45);
+}
+
+.admin-pro-form-editable-list__row {
+  align-items: start;
+  border: 1px solid var(--app-border);
+  border-bottom: 0;
+  background: var(--app-surface);
+}
+
+.admin-pro-form-editable-list .ant-pro-form-list-item:last-child .admin-pro-form-editable-list__row {
+  border-bottom: 1px solid var(--app-border);
+  border-radius: 0 0 6px 6px;
+}
+
+.admin-pro-form-editable-list__sequence,
+.admin-pro-form-editable-list__cell,
+.admin-pro-form-editable-list__operation {
+  min-width: 0;
+  padding: 8px 10px;
+}
+
+.admin-pro-form-editable-list__sequence,
+.admin-pro-form-editable-list__operation {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+}
+
+.admin-pro-form-editable-list__sequence {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  justify-content: center;
+  color: var(--app-muted);
+  background: var(--app-surface);
+  box-shadow: 6px 0 8px -8px rgba(31, 62, 107, 0.45);
+}
+
+.admin-pro-form-editable-list__operation {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  justify-content: flex-start;
+  background: var(--app-surface);
+  box-shadow: -6px 0 8px -8px rgba(31, 62, 107, 0.45);
+}
+
+.admin-pro-form-editable-list__cell .ant-form-item {
+  margin-bottom: 0;
+}
+
+.admin-pro-form-editable-list__cell .ant-form-item-explain {
+  margin-top: 4px;
+}
+
+.admin-pro-form-editable-list__mobile-label {
+  display: none;
+}
+
+.admin-pro-form-editable-list .ant-pro-form-list-item {
+  display: block !important;
+  margin-block-end: 0;
+}
+
+.admin-pro-form-editable-list .ant-pro-form-list-container {
+  width: 100%;
+}
+
+.admin-pro-form-editable-list .ant-pro-form-list-creator-button-bottom {
+  margin-block-start: 10px;
+}
+
+@media (max-width: 760px) {
+  .admin-pro-form-editable-list {
+    width: 100%;
+    overflow-x: visible;
+  }
+
+  .admin-pro-form-editable-list__header {
+    display: none;
+  }
+
+  .admin-pro-form-editable-list__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 12px;
+    border: 1px solid var(--app-border);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(31, 62, 107, 0.06);
+  }
+
+  .admin-pro-form-editable-list .ant-pro-form-list-item:last-child .admin-pro-form-editable-list__row {
+    border-radius: 6px;
+  }
+
+  .admin-pro-form-editable-list__sequence,
+  .admin-pro-form-editable-list__cell,
+  .admin-pro-form-editable-list__operation {
+    position: static;
+    display: grid;
+    grid-template-columns: minmax(72px, 28%) minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+    min-height: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .admin-pro-form-editable-list__mobile-label {
+    display: inline;
+    padding-top: 5px;
+    color: var(--app-muted);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 22px;
+  }
+
+  .admin-pro-form-editable-list__operation {
+    align-items: center;
+    padding-top: 2px;
+    border-top: 1px dashed var(--app-border);
+  }
+}

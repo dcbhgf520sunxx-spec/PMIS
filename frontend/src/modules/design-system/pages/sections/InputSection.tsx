@@ -2,6 +2,7 @@ import { AdminCard } from '../../../../components/admin';
 import { AdvancedInputExamples } from './input/AdvancedInputExamples';
 import { BasicInputExamples } from './input/BasicInputExamples';
 import { ChoiceInputExamples } from './input/ChoiceInputExamples';
+import { EditableDetailListExamples } from './input/EditableDetailListExamples';
 import { SelectionInputExamples } from './input/SelectionInputExamples';
 
 const inputComponentSpecs = [
@@ -31,6 +32,7 @@ export function InputSection({ richText, setRichText }: InputSectionProps) {
       <SelectionInputExamples />
       <ChoiceInputExamples />
       <AdvancedInputExamples richText={richText} setRichText={setRichText} />
+      <EditableDetailListExamples />
     </div>
   );
 }

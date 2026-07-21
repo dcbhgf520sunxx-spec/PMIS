@@ -19,12 +19,22 @@
 
 用户通常描述界面效果，代码则使用组件名和属性名，两者可能不一样。AI 在判断“底座没有这个能力”之前，必须按“用户说法和同义词 → 下表能力映射 → 组件入口 → 组件工作台示例 → 实际行为和测试”的顺序核对，不能只搜索一个技术关键词。确认已有能力时直接复用；确认缺失时，结论中必须列出已核对的组件入口和工作台示例。
 
+开发新功能时，能力检索结果必须在开始实现前通过“组件支撑情况”向用户展示，不能只在 AI 内部完成判断。支持结论只使用以下四类：
+
+- **全部支持**：现有页面样板和组件可直接组合，列出实际入口和工作台示例。
+- **部分支持**：分别列出直接复用和需要扩展的部分，说明扩展落在组件层还是业务层。
+- **暂不支持**：列出已经核对的入口、工作台示例和测试证据，再说明采用业务特例还是补充底座。
+- **不涉及前端组件**：适用于纯接口、脚本或配置功能，组件和工作台示例填写 `-`。
+
+不得只写“复用现有组件”或“底座不支持”而不给证据，也不得在清单尚未输出时先写业务页面、事后补清单。
+
 | 用户常用说法 | 底座能力与调用方式 | 实际行为 | 组件工作台示例 |
 |---|---|---|---|
 | 详情页 Tab、顶部页签、详情分类、锚点导航、点击定位 | `TemplateDetailPage.sectionNavigation`；参与导航的 `TemplateDetailSection`、`TemplateDetailTableSection`、`HistoryTimelineSection` 传唯一 `sectionKey` | 顶部生成分类标签，点击后定位到对应详情区域；它不是切换或隐藏内容的页面切换 Tab，窄屏时自动改为下拉定位 | `frontend/src/modules/design-system/pages/demos/DetailTemplateDemo.tsx` |
 | 详情页页面切换、详情子页面、详情路由页签 | 为 `TemplateDetailPage.sectionNavigation` 传入 `items`、`activeKey` 和 `onChange`；业务层在 `onChange` 中更新路由并只传当前页面内容 | 与导航定位使用同一套分类导航样式，点击后切换地址和页面内容，不滚动定位；窄屏时使用同一套下拉切换 | `frontend/src/modules/design-system/pages/demos/DetailTemplateDemo.tsx` |
 | 普通页面分类切换、跨页面分类页签 | 使用 `DetailSectionNavigation`；由业务层在 `onChange` 中调用 `navigate(targetPath)`，并根据当前路由或查询参数传入选中项 | 与详情分类导航保持同一套样式，点击后切换到不同页面或路由，只展示目标页面内容 | `frontend/src/modules/design-system/pages/sections/BaseSection.tsx` 的“页面分类切换”示例 |
 | 列表数据视图 | 使用 `ViewTabs`；根据当前视图传入选中项和真实统计数量 | 切换同一列表的数据范围，不切换页面；必须遵守列表统计规则 | `frontend/src/modules/design-system/pages/sections/BaseSection.tsx` 的“列表数据视图切换”示例 |
+| 可编辑表格、动态明细、付款阶段、预算明细、表单中增删多行 | 在 `TemplateFormPage` 内使用 `AdminProFormEditableList`，每列继续组合 `AdminProForm*` 控件 | 电脑端表格化录入，窄屏自动变卡片；底座统一序号、增删和最少行数，明细数组随主表单一起校验提交 | `frontend/src/modules/design-system/pages/sections/input/EditableDetailListExamples.tsx` |
 
 判断标准固定为：详情页同一页面内定位时，为 `sectionNavigation` 传 `true` 并让全部分组声明 `sectionKey`；详情页切换页面或路由时，为 `sectionNavigation` 传 `items`、`activeKey` 和 `onChange`，只渲染当前页面内容。普通页面的分类切换直接使用 `DetailSectionNavigation`。这些模式复用同一套分类导航样式；只有列表数据视图使用 `ViewTabs`。不得用 `ViewTabs` 重做分类导航，也不能因为代码名称不是 `Tabs`，就误判底座不支持用户所说的页签效果。
 
@@ -124,6 +134,7 @@ API 接入保持统一：
 - 业务页只传 `formId`、初始值、提交回调和业务字段。
 - 字段布局优先使用模板内置 grid class，不在业务页另起一套表单布局。
 - 表单控件优先使用 `AdminProForm*` 或项目已沉淀表单组件。
+- 表单中需要新增、删除多行结构化明细时统一使用 `AdminProFormEditableList`。业务页只声明中文表头、列宽、字段控件、校验规则和新增行默认值；自动序号、最少行数、电脑端表格布局和窄屏卡片布局由组件承接。电脑端表格按列的实际总宽度展示，不强制铺满页面；未声明列宽时，单列默认在 160 至 280 像素之间，列较多并超过可用区域时允许横向滚动，并由组件固定左侧序号列和右侧操作列。金额字段统一使用 `AdminProFormMoney`，默认保留两位小数。序号仅用于展示，不得作为业务字段提交。业务页不得直接使用 `ProFormList`、`Form.List` 或 `EditableProTable` 重做同类能力。
 
 ### 详情页
 
@@ -160,6 +171,7 @@ API 接入保持统一：
 - `Dropdown`
 - `Empty`
 - `ProFormText`、`ProFormTextArea`、`ProFormDatePicker`、`ProFormSelect`
+- `ProFormList`、`Form.List`、`EditableProTable`
 
 如果确实需要这些能力，先使用现有 `Admin*` 组件；现有组件不满足时，先扩展或新增组件，再让业务页面调用。
 

@@ -75,6 +75,17 @@ test('组件审计阻断业务页直接使用 ProForm.Item', () => {
   }
 });
 
+test('组件审计阻断业务页绕开可编辑明细表单组件', () => {
+  for (const primitive of ['<ProFormList name="stages" />', '<Form.List name="stages" />', '<EditableProTable />']) {
+    const result = runStrictAudit(
+      `export function ContractFormPage() { return <TemplateFormPage>${primitive}</TemplateFormPage>; }`,
+      'ContractEdit.tsx'
+    );
+    assert.equal(result.status, 1, primitive);
+    assert.match(result.stdout, /AdminProFormEditableList/);
+  }
+});
+
 test('组件审计阻断业务页直接使用 antd Button', () => {
   const modulesDir = mkdtempSync(join(tmpdir(), 'component-audit-'));
   const pagePath = join(modulesDir, 'UserDetailPage.tsx');
