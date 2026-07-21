@@ -97,7 +97,7 @@
   box-shadow: -6px 0 8px -8px rgba(31, 62, 107, 0.45);
 }
 
-.admin-pro-form-editable-list__cell .ant-form-item {
+.admin-pro-form-editable-list .admin-pro-form-editable-list__cell .ant-form-item {
   margin-bottom: 0;
 }
 

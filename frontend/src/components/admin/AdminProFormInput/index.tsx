@@ -71,6 +71,8 @@ export function AdminProFormTextArea(props: ComponentProps<typeof ProFormTextAre
 }
 
 export function AdminProFormMoney(props: ComponentProps<typeof ProFormDigit>) {
+  const className = ['admin-input', props.fieldProps?.className].filter(Boolean).join(' ');
+
   return (
     <ProFormDigit
       {...props}
@@ -80,6 +82,7 @@ export function AdminProFormMoney(props: ComponentProps<typeof ProFormDigit>) {
         stringMode: true,
         controls: false,
         ...props.fieldProps,
+        className,
         style: { width: '100%', ...props.fieldProps?.style }
       }}
     />
