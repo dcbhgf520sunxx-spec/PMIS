@@ -21,6 +21,16 @@ export type ProjectPaymentStage = {
   paymentStatus: ProjectPaymentStatus;
   sortOrder: number;
 };
+export type ProjectContractAttachment = {
+  id: string;
+  contractId: string;
+  originalName: string;
+  mimeType: string;
+  fileSize: number;
+  sortOrder: number;
+  creatorName: string;
+  createdAt: string;
+};
 export type ProjectContractRecord = {
   id: string;
   projectId: string;
@@ -34,6 +44,7 @@ export type ProjectContractRecord = {
   paidAmount: number;
   unpaidAmount: number;
   stages: ProjectPaymentStage[];
+  attachments: ProjectContractAttachment[];
 };
 export type ProjectContractFormValues = {
   contractCode: string;

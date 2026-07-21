@@ -1,7 +1,7 @@
 import { request, unwrap } from './requestClient';
 import { arrayContract, objectContract } from './responseContract';
 import type { PageResult } from '../types/api';
-import type { ProjectContractFormValues, ProjectContractRecord, ProjectFormValues, ProjectPaymentFormValues, ProjectPaymentRecord, ProjectRecord, ProjectStatus } from '../modules/project/types';
+import type { ProjectContractAttachment, ProjectContractFormValues, ProjectContractRecord, ProjectFormValues, ProjectPaymentFormValues, ProjectPaymentRecord, ProjectRecord, ProjectStatus } from '../modules/project/types';
 import dayjs from 'dayjs';
 type Row={id:number;name:string;description?:string;product_id:number;product_name:string;owner_id:number;owner_name:string;members?:Array<{id:number;name:string}>;status:number;previous_status?:number;is_overdue:number;start_date?:string;expected_end_date:string;actual_end_date?:string;suspend_date?:string;progress_text?:string;risk_text?:string;creator_name?:string;updater_name?:string;created_at?:string;updated_at?:string};
 const rowContract=objectContract<Row>(['id','name','product_id','product_name','owner_id','owner_name','status','is_overdue','expected_end_date']);
@@ -48,11 +48,13 @@ export async function deleteProject(id:string){return unwrap<null>(request.delet
 export async function getProjectHistory(id:string){return unwrap<ProjectHistoryItem[]>(request.get(`/projects/${id}/history`),historyContract)}
 
 type ContractStageRow = { id: number; contract_id: number; stage_name: string; planned_amount: string | number; paid_amount: string | number; unpaid_amount: string | number; payment_status: number; sort_order: number };
-type ContractRow = { id: number; project_id: number; project_name: string; contract_code: string; contract_name: string; supplier_id: number; supplier_name: string; signed_date: string; contract_amount: string | number; paid_amount: string | number; unpaid_amount: string | number; stages: ContractStageRow[] };
+type ContractAttachmentRow = { id: number; contract_id: number; original_name: string; mime_type: string; file_size: number; sort_order: number; creator_name?: string; created_at: string };
+type ContractRow = { id: number; project_id: number; project_name: string; contract_code: string; contract_name: string; supplier_id: number; supplier_name: string; signed_date: string; contract_amount: string | number; paid_amount: string | number; unpaid_amount: string | number; stages: ContractStageRow[]; attachments: ContractAttachmentRow[] };
 type PaymentRow = { id: number; stage_id: number; payment_amount: string | number; payment_month: string; handler_id: number; handler_name: string; remark?: string; creator_name?: string; created_at: string; updated_at: string };
 
 const contractStageContract = objectContract<ContractStageRow>(['id', 'contract_id', 'stage_name', 'planned_amount', 'paid_amount', 'unpaid_amount', 'payment_status', 'sort_order']);
-const contractContract = objectContract<ContractRow>(['id', 'project_id', 'project_name', 'contract_code', 'contract_name', 'supplier_id', 'supplier_name', 'signed_date', 'contract_amount', 'paid_amount', 'unpaid_amount', 'stages'], { stages: arrayContract(contractStageContract) });
+const contractAttachmentContract = objectContract<ContractAttachmentRow>(['id', 'contract_id', 'original_name', 'mime_type', 'file_size', 'sort_order', 'created_at']);
+const contractContract = objectContract<ContractRow>(['id', 'project_id', 'project_name', 'contract_code', 'contract_name', 'supplier_id', 'supplier_name', 'signed_date', 'contract_amount', 'paid_amount', 'unpaid_amount', 'stages', 'attachments'], { stages: arrayContract(contractStageContract), attachments: arrayContract(contractAttachmentContract) });
 const nullableContract = (value: unknown): value is ContractRow | null => value === null || contractContract(value);
 const paymentContract = objectContract<PaymentRow>(['id', 'stage_id', 'payment_amount', 'payment_month', 'handler_id', 'handler_name', 'created_at', 'updated_at']);
 
@@ -61,11 +63,15 @@ const mapStage = (row: ContractStageRow) => ({
   plannedAmount: Number(row.planned_amount), paidAmount: Number(row.paid_amount), unpaidAmount: Number(row.unpaid_amount),
   paymentStatus: Number(row.payment_status) as 0 | 1 | 2, sortOrder: Number(row.sort_order),
 });
+const mapContractAttachment = (row: ContractAttachmentRow): ProjectContractAttachment => ({
+  id: String(row.id), contractId: String(row.contract_id), originalName: row.original_name, mimeType: row.mime_type,
+  fileSize: Number(row.file_size), sortOrder: Number(row.sort_order), creatorName: row.creator_name || '-', createdAt: dt(row.created_at),
+});
 const mapContract = (row: ContractRow): ProjectContractRecord => ({
   id: String(row.id), projectId: String(row.project_id), projectName: row.project_name, contractCode: row.contract_code,
   contractName: row.contract_name, supplierId: String(row.supplier_id), supplierName: row.supplier_name, signedDate: date(row.signed_date),
   contractAmount: Number(row.contract_amount), paidAmount: Number(row.paid_amount), unpaidAmount: Number(row.unpaid_amount),
-  stages: row.stages.map(mapStage),
+  stages: row.stages.map(mapStage), attachments: row.attachments.map(mapContractAttachment),
 });
 const contractPayload = (values: ProjectContractFormValues) => ({
   contract_code: values.contractCode,
@@ -89,6 +95,24 @@ export async function getProjectContract(projectId: string) {
 export async function saveProjectContract(projectId: string, values: ProjectContractFormValues, exists: boolean) {
   const promise = exists ? request.put(`/projects/${projectId}/contract`, contractPayload(values)) : request.post(`/projects/${projectId}/contract`, contractPayload(values));
   return exists ? unwrap<null>(promise) : unwrap<{ id: number }>(promise, idContract);
+}
+export async function uploadProjectContractAttachment(projectId: string, file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const row = await unwrap<ContractAttachmentRow>(request.post(`/projects/${projectId}/contract/attachments`, formData), contractAttachmentContract);
+  return mapContractAttachment(row);
+}
+export async function deleteProjectContractAttachment(projectId: string, attachmentId: string) {
+  return unwrap<null>(request.delete(`/projects/${projectId}/contract/attachments/${attachmentId}`));
+}
+export async function downloadProjectContractAttachment(projectId: string, attachmentId: string, fileName: string) {
+  const response = await request.get<Blob>(`/projects/${projectId}/contract/attachments/${attachmentId}/download`, { responseType: 'blob' });
+  const url = URL.createObjectURL(response.data);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 export async function getProjectPayments(projectId: string, stageId: string): Promise<ProjectPaymentRecord[]> {
   const rows = await unwrap<PaymentRow[]>(request.get(`/projects/${projectId}/contract/stages/${stageId}/payments`), arrayContract(paymentContract));

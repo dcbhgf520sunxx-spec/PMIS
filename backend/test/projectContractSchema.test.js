@@ -51,3 +51,21 @@ test('项目合同供应商关联供应商基础档案并迁移历史名称', ()
   assert.match(contractController, /supplier_id/)
   assert.match(read('src/controllers/archiveController.js'), /pms_project_contract[\s\S]*项目合同/)
 })
+
+test('项目合同附件结构同步进入初始化和增量迁移', () => {
+  const schema = read('db/init/001_schema.sql')
+  const migrationPath = path.join(root, 'db/migrations/20260721_02_add_project_contract_attachment.sql')
+  assert.ok(fs.existsSync(migrationPath), '缺少项目合同附件迁移')
+  const migration = fs.readFileSync(migrationPath, 'utf8')
+
+  for (const source of [schema, migration]) {
+    assert.match(source, /CREATE TABLE IF NOT EXISTS pms_project_contract_attachment/)
+    assert.match(source, /contract_id BIGINT NOT NULL REFERENCES pms_project_contract\(id\) ON DELETE RESTRICT/)
+    assert.match(source, /original_name VARCHAR\(255\) NOT NULL/)
+    assert.match(source, /storage_name VARCHAR\(255\) NOT NULL/)
+    assert.match(source, /mime_type VARCHAR\(150\) NOT NULL/)
+    assert.match(source, /file_size BIGINT NOT NULL CHECK \(file_size > 0 AND file_size <= 20971520\)/)
+    assert.match(source, /uk_project_contract_attachment_storage_name/)
+    assert.match(source, /idx_project_contract_attachment_contract_active/)
+  }
+})

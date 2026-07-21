@@ -1,4 +1,5 @@
 const db = require('../db')
+const fs = require('node:fs')
 const { fail, failField, ok } = require('../utils/response')
 const {
   normalizePaymentMonth,
@@ -6,6 +7,12 @@ const {
   validateContractStages,
   validatePaymentAmount,
 } = require('../services/projectContractRules')
+const {
+  normalizeOriginalName,
+  removeAttachmentFile,
+  resolveAttachmentPath,
+  saveAttachmentFile,
+} = require('../services/projectContractAttachmentService')
 
 async function findProject(projectId) {
   return db.prepare('SELECT id, name FROM pms_project WHERE id = ? AND is_deleted = 0').get(projectId)
@@ -52,10 +59,19 @@ async function findStages(contractId) {
     ORDER BY s.sort_order, s.id`).all(contractId)
 }
 
+async function findAttachments(contractId) {
+  return db.prepare(`SELECT attachment.id, attachment.contract_id, attachment.original_name, attachment.mime_type,
+    attachment.file_size, attachment.sort_order, attachment.created_at, creator.real_name creator_name
+    FROM pms_project_contract_attachment attachment
+    LEFT JOIN pms_user creator ON creator.id = attachment.creator_id
+    WHERE attachment.contract_id = ? AND attachment.is_deleted = 0
+    ORDER BY attachment.sort_order, attachment.id`).all(contractId)
+}
+
 async function loadContract(projectId) {
   const contract = await findContract(projectId)
   if (!contract) return null
-  return { ...contract, stages: await findStages(contract.id) }
+  return { ...contract, stages: await findStages(contract.id), attachments: await findAttachments(contract.id) }
 }
 
 async function validateContract(res, projectId, body, excludeContractId) {
@@ -197,6 +213,94 @@ exports.update = async (req, res) => {
   } catch (error) {
     console.error(error)
     fail(res, 500, 500, '更新合同失败')
+  }
+}
+
+function attachmentErrorResponse(res, error, fallback) {
+  if (error.statusCode === 400) return fail(res, 400, 400, error.message)
+  console.error(error)
+  return fail(res, 500, 500, fallback)
+}
+
+async function findAttachment(projectId, attachmentId) {
+  return db.prepare(`SELECT attachment.*, contract.project_id, project.name project_name
+    FROM pms_project_contract_attachment attachment
+    JOIN pms_project_contract contract ON contract.id = attachment.contract_id AND contract.is_deleted = 0
+    JOIN pms_project project ON project.id = contract.project_id AND project.is_deleted = 0
+    WHERE attachment.id = ? AND project.id = ? AND attachment.is_deleted = 0`).get(attachmentId, projectId)
+}
+
+exports.uploadAttachment = async (req, res) => {
+  let saved
+  try {
+    const contract = await findContract(req.params.id)
+    if (!contract) return fail(res, 404, 404, '项目合同不存在')
+    if (!req.file) return fail(res, 400, 400, '请选择要上传的附件')
+    req.file.originalname = normalizeOriginalName(req.file.originalname)
+    saved = await saveAttachmentFile(req.file)
+    const attachmentId = await db.transaction(async (tx) => {
+      const lockedContract = await tx.prepare('SELECT id FROM pms_project_contract WHERE id = ? AND is_deleted = 0 FOR UPDATE').get(contract.id)
+      if (!lockedContract) {
+        const error = new Error('项目合同不存在')
+        error.statusCode = 400
+        throw error
+      }
+      const count = await tx.prepare('SELECT COUNT(*) count FROM pms_project_contract_attachment WHERE contract_id = ? AND is_deleted = 0').get(contract.id)
+      if (Number(count.count) >= 10) {
+        const error = new Error('一份合同最多上传10个附件')
+        error.statusCode = 400
+        throw error
+      }
+      const result = await tx.prepare(`INSERT INTO pms_project_contract_attachment
+        (contract_id, original_name, storage_name, mime_type, file_size, sort_order, creator_id, updater_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(contract.id, req.file.originalname, saved.storageName, req.file.mimetype, req.file.buffer.length, Number(count.count), req.user.id, req.user.id)
+      return result.lastInsertRowid
+    })
+    await db.writeLog(req.user.id, '上传合同附件', '项目', req.params.id, 'contract_attachment', null, req.file.originalname, req.ip, contract.project_name)
+    const attachment = (await findAttachments(contract.id)).find((item) => Number(item.id) === Number(attachmentId))
+    ok(res, attachment)
+  } catch (error) {
+    if (saved) await removeAttachmentFile(saved.storageName).catch(console.error)
+    attachmentErrorResponse(res, error, '上传合同附件失败')
+  }
+}
+
+exports.downloadAttachment = async (req, res) => {
+  try {
+    const contract = await findContract(req.params.id)
+    if (!contract) return fail(res, 404, 404, '项目合同不存在')
+    const attachment = await findAttachment(req.params.id, req.params.attachmentId)
+    if (!attachment || Number(attachment.contract_id) !== Number(contract.id)) return fail(res, 404, 404, '合同附件不存在')
+    const filePath = resolveAttachmentPath(attachment.storage_name)
+    await fs.promises.access(filePath)
+    res.setHeader('Content-Type', attachment.mime_type)
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(attachment.original_name)}`)
+    const stream = fs.createReadStream(filePath)
+    stream.on('error', (error) => {
+      if (!res.headersSent) attachmentErrorResponse(res, error, '下载合同附件失败')
+      else res.destroy(error)
+    })
+    stream.pipe(res)
+  } catch (error) {
+    if (error.code === 'ENOENT') return fail(res, 404, 404, '附件文件不存在')
+    attachmentErrorResponse(res, error, '下载合同附件失败')
+  }
+}
+
+exports.deleteAttachment = async (req, res) => {
+  try {
+    const contract = await findContract(req.params.id)
+    if (!contract) return fail(res, 404, 404, '项目合同不存在')
+    const attachment = await findAttachment(req.params.id, req.params.attachmentId)
+    if (!attachment || Number(attachment.contract_id) !== Number(contract.id)) return fail(res, 404, 404, '合同附件不存在')
+    await db.prepare(`UPDATE pms_project_contract_attachment SET is_deleted = 1, updater_id = ?, updated_at = NOW()
+      WHERE id = ? AND contract_id = ? AND is_deleted = 0`).run(req.user.id, attachment.id, contract.id)
+    await removeAttachmentFile(attachment.storage_name).catch(console.error)
+    await db.writeLog(req.user.id, '删除合同附件', '项目', req.params.id, 'contract_attachment', attachment.original_name, null, req.ip, contract.project_name)
+    ok(res, null)
+  } catch (error) {
+    attachmentErrorResponse(res, error, '删除合同附件失败')
   }
 }
 

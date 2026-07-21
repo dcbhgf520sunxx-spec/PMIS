@@ -78,7 +78,30 @@ test('项目合同和分阶段付款真实接口流程', { skip: !enabled }, asy
     assert.equal(detail.body.data.supplier_name, `测试供应商${suffix}`)
     assert.equal(Number(detail.body.data.paid_amount), 0)
     assert.equal(detail.body.data.stages.length, 2)
+    assert.deepEqual(detail.body.data.attachments, [])
     const stageId = detail.body.data.stages[0].id
+
+    const attachmentForm = new FormData()
+    attachmentForm.append('file', new Blob([Buffer.from('%PDF-1.7 integration contract')], { type: 'application/pdf' }), '合同附件.pdf')
+    const attachmentResponse = await fetch(`${baseUrl}/api/projects/${projectId}/contract/attachments`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}` },
+      body: attachmentForm,
+    })
+    const attachmentBody = await readJson(attachmentResponse)
+    assert.equal(attachmentResponse.status, 200)
+    assert.equal(attachmentBody.data.original_name, '合同附件.pdf')
+    const attachmentId = attachmentBody.data.id
+
+    const withAttachment = await request(`/api/projects/${projectId}/contract`)
+    assert.equal(withAttachment.body.data.attachments.length, 1)
+    assert.equal(withAttachment.body.data.attachments[0].original_name, '合同附件.pdf')
+    const unauthorizedDownload = await fetch(`${baseUrl}/api/projects/${projectId}/contract/attachments/${attachmentId}/download`)
+    assert.equal(unauthorizedDownload.status, 401)
+    const download = await fetch(`${baseUrl}/api/projects/${projectId}/contract/attachments/${attachmentId}/download`, { headers: { authorization: `Bearer ${token}` } })
+    assert.equal(download.status, 200)
+    assert.match(download.headers.get('content-disposition'), /合同附件\.pdf|%E5%90%88%E5%90%8C%E9%99%84%E4%BB%B6\.pdf/)
+    assert.equal(Buffer.from(await download.arrayBuffer()).toString(), '%PDF-1.7 integration contract')
 
     for (const amount of ['30.00', '20.00']) {
       const payment = await request(`/api/projects/${projectId}/contract/stages/${stageId}/payments`, { method: 'POST', body: { payment_amount: amount, payment_month: '2026-07', handler_id: 1, remark: '集成测试付款' } })
@@ -113,6 +136,10 @@ test('项目合同和分阶段付款真实接口流程', { skip: !enabled }, asy
     const protectedSupplier = await request(`/api/archives/${supplierId}`, { method: 'DELETE' })
     assert.equal(protectedSupplier.response.status, 400)
     assert.match(protectedSupplier.body.message, /项目合同/)
+    const deletedAttachment = await request(`/api/projects/${projectId}/contract/attachments/${attachmentId}`, { method: 'DELETE' })
+    assert.equal(deletedAttachment.response.status, 200)
+    const withoutAttachment = await request(`/api/projects/${projectId}/contract`)
+    assert.deepEqual(withoutAttachment.body.data.attachments, [])
   } finally {
     await new Promise((resolve) => server.close(resolve))
     await db.pool.end()

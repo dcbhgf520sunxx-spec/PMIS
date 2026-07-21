@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { App } from 'antd';
+import { CloudUploadOutlined } from '@ant-design/icons';
+import { App, Upload, type UploadFile } from 'antd';
 import { ProForm } from '@ant-design/pro-components';
 import { useParams } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -9,16 +10,49 @@ import {
   AdminProFormMoney,
   AdminProFormSelect,
   AdminProFormText,
+  AdminButton,
+  AdminText,
+  AdminUpload,
   TemplateFormPage,
   TemplateFormSection,
   type AdminProFormEditableListField,
   usePageReturnNavigation,
 } from '../../../components/admin';
-import { getProject, getProjectContract, saveProjectContract } from '../../../api/projectApi';
+import {
+  deleteProjectContractAttachment,
+  downloadProjectContractAttachment,
+  getProject,
+  getProjectContract,
+  saveProjectContract,
+  uploadProjectContractAttachment,
+} from '../../../api/projectApi';
 import { getArchiveOptionsByTypeName } from '../../../api/archiveApi';
 import type { ProjectContractFormValues } from '../types';
 
 const amountPattern = /^\d+(?:\.\d{1,2})?$/;
+const attachmentExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.zip'];
+const attachmentAccept = attachmentExtensions.join(',');
+const maxAttachmentSize = 20 * 1024 * 1024;
+
+type ContractUploadResponse = { attachmentId?: string };
+type ContractUploadFile = UploadFile<ContractUploadResponse>;
+
+const attachmentIdOf = (file: ContractUploadFile) => file.response?.attachmentId;
+const toUploadFile = (attachment: { id: string; originalName: string; fileSize: number; mimeType: string }): ContractUploadFile => ({
+  uid: `attachment-${attachment.id}`,
+  name: attachment.originalName,
+  size: attachment.fileSize,
+  type: attachment.mimeType,
+  status: 'done',
+  response: { attachmentId: attachment.id },
+});
+
+function validateAttachment(file: File) {
+  const lowerName = file.name.toLowerCase();
+  if (!attachmentExtensions.some((extension) => lowerName.endsWith(extension))) return '不支持该文件类型';
+  if (file.size > maxAttachmentSize) return '单个附件不能超过20MB';
+  return '';
+}
 const stageFields: AdminProFormEditableListField[] = [
   {
     key: 'stageName',
@@ -63,6 +97,8 @@ export function ProjectContractFormPage() {
   const [error, setError] = useState('');
   const [notFound, setNotFound] = useState(false);
   const [revision, setRevision] = useState(0);
+  const [attachmentFiles, setAttachmentFiles] = useState<ContractUploadFile[]>([]);
+  const [removedAttachmentIds, setRemovedAttachmentIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!params.id) return;
@@ -72,6 +108,8 @@ export function ProjectContractFormPage() {
       .then(([, contract, options]) => {
         setSupplierOptions(options);
         setExists(Boolean(contract));
+        setAttachmentFiles((contract?.attachments || []).map(toUploadFile));
+        setRemovedAttachmentIds([]);
         setInitialValues(contract ? {
           contractCode: contract.contractCode,
           contractName: contract.contractName,
@@ -103,6 +141,15 @@ export function ProjectContractFormPage() {
       onSubmit={async (values) => {
         if (!params.id) return;
         await saveProjectContract(params.id, values, exists);
+        setExists(true);
+        for (const attachmentId of removedAttachmentIds) {
+          await deleteProjectContractAttachment(params.id, attachmentId);
+          setRemovedAttachmentIds((current) => current.filter((id) => id !== attachmentId));
+        }
+        for (const file of attachmentFiles.filter((item) => item.originFileObj)) {
+          const uploaded = await uploadProjectContractAttachment(params.id, file.originFileObj as File);
+          setAttachmentFiles((current) => current.map((item) => item.uid === file.uid ? toUploadFile(uploaded) : item));
+        }
         message.success(exists ? '合同保存成功' : '合同创建成功');
         returnToSource();
       }}
@@ -131,6 +178,36 @@ export function ProjectContractFormPage() {
           fields={stageFields}
           creatorRecord={() => ({ stageName: '', plannedAmount: '' })}
         />
+      </TemplateFormSection>
+      <TemplateFormSection title="合同附件">
+        <AdminUpload
+          accept={attachmentAccept}
+          multiple
+          maxCount={10}
+          fileList={attachmentFiles}
+          beforeUpload={(file) => {
+            const validationMessage = validateAttachment(file);
+            if (validationMessage) {
+              message.error(validationMessage);
+              return Upload.LIST_IGNORE;
+            }
+            return false;
+          }}
+          onChange={({ fileList }) => setAttachmentFiles(fileList)}
+          onRemove={(file) => {
+            const attachmentId = attachmentIdOf(file);
+            if (attachmentId) setRemovedAttachmentIds((current) => [...new Set([...current, attachmentId])]);
+            return true;
+          }}
+          onDownload={(file) => {
+            const attachmentId = attachmentIdOf(file);
+            if (params.id && attachmentId) void downloadProjectContractAttachment(params.id, attachmentId, file.name);
+          }}
+          showUploadList={{ showDownloadIcon: (file) => Boolean(attachmentIdOf(file)) }}
+        >
+          <AdminButton icon={<CloudUploadOutlined />}>选择附件</AdminButton>
+        </AdminUpload>
+        <AdminText type="secondary">支持图片、PDF、Word、Excel 和 ZIP，单个文件不超过 20MB，最多 10 个。</AdminText>
       </TemplateFormSection>
     </TemplateFormPage>
   );

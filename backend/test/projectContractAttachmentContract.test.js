@@ -1,0 +1,31 @@
+const test = require('node:test')
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+
+const root = path.join(__dirname, '..')
+const read = (file) => fs.readFileSync(path.join(root, file), 'utf8')
+
+test('项目合同附件路由使用单文件 multipart 上传并复用项目权限', () => {
+  const routes = read('src/routes/project.js')
+  assert.match(routes, /multer/)
+  assert.match(routes, /limits:\s*\{\s*fileSize:\s*MAX_ATTACHMENT_SIZE\s*\}/)
+  assert.match(routes, /upload\.single\('file'\)/)
+  assert.match(routes, /:\id\/contract\/attachments'/)
+  assert.match(routes, /:\id\/contract\/attachments\/:attachmentId\/download/)
+  assert.match(routes, /router\.delete\('\/:id\/contract\/attachments\/:attachmentId'/)
+})
+
+test('合同查询、上传、下载和删除附件均校验合同归属', () => {
+  const controller = read('src/controllers/projectContractController.js')
+  assert.match(controller, /async function findAttachments\(contractId\)/)
+  assert.match(controller, /attachments:\s*await findAttachments\(contract\.id\)/)
+  assert.match(controller, /exports\.uploadAttachment/)
+  assert.match(controller, /exports\.downloadAttachment/)
+  assert.match(controller, /exports\.deleteAttachment/)
+  assert.match(controller, /pms_project_contract_attachment/)
+  assert.match(controller, /COUNT\(\*\)[\s\S]*contract_id = \?[\s\S]*is_deleted = 0/)
+  assert.match(controller, /attachment\.contract_id[\s\S]*contract\.id/)
+  assert.match(controller, /Content-Disposition/)
+  assert.match(controller, /is_deleted = 1/)
+})

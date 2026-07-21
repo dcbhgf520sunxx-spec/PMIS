@@ -13,13 +13,16 @@ import {
   TemplateDetailTableSection,
   usePageReturnNavigation,
 } from '../../../components/admin';
-import { getProject, getProjectContract } from '../../../api/projectApi';
+import { downloadProjectContractAttachment, getProject, getProjectContract } from '../../../api/projectApi';
 import { getUserOptions } from '../../../api/userApi';
-import type { ProjectContractRecord, ProjectPaymentRecord, ProjectPaymentStage } from '../types';
+import type { ProjectContractAttachment, ProjectContractRecord, ProjectPaymentRecord, ProjectPaymentStage } from '../types';
 import { ProjectPaymentModal } from '../components/ProjectPaymentModal';
 import { ProjectPaymentDrawer } from '../components/ProjectPaymentDrawer';
 
 const money = (value: number) => value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fileSize = (value: number) => value < 1024 * 1024
+  ? `${(value / 1024).toFixed(1)} KB`
+  : `${(value / 1024 / 1024).toFixed(1)} MB`;
 
 function renderPaymentStatus(status: ProjectPaymentStage['paymentStatus']) {
   if (status === 2) return <StatusTag status="success" text="已付清" />;
@@ -81,6 +84,21 @@ export function ProjectContractDetailPage() {
     },
   ], []);
 
+  const attachmentColumns = useMemo<ProColumns<ProjectContractAttachment>[]>(() => [
+    { title: '文件名称', dataIndex: 'originalName', width: 280, ellipsis: true },
+    { title: '文件大小', dataIndex: 'fileSize', width: 120, render: (_, attachment) => fileSize(attachment.fileSize) },
+    { title: '上传人', dataIndex: 'creatorName', width: 140 },
+    { title: '上传时间', dataIndex: 'createdAt', width: 180 },
+    {
+      title: '操作', valueType: 'option', width: 100, fixed: 'right',
+      render: (_, attachment) => (
+        <OperationColumnActions>
+          <AdminTextAction onClick={() => params.id && downloadProjectContractAttachment(params.id, attachment.id, attachment.originalName)}>下载</AdminTextAction>
+        </OperationColumnActions>
+      ),
+    },
+  ], [params.id]);
+
   return (
     <>
       <TemplateDetailPage
@@ -121,6 +139,14 @@ export function ProjectContractDetailPage() {
             sectionKey="contract-payments"
             summary={`共 ${contract.stages.length} 个阶段`}
             table={{ columns: stageColumns, dataSource: contract.stages, scroll: { x: 940 } }}
+          />
+        ) : null}
+        {contract ? (
+          <TemplateDetailTableSection<ProjectContractAttachment>
+            title="合同附件"
+            sectionKey="contract-attachments"
+            summary={`共 ${contract.attachments.length} 个附件`}
+            table={{ columns: attachmentColumns, dataSource: contract.attachments, scroll: { x: 820 } }}
           />
         ) : null}
       </TemplateDetailPage>

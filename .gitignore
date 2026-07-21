@@ -4,6 +4,7 @@ node_modules/
 .~*
 backend/.env
 backend/uploads/
+backend/private-uploads/
 .env
 .env.*
 !.env.example

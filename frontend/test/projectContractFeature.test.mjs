@@ -128,3 +128,35 @@ test('登记付款金额使用两位小数并默认带入待付金额', async ()
   assert.match(source, /\[form, open, payment, stage\]/);
   assert.doesNotMatch(source, /<AdminProFormText\s+name="paymentAmount"/);
 })
+
+test('合同新增编辑复用底座上传组件并支持多个附件', async () => {
+  const form = await read('../src/modules/project/pages/ProjectContractFormPage.tsx');
+  const api = await read('../src/api/projectApi.ts');
+  const types = await read('../src/modules/project/types.ts');
+
+  assert.match(form, /TemplateFormSection title="合同附件"/);
+  assert.match(form, /AdminUpload/);
+  assert.match(form, /multiple/);
+  assert.match(form, /maxCount=\{10\}/);
+  assert.match(form, /单个文件不超过 20MB，最多 10 个/);
+  assert.match(form, /uploadProjectContractAttachment/);
+  assert.match(form, /deleteProjectContractAttachment/);
+  assert.match(form, /await saveProjectContract[\s\S]*setExists\(true\)[\s\S]*uploadProjectContractAttachment/);
+  assert.match(api, /attachments:\s*arrayContract\(contractAttachmentContract\)/);
+  assert.match(api, /new FormData\(\)/);
+  assert.match(api, /formData\.append\('file', file\)/);
+  assert.match(api, /responseType:\s*'blob'/);
+  assert.match(types, /export type ProjectContractAttachment/);
+})
+
+test('合同详情使用标准详情表格展示并下载附件', async () => {
+  const detail = await read('../src/modules/project/pages/ProjectContractDetailPage.tsx');
+
+  assert.match(detail, /title="合同附件"/);
+  assert.match(detail, /sectionKey="contract-attachments"/);
+  for (const label of ['文件名称', '文件大小', '上传人', '上传时间', '下载']) {
+    assert.match(detail, new RegExp(label));
+  }
+  assert.match(detail, /downloadProjectContractAttachment/);
+  assert.match(detail, /TemplateDetailTableSection<ProjectContractAttachment>/);
+})
