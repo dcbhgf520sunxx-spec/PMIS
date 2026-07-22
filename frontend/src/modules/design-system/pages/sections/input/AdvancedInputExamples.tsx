@@ -51,7 +51,7 @@ export function AdvancedInputExamples({ richText, setRichText }: AdvancedInputEx
     <>
       <AdminCard title="9. 上传">
         <div className="design-system-page__input-grid">
-          <section className="design-system-page__input-panel">
+          <section className="design-system-page__input-panel is-wide">
             <div className="design-system-page__input-panel-head">
               <h3>上传</h3>
               <p>用于附件、截图、导入文件，上传入口要清晰，限制条件写在提示里。</p>
@@ -82,9 +82,10 @@ export function AdvancedInputExamples({ richText, setRichText }: AdvancedInputEx
                 <h4>拖拽上传</h4>
                 <ComponentEntry name="AdminAttachmentDragger" />
                 <p className="design-system-page__input-demo-description">
-                  拖拽或点击选择文件；上传完成后不重复显示成功文案，失败时保留原因和重试入口。
+                  拖拽或点击选择文件；本例使用铺满模式，上传完成后不重复显示成功文案，失败时保留原因和重试入口。
                 </p>
                 <AdminAttachmentDragger
+                  widthMode="full"
                   value={dragAttachments}
                   onChange={setDragAttachments}
                   onUpload={simulateUpload}
