@@ -114,3 +114,14 @@ test('AI 规则明确附件限制由业务传入且底座不设默认限制', ()
   assert.match(rules, /底座不内置文件格式、附件数量和附件大小限制/);
   assert.match(rules, /业务方未传对应规则时不限制/);
 });
+
+test('附件上传在宽屏保持适中宽度且窄屏占满可用区域', () => {
+  const styles = read('src/components/admin/AdminAttachmentUpload/index.css');
+  const rules = read('../docs/ai-development-rules.md');
+
+  assert.match(
+    styles,
+    /\.admin-attachment-upload\s*\{[^}]*width:\s*100%;[^}]*max-width:\s*min\(960px,\s*100%\);[^}]*min-width:\s*0;[^}]*\}/,
+  );
+  assert.match(rules, /宽屏保持适中宽度，不铺满整个四列表单；窄屏占满可用宽度/);
+});
