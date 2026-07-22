@@ -50,22 +50,30 @@ export type AdminAttachmentUploadContext = {
   onProgress: (percent: number) => void;
 };
 
+type AttachmentPreviewHandler = (attachment: AdminAttachment) => Promise<void> | void;
+type AttachmentDownloadHandler = (attachment: AdminAttachment) => Promise<void> | void;
+
+type AdminAttachmentAccessProps = {
+  onPreview?: never;
+  onDownload?: never;
+} | {
+  onPreview: AttachmentPreviewHandler;
+  onDownload: AttachmentDownloadHandler;
+};
+
 export type AdminAttachmentUploadProps = {
   value?: AdminAttachment[];
   defaultValue?: AdminAttachment[];
   onChange?: (attachments: AdminAttachment[]) => void;
   onUpload: (file: RcFile, context: AdminAttachmentUploadContext) => Promise<AdminAttachmentUploadResult>;
-  onPreview?: (attachment: AdminAttachment) => Promise<void> | void;
-  onDownload?: (attachment: AdminAttachment) => Promise<void> | void;
   onRemove?: (attachment: AdminAttachment) => Promise<void> | void;
   accept?: string;
   maxCount?: number;
   maxSize?: number;
   multiple?: boolean;
   disabled?: boolean;
-  widthMode?: 'standard' | 'full';
   hint?: ReactNode;
-};
+} & AdminAttachmentAccessProps;
 
 function errorMessageOf(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
@@ -114,7 +122,6 @@ function AttachmentUpload({
   maxSize,
   multiple = true,
   disabled,
-  widthMode = 'standard',
   hint
 }: AdminAttachmentUploadProps & { variant: AttachmentUploadVariant }) {
   const { message } = useAdminFeedback();
@@ -227,7 +234,7 @@ function AttachmentUpload({
   };
 
   return (
-    <div className={`admin-attachment-upload${widthMode === 'full' ? ' is-full-width' : ''}`}>
+    <div className="admin-attachment-upload">
       {variant === 'dragger' ? (
         <Upload.Dragger
           accept={accept}

@@ -2,12 +2,8 @@
   display: grid;
   gap: 12px;
   width: 100%;
-  max-width: min(960px, 100%);
+  max-width: min(760px, 100%);
   min-width: 0;
-}
-
-.admin-attachment-upload.is-full-width {
-  max-width: none;
 }
 
 .admin-attachment-upload .ant-upload-wrapper .ant-upload-drag {

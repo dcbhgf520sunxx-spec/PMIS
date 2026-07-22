@@ -429,6 +429,18 @@ function collectSemanticViolations(files) {
             ));
           }
         }
+        if (name === 'AdminAttachmentUpload' || name === 'AdminAttachmentDragger') {
+          const hasPreview = Boolean(attribute(node, 'onPreview'));
+          const hasDownload = Boolean(attribute(node, 'onDownload'));
+          if (hasPreview !== hasDownload) {
+            violations.push(finding(
+              file,
+              sourceFile,
+              node,
+              '附件预览和下载必须成对接入；已有附件不能只接下载而漏掉点击名称预览'
+            ));
+          }
+        }
         if (name === 'TemplateDetailPage') {
           const statusSection = attribute(node, 'statusSection');
           const titleTags = attribute(node, 'titleTags');
