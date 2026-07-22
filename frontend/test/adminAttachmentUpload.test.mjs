@@ -125,3 +125,22 @@ test('附件上传在宽屏保持适中宽度且窄屏占满可用区域', () =>
   );
   assert.match(rules, /宽屏保持适中宽度，不铺满整个四列表单；窄屏占满可用宽度/);
 });
+
+test('附件组件允许业务在底座限定范围内选择适中或铺满宽度', () => {
+  const source = read('src/components/admin/AdminAttachmentUpload/index.tsx');
+  const styles = read('src/components/admin/AdminAttachmentUpload/index.css');
+  const example = read('src/modules/design-system/pages/sections/input/AdvancedInputExamples.tsx');
+  const rules = read('../docs/ai-development-rules.md');
+
+  assert.match(source, /widthMode\?:\s*'standard'\s*\|\s*'full'/);
+  assert.match(source, /widthMode\s*=\s*'standard'/);
+  assert.match(source, /widthMode === 'full' \? ' is-full-width' : ''/);
+  assert.match(styles, /\.admin-attachment-upload\.is-full-width\s*\{[^}]*max-width:\s*none;/);
+  assert.match(
+    example,
+    /<AdminCard title="9\. 上传">\s*<div className="design-system-page__input-grid">\s*<section className="design-system-page__input-panel is-wide">/,
+  );
+  assert.match(example, /<AdminAttachmentDragger[\s\S]*?widthMode="full"/);
+  assert.match(rules, /业务页面只允许选择适中或铺满模式/);
+  assert.doesNotMatch(source, /className\?:|style\?:/);
+});
