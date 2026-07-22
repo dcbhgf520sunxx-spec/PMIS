@@ -63,7 +63,6 @@ export type AdminAttachmentUploadProps = {
   maxSize?: number;
   multiple?: boolean;
   disabled?: boolean;
-  widthMode?: 'standard' | 'full';
   hint?: ReactNode;
 };
 
@@ -114,7 +113,6 @@ function AttachmentUpload({
   maxSize,
   multiple = true,
   disabled,
-  widthMode = 'standard',
   hint
 }: AdminAttachmentUploadProps & { variant: AttachmentUploadVariant }) {
   const { message } = useAdminFeedback();
@@ -227,7 +225,7 @@ function AttachmentUpload({
   };
 
   return (
-    <div className={`admin-attachment-upload${widthMode === 'full' ? ' is-full-width' : ''}`}>
+    <div className="admin-attachment-upload">
       {variant === 'dragger' ? (
         <Upload.Dragger
           accept={accept}
