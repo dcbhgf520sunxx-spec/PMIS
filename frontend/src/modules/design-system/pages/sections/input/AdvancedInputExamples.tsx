@@ -123,6 +123,18 @@ export function AdvancedInputExamples({ richText, setRichText }: AdvancedInputEx
                   onRemove={async () => undefined}
                 />
               </div>
+              <div className="design-system-page__input-demo">
+                <h4>只读附件</h4>
+                <ComponentEntry name="AdminAttachmentUpload" />
+                <AdminAttachmentUpload
+                  readOnly
+                  value={attachments}
+                  onLoadPreview={loadPreview}
+                  onDownload={(attachment) => {
+                    message.success(`开始下载：${attachment.name}`);
+                  }}
+                />
+              </div>
             </div>
           </section>
         </div>

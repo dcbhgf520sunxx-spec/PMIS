@@ -175,3 +175,15 @@ test('附件组件不开放业务宽度开关和任意样式覆盖', () => {
   assert.doesNotMatch(example, /widthMode|铺满模式/);
   assert.match(rules, /业务页面不得选择附件宽度模式/);
 });
+
+test('附件组件支持详情字段内只读展示已有附件', () => {
+  const source = read('src/components/admin/AdminAttachmentUpload/index.tsx');
+  const example = read('src/modules/design-system/pages/sections/input/AdvancedInputExamples.tsx');
+
+  assert.match(source, /type AdminAttachmentModeProps/);
+  assert.match(source, /readOnly:\s*true/);
+  assert.match(source, /readOnly\?:\s*false/);
+  assert.match(source, /!readOnly[\s\S]*admin-attachment-upload__button-entry/);
+  assert.match(source, /!readOnly[\s\S]*AdminDeleteIconAction/);
+  assert.match(example, /只读附件[\s\S]*readOnly[\s\S]*onLoadPreview[\s\S]*onDownload/);
+});

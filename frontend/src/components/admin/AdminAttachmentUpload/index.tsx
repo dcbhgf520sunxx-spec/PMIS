@@ -62,11 +62,18 @@ type AdminAttachmentAccessProps = {
   onDownload: AttachmentDownloadHandler;
 };
 
+type AdminAttachmentModeProps = {
+  readOnly: true;
+  onUpload?: never;
+} | {
+  readOnly?: false;
+  onUpload: (file: RcFile, context: AdminAttachmentUploadContext) => Promise<AdminAttachmentUploadResult>;
+};
+
 export type AdminAttachmentUploadProps = {
   value?: AdminAttachment[];
   defaultValue?: AdminAttachment[];
   onChange?: (attachments: AdminAttachment[]) => void;
-  onUpload: (file: RcFile, context: AdminAttachmentUploadContext) => Promise<AdminAttachmentUploadResult>;
   onRemove?: (attachment: AdminAttachment) => Promise<void> | void;
   accept?: string;
   maxCount?: number;
@@ -74,7 +81,7 @@ export type AdminAttachmentUploadProps = {
   multiple?: boolean;
   disabled?: boolean;
   hint?: ReactNode;
-} & AdminAttachmentAccessProps;
+} & AdminAttachmentAccessProps & AdminAttachmentModeProps;
 
 function errorMessageOf(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
@@ -146,6 +153,7 @@ function AttachmentUpload({
   maxSize,
   multiple = true,
   disabled,
+  readOnly = false,
   hint
 }: AdminAttachmentUploadProps & { variant: AttachmentUploadVariant }) {
   const { message } = useAdminFeedback();
@@ -176,6 +184,7 @@ function AttachmentUpload({
   };
 
   const uploadFile = async (file: RcFile, existingId?: string) => {
+    if (!onUpload || readOnly) return;
     const validationError = validateAttachmentFile(file, { accept, maxSize });
     if (validationError) {
       message.error(`${file.name}：${validationError}`);
@@ -282,7 +291,7 @@ function AttachmentUpload({
 
   return (
     <div className="admin-attachment-upload">
-      {variant === 'dragger' ? (
+      {!readOnly ? (variant === 'dragger' ? (
         <Upload.Dragger
           accept={accept}
           beforeUpload={beforeUpload}
@@ -310,7 +319,7 @@ function AttachmentUpload({
           </Upload>
           <span>{hint || '可选择一个或多个文件'}</span>
         </div>
-      )}
+      )) : null}
 
       {attachments.length ? (
         <ul className="admin-attachment-upload__list" aria-label="附件列表">
@@ -354,7 +363,7 @@ function AttachmentUpload({
                 </span>
               ) : null}
               <div className="admin-attachment-upload__actions">
-                {attachment.status === 'error' && attachment.rawFile ? (
+                {!readOnly && attachment.status === 'error' && attachment.rawFile ? (
                   <AdminIconAction
                     icon={<RedoOutlined />}
                     label="重试"
@@ -368,7 +377,7 @@ function AttachmentUpload({
                     onClick={() => void handleDownload(attachment)}
                   />
                 ) : null}
-                {!disabled && (onRemove || attachment.status !== 'done') ? (
+                {!readOnly && !disabled && (onRemove || attachment.status !== 'done') ? (
                   <AdminDeleteIconAction
                     entityName="附件"
                     targetName={attachment.name}
