@@ -3,10 +3,13 @@ import { DetailTemplateDemo } from '../demos/DetailTemplateDemo';
 import { FormTemplateDemo } from '../demos/FormTemplateDemo';
 import { OverlayTemplateDemo } from '../demos/OverlayTemplateDemo';
 import { ListTemplateDemo } from './layout/ListTemplateDemo';
+import { SplitPaneExamples } from './layout/SplitPaneExamples';
+import { StepNavigationExamples } from './layout/StepNavigationExamples';
 import { layoutPatterns } from './layout/layoutPatterns';
 import './LayoutSection.css';
 import './layout/LayoutPatternGallery.css';
 import './layout/LayoutPatternPreviews.css';
+import './layout/SplitPaneExamples.css';
 
 const layoutSpecs = [
   { label: '系统框架', value: '顶部栏、侧边栏、消息、用户入口统一位置' },
@@ -53,6 +56,9 @@ export function LayoutSection() {
           ))}
         </div>
       </AdminCard>
+
+      <SplitPaneExamples />
+      <StepNavigationExamples />
     </div>
   );
 }

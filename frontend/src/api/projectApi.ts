@@ -105,9 +105,12 @@ export async function uploadProjectContractAttachment(projectId: string, file: F
 export async function deleteProjectContractAttachment(projectId: string, attachmentId: string) {
   return unwrap<null>(request.delete(`/projects/${projectId}/contract/attachments/${attachmentId}`));
 }
-export async function downloadProjectContractAttachment(projectId: string, attachmentId: string, fileName: string) {
+export async function loadProjectContractAttachmentPreview(projectId: string, attachmentId: string) {
   const response = await request.get<Blob>(`/projects/${projectId}/contract/attachments/${attachmentId}/download`, { responseType: 'blob' });
-  const url = URL.createObjectURL(response.data);
+  return response.data;
+}
+export async function downloadProjectContractAttachment(projectId: string, attachmentId: string, fileName: string) {
+  const url = URL.createObjectURL(await loadProjectContractAttachmentPreview(projectId, attachmentId));
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = fileName;

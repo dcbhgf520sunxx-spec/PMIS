@@ -3,6 +3,7 @@ import type { ProColumns } from '@ant-design/pro-components';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   AdminEmptyState,
+  AdminAttachmentUpload,
   AdminTextAction,
   DetailMetaList,
   OperationColumnActions,
@@ -11,18 +12,23 @@ import {
   TemplateDetailPage,
   TemplateDetailSection,
   TemplateDetailTableSection,
+  type AdminAttachment,
   usePageReturnNavigation,
 } from '../../../components/admin';
-import { downloadProjectContractAttachment, getProject, getProjectContract } from '../../../api/projectApi';
+import { downloadProjectContractAttachment, getProject, getProjectContract, loadProjectContractAttachmentPreview } from '../../../api/projectApi';
 import { getUserOptions } from '../../../api/userApi';
 import type { ProjectContractAttachment, ProjectContractRecord, ProjectPaymentRecord, ProjectPaymentStage } from '../types';
 import { ProjectPaymentModal } from '../components/ProjectPaymentModal';
 import { ProjectPaymentDrawer } from '../components/ProjectPaymentDrawer';
 
 const money = (value: number) => value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fileSize = (value: number) => value < 1024 * 1024
-  ? `${(value / 1024).toFixed(1)} KB`
-  : `${(value / 1024 / 1024).toFixed(1)} MB`;
+const toAdminAttachment = (attachment: ProjectContractAttachment): AdminAttachment => ({
+  id: attachment.id,
+  name: attachment.originalName,
+  size: attachment.fileSize,
+  contentType: attachment.mimeType,
+  status: 'done',
+});
 
 function renderPaymentStatus(status: ProjectPaymentStage['paymentStatus']) {
   if (status === 2) return <StatusTag status="success" text="已付清" />;
@@ -84,21 +90,6 @@ export function ProjectContractDetailPage() {
     },
   ], []);
 
-  const attachmentColumns = useMemo<ProColumns<ProjectContractAttachment>[]>(() => [
-    { title: '文件名称', dataIndex: 'originalName', width: 280, ellipsis: true },
-    { title: '文件大小', dataIndex: 'fileSize', width: 120, render: (_, attachment) => fileSize(attachment.fileSize) },
-    { title: '上传人', dataIndex: 'creatorName', width: 140 },
-    { title: '上传时间', dataIndex: 'createdAt', width: 180 },
-    {
-      title: '操作', valueType: 'option', width: 100, fixed: 'right',
-      render: (_, attachment) => (
-        <OperationColumnActions>
-          <AdminTextAction onClick={() => params.id && downloadProjectContractAttachment(params.id, attachment.id, attachment.originalName)}>下载</AdminTextAction>
-        </OperationColumnActions>
-      ),
-    },
-  ], [params.id]);
-
   return (
     <>
       <TemplateDetailPage
@@ -131,6 +122,27 @@ export function ProjectContractDetailPage() {
             { label: '合同名称', value: contract.contractName }, { label: '供应商', value: contract.supplierName },
             { label: '签订时间', value: contract.signedDate }, { label: '合同金额（元）', value: money(contract.contractAmount) },
             { label: '已付金额（元）', value: money(contract.paidAmount) }, { label: '未付金额（元）', value: money(contract.unpaidAmount) },
+            {
+              label: '合同附件',
+              wide: true,
+              value: contract.attachments.length ? (
+                <AdminAttachmentUpload
+                  readOnly
+                  value={contract.attachments.map(toAdminAttachment)}
+                  onLoadPreview={(attachment) => {
+                    if (params.id) {
+                      return loadProjectContractAttachmentPreview(params.id, attachment.id);
+                    }
+                    return Promise.reject(new Error('缺少项目编号，无法加载预览'));
+                  }}
+                  onDownload={(attachment) => {
+                    if (params.id) {
+                      return downloadProjectContractAttachment(params.id, attachment.id, attachment.name);
+                    }
+                  }}
+                />
+              ) : '-',
+            },
           ]} /> : <AdminEmptyState description="暂未维护项目合同" />}
         </TemplateDetailSection>
         {contract ? (
@@ -139,14 +151,6 @@ export function ProjectContractDetailPage() {
             sectionKey="contract-payments"
             summary={`共 ${contract.stages.length} 个阶段`}
             table={{ columns: stageColumns, dataSource: contract.stages, scroll: { x: 940 } }}
-          />
-        ) : null}
-        {contract ? (
-          <TemplateDetailTableSection<ProjectContractAttachment>
-            title="合同附件"
-            sectionKey="contract-attachments"
-            summary={`共 ${contract.attachments.length} 个附件`}
-            table={{ columns: attachmentColumns, dataSource: contract.attachments, scroll: { x: 820 } }}
           />
         ) : null}
       </TemplateDetailPage>

@@ -2,6 +2,8 @@
   display: grid;
   gap: 12px;
   width: 100%;
+  max-width: min(760px, 100%);
+  min-width: 0;
 }
 
 .admin-attachment-upload .ant-upload-wrapper .ant-upload-drag {
@@ -155,6 +157,29 @@ button.admin-attachment-upload__file-name.is-previewable:hover {
   justify-content: flex-end;
   gap: 2px;
   white-space: nowrap;
+}
+
+.admin-attachment-upload__preview {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: min(68vh, 640px);
+  overflow: auto;
+  background: #f5f7fa;
+}
+
+.admin-attachment-upload__preview img {
+  display: block;
+  max-width: 100%;
+  max-height: min(68vh, 640px);
+  object-fit: contain;
+}
+
+.admin-attachment-upload__preview iframe {
+  width: 100%;
+  height: min(68vh, 640px);
+  border: 0;
+  background: var(--app-surface);
 }
 
 @media (max-width: 760px) {

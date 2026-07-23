@@ -1,5 +1,6 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
+const bcrypt = require('bcryptjs')
 
 const enabled = process.env.RUN_DB_INTEGRATION === '1'
 
@@ -32,13 +33,22 @@ test('项目合同和分阶段付款真实接口流程', { skip: !enabled }, asy
   }
 
   try {
-    const login = await request('/api/auth/login', { method: 'POST', auth: false, body: { account: 'admin', password: 'vv123456' } })
+    const suffix = Date.now().toString(36)
+    const employeeNo = `contract_${suffix}`
+    const passwordHash = await bcrypt.hash('vv123456', 10)
+    const testUser = await db.prepare(
+      'INSERT INTO pms_user (employee_no, real_name, phone, password, status, first_login, creator_id, updater_id) VALUES (?, ?, ?, ?, 1, 1, 1, 1)'
+    ).run(employeeNo, '合同集成测试用户', `136${String(Date.now()).slice(-8)}`, passwordHash)
+    await db.prepare(
+      "INSERT INTO pms_user_role (user_id, role_id) SELECT ?, id FROM pms_role WHERE code = 'admin' AND is_deleted = 0"
+    ).run(testUser.lastInsertRowid)
+
+    const login = await request('/api/auth/login', { method: 'POST', auth: false, body: { account: employeeNo, password: 'vv123456' } })
     assert.equal(login.response.status, 200)
     token = login.body.data.token
     const password = await request('/api/auth/password', { method: 'PUT', body: { old_password: 'vv123456', new_password: 'vv1234567' } })
     assert.equal(password.response.status, 200)
 
-    const suffix = Date.now().toString(36)
     const product = await request('/api/products', { method: 'POST', body: { name: `合同测试产品${suffix}`, owner_id: 1 } })
     assert.equal(product.response.status, 200)
     const project = await request('/api/projects', { method: 'POST', body: { name: `合同测试项目${suffix}`, product_id: product.body.data.id, owner_id: 1, expected_end_date: '2026-12-31' } })

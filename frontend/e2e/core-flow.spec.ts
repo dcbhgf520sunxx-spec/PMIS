@@ -7,7 +7,7 @@ test('首次登录改密、核心页面和失效会话形成真实闭环', async
   await page.goto('/login');
   await page.getByPlaceholder('请输入账号或手机号').fill('admin');
   await page.getByPlaceholder('请输入密码').fill('vv123456');
-  await page.getByRole('button', { name: '进入平台' }).click();
+  await page.getByRole('button', { name: '登录系统' }).click();
 
   const forcedModal = page.getByRole('dialog', { name: '首次登录请修改密码' });
   await expect(forcedModal).toBeVisible();
@@ -18,7 +18,7 @@ test('首次登录改密、核心页面和失效会话形成真实闭环', async
   await forcedModal.getByRole('button', { name: '确认修改并进入系统' }).click();
 
   await expect(page).toHaveURL(/\/home$/);
-  await expect(page.getByRole('heading', { name: '欢迎使用小安智能管理平台' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '不怕事情多，就怕没着落' })).toBeVisible();
 
   await page.goto('/work-orders');
   await expect(page).toHaveURL(/\/work-orders$/);

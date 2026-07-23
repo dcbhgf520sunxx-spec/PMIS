@@ -84,6 +84,36 @@ test('组件审计阻断业务页直接使用原生 Upload 拼附件能力', () 
   assert.match(result.stdout, /AdminAttachmentUpload/);
 });
 
+test('组件审计阻断附件预览和下载只接其中一项', () => {
+  for (const component of ['AdminAttachmentUpload', 'AdminAttachmentDragger']) {
+    for (const action of ['onDownload={download}', 'onLoadPreview={loadPreview}']) {
+      const result = runStrictAudit(
+        `export function AttachmentField() { return <${component} value={files} onUpload={upload} ${action} />; }`,
+        'AttachmentField.tsx'
+      );
+      assert.equal(result.status, 1, `${component} ${action}`);
+      assert.match(result.stdout, /附件预览和下载必须成对接入/);
+    }
+  }
+});
+
+test('组件审计允许附件同时接入下载和预览', () => {
+  const result = runStrictAudit(
+    'export function AttachmentField() { return <AdminAttachmentUpload value={files} onUpload={upload} onLoadPreview={loadPreview} onDownload={download} />; }',
+    'AttachmentField.tsx'
+  );
+  assert.equal(result.status, 0, result.stdout);
+});
+
+test('组件审计阻断旧的自由预览回调继续冒充真实预览', () => {
+  const result = runStrictAudit(
+    'export function AttachmentField() { return <AdminAttachmentUpload value={files} onUpload={upload} onPreview={preview} onDownload={download} />; }',
+    'AttachmentField.tsx'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /onLoadPreview/);
+});
+
 test('组件审计阻断业务页绕开可编辑明细表单组件', () => {
   for (const primitive of ['<ProFormList name="stages" />', '<Form.List name="stages" />', '<EditableProTable />']) {
     const result = runStrictAudit(

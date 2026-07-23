@@ -19,6 +19,7 @@ import {
 import { Progress, Upload } from 'antd';
 import type { RcFile } from 'antd/es/upload/interface';
 import { AdminDeleteIconAction, AdminIconAction } from '../AdminIconAction';
+import { AdminModal } from '../AdminModal';
 import { AdminButton } from '../AdminPrimitives';
 import { useAdminFeedback } from '../AdminFeedback';
 import { formatAttachmentSize, validateAttachmentFile } from './validation';
@@ -50,13 +51,29 @@ export type AdminAttachmentUploadContext = {
   onProgress: (percent: number) => void;
 };
 
+type AttachmentPreviewLoader = (attachment: AdminAttachment) => Promise<Blob> | Blob;
+type AttachmentDownloadHandler = (attachment: AdminAttachment) => Promise<void> | void;
+
+type AdminAttachmentAccessProps = {
+  onLoadPreview?: never;
+  onDownload?: never;
+} | {
+  onLoadPreview: AttachmentPreviewLoader;
+  onDownload: AttachmentDownloadHandler;
+};
+
+type AdminAttachmentModeProps = {
+  readOnly: true;
+  onUpload?: never;
+} | {
+  readOnly?: false;
+  onUpload: (file: RcFile, context: AdminAttachmentUploadContext) => Promise<AdminAttachmentUploadResult>;
+};
+
 export type AdminAttachmentUploadProps = {
   value?: AdminAttachment[];
   defaultValue?: AdminAttachment[];
   onChange?: (attachments: AdminAttachment[]) => void;
-  onUpload: (file: RcFile, context: AdminAttachmentUploadContext) => Promise<AdminAttachmentUploadResult>;
-  onPreview?: (attachment: AdminAttachment) => Promise<void> | void;
-  onDownload?: (attachment: AdminAttachment) => Promise<void> | void;
   onRemove?: (attachment: AdminAttachment) => Promise<void> | void;
   accept?: string;
   maxCount?: number;
@@ -64,7 +81,7 @@ export type AdminAttachmentUploadProps = {
   multiple?: boolean;
   disabled?: boolean;
   hint?: ReactNode;
-};
+} & AdminAttachmentAccessProps & AdminAttachmentModeProps;
 
 function errorMessageOf(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
@@ -99,13 +116,36 @@ function attachmentIcon(attachment: AdminAttachment) {
   return <FileOutlined />;
 }
 
+function isAttachmentPreviewable(attachment: AdminAttachment) {
+  const kind = attachmentKind(attachment);
+  return kind === 'image' || kind === 'pdf';
+}
+
+function attachmentPreviewMimeType(attachment: AdminAttachment) {
+  if (attachmentKind(attachment) === 'pdf') return 'application/pdf';
+  const declaredType = (attachment.contentType || attachment.rawFile?.type || '').toLowerCase();
+  if (declaredType.startsWith('image/')) return declaredType;
+  const extension = attachment.name.toLowerCase().split('.').pop();
+  const imageTypeMap: Record<string, string> = {
+    avif: 'image/avif', bmp: 'image/bmp', gif: 'image/gif', heic: 'image/heic',
+    jpeg: 'image/jpeg', jpg: 'image/jpeg', png: 'image/png', svg: 'image/svg+xml', webp: 'image/webp'
+  };
+  return imageTypeMap[extension || ''] || 'image/*';
+}
+
+type AttachmentPreviewState = {
+  kind: 'image' | 'pdf';
+  name: string;
+  url: string;
+};
+
 function AttachmentUpload({
   variant,
   value,
   defaultValue = [],
   onChange,
   onUpload,
-  onPreview,
+  onLoadPreview,
   onDownload,
   onRemove,
   accept,
@@ -113,16 +153,23 @@ function AttachmentUpload({
   maxSize,
   multiple = true,
   disabled,
+  readOnly = false,
   hint
 }: AdminAttachmentUploadProps & { variant: AttachmentUploadVariant }) {
   const { message } = useAdminFeedback();
   const [innerValue, setInnerValue] = useState(defaultValue);
+  const [preview, setPreview] = useState<AttachmentPreviewState>();
   const attachments = value ?? innerValue;
   const attachmentsRef = useRef(attachments);
+  const previewUrlRef = useRef('');
 
   useEffect(() => {
     attachmentsRef.current = attachments;
   }, [attachments]);
+
+  useEffect(() => () => {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+  }, []);
 
   const commit = (next: AdminAttachment[]) => {
     attachmentsRef.current = next;
@@ -137,6 +184,7 @@ function AttachmentUpload({
   };
 
   const uploadFile = async (file: RcFile, existingId?: string) => {
+    if (!onUpload || readOnly) return;
     const validationError = validateAttachmentFile(file, { accept, maxSize });
     if (validationError) {
       message.error(`${file.name}：${validationError}`);
@@ -205,12 +253,29 @@ function AttachmentUpload({
   };
 
   const handlePreview = async (attachment: AdminAttachment) => {
-    if (!onPreview) return;
+    if (!onLoadPreview) return;
+    if (!isAttachmentPreviewable(attachment)) {
+      message.warning('该格式暂不支持在线预览，请下载查看');
+      return;
+    }
     try {
-      await onPreview(attachment);
+      const source = await onLoadPreview(attachment);
+      if (!(source instanceof Blob)) throw new Error('预览接口未返回有效文件内容');
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+      const previewBlob = new Blob([source], { type: attachmentPreviewMimeType(attachment) });
+      const url = URL.createObjectURL(previewBlob);
+      const kind = attachmentKind(attachment) as AttachmentPreviewState['kind'];
+      previewUrlRef.current = url;
+      setPreview({ kind, name: attachment.name, url });
     } catch (error) {
       message.error(errorMessageOf(error, '预览失败，请稍后重试'));
     }
+  };
+
+  const closePreview = () => {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = '';
+    setPreview(undefined);
   };
 
   const handleRemove = async (attachment: AdminAttachment) => {
@@ -226,7 +291,7 @@ function AttachmentUpload({
 
   return (
     <div className="admin-attachment-upload">
-      {variant === 'dragger' ? (
+      {!readOnly ? (variant === 'dragger' ? (
         <Upload.Dragger
           accept={accept}
           beforeUpload={beforeUpload}
@@ -254,7 +319,7 @@ function AttachmentUpload({
           </Upload>
           <span>{hint || '可选择一个或多个文件'}</span>
         </div>
-      )}
+      )) : null}
 
       {attachments.length ? (
         <ul className="admin-attachment-upload__list" aria-label="附件列表">
@@ -264,7 +329,7 @@ function AttachmentUpload({
                 {attachmentIcon(attachment)}
               </span>
               <div className="admin-attachment-upload__file-main">
-                {attachment.status === 'done' && onPreview ? (
+                {attachment.status === 'done' && onLoadPreview ? (
                   <button
                     className="admin-attachment-upload__file-name is-previewable"
                     title={`预览 ${attachment.name}`}
@@ -298,7 +363,7 @@ function AttachmentUpload({
                 </span>
               ) : null}
               <div className="admin-attachment-upload__actions">
-                {attachment.status === 'error' && attachment.rawFile ? (
+                {!readOnly && attachment.status === 'error' && attachment.rawFile ? (
                   <AdminIconAction
                     icon={<RedoOutlined />}
                     label="重试"
@@ -312,7 +377,7 @@ function AttachmentUpload({
                     onClick={() => void handleDownload(attachment)}
                   />
                 ) : null}
-                {!disabled && (onRemove || attachment.status !== 'done') ? (
+                {!readOnly && !disabled && (onRemove || attachment.status !== 'done') ? (
                   <AdminDeleteIconAction
                     entityName="附件"
                     targetName={attachment.name}
@@ -325,6 +390,25 @@ function AttachmentUpload({
           ))}
         </ul>
       ) : null}
+
+      <AdminModal
+        className="admin-attachment-upload__preview-modal"
+        title={preview ? `附件预览：${preview.name}` : '附件预览'}
+        open={Boolean(preview)}
+        width={920}
+        footer={null}
+        onCancel={closePreview}
+      >
+        {preview ? (
+          <div className={`admin-attachment-upload__preview is-${preview.kind}`}>
+            {preview.kind === 'image' ? (
+              <img src={preview.url} alt={preview.name} />
+            ) : (
+              <iframe src={preview.url} title={preview.name} />
+            )}
+          </div>
+        ) : null}
+      </AdminModal>
     </div>
   );
 }

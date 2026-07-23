@@ -134,13 +134,24 @@ test('合同新增编辑复用底座上传组件并支持多个附件', async ()
   const api = await read('../src/api/projectApi.ts');
   const types = await read('../src/modules/project/types.ts');
 
-  assert.match(form, /TemplateFormSection title="合同附件"/);
-  assert.match(form, /AdminUpload/);
+  const contractSectionStart = form.indexOf('<TemplateFormSection title="合同信息">');
+  const attachmentFieldStart = form.indexOf('<AdminFormItem label="合同附件"');
+  const paymentSectionStart = form.indexOf('<TemplateFormSection title="付款阶段">');
+  assert.ok(contractSectionStart >= 0 && contractSectionStart < attachmentFieldStart);
+  assert.ok(attachmentFieldStart < paymentSectionStart);
+  assert.doesNotMatch(form, /TemplateFormSection title="合同附件"/);
+  assert.match(form, /AdminAttachmentUpload/);
+  assert.match(form, /type AdminAttachment/);
+  assert.doesNotMatch(form, /\bAdminUpload\b/);
   assert.match(form, /multiple/);
   assert.match(form, /maxCount=\{10\}/);
+  assert.match(form, /maxSize=\{maxAttachmentSize\}/);
+  assert.match(form, /accept=\{attachmentAccept\}/);
   assert.match(form, /单个文件不超过 20MB，最多 10 个/);
   assert.match(form, /uploadProjectContractAttachment/);
   assert.match(form, /deleteProjectContractAttachment/);
+  assert.match(form, /onLoadPreview=/);
+  assert.match(form, /loadProjectContractAttachmentPreview/);
   assert.match(form, /await saveProjectContract[\s\S]*setExists\(true\)[\s\S]*uploadProjectContractAttachment/);
   assert.match(api, /attachments:\s*arrayContract\(contractAttachmentContract\)/);
   assert.match(api, /new FormData\(\)/);
@@ -149,14 +160,19 @@ test('合同新增编辑复用底座上传组件并支持多个附件', async ()
   assert.match(types, /export type ProjectContractAttachment/);
 })
 
-test('合同详情使用标准详情表格展示并下载附件', async () => {
+test('合同详情在合同信息最后展示附件并支持下载', async () => {
   const detail = await read('../src/modules/project/pages/ProjectContractDetailPage.tsx');
 
-  assert.match(detail, /title="合同附件"/);
-  assert.match(detail, /sectionKey="contract-attachments"/);
-  for (const label of ['文件名称', '文件大小', '上传人', '上传时间', '下载']) {
-    assert.match(detail, new RegExp(label));
-  }
+  const contractInfoStart = detail.indexOf('<DetailMetaList items={[');
+  const attachmentFieldStart = detail.indexOf("label: '合同附件'");
+  const paymentSectionStart = detail.indexOf('<TemplateDetailTableSection<ProjectPaymentStage>');
+  assert.ok(contractInfoStart >= 0 && contractInfoStart < attachmentFieldStart);
+  assert.ok(attachmentFieldStart < paymentSectionStart);
+  assert.match(detail, /label: '合同附件'[\s\S]*wide: true/);
+  assert.match(detail, /AdminAttachmentUpload/);
+  assert.match(detail, /readOnly/);
+  assert.match(detail, /onLoadPreview=/);
+  assert.match(detail, /loadProjectContractAttachmentPreview/);
   assert.match(detail, /downloadProjectContractAttachment/);
-  assert.match(detail, /TemplateDetailTableSection<ProjectContractAttachment>/);
+  assert.doesNotMatch(detail, /TemplateDetailTableSection<ProjectContractAttachment>/);
 })

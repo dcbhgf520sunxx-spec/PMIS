@@ -23,6 +23,24 @@ test('新功能开工前必须向用户展示组件支撑情况', () => {
   assert.match(developmentRulesSource, /全部支持[\s\S]*部分支持[\s\S]*暂不支持[\s\S]*不涉及前端组件/);
 });
 
+test('部分支持或暂不支持时必须给出组件沉淀建议结论', () => {
+  for (const source of [agentsSource, deliveryFlowSource, developmentRulesSource]) {
+    assert.match(source, /部分支持[\s\S]*暂不支持[\s\S]*建议结论/);
+    assert.match(source, /业务内最小处理[\s\S]*扩展现有底座组件[\s\S]*新增底座组件/);
+  }
+  assert.match(deliveryFlowSource, /复用范围[\s\S]*职责边界[\s\S]*影响范围/);
+  assert.match(deliveryFlowSource, /先完善底座[\s\S]*组件工作台[\s\S]*测试[\s\S]*业务页面/);
+});
+
+test('低频和业务特有能力允许由业务系统自行开发', () => {
+  for (const source of [agentsSource, deliveryFlowSource, developmentRulesSource]) {
+    assert.match(source, /低频[\s\S]*一次性[\s\S]*业务特有/);
+    assert.match(source, /允许业务系统自行开发/);
+  }
+  assert.match(deliveryFlowSource, /门禁[\s\S]*只检查[\s\S]*分析[\s\S]*建议结论/);
+  assert.match(deliveryFlowSource, /不因选择[“"]?业务内最小处理[”"]?而阻断/);
+});
+
 test('用户口中的分类导航明确区分同页定位和页面切换', () => {
   assert.match(developmentRulesSource, /详情页 Tab/);
   assert.match(developmentRulesSource, /顶部页签/);

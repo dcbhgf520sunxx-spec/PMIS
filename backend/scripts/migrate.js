@@ -92,7 +92,7 @@ async function assertBaselineReady(client) {
         OR (SELECT COUNT(*) FROM pms_user_role) <> 1
         OR (SELECT COUNT(*) FROM pms_menu) <> 22
         OR (SELECT COUNT(*) FROM pms_role_menu) <> 22
-        OR (SELECT COUNT(*) FROM pms_archive_type) <> 5
+        OR (SELECT COUNT(*) FROM pms_archive_type) <> 6
         OR (SELECT COUNT(*) FROM pms_archive) <> 26
         AS has_business_data
   `)
