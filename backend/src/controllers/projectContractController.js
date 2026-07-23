@@ -144,9 +144,9 @@ exports.create = async (req, res) => {
     const operatorId = req.user.id
     const contractId = await db.transaction(async (tx) => {
       const result = await tx.prepare(`INSERT INTO pms_project_contract
-        (project_id, contract_code, contract_name, supplier_id, signed_date, contract_amount, creator_id, updater_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-        .run(req.params.id, req.body.contract_code.trim(), req.body.contract_name.trim(), validated.supplier.id, req.body.signed_date, req.body.contract_amount, operatorId, operatorId)
+        (project_id, contract_code, contract_name, supplier_id, signed_date, contract_amount, remark, creator_id, updater_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(req.params.id, req.body.contract_code.trim(), req.body.contract_name.trim(), validated.supplier.id, req.body.signed_date, req.body.contract_amount, req.body.remark || null, operatorId, operatorId)
       for (const [index, stage] of req.body.stages.entries()) {
         await tx.prepare(`INSERT INTO pms_project_payment_stage
           (contract_id, stage_name, planned_amount, sort_order, creator_id, updater_id)
@@ -189,8 +189,8 @@ exports.update = async (req, res) => {
     const operatorId = req.user.id
     await db.transaction(async (tx) => {
       await tx.prepare(`UPDATE pms_project_contract SET contract_code = ?, contract_name = ?, supplier_id = ?, signed_date = ?,
-        contract_amount = ?, updater_id = ?, updated_at = NOW() WHERE id = ?`)
-        .run(req.body.contract_code.trim(), req.body.contract_name.trim(), validated.supplier.id, req.body.signed_date, req.body.contract_amount, operatorId, oldContract.id)
+        contract_amount = ?, remark = ?, updater_id = ?, updated_at = NOW() WHERE id = ?`)
+        .run(req.body.contract_code.trim(), req.body.contract_name.trim(), validated.supplier.id, req.body.signed_date, req.body.contract_amount, req.body.remark || null, operatorId, oldContract.id)
       await tx.prepare("UPDATE pms_project_payment_stage SET stage_name = '__editing_' || id::text WHERE contract_id = ? AND is_deleted = 0").run(oldContract.id)
       for (const [index, stage] of req.body.stages.entries()) {
         if (stage.id) {

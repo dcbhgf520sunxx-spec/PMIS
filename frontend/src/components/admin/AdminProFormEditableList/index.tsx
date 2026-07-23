@@ -9,6 +9,7 @@ import './index.css';
 export type AdminProFormEditableListField = {
   key: string;
   title: string;
+  width?: 'compact' | 'standard' | 'wide';
   render: (context: { field: FormListFieldData; index: number }) => ReactNode;
 };
 
@@ -21,16 +22,22 @@ export type AdminProFormEditableListProps<T extends Record<string, unknown>> = {
   label?: ReactNode;
   fields: AdminProFormEditableListField[];
   creatorRecord: T | (() => T);
+  rules?: FormListProps['rules'];
 };
 
 const MIN_ROWS = 1;
-const FIELD_WIDTH = 'minmax(160px, 280px)';
+const FIELD_WIDTHS = {
+  compact: 'minmax(120px, 180px)',
+  standard: 'minmax(160px, 280px)',
+  wide: 'minmax(240px, 380px)'
+};
 
 export function AdminProFormEditableList<T extends Record<string, unknown>>({
   name,
   label,
   fields,
-  creatorRecord
+  creatorRecord,
+  rules
 }: AdminProFormEditableListProps<T>) {
   const initialValue = useMemo(
     () => Array.from({ length: MIN_ROWS }, () => (
@@ -39,7 +46,7 @@ export function AdminProFormEditableList<T extends Record<string, unknown>>({
     [creatorRecord]
   );
   const style = {
-    '--admin-editable-list-columns': `64px ${fields.map(() => FIELD_WIDTH).join(' ')} 72px`
+    '--admin-editable-list-columns': `64px ${fields.map((field) => FIELD_WIDTHS[field.width || 'standard']).join(' ')} 72px`
   } as EditableListStyle;
 
   return (
@@ -53,6 +60,7 @@ export function AdminProFormEditableList<T extends Record<string, unknown>>({
       <ProFormList<T>
         name={name}
         min={MIN_ROWS}
+        rules={rules}
         initialValue={initialValue}
         creatorRecord={creatorRecord}
         creatorButtonProps={{

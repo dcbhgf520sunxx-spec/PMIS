@@ -41,6 +41,7 @@ export type ProjectContractRecord = {
   supplierName: string;
   signedDate: string;
   contractAmount: number;
+  remark: string;
   paidAmount: number;
   unpaidAmount: number;
   stages: ProjectPaymentStage[];
@@ -52,7 +53,8 @@ export type ProjectContractFormValues = {
   supplierId: string;
   signedDate: string;
   contractAmount: string;
-  stages: Array<{ id?: string; stageName: string; plannedAmount: string }>;
+  remark?: string;
+  stages: Array<{ id?: string; stageName: string; paymentRatio: string; plannedAmount: string }>;
 };
 export type ProjectPaymentRecord = {
   id: string;

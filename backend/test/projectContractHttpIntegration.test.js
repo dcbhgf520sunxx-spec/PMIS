@@ -69,6 +69,7 @@ test('项目合同和分阶段付款真实接口流程', { skip: !enabled }, asy
       supplier_id: supplierId,
       signed_date: '2026-07-20',
       contract_amount: '100.00',
+      remark: '合同集成测试备注',
       stages: [
         { stage_name: '签约款', planned_amount: '50.00' },
         { stage_name: '验收款', planned_amount: '50.00' },
@@ -87,6 +88,7 @@ test('项目合同和分阶段付款真实接口流程', { skip: !enabled }, asy
     assert.equal(Number(detail.body.data.supplier_id), Number(supplierId))
     assert.equal(detail.body.data.supplier_name, `测试供应商${suffix}`)
     assert.equal(Number(detail.body.data.paid_amount), 0)
+    assert.equal(detail.body.data.remark, '合同集成测试备注')
     assert.equal(detail.body.data.stages.length, 2)
     assert.deepEqual(detail.body.data.attachments, [])
     const stageId = detail.body.data.stages[0].id

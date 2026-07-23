@@ -139,6 +139,7 @@ CREATE TABLE IF NOT EXISTS pms_project_contract (
   supplier_id BIGINT NOT NULL,
   signed_date DATE NOT NULL,
   contract_amount NUMERIC(18,2) NOT NULL CHECK (contract_amount > 0),
+  remark TEXT,
   creator_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
   updater_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
   is_deleted SMALLINT NOT NULL DEFAULT 0 CHECK (is_deleted IN (0, 1)),

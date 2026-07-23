@@ -9,8 +9,10 @@ import {
   AdminProFormMoney,
   AdminProFormSelect,
   AdminProFormText,
+  AdminProFormTextArea,
   AdminAttachmentUpload,
   AdminFormItem,
+  AdminNumberInput,
   TemplateFormPage,
   TemplateFormSection,
   type AdminAttachment,
@@ -28,6 +30,11 @@ import {
 } from '../../../api/projectApi';
 import { getArchiveOptionsByTypeName } from '../../../api/archiveApi';
 import type { ProjectContractFormValues } from '../types';
+import {
+  calculateStagePlannedAmounts,
+  deriveStagePaymentRatios,
+  isPaymentRatioTotalValid,
+} from '../projectContractCalculations';
 
 const amountPattern = /^\d+(?:\.\d{1,2})?$/;
 const attachmentExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.zip'];
@@ -57,6 +64,7 @@ const stageFields: AdminProFormEditableListField[] = [
   {
     key: 'stageName',
     title: '阶段名称',
+    width: 'wide',
     render: () => (
       <AdminProFormText
         name="stageName"
@@ -67,12 +75,42 @@ const stageFields: AdminProFormEditableListField[] = [
     ),
   },
   {
+    key: 'paymentRatio',
+    title: '付款比例',
+    width: 'compact',
+    render: ({ field }) => (
+      <AdminFormItem
+        name={[field.name, 'paymentRatio']}
+        rules={[
+          { required: true, message: '请输入付款比例' },
+          { validator: async (_: unknown, value: unknown) => {
+            const ratio = Number(value);
+            if (!Number.isFinite(ratio) || ratio <= 0 || ratio > 100) throw new Error('付款比例必须大于0且不超过100%');
+          } },
+        ]}
+      >
+        <AdminNumberInput
+          min={0.01}
+          max={100}
+          precision={2}
+          step={0.01}
+          stringMode
+          controls={false}
+          suffix="%"
+          placeholder="请输入比例"
+        />
+      </AdminFormItem>
+    ),
+  },
+  {
     key: 'plannedAmount',
     title: '计划金额（元）',
+    width: 'compact',
     render: () => (
       <AdminProFormMoney
         name="plannedAmount"
-        placeholder="请输入计划金额"
+        placeholder="自动计算"
+        disabled
         rules={[
           { required: true, message: '请输入计划金额' },
           { pattern: amountPattern, message: '请输入最多两位小数的金额' },
@@ -99,6 +137,9 @@ export function ProjectContractFormPage() {
   const [revision, setRevision] = useState(0);
   const [attachmentFiles, setAttachmentFiles] = useState<AdminAttachment[]>([]);
   const [removedAttachmentIds, setRemovedAttachmentIds] = useState<string[]>([]);
+  const watchedContractAmount = ProForm.useWatch('contractAmount', form);
+  const watchedStages = ProForm.useWatch('stages', form);
+  const paymentRatioSignature = (watchedStages || []).map((stage) => stage?.paymentRatio || '').join('|');
 
   useEffect(() => {
     if (!params.id) return;
@@ -110,14 +151,23 @@ export function ProjectContractFormPage() {
         setExists(Boolean(contract));
         setAttachmentFiles((contract?.attachments || []).map(toAdminAttachment));
         setRemovedAttachmentIds([]);
+        const paymentRatios = contract
+          ? deriveStagePaymentRatios(contract.contractAmount, contract.stages.map((stage) => stage.plannedAmount))
+          : [];
         setInitialValues(contract ? {
           contractCode: contract.contractCode,
           contractName: contract.contractName,
           supplierId: contract.supplierId,
           signedDate: contract.signedDate,
           contractAmount: contract.contractAmount.toFixed(2),
-          stages: contract.stages.map((stage) => ({ id: stage.id, stageName: stage.stageName, plannedAmount: stage.plannedAmount.toFixed(2) })),
-        } : { stages: [{ stageName: '', plannedAmount: '' }] });
+          remark: contract.remark,
+          stages: contract.stages.map((stage, index) => ({
+            id: stage.id,
+            stageName: stage.stageName,
+            paymentRatio: paymentRatios[index],
+            plannedAmount: stage.plannedAmount.toFixed(2),
+          })),
+        } : { stages: [{ stageName: '', paymentRatio: '', plannedAmount: '' }] });
       })
       .catch((loadError) => {
         const text = loadError instanceof Error ? loadError.message : '加载失败';
@@ -125,6 +175,20 @@ export function ProjectContractFormPage() {
       })
       .finally(() => setLoading(false));
   }, [params.id, revision]);
+
+  useEffect(() => {
+    const stages = (form.getFieldValue('stages') || []) as ProjectContractFormValues['stages'];
+    const plannedAmounts = calculateStagePlannedAmounts(
+      watchedContractAmount,
+      stages.map((stage) => stage?.paymentRatio)
+    );
+    if (!plannedAmounts.some(Boolean)) return;
+    if (stages.every((stage, index) => stage?.plannedAmount === plannedAmounts[index])) return;
+    form.setFieldValue('stages', stages.map((stage, index) => ({
+      ...stage,
+      plannedAmount: plannedAmounts[index],
+    })));
+  }, [form, watchedContractAmount, paymentRatioSignature]);
 
   return (
     <TemplateFormPage<ProjectContractFormValues>
@@ -169,6 +233,13 @@ export function ProjectContractFormPage() {
               { validator: async (_: unknown, value: unknown) => { if (Number(value) <= 0) throw new Error('合同金额必须大于0'); } },
             ]}
             fieldProps={{ inputMode: 'decimal' }}
+          />
+          <AdminProFormTextArea
+            name="remark"
+            label="备注"
+            className="admin-template-form-page__field is-full"
+            fieldProps={{ rows: 3, maxLength: 1000 }}
+            placeholder="请输入备注"
           />
           <AdminFormItem label="合同附件" className="admin-template-form-page__field is-full">
             <AdminAttachmentUpload
@@ -217,7 +288,14 @@ export function ProjectContractFormPage() {
         <AdminProFormEditableList
           name="stages"
           fields={stageFields}
-          creatorRecord={() => ({ stageName: '', plannedAmount: '' })}
+          rules={[{
+            validator: async (_: unknown, stages: ProjectContractFormValues['stages']) => {
+              if (!isPaymentRatioTotalValid((stages || []).map((stage) => stage?.paymentRatio))) {
+                throw new Error('付款比例合计必须等于100%');
+              }
+            },
+          }]}
+          creatorRecord={() => ({ stageName: '', paymentRatio: '', plannedAmount: '' })}
         />
       </TemplateFormSection>
     </TemplateFormPage>

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
@@ -92,6 +93,75 @@ test('付款阶段复用底座可编辑明细表单', async () => {
   assert.doesNotMatch(form, /minRows=/);
   assert.doesNotMatch(form, /Form\.List/);
 })
+
+test('合同新增编辑支持非必填备注并提交到真实接口', async () => {
+  const form = await read('../src/modules/project/pages/ProjectContractFormPage.tsx');
+  const api = await read('../src/api/projectApi.ts');
+  const types = await read('../src/modules/project/types.ts');
+
+  assert.match(form, /AdminProFormTextArea/);
+  assert.match(form, /name="remark"\s+label="备注"/);
+  assert.doesNotMatch(form, /name="remark"[\s\S]{0,160}required:\s*true/);
+  assert.match(api, /remark:\s*values\.remark\s*\|\|\s*null/);
+  assert.match(types, /ProjectContractFormValues[\s\S]*remark\?:\s*string/);
+});
+
+test('合同详情在金额字段后展示备注且空值显示占位符', async () => {
+  const detail = await read('../src/modules/project/pages/ProjectContractDetailPage.tsx');
+  const amountFieldStart = detail.indexOf("label: '未付金额（元）'");
+  const remarkFieldStart = detail.indexOf("label: '备注'");
+  const attachmentFieldStart = detail.indexOf("label: '合同附件'");
+
+  assert.ok(amountFieldStart >= 0 && amountFieldStart < remarkFieldStart);
+  assert.ok(remarkFieldStart < attachmentFieldStart);
+  assert.match(detail, /\{\s*label:\s*'备注',\s*value:\s*contract\.remark\s*\|\|\s*'-',\s*wide:\s*true\s*\}/);
+});
+
+test('付款比例人工录入并自动计算计划金额', async () => {
+  const calculationPath = new URL('../src/modules/project/projectContractCalculations.ts', import.meta.url);
+  assert.equal(existsSync(calculationPath), true, '应提供付款阶段比例计算模块');
+  const { calculateStagePlannedAmounts, deriveStagePaymentRatios, isPaymentRatioTotalValid } = await import(calculationPath);
+
+  assert.equal(isPaymentRatioTotalValid(['30.00', '70.00']), true);
+  assert.equal(isPaymentRatioTotalValid(['30.00', '69.99']), false);
+  assert.deepEqual(calculateStagePlannedAmounts('100.01', ['33.33', '33.33', '33.34']), ['33.33', '33.33', '33.35']);
+  assert.deepEqual(deriveStagePaymentRatios('100.00', ['20.00', '80.00']), ['20.00', '80.00']);
+
+  const form = await read('../src/modules/project/pages/ProjectContractFormPage.tsx');
+  assert.match(form, /title:\s*'付款比例'/);
+  assert.match(form, /render:\s*\(\{\s*field\s*\}\)\s*=>[\s\S]{0,220}name=\{\[field\.name,\s*'paymentRatio'\]\}/);
+  assert.match(form, /suffix=["']%["']/);
+  assert.match(form, /name="plannedAmount"[\s\S]{0,240}disabled/);
+  assert.match(form, /calculateStagePlannedAmounts/);
+  assert.match(form, /deriveStagePaymentRatios/);
+  assert.match(form, /isPaymentRatioTotalValid/);
+});
+
+test('合同详情付款阶段在阶段名称后展示还原后的付款比例', async () => {
+  const detail = await read('../src/modules/project/pages/ProjectContractDetailPage.tsx');
+  const stageColumnStart = detail.indexOf("title: '阶段'");
+  const ratioColumnStart = detail.indexOf("title: '付款比例'");
+  const amountColumnStart = detail.indexOf("title: '计划金额（元）'");
+
+  assert.match(detail, /import\s*\{\s*deriveStagePaymentRatios\s*\}\s*from\s*'\.\.\/projectContractCalculations'/);
+  assert.match(detail, /deriveStagePaymentRatios\(contract\.contractAmount,\s*contract\.stages\.map\(\(stage\)\s*=>\s*stage\.plannedAmount\)\)/);
+  assert.ok(stageColumnStart >= 0 && stageColumnStart < ratioColumnStart);
+  assert.ok(ratioColumnStart < amountColumnStart);
+  assert.match(detail, /title:\s*'付款比例'[\s\S]{0,220}`\$\{ratio\}%`/);
+});
+
+test('付款阶段使用底座受控列宽规格突出阶段名称并收窄金额', async () => {
+  const form = await read('../src/modules/project/pages/ProjectContractFormPage.tsx');
+  const editableList = await read('../src/components/admin/AdminProFormEditableList/index.tsx');
+  const example = await read('../src/modules/design-system/pages/sections/input/EditableDetailListExamples.tsx');
+
+  assert.match(form, /key:\s*'stageName'[\s\S]{0,120}width:\s*'wide'/);
+  assert.match(form, /key:\s*'plannedAmount'[\s\S]{0,120}width:\s*'compact'/);
+  assert.match(editableList, /width\?:\s*'compact'\s*\|\s*'standard'\s*\|\s*'wide'/);
+  assert.match(editableList, /FIELD_WIDTHS/);
+  assert.match(example, /width:\s*'wide'/);
+  assert.match(example, /width:\s*'compact'/);
+});
 
 test('登记付款只包含确认字段且付款时间按月选择', async () => {
   const source = await read('../src/modules/project/components/ProjectPaymentModal.tsx');

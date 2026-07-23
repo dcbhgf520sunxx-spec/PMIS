@@ -20,6 +20,7 @@ import { getUserOptions } from '../../../api/userApi';
 import type { ProjectContractAttachment, ProjectContractRecord, ProjectPaymentRecord, ProjectPaymentStage } from '../types';
 import { ProjectPaymentModal } from '../components/ProjectPaymentModal';
 import { ProjectPaymentDrawer } from '../components/ProjectPaymentDrawer';
+import { deriveStagePaymentRatios } from '../projectContractCalculations';
 
 const money = (value: number) => value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const toAdminAttachment = (attachment: ProjectContractAttachment): AdminAttachment => ({
@@ -73,8 +74,23 @@ export function ProjectContractDetailPage() {
     setRevision((value) => value + 1);
   };
 
+  const stagePaymentRatios = useMemo(() => {
+    if (!contract) return new Map<string, string>();
+    const ratios = deriveStagePaymentRatios(contract.contractAmount, contract.stages.map((stage) => stage.plannedAmount));
+    return new Map(contract.stages.map((stage, index) => [stage.id, ratios[index] || '']));
+  }, [contract]);
+
   const stageColumns = useMemo<ProColumns<ProjectPaymentStage>[]>(() => [
     { title: '阶段', dataIndex: 'stageName', width: 180 },
+    {
+      title: '付款比例',
+      key: 'paymentRatio',
+      width: 120,
+      render: (_, stage) => {
+        const ratio = stagePaymentRatios.get(stage.id);
+        return ratio ? `${ratio}%` : '-';
+      },
+    },
     { title: '计划金额（元）', dataIndex: 'plannedAmount', width: 150, render: (_, stage) => money(stage.plannedAmount) },
     { title: '已付金额（元）', dataIndex: 'paidAmount', width: 150, render: (_, stage) => money(stage.paidAmount) },
     { title: '待付金额（元）', dataIndex: 'unpaidAmount', width: 150, render: (_, stage) => money(stage.unpaidAmount) },
@@ -88,7 +104,7 @@ export function ProjectContractDetailPage() {
         </OperationColumnActions>
       ),
     },
-  ], []);
+  ], [stagePaymentRatios]);
 
   return (
     <>
@@ -122,6 +138,7 @@ export function ProjectContractDetailPage() {
             { label: '合同名称', value: contract.contractName }, { label: '供应商', value: contract.supplierName },
             { label: '签订时间', value: contract.signedDate }, { label: '合同金额（元）', value: money(contract.contractAmount) },
             { label: '已付金额（元）', value: money(contract.paidAmount) }, { label: '未付金额（元）', value: money(contract.unpaidAmount) },
+            { label: '备注', value: contract.remark || '-', wide: true },
             {
               label: '合同附件',
               wide: true,
@@ -150,7 +167,7 @@ export function ProjectContractDetailPage() {
             title="付款阶段"
             sectionKey="contract-payments"
             summary={`共 ${contract.stages.length} 个阶段`}
-            table={{ columns: stageColumns, dataSource: contract.stages, scroll: { x: 940 } }}
+            table={{ columns: stageColumns, dataSource: contract.stages, scroll: { x: 1060 } }}
           />
         ) : null}
       </TemplateDetailPage>

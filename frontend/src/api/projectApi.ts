@@ -49,7 +49,7 @@ export async function getProjectHistory(id:string){return unwrap<ProjectHistoryI
 
 type ContractStageRow = { id: number; contract_id: number; stage_name: string; planned_amount: string | number; paid_amount: string | number; unpaid_amount: string | number; payment_status: number; sort_order: number };
 type ContractAttachmentRow = { id: number; contract_id: number; original_name: string; mime_type: string; file_size: number; sort_order: number; creator_name?: string; created_at: string };
-type ContractRow = { id: number; project_id: number; project_name: string; contract_code: string; contract_name: string; supplier_id: number; supplier_name: string; signed_date: string; contract_amount: string | number; paid_amount: string | number; unpaid_amount: string | number; stages: ContractStageRow[]; attachments: ContractAttachmentRow[] };
+type ContractRow = { id: number; project_id: number; project_name: string; contract_code: string; contract_name: string; supplier_id: number; supplier_name: string; signed_date: string; contract_amount: string | number; remark?: string; paid_amount: string | number; unpaid_amount: string | number; stages: ContractStageRow[]; attachments: ContractAttachmentRow[] };
 type PaymentRow = { id: number; stage_id: number; payment_amount: string | number; payment_month: string; handler_id: number; handler_name: string; remark?: string; creator_name?: string; created_at: string; updated_at: string };
 
 const contractStageContract = objectContract<ContractStageRow>(['id', 'contract_id', 'stage_name', 'planned_amount', 'paid_amount', 'unpaid_amount', 'payment_status', 'sort_order']);
@@ -70,7 +70,7 @@ const mapContractAttachment = (row: ContractAttachmentRow): ProjectContractAttac
 const mapContract = (row: ContractRow): ProjectContractRecord => ({
   id: String(row.id), projectId: String(row.project_id), projectName: row.project_name, contractCode: row.contract_code,
   contractName: row.contract_name, supplierId: String(row.supplier_id), supplierName: row.supplier_name, signedDate: date(row.signed_date),
-  contractAmount: Number(row.contract_amount), paidAmount: Number(row.paid_amount), unpaidAmount: Number(row.unpaid_amount),
+  contractAmount: Number(row.contract_amount), remark: row.remark || '', paidAmount: Number(row.paid_amount), unpaidAmount: Number(row.unpaid_amount),
   stages: row.stages.map(mapStage), attachments: row.attachments.map(mapContractAttachment),
 });
 const contractPayload = (values: ProjectContractFormValues) => ({
@@ -79,6 +79,7 @@ const contractPayload = (values: ProjectContractFormValues) => ({
   supplier_id: Number(values.supplierId),
   signed_date: formatDateInput(values.signedDate),
   contract_amount: values.contractAmount,
+  remark: values.remark || null,
   stages: values.stages.map((stage) => ({ id: stage.id ? Number(stage.id) : undefined, stage_name: stage.stageName, planned_amount: stage.plannedAmount })),
 });
 const paymentPayload = (values: ProjectPaymentFormValues) => ({

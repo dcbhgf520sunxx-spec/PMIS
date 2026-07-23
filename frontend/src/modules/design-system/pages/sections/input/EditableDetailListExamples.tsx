@@ -20,6 +20,7 @@ const stageFields = [
   {
     key: 'stageName',
     title: '阶段名称',
+    width: 'wide' as const,
     render: () => (
       <AdminProFormText
         name="stageName"
@@ -31,6 +32,7 @@ const stageFields = [
   {
     key: 'plannedAmount',
     title: '计划金额（元）',
+    width: 'compact' as const,
     render: () => (
       <AdminProFormMoney
         name="plannedAmount"
