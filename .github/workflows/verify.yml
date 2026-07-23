@@ -19,11 +19,11 @@ jobs:
         env:
           POSTGRES_USER: pms
           POSTGRES_PASSWORD: pms123456
-          POSTGRES_DB: project_template
+          POSTGRES_DB: pmis
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U pms -d project_template"
+          --health-cmd "pg_isready -U pms -d pmis"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -45,14 +45,14 @@ jobs:
       - name: Initialize database
         env:
           PGPASSWORD: pms123456
-        run: psql -h 127.0.0.1 -U pms -d project_template -v ON_ERROR_STOP=1 -f backend/db/init/001_schema.sql
+        run: psql -h 127.0.0.1 -U pms -d pmis -v ON_ERROR_STOP=1 -f backend/db/init/001_schema.sql
       - name: Run migrations
         env:
           DB_HOST: 127.0.0.1
           DB_PORT: 5432
           DB_USER: pms
           DB_PASSWORD: pms123456
-          DB_NAME: project_template
+          DB_NAME: pmis
         run: npm run db:migrate -- --baseline
         working-directory: backend
       - name: Verify
@@ -64,7 +64,7 @@ jobs:
           DB_PORT: 5432
           DB_USER: pms
           DB_PASSWORD: pms123456
-          DB_NAME: project_template
+          DB_NAME: pmis
           JWT_SECRET: ci-only-project-template-secret
           CORS_ORIGIN: http://localhost:3102
           NODE_ENV: test
@@ -79,7 +79,7 @@ jobs:
           DB_PORT: 5432
           DB_USER: pms
           DB_PASSWORD: pms123456
-          DB_NAME: project_template
+          DB_NAME: pmis
           JWT_SECRET: ci-only-project-template-secret
         run: npm run test:e2e
         working-directory: frontend
