@@ -116,3 +116,30 @@
 .design-system-page__drawer-problem-tag {
   flex-shrink: 0;
 }
+
+.design-system-page__async-task-state-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.design-system-page__async-task-state-item {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.design-system-page__async-task-state-item h4 {
+  margin: 0;
+  color: #425774;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+@media (max-width: 760px) {
+  .design-system-page__async-task-state-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

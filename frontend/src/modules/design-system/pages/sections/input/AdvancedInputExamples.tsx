@@ -11,12 +11,33 @@ type AdvancedInputExamplesProps = {
   setRichText: (value: string) => void;
 };
 
+function createPreviewDemoPdf() {
+  const objects = [
+    '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
+    '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n',
+    '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 420 260] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>\nendobj\n',
+    '4 0 obj\n<< /Length 58 >>\nstream\nBT /F1 20 Tf 72 160 Td (Attachment preview works) Tj ET\nendstream\nendobj\n',
+    '5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n'
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offsets = [0];
+  for (const object of objects) {
+    offsets.push(pdf.length);
+    pdf += object;
+  }
+  const xrefOffset = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  pdf += offsets.slice(1).map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`).join('');
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+  return new Blob([pdf], { type: 'application/pdf' });
+}
+
 export function AdvancedInputExamples({ richText, setRichText }: AdvancedInputExamplesProps) {
   const { message } = useAdminFeedback();
   const [attachments, setAttachments] = useState<AdminAttachment[]>([
-    { id: 'existing-contract', name: '已有附件-合同扫描件.pdf', size: 832_104, status: 'done' },
-    { id: 'existing-image', name: '现场照片.png', size: 1_240_072, status: 'done' },
-    { id: 'existing-sheet', name: '费用明细.xlsx', size: 126_420, status: 'done' }
+    { id: 'preview-image', name: '预览示例.png', size: 18_432, status: 'done', contentType: 'image/png' },
+    { id: 'preview-pdf', name: '预览示例.pdf', size: 832_104, status: 'done', contentType: 'application/pdf' },
+    { id: 'unsupported-word', name: '暂不支持预览.docx', size: 126_420, status: 'done' }
   ]);
   const [dragAttachments, setDragAttachments] = useState<AdminAttachment[]>(() => {
     const failedFile = Object.assign(
@@ -47,6 +68,15 @@ export function AdvancedInputExamples({ richText, setRichText }: AdvancedInputEx
     };
   };
 
+  const loadPreview: NonNullable<AdminAttachmentUploadProps['onLoadPreview']> = async (attachment) => {
+    if (attachment.id === 'preview-image') {
+      const response = await fetch('/sidebar-logo.png');
+      if (!response.ok) throw new Error('示例图片加载失败');
+      return response.blob();
+    }
+    return createPreviewDemoPdf();
+  };
+
   return (
     <>
       <AdminCard title="9. 上传">
@@ -70,9 +100,7 @@ export function AdvancedInputExamples({ richText, setRichText }: AdvancedInputEx
                   onDownload={(attachment) => {
                     message.success(`开始下载：${attachment.name}`);
                   }}
-                  onPreview={(attachment) => {
-                    message.success(`预览：${attachment.name}`);
-                  }}
+                  onLoadPreview={loadPreview}
                   onRemove={async () => {
                     await new Promise((resolve) => window.setTimeout(resolve, 180));
                   }}
@@ -88,9 +116,7 @@ export function AdvancedInputExamples({ richText, setRichText }: AdvancedInputEx
                   value={dragAttachments}
                   onChange={setDragAttachments}
                   onUpload={simulateUpload}
-                  onPreview={(attachment) => {
-                    message.success(`预览：${attachment.name}`);
-                  }}
+                  onLoadPreview={loadPreview}
                   onDownload={(attachment) => {
                     message.success(`开始下载：${attachment.name}`);
                   }}

@@ -1,0 +1,95 @@
+.admin-async-task-status {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(220, 232, 247, 0.92);
+  border-radius: 6px;
+  background: var(--app-surface);
+}
+
+.admin-async-task-status__icon {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(100, 116, 139, 0.1);
+  color: var(--app-muted);
+  font-size: 15px;
+}
+
+.admin-async-task-status.is-running .admin-async-task-status__icon {
+  background: rgba(31, 111, 255, 0.1);
+  color: var(--app-primary);
+}
+
+.admin-async-task-status.is-success .admin-async-task-status__icon {
+  background: color-mix(in srgb, var(--app-success) 10%, var(--app-surface));
+  color: var(--app-success);
+}
+
+.admin-async-task-status.is-error .admin-async-task-status__icon {
+  background: color-mix(in srgb, var(--app-danger) 9%, var(--app-surface));
+  color: var(--app-danger);
+}
+
+.admin-async-task-status__content {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.admin-async-task-status__heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.admin-async-task-status__heading strong {
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-async-task-status__heading span,
+.admin-async-task-status__content p {
+  margin: 0;
+  color: var(--app-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.admin-async-task-status__heading span {
+  flex: none;
+}
+
+.admin-async-task-status__content .ant-progress {
+  margin-top: 2px;
+}
+
+.admin-async-task-status__error {
+  color: var(--app-danger) !important;
+}
+
+.admin-async-task-status > .admin-text-action {
+  align-self: center;
+}
+
+@media (max-width: 520px) {
+  .admin-async-task-status {
+    grid-template-columns: 24px minmax(0, 1fr);
+  }
+
+  .admin-async-task-status > .admin-text-action {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
