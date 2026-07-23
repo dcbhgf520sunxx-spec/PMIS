@@ -253,7 +253,7 @@ test('真实 HTTP、PostgreSQL 和核心业务流程', { skip: !enabled }, async
       assert.equal(resumedDetail.body.data.close_date, null)
       assert.equal(resumedDetail.body.data.result_desc, null)
 
-      const archiveDelete = await request(`/api/archives/${system.id}`, { method: 'DELETE' })
+      const archiveDelete = await request(`/api/archives/${problemType.id}`, { method: 'DELETE' })
       assert.equal(archiveDelete.response.status, 400)
       assert.match(archiveDelete.body.message, /引用/)
     })
