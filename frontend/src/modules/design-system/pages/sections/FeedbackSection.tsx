@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AdminCard } from '../../../../components/admin';
 import { FeedbackConfirmations } from './feedback/FeedbackConfirmations';
+import { AsyncTaskStatusExamples } from './feedback/AsyncTaskStatusExamples';
 import { FeedbackMessages } from './feedback/FeedbackMessages';
 import { FeedbackOverlays } from './feedback/FeedbackOverlays';
 import { FeedbackProgress } from './feedback/FeedbackProgress';
@@ -13,7 +14,8 @@ const feedbackSpecs = [
   { label: '气泡确认框', value: '用于按钮或文字操作旁的二次确认，高风险动作必须说明后果' },
   { label: '进度反馈', value: '用于导入、导出、批处理等可量化任务，明确展示完成比例' },
   { label: '加载状态', value: '用于局部等待和提交中状态，只加载正在处理的区域' },
-  { label: '弹窗与抽屉', value: '弹窗承接短流程，抽屉承接侧向补充，不替代详情页' }
+  { label: '弹窗与抽屉', value: '弹窗承接短流程，抽屉承接侧向补充，不替代详情页' },
+  { label: '长任务处理', value: '用于需要几十秒或几分钟完成的后台任务，展示排队、进度、结果和重试' }
 ];
 
 export function FeedbackSection() {
@@ -33,6 +35,7 @@ export function FeedbackSection() {
       <FeedbackConfirmations />
       <FeedbackProgress />
       <FeedbackOverlays onOpenTableDrawer={() => setTableDrawerOpen(true)} />
+      <AsyncTaskStatusExamples />
     </div>
     <FeedbackTableDrawer open={tableDrawerOpen} onClose={() => setTableDrawerOpen(false)} />
   </>);

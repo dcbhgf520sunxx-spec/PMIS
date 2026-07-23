@@ -37,7 +37,10 @@
 | 普通页面分类切换、跨页面分类页签 | 使用 `DetailSectionNavigation`；由业务层在 `onChange` 中调用 `navigate(targetPath)`，并根据当前路由或查询参数传入选中项 | 与详情分类导航保持同一套样式，点击后切换到不同页面或路由，只展示目标页面内容 | `frontend/src/modules/design-system/pages/sections/BaseSection.tsx` 的“页面分类切换”示例 |
 | 列表数据视图 | 使用 `ViewTabs`；根据当前视图传入选中项和真实统计数量 | 切换同一列表的数据范围，不切换页面；必须遵守列表统计规则 | `frontend/src/modules/design-system/pages/sections/BaseSection.tsx` 的“列表数据视图切换”示例 |
 | 可编辑表格、动态明细、付款阶段、预算明细、表单中增删多行 | 在 `TemplateFormPage` 内使用 `AdminProFormEditableList`，通过 `fields` 组合 `AdminProForm*` 字段控件 | 业务方只定义字段、校验和默认值；底座统一列宽、序号、增删、最少行数、响应式以及保存取消 | `frontend/src/modules/design-system/pages/sections/input/EditableDetailListExamples.tsx` |
-| 附件、上传附件、多附件、已有附件、下载附件、删除附件 | 按钮选择使用 `AdminAttachmentUpload`，拖拽上传使用 `AdminAttachmentDragger`，由业务方传入附件数据和上传、预览、下载、删除回调 | 两种入口共用附件列表、格式图标、上传进度、失败重试、名称预览、图标下载和删除确认；文件格式、附件数量和附件大小仅在业务方明确传入规则时校验 | `frontend/src/modules/design-system/pages/sections/input/AdvancedInputExamples.tsx` |
+| 附件、上传附件、多附件、已有附件、下载附件、删除附件 | 按钮选择使用 `AdminAttachmentUpload`，拖拽上传使用 `AdminAttachmentDragger`，由业务方传入附件数据、上传与删除动作，并通过 `onLoadPreview` 和 `onDownload` 分别提供预览内容与下载动作 | 两种入口共用附件列表、格式图标、上传进度、失败重试、名称预览、图标下载和删除确认；图片和 PDF 由底座弹窗预览，不支持在线预览的格式明确提示下载；文件格式、附件数量和附件大小仅在业务方明确传入规则时校验 | `frontend/src/modules/design-system/pages/sections/input/AdvancedInputExamples.tsx` |
+| 左右分栏、拖拽面板、双栏工作台、目录与预览同屏 | 使用 `AdminSplitPane`，传入左右两侧内容；需要记住个人调整宽度时传唯一 `storageKey` | 底座统一承接拖拽、键盘调宽、左右宽度边界、窄屏上下堆叠和可选的个人宽度记忆；业务页面只放各自的列表、预览或详情内容。基础档案是已落地用法，判断能力时应同时核对该真实页面 | `frontend/src/modules/design-system/pages/sections/layout/SplitPaneExamples.tsx`、`frontend/src/modules/archive/pages/ArchivePage.tsx` |
+| 异步任务、后台处理中、解析进度、导出进度、失败重试 | 使用 `AdminAsyncTaskStatus`，传入任务状态、标题、进度、失败原因和重试回调 | 底座统一显示等待、执行中、完成、失败、进度和重试；运行中不重复暴露重试入口，业务负责真实任务接口、轮询或消息订阅 | `frontend/src/modules/design-system/pages/sections/feedback/AsyncTaskStatusExamples.tsx` |
+| 多步骤流程、阶段导航、办理步骤、审核步骤 | 使用 `AdminStepNavigation`，传入步骤项、当前步骤和切换回调 | 底座统一步骤导航外观、完成/当前/等待状态和窄屏表现；业务负责每一步的数据、校验、保存以及是否允许进入下一步 | `frontend/src/modules/design-system/pages/sections/layout/StepNavigationExamples.tsx` |
 
 判断标准固定为：详情页同一页面内定位时，为 `sectionNavigation` 传 `true` 并让全部分组声明 `sectionKey`；详情页切换页面或路由时，为 `sectionNavigation` 传 `items`、`activeKey` 和 `onChange`，只渲染当前页面内容。普通页面的分类切换直接使用 `DetailSectionNavigation`。这些模式复用同一套分类导航样式；只有列表数据视图使用 `ViewTabs`。不得用 `ViewTabs` 重做分类导航，也不能因为代码名称不是 `Tabs`，就误判底座不支持用户所说的页签效果。
 
@@ -139,7 +142,7 @@ API 接入保持统一：
 - 字段布局优先使用模板内置 grid class，不在业务页另起一套表单布局。
 - 表单控件优先使用 `AdminProForm*` 或项目已沉淀表单组件。
 - 表单中需要新增、删除多行结构化明细时统一使用 `AdminProFormEditableList`，并且必须位于 `TemplateFormPage` 内。业务页只通过 `fields` 声明中文字段名、字段控件和校验规则，通过 `creatorRecord` 声明新增行的业务默认值；列宽、新增文案、自动序号、删除方式、最少行数、电脑端表格布局、窄屏卡片布局和保存取消全部由底座固定，不开放业务覆盖。电脑端表格按字段数量和底座标准宽度展示，不强制铺满页面；字段较多并超过可用区域时允许横向滚动，并由组件固定左侧序号列和右侧操作列。金额字段统一使用 `AdminProFormMoney`，默认保留两位小数。序号仅用于展示，不得作为业务字段提交。业务页不得直接使用 `ProFormList`、`Form.List`、`EditableProTable`，也不得向 `AdminProFormEditableList` 传入 `columns`、`addText`、`minRows`、`maxRows`、`readonly`、`className` 或 `style` 改写公共结构。
-- 业务附件按钮入口使用 `AdminAttachmentUpload`，拖拽入口使用 `AdminAttachmentDragger`。业务方负责提供已有附件数据、上传、预览、下载、删除回调以及确有需要的校验规则；已有附件提供下载时必须同时传入 `onPreview`，提供预览时也必须同时传入 `onDownload`，不得只接其中一项。底座统一承接多附件列表、真实格式图标、上传进度、失败原因与图标重试、点击名称预览、图标下载、图标删除确认和响应式样式。附件上传区域在宽屏最大宽度统一为 `760px`，窄屏占满可用宽度。业务页面不得选择附件宽度模式，也不得通过 `className`、`style` 或页面级样式改写组件内部布局。已上传附件保持单行紧凑展示，名称过长时省略，文件大小和操作不换行；上传完成后不重复展示“上传成功”。底座不内置文件格式、附件数量和附件大小限制；业务方未传对应规则时不限制。头像、导入文件等不需要完整附件列表和管理流程的轻量场景，可以继续使用 `AdminUpload`。
+- 业务附件按钮入口使用 `AdminAttachmentUpload`，拖拽入口使用 `AdminAttachmentDragger`。业务方负责提供已有附件数据、上传、下载、删除回调以及确有需要的校验规则；预览必须通过 `onLoadPreview` 返回 `Blob` 文件内容，由底座统一判断格式和展示，不得自行打开窗口或复用下载动作冒充预览。已有附件提供下载时必须同时传入 `onLoadPreview`，提供预览内容时也必须同时传入 `onDownload`，不得只接其中一项。底座统一承接多附件列表、真实格式图标、上传进度、失败原因与图标重试、点击名称预览、图标下载、图标删除确认和响应式样式。图片和 PDF 在底座弹窗内预览；Word、Excel、压缩包等浏览器不支持的格式统一提示“该格式暂不支持在线预览，请下载查看”，不打开空白页。附件上传区域在宽屏最大宽度统一为 `760px`，窄屏占满可用宽度。业务页面不得选择附件宽度模式，也不得通过 `className`、`style` 或页面级样式改写组件内部布局。已上传附件保持单行紧凑展示，名称过长时省略，文件大小和操作不换行；上传完成后不重复展示“上传成功”。底座不内置文件格式、附件数量和附件大小限制；业务方未传对应规则时不限制。头像、导入文件等不需要完整附件列表和管理流程的轻量场景，可以继续使用 `AdminUpload`。
 
 ### 详情页
 
@@ -191,6 +194,14 @@ API 接入保持统一：
 4. 不确定时，先说明差异点、影响范围和建议方案，再继续改。
 
 不得为了赶进度先用原生控件拼页面，再事后对齐样式。
+
+## 双栏工作台与异步任务规则
+
+- 需要左侧目录、规则、记录列表与右侧预览、详情、处理区同时出现，且用户需要调整阅读空间时，统一使用 `AdminSplitPane`；业务页面不得自行实现鼠标拖拽分隔线、宽度记忆或另一套窄屏折叠逻辑。
+- `AdminSplitPane` 只负责通用布局。左侧内容、右侧业务内容、默认宽度和最小宽度可由业务页面传入；确有“记住个人宽度”需要时，使用模块内唯一的 `storageKey`，不得多个页面共用同一个键。
+- 解析、导出、重新提取、重新审核等异步任务，统一使用 `AdminAsyncTaskStatus` 展示等待、执行中、完成和失败。业务页面负责真实状态来源、轮询/订阅和重试调用；不得另拼进度条、失败文案和重试按钮。运行中不应再次提供重试入口，避免重复发起任务。
+- 有明确先后顺序的多步骤页面统一使用 `AdminStepNavigation`；业务页面只传步骤、当前步骤和切换回调，不得另拼步骤条样式。每一步的业务内容、保存时机、前置校验和是否允许跳转由业务模块处理，底座不固化具体流程。
+- 文件排序、PDF 页码/坐标标注、审核规则、证据卡片和报告内容属于具体业务，不因使用上述通用组件而沉淀到底座。
 
 ## 查询和下拉规则
 

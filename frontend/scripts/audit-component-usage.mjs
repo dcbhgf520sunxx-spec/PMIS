@@ -430,14 +430,23 @@ function collectSemanticViolations(files) {
           }
         }
         if (name === 'AdminAttachmentUpload' || name === 'AdminAttachmentDragger') {
-          const hasPreview = Boolean(attribute(node, 'onPreview'));
+          const legacyPreview = attribute(node, 'onPreview');
+          const hasPreview = Boolean(attribute(node, 'onLoadPreview'));
           const hasDownload = Boolean(attribute(node, 'onDownload'));
+          if (legacyPreview) {
+            violations.push(finding(
+              file,
+              sourceFile,
+              node,
+              '附件预览必须使用 onLoadPreview 返回文件内容，由底座统一判断格式并展示；不得继续使用自由 onPreview 回调'
+            ));
+          }
           if (hasPreview !== hasDownload) {
             violations.push(finding(
               file,
               sourceFile,
               node,
-              '附件预览和下载必须成对接入；已有附件不能只接下载而漏掉点击名称预览'
+              '附件预览和下载必须成对接入；已有附件不能只接下载或只传 onLoadPreview'
             ));
           }
         }

@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
 import { App, Form } from 'antd';
-import { AdminButton, AdminEmptyState, AdminText, PageShell, useTemplateListPageData } from '../../../components/admin';
+import { AdminButton, AdminEmptyState, AdminSplitPane, AdminText, PageShell, useTemplateListPageData } from '../../../components/admin';
 import {
   batchUpdateArchiveSort,
   createArchive,
@@ -47,7 +47,6 @@ export function ArchivePage() {
   const [typeSubmitting, setTypeSubmitting] = useState(false);
   const [archiveSubmitting, setArchiveSubmitting] = useState(false);
   const [draggingId, setDraggingId] = useState<string>();
-  const [sidebarWidth, setSidebarWidth] = useState(MIN_ARCHIVE_SIDEBAR_WIDTH);
   const archiveFiltersRef = useRef(archiveFilters);
 
   useEffect(() => {
@@ -260,63 +259,33 @@ export function ArchivePage() {
     }
   };
 
-  const handleSidebarResizeStart = (event: ReactPointerEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const container = event.currentTarget.closest('.archive-page');
-    if (!(container instanceof HTMLElement)) return;
-
-    const containerLeft = container.getBoundingClientRect().left;
-    const previousCursor = document.body.style.cursor;
-    const previousUserSelect = document.body.style.userSelect;
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-
-    const handlePointerMove = (moveEvent: WindowEventMap['pointermove']) => {
-      const nextWidth = moveEvent.clientX - containerLeft;
-      setSidebarWidth(Math.min(Math.max(nextWidth, MIN_ARCHIVE_SIDEBAR_WIDTH), MAX_ARCHIVE_SIDEBAR_WIDTH));
-    };
-
-    const handlePointerUp = () => {
-      document.body.style.cursor = previousCursor;
-      document.body.style.userSelect = previousUserSelect;
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
-    };
-
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp);
-  };
-
   return (
     <PageShell
       compact
       title="基础档案"
     >
-      <div
+      <AdminSplitPane
+        ariaLabel="调整档案类型区域宽度"
         className="archive-page"
-        style={{ gridTemplateColumns: `${sidebarWidth}px 8px minmax(0, 1fr)` }}
-      >
-        <ArchiveTypeSidebar
-          items={filteredTypeList}
-          keyword={typeKeyword}
-          selectedId={selectedTypeId}
-          onKeywordChange={setTypeKeyword}
-          onSelect={setSelectedTypeId}
-          onCreate={() => openTypeModal()}
-          onEdit={openTypeModal}
-          onToggleStatus={handleTypeStatusChange}
-          onDelete={handleDeleteType}
-        />
-
-        <div
-          className="archive-page__resize-handle"
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="调整档案类型区域宽度"
-          onPointerDown={handleSidebarResizeStart}
-        />
-
-        <section className="archive-page__main">
+        defaultLeftWidth={MIN_ARCHIVE_SIDEBAR_WIDTH}
+        left={(
+          <ArchiveTypeSidebar
+            items={filteredTypeList}
+            keyword={typeKeyword}
+            selectedId={selectedTypeId}
+            onKeywordChange={setTypeKeyword}
+            onSelect={setSelectedTypeId}
+            onCreate={() => openTypeModal()}
+            onEdit={openTypeModal}
+            onToggleStatus={handleTypeStatusChange}
+            onDelete={handleDeleteType}
+          />
+        )}
+        maxLeftWidth={MAX_ARCHIVE_SIDEBAR_WIDTH}
+        minLeftWidth={MIN_ARCHIVE_SIDEBAR_WIDTH}
+        minRightWidth={420}
+        right={(
+          <section className="archive-page__main">
           <div className="archive-page__main-header">
             <div className="archive-page__main-title">
               <AdminText strong>{selectedType ? selectedType.name : '档案明细'}</AdminText>
@@ -363,8 +332,10 @@ export function ArchivePage() {
               <AdminEmptyState description="请先新增档案类型" />
             </div>
           )}
-        </section>
-      </div>
+          </section>
+        )}
+        storageKey="archive-type-list"
+      />
 
       <ArchiveTypeModal
         form={typeForm}

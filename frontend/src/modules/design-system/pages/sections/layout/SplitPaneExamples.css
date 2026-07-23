@@ -1,0 +1,68 @@
+.design-system-page__split-pane-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.design-system-page__split-pane-panel > .admin-split-pane {
+  min-height: 232px;
+  border: 1px solid rgba(220, 232, 247, 0.92);
+  border-radius: 6px;
+  background: var(--app-surface-tech);
+}
+
+.design-system-page__split-pane-list,
+.design-system-page__split-pane-preview {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  height: 100%;
+  padding: 12px;
+}
+
+.design-system-page__split-pane-list {
+  border-right: 1px solid rgba(220, 232, 247, 0.82);
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.design-system-page__split-pane-list strong,
+.design-system-page__split-pane-preview strong {
+  color: var(--app-text);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.design-system-page__split-pane-list .ant-btn {
+  justify-content: flex-start;
+  width: 100%;
+  color: var(--app-muted);
+  text-align: left;
+}
+
+.design-system-page__split-pane-list .ant-btn.is-selected {
+  color: var(--app-primary);
+  background: rgba(31, 111, 255, 0.08);
+}
+
+.design-system-page__split-pane-preview {
+  gap: 8px;
+  background: var(--app-surface);
+}
+
+.design-system-page__split-pane-preview span,
+.design-system-page__split-pane-preview p {
+  margin: 0;
+  color: var(--app-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+@media (max-width: 760px) {
+  .design-system-page__split-pane-panel > .admin-split-pane {
+    overflow: hidden;
+  }
+
+  .design-system-page__split-pane-list {
+    border-right: 0;
+    border-bottom: 1px solid rgba(220, 232, 247, 0.82);
+  }
+}

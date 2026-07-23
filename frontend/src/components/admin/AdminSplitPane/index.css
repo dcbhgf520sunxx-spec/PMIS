@@ -1,0 +1,84 @@
+.admin-split-pane {
+  display: grid;
+  grid-template-columns: minmax(0, var(--admin-split-pane-left-width)) 12px minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.admin-split-pane.is-resizing,
+.admin-split-pane.is-resizing * {
+  cursor: col-resize !important;
+  user-select: none;
+}
+
+.admin-split-pane__left,
+.admin-split-pane__right {
+  min-width: 0;
+  min-height: 0;
+}
+
+.admin-split-pane__divider {
+  position: relative;
+  z-index: 1;
+  width: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.admin-split-pane__divider::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: rgba(185, 204, 230, 0.9);
+  content: '';
+  transform: translateX(-50%);
+  transition: background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.admin-split-pane__divider span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 44px;
+  border-radius: 999px;
+  background: rgba(124, 164, 222, 0.72);
+  transform: translate(-50%, -50%);
+  transition: background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.admin-split-pane__divider:hover::before,
+.admin-split-pane__divider:focus-visible::before,
+.admin-split-pane.is-resizing .admin-split-pane__divider::before {
+  background: var(--app-primary);
+  box-shadow: 0 0 0 2px rgba(31, 111, 255, 0.1);
+}
+
+.admin-split-pane__divider:hover span,
+.admin-split-pane__divider:focus-visible span,
+.admin-split-pane.is-resizing .admin-split-pane__divider span {
+  background: var(--app-primary);
+  box-shadow: 0 0 0 2px rgba(31, 111, 255, 0.1);
+}
+
+.admin-split-pane__divider:focus-visible {
+  outline: 0;
+}
+
+@media (max-width: 760px) {
+  .admin-split-pane {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    overflow: visible;
+  }
+
+  .admin-split-pane__divider {
+    display: none;
+  }
+}
