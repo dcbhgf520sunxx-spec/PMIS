@@ -1,6 +1,6 @@
-import { Form } from 'antd';
 import {
   AdminDatePicker,
+  AdminFormItem,
   AdminTextArea,
   StatusChangeAction,
   type StatusChangeActionProps,
@@ -51,34 +51,34 @@ export function WorkOrderStatusChangeAction({
       renderExtra={(target) => (
         <>
           {target === 2 || (workOrder.status === 4 && target === 3) ? (
-            <Form.Item
+            <AdminFormItem
               name="actualFixedAt"
               label="实际修复时间"
               rules={[{ required: true, message: '请选择实际修复时间' }]}
             >
               <AdminDatePicker placeholder="请选择实际修复时间" />
-            </Form.Item>
+            </AdminFormItem>
           ) : null}
           {target === 3 ? (
-            <Form.Item
+            <AdminFormItem
               name="closedAt"
               label="关闭时间"
               rules={[{ required: true, message: '请选择关闭时间' }]}
             >
               <AdminDatePicker placeholder="请选择关闭时间" />
-            </Form.Item>
+            </AdminFormItem>
           ) : null}
           {target === 4 ? (
-            <Form.Item
+            <AdminFormItem
               name="suspendedAt"
               label="暂停时间"
               rules={[{ required: true, message: '请选择暂停时间' }]}
             >
               <AdminDatePicker placeholder="请选择暂停时间" />
-            </Form.Item>
+            </AdminFormItem>
           ) : null}
           {target === 5 ? (
-            <Form.Item
+            <AdminFormItem
               name="activationReason"
               label="激活原因"
               rules={[
@@ -87,16 +87,16 @@ export function WorkOrderStatusChangeAction({
               ]}
             >
               <AdminTextArea rows={3} maxLength={100} showCount placeholder="请输入激活原因" />
-            </Form.Item>
+            </AdminFormItem>
           ) : null}
           {target === 2 || (workOrder.status === 4 && target === 3) ? (
-            <Form.Item
+            <AdminFormItem
               name="result"
               label="处置结果"
               rules={[{ required: true, whitespace: true, message: '请输入处置结果' }]}
             >
               <AdminTextArea rows={3} placeholder="请输入处置结果" />
-            </Form.Item>
+            </AdminFormItem>
           ) : null}
         </>
       )}

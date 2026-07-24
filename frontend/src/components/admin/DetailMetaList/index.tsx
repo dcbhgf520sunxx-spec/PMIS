@@ -23,7 +23,8 @@ export function DetailMetaList({ items, columns = 4 }: DetailMetaListProps) {
         const value = normalizeDetailMetaValue(item.value);
         const isTextValue = typeof value === 'string' || typeof value === 'number';
         const shouldClamp = !item.longText && (item.aggregate || isTextValue);
-        const valueNode = <dd className={shouldClamp ? 'is-clamped' : undefined}>{value}</dd>;
+        const valueClassName = item.longText ? 'is-long-text' : shouldClamp ? 'is-clamped' : undefined;
+        const valueNode = <dd className={valueClassName}>{value}</dd>;
         return (
           <div className={item.wide ? 'admin-detail-meta-list__item is-wide' : 'admin-detail-meta-list__item'} key={item.label}>
             <dt>{item.label}</dt>

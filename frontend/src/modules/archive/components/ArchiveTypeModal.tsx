@@ -1,6 +1,6 @@
 import { Form } from 'antd';
 import type { FormInstance } from 'antd';
-import { AdminInput, AdminModal } from '../../../components/admin';
+import { AdminFormItem, AdminInput, AdminModal } from '../../../components/admin';
 import { checkArchiveTypePrefix, type ArchiveTypeRecord } from '../../../api/archiveApi';
 
 type TypeFormValue = {
@@ -37,7 +37,7 @@ export function ArchiveTypeModal({
       onOk={() => form.submit()}
     >
       <Form form={form} layout="vertical" preserve={false} onFinish={onSubmit}>
-        <Form.Item
+        <AdminFormItem
           name="codePrefix"
           label="编码前缀"
           extra="将作为该类型下档案编码的自动生成前缀，如 TT -> TT001"
@@ -53,10 +53,10 @@ export function ArchiveTypeModal({
           ]}
         >
           <AdminInput disabled={Boolean(editingType)} maxLength={10} placeholder="如 TT" />
-        </Form.Item>
-        <Form.Item name="name" label="类型名称" rules={[{ required: true, message: '请输入类型名称' }]}>
+        </AdminFormItem>
+        <AdminFormItem name="name" label="类型名称" rules={[{ required: true, message: '请输入类型名称' }]}>
           <AdminInput maxLength={100} placeholder="如 问题类型" />
-        </Form.Item>
+        </AdminFormItem>
       </Form>
     </AdminModal>
   );

@@ -56,6 +56,12 @@
   -webkit-line-clamp: 2;
 }
 
+.admin-detail-meta-list__item dd.is-long-text {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
 @media (max-width: 1180px) {
   .admin-detail-meta-list.is-columns-4,
   .admin-detail-meta-list.is-columns-3 {

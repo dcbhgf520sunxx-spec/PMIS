@@ -75,6 +75,74 @@ test('组件审计阻断业务页直接使用 ProForm.Item', () => {
   }
 });
 
+test('组件审计阻断弹窗手工标签包裹表单控件', () => {
+  const result = runStrictAudit(
+    'export function StageModal() { return <AdminModal><label><span>阶段名称</span><AdminInput /></label></AdminModal>; }',
+    'StageModal.tsx'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /AdminFormItem/);
+});
+
+test('组件审计阻断弹窗和抽屉中的字段脱离 AdminFormItem', () => {
+  for (const container of ['AdminModal', 'AdminDrawer']) {
+    const result = runStrictAudit(
+      `export function StageEditor() { return <${container}><div><span>阶段名称</span><AdminInput /></div></${container}>; }`,
+      'StageEditor.tsx'
+    );
+    assert.equal(result.status, 1, container);
+    assert.match(result.stdout, /AdminFormItem/);
+  }
+});
+
+test('组件审计阻断业务页直接使用 Form.Item', () => {
+  const result = runStrictAudit(
+    'export function StageModal() { return <AdminModal><Form><Form.Item name="name"><AdminInput /></Form.Item></Form></AdminModal>; }',
+    'StageModal.tsx'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /AdminFormItem/);
+});
+
+test('组件审计阻断字段必填错误使用顶部消息', () => {
+  const result = runStrictAudit(
+    "export function StageModal() { const save=()=>{if(!name)return message.error('请输入阶段名称')}; return <AdminModal onOk={save}><AdminFormItem><AdminInput /></AdminFormItem></AdminModal>; }",
+    'StageModal.tsx'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /字段校验/);
+});
+
+test('组件审计允许无字段归属的失败使用顶部消息', () => {
+  const result = runStrictAudit(
+    "export function StageModal() { const save=async()=>{try{await submit()}catch{message.error('保存失败')}}; return <AdminModal onOk={save} />; }",
+    'StageModal.tsx'
+  );
+  assert.equal(result.status, 0, result.stdout);
+});
+
+test('组件审计阻断业务页直接使用原生 HTML 控件', () => {
+  for (const primitive of ['<button>保存</button>', '<input />', '<select />', '<textarea />']) {
+    const result = runStrictAudit(
+      `export function StageModal() { return <AdminModal>${primitive}</AdminModal>; }`,
+      'StageModal.tsx'
+    );
+    assert.equal(result.status, 1, primitive);
+    assert.match(result.stdout, /Admin/);
+  }
+});
+
+test('组件审计阻断通过别名绕开组件库检查', () => {
+  for (const source of [
+    "import { Input as StageNameInput } from 'antd'; export function StageModal() { return <StageNameInput />; }",
+    "import * as Antd from 'antd'; export function StageModal() { return <Antd.Input />; }"
+  ]) {
+    const result = runStrictAudit(source, 'StageModal.tsx');
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /AdminInput/);
+  }
+});
+
 test('组件审计阻断业务页直接使用原生 Upload 拼附件能力', () => {
   const result = runStrictAudit(
     'export function ContractFormPage() { return <TemplateFormPage><Upload multiple /></TemplateFormPage>; }',

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { App, Form } from 'antd';
-import { AdminModal, AdminPasswordInput } from '../../../components/admin';
+import { AdminFormItem, AdminModal, AdminPasswordInput } from '../../../components/admin';
 import { changeCurrentPassword } from '../../../api/authApi';
 import './AccountDrawers.css';
 
@@ -76,10 +76,10 @@ export function PasswordChangeModal({
       onOk={handleChangePassword}
     >
       <Form className="account-drawer__form" form={form} layout="vertical">
-        <Form.Item name="oldPassword" label="原密码" rules={[{ required: true, message: '请输入原密码' }]}>
+        <AdminFormItem name="oldPassword" label="原密码" rules={[{ required: true, message: '请输入原密码' }]}>
           <AdminPasswordInput placeholder="请输入原密码" />
-        </Form.Item>
-        <Form.Item
+        </AdminFormItem>
+        <AdminFormItem
           name="newPassword"
           label="新密码"
           dependencies={['oldPassword']}
@@ -95,8 +95,8 @@ export function PasswordChangeModal({
           ]}
         >
           <AdminPasswordInput placeholder="请输入新密码" />
-        </Form.Item>
-        <Form.Item
+        </AdminFormItem>
+        <AdminFormItem
           name="confirmPassword"
           label="确认新密码"
           dependencies={['newPassword']}
@@ -111,7 +111,7 @@ export function PasswordChangeModal({
           ]}
         >
           <AdminPasswordInput placeholder="请再次输入新密码" />
-        </Form.Item>
+        </AdminFormItem>
       </Form>
     </AdminModal>
   );

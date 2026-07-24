@@ -3,6 +3,7 @@ import {
   BellOutlined,
   ColumnHeightOutlined,
   DownloadOutlined,
+  ExportOutlined,
   FullscreenOutlined,
   PlusOutlined,
   ReloadOutlined,
@@ -230,6 +231,7 @@ export function BaseSection() {
               <AdminIconAction label="消息" icon={<BellOutlined />} onClick={(event) => event.preventDefault()} />
               <AdminIconAction label="用户" icon={<UserOutlined />} onClick={(event) => event.preventDefault()} />
               <AdminIconAction label="下载" icon={<DownloadOutlined />} onClick={(event) => event.preventDefault()} />
+              <AdminIconAction label="新窗口打开" icon={<ExportOutlined />} onClick={(event) => event.preventDefault()} />
               <AdminIconAction label="暂无权限" disabled icon={<SettingOutlined />} />
               <AdminIconAction label="加载中" loading />
               <ExpandToggleButton expanded={false} onClick={(event) => event.preventDefault()} />

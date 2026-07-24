@@ -108,8 +108,23 @@ export function AdminTransfer(props: ComponentProps<typeof Transfer>) {
   return <Transfer {...props} />;
 }
 
-export function AdminProgress(props: ComponentProps<typeof Progress>) {
-  return <Progress {...props} />;
+export function AdminProgress({
+  status,
+  strokeColor,
+  ...props
+}: ComponentProps<typeof Progress>) {
+  const defaultStrokeColor = '#1f6fff';
+  const semanticStrokeColor = status === 'exception' || status === 'success'
+    ? undefined
+    : defaultStrokeColor;
+
+  return (
+    <Progress
+      {...props}
+      status={status}
+      strokeColor={strokeColor ?? semanticStrokeColor}
+    />
+  );
 }
 
 export function AdminSpin(props: ComponentProps<typeof Spin>) {

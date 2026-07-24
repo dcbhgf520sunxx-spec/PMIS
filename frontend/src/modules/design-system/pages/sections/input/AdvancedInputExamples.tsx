@@ -84,14 +84,14 @@ export function AdvancedInputExamples({ richText, setRichText }: AdvancedInputEx
           <section className="design-system-page__input-panel is-wide">
             <div className="design-system-page__input-panel-head">
               <h3>上传</h3>
-              <p>用于附件、截图、导入文件，上传入口要清晰，限制条件写在提示里。</p>
+              <p>用于附件、截图、导入文件。图片明确支持 JPG、JPEG、PNG、GIF、WEBP、BMP、SVG、AVIF、HEIC，其他文件格式默认不限制。</p>
             </div>
             <div className="design-system-page__input-demo-list design-system-page__input-demo-list--stack">
               <div className="design-system-page__input-demo">
                 <h4>基础上传</h4>
                 <ComponentEntry name="AdminAttachmentUpload" />
                 <p className="design-system-page__input-demo-description">
-                  按钮选择文件；已有附件和新附件统一展示，点击名称预览，图标操作用于下载和删除。
+                  按钮选择文件；已有附件和新附件统一展示，点击名称弹窗预览图片或 PDF，需要大画面时可从弹窗右上角新窗口打开。
                 </p>
                 <AdminAttachmentUpload
                   value={attachments}

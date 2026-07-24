@@ -1,6 +1,6 @@
-import { Form } from 'antd';
 import {
   AdminDatePicker,
+  AdminFormItem,
   StatusChangeAction,
   StatusTag,
   type StatusChangeActionProps,
@@ -36,14 +36,14 @@ export function ProjectStatusChangeAction({ project, ...props }: Props) {
       renderExtra={(target) => (
         <>
           {target === 2 ? (
-            <Form.Item name="actualEndDate" label="实际完成时间" rules={[{ required: true, message: '请选择实际完成时间' }]}>
+            <AdminFormItem name="actualEndDate" label="实际完成时间" rules={[{ required: true, message: '请选择实际完成时间' }]}>
               <AdminDatePicker placeholder="请选择实际完成时间" />
-            </Form.Item>
+            </AdminFormItem>
           ) : null}
           {target === 3 ? (
-            <Form.Item name="suspendDate" label="暂停时间" rules={[{ required: true, message: '请选择暂停时间' }]}>
+            <AdminFormItem name="suspendDate" label="暂停时间" rules={[{ required: true, message: '请选择暂停时间' }]}>
               <AdminDatePicker placeholder="请选择暂停时间" />
-            </Form.Item>
+            </AdminFormItem>
           ) : null}
         </>
       )}

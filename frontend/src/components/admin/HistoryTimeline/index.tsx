@@ -2,7 +2,6 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Empty, Timeline } from 'antd';
 import { richTextToSummary } from '../../../utils/richText';
-import { AdminTextAction } from '../AdminTextAction';
 import { ExpandToggleButton } from '../ExpandToggleButton';
 import './index.css';
 
@@ -62,9 +61,13 @@ export function HistoryTimeline({ items, expandedKeys: controlledKeys, onExpande
     <div className="admin-history-timeline">
       {showBulkToggle && expandableKeys.length > 0 ? (
         <div className="admin-history-timeline__toolbar">
-          <AdminTextAction onClick={() => setExpandedKeys(isAllExpanded ? [] : expandableKeys)}>
-            {isAllExpanded ? '全部收起' : '全部展开'}
-          </AdminTextAction>
+          <ExpandToggleButton
+            collapseLabel="全部收起"
+            expandLabel="全部展开"
+            expanded={isAllExpanded}
+            variant="square"
+            onClick={() => setExpandedKeys(isAllExpanded ? [] : expandableKeys)}
+          />
         </div>
       ) : null}
       <Timeline
@@ -81,6 +84,7 @@ export function HistoryTimeline({ items, expandedKeys: controlledKeys, onExpande
                     collapseLabel="收起变更详情"
                     expandLabel="展开变更详情"
                     expanded={expandedKeys.includes(item.id)}
+                    variant="square"
                     onClick={() => toggleExpanded(item.id)}
                   />
                 ) : null}

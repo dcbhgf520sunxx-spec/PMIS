@@ -31,6 +31,7 @@ const blockingRules = [
   { pattern: /<ProFormDatePicker(\s|>)/g, reason: '表单日期应优先使用 AdminProFormDatePicker' },
   { pattern: /<ProFormSelect(\s|>)/g, reason: '表单下拉应优先使用 AdminProFormSelect' },
   { pattern: /<ProForm\.Item(\s|>)/g, reason: '表单字段应优先使用 AdminProForm 系列组件' },
+  { pattern: /<Form\.Item(\s|>)/g, reason: '弹窗和局部表单字段必须使用 AdminFormItem，统一字段布局和错误提示位置' },
   { pattern: /<ProFormList(\s|>)/g, reason: '可编辑明细应使用 AdminProFormEditableList' },
   { pattern: /<Form\.List(\s|>)/g, reason: '可编辑明细应使用 AdminProFormEditableList' },
   { pattern: /<EditableProTable(\s|>)/g, reason: '可编辑明细应使用 AdminProFormEditableList' },
@@ -40,7 +41,12 @@ const blockingRules = [
   { pattern: /<ProCard(\s|>)/g, reason: '卡片应优先使用页面样板或 AdminCard' },
   { pattern: /<Dropdown(\s|>)/g, reason: '动作下拉应优先使用 AdminActionDropdown / AdminSearchDropdown' },
   { pattern: /<Typography\.Text(\s|>)/g, reason: '文本状态应优先使用 AdminText' },
-  { pattern: /<Tag(\s|>)/g, reason: '标签应使用 AdminTag 或状态、紧急程度、逾期等统一语义标签' }
+  { pattern: /<Tag(\s|>)/g, reason: '标签应使用 AdminTag 或状态、紧急程度、逾期等统一语义标签' },
+  { pattern: /<button(\s|>)/g, reason: '业务页面不得直接使用原生 button，应使用 AdminButton 或统一操作组件' },
+  { pattern: /<input(\s|>)/g, reason: '业务页面不得直接使用原生 input，应使用 AdminInput 或统一输入组件' },
+  { pattern: /<select(\s|>)/g, reason: '业务页面不得直接使用原生 select，应使用 AdminSelect' },
+  { pattern: /<textarea(\s|>)/g, reason: '业务页面不得直接使用原生 textarea，应使用 AdminTextArea' },
+  { pattern: /message\.error\s*\(\s*['"](?:请(?:填写|输入|选择)|[^'"]*不能为空)/g, reason: '字段校验错误必须通过 AdminFormItem rules 展示在对应字段下方，不能使用顶部消息' }
 ];
 
 const warningRules = [];
@@ -306,6 +312,19 @@ function collectSemanticViolations(files) {
     'DeleteConfirmAction',
     'ConfirmAction'
   ]);
+  const formFieldControls = new Set([
+    'AdminInput',
+    'AdminPasswordInput',
+    'AdminTextArea',
+    'AdminSelect',
+    'AdminTreeSelect',
+    'AdminCascader',
+    'AdminDatePicker',
+    'AdminRangePicker',
+    'AdminSwitch',
+    'AdminCheckbox',
+    'AdminRadioGroup'
+  ]);
 
   return files.flatMap((file) => {
     const source = readFileSync(file, 'utf8');
@@ -348,6 +367,51 @@ function collectSemanticViolations(files) {
     const visit = (node) => {
       if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
         const name = jsxTagName(node, sourceFile);
+        if (name === 'label') {
+          let wrappedControl = '';
+          const inspectLabel = (child) => {
+            if (wrappedControl) return;
+            if ((ts.isJsxElement(child) || ts.isJsxSelfClosingElement(child))
+              && formFieldControls.has(jsxTagName(child, sourceFile))) {
+              wrappedControl = jsxTagName(child, sourceFile);
+              return;
+            }
+            ts.forEachChild(child, inspectLabel);
+          };
+          ts.forEachChild(node, inspectLabel);
+          if (wrappedControl) {
+            violations.push(finding(
+              file,
+              sourceFile,
+              node,
+              `业务字段 ${wrappedControl} 必须放入 AdminFormItem，由字段项承接标签、校验和错误提示`
+            ));
+          }
+        }
+        if (formFieldControls.has(name)) {
+          let parent = node.parent;
+          let hasFormItem = false;
+          let formContainer = '';
+          while (parent && parent !== sourceFile) {
+            if (ts.isJsxElement(parent)) {
+              const parentName = jsxTagName(parent, sourceFile);
+              if (parentName === 'AdminFormItem') hasFormItem = true;
+              if (['AdminModal', 'AdminDrawer'].includes(parentName)) {
+                formContainer = parentName;
+                break;
+              }
+            }
+            parent = parent.parent;
+          }
+          if (formContainer && !hasFormItem) {
+            violations.push(finding(
+              file,
+              sourceFile,
+              node,
+              `${formContainer} 中的业务字段 ${name} 必须放入 AdminFormItem，由字段项承接标签、校验和错误提示`
+            ));
+          }
+        }
         inspectBusinessStatusAction(node, name);
         if (successMessageActions.has(name)) {
           const onConfirmSource = attributeText(node, 'onConfirm', sourceFile);
@@ -523,6 +587,84 @@ function collectSemanticViolations(files) {
   });
 }
 
+function collectLibraryAliasViolations(files) {
+  const disallowedImports = new Map([
+    ['Button', '按钮应优先使用 AdminButton / PermissionButton / 操作组件'],
+    ['Input', '输入框应优先使用 AdminInput / AdminTextArea'],
+    ['DatePicker', '日期应优先使用 AdminDatePicker / AdminRangePicker'],
+    ['Select', '下拉应优先使用 AdminSelect'],
+    ['TreeSelect', '树选择应优先使用 AdminTreeSelect'],
+    ['Tree', '树组件应优先使用 AdminTree'],
+    ['Cascader', '级联选择应优先使用 AdminCascader'],
+    ['Modal', '弹窗应优先使用 AdminModal / ConfirmAction'],
+    ['Popconfirm', '气泡确认应优先使用 BubbleConfirmAction'],
+    ['Drawer', '抽屉应优先沉淀为 AdminDrawer / 业务抽屉组件'],
+    ['Empty', '空状态应优先使用 AdminEmptyState / SearchTable locale'],
+    ['Upload', '业务附件应使用 AdminAttachmentUpload 或 AdminAttachmentDragger'],
+    ['ProTable', '表格应优先使用 TemplateListPage / SearchTable'],
+    ['ProFormText', '表单文本应优先使用 AdminProFormText'],
+    ['ProFormTextArea', '表单多行文本应优先使用 AdminProFormTextArea'],
+    ['ProFormDatePicker', '表单日期应优先使用 AdminProFormDatePicker'],
+    ['ProFormSelect', '表单下拉应优先使用 AdminProFormSelect'],
+    ['ProFormList', '可编辑明细应使用 AdminProFormEditableList'],
+    ['EditableProTable', '可编辑明细应使用 AdminProFormEditableList'],
+    ['ProCard', '卡片应优先使用页面样板或 AdminCard'],
+    ['Dropdown', '动作下拉应优先使用 AdminActionDropdown / AdminSearchDropdown'],
+    ['Tag', '标签应使用 AdminTag 或统一语义标签']
+  ]);
+
+  return files.flatMap((file) => {
+    const source = readFileSync(file, 'utf8');
+    const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const aliasedImports = new Map();
+    const namespaces = new Set();
+    for (const statement of sourceFile.statements) {
+      if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) continue;
+      if (!['antd', '@ant-design/pro-components'].includes(statement.moduleSpecifier.text)) continue;
+      const clause = statement.importClause;
+      if (!clause || clause.isTypeOnly) continue;
+      const bindings = clause.namedBindings;
+      if (bindings && ts.isNamespaceImport(bindings)) namespaces.add(bindings.name.text);
+      if (!bindings || !ts.isNamedImports(bindings)) continue;
+      for (const element of bindings.elements) {
+        if (element.isTypeOnly) continue;
+        const importedName = element.propertyName?.text || element.name.text;
+        if (element.propertyName && disallowedImports.has(importedName)) {
+          aliasedImports.set(element.name.text, {
+            importedName,
+            reason: disallowedImports.get(importedName)
+          });
+        }
+      }
+    }
+    if (aliasedImports.size === 0 && namespaces.size === 0) return [];
+
+    const violations = [];
+    const visit = (node) => {
+      if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
+        const name = jsxTagName(node, sourceFile);
+        const alias = aliasedImports.get(name.split('.')[0]);
+        if (alias) {
+          violations.push(finding(file, sourceFile, node, alias.reason, `${alias.importedName} as ${name}`));
+        }
+        const [namespace, importedName] = name.split('.');
+        if (namespaces.has(namespace) && disallowedImports.has(importedName)) {
+          violations.push(finding(
+            file,
+            sourceFile,
+            node,
+            disallowedImports.get(importedName),
+            `${namespace}.${importedName}`
+          ));
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(sourceFile);
+    return violations;
+  });
+}
+
 function objectProperty(object, name) {
   return object.properties.find((property) => ts.isPropertyAssignment(property)
     && property.name.getText().replace(/^['"]|['"]$/g, '') === name);
@@ -688,6 +830,7 @@ const listTemplateBlocking = collectMatches(files, listTemplateRules, 'BLOCK');
 const pageTemplateBlocking = collectPageTemplateViolations(files);
 const serverListDataBlocking = collectServerListDataViolations(sourceFiles);
 const semanticBlocking = collectSemanticViolations(files);
+const libraryAliasBlocking = collectLibraryAliasViolations(files);
 const listColumnContractBlocking = collectListColumnContractViolations(files);
 const listCreationColumnBlocking = collectListCreationColumnViolations(files);
 const listViewTabContractBlocking = collectListViewTabContractViolations(files);
@@ -695,13 +838,13 @@ const warnings = collectMatches(files, warningRules, 'WARN');
 
 console.log('组件接入审计');
 console.log(`扫描文件：${files.length}`);
-console.log(`阻断项：${blocking.length + listTemplateBlocking.length + pageTemplateBlocking.length + serverListDataBlocking.length + semanticBlocking.length + listColumnContractBlocking.length + listCreationColumnBlocking.length + listViewTabContractBlocking.length}`);
+console.log(`阻断项：${blocking.length + listTemplateBlocking.length + pageTemplateBlocking.length + serverListDataBlocking.length + semanticBlocking.length + libraryAliasBlocking.length + listColumnContractBlocking.length + listCreationColumnBlocking.length + listViewTabContractBlocking.length}`);
 console.log(`提醒项：${warnings.length}`);
 
-for (const item of [...blocking, ...listTemplateBlocking, ...pageTemplateBlocking, ...serverListDataBlocking, ...semanticBlocking, ...listColumnContractBlocking, ...listCreationColumnBlocking, ...listViewTabContractBlocking, ...warnings]) {
+for (const item of [...blocking, ...listTemplateBlocking, ...pageTemplateBlocking, ...serverListDataBlocking, ...semanticBlocking, ...libraryAliasBlocking, ...listColumnContractBlocking, ...listCreationColumnBlocking, ...listViewTabContractBlocking, ...warnings]) {
   console.log(`${item.level} ${item.file}:${item.line} ${item.token} ${item.reason}`);
 }
 
-if (strict && (blocking.length > 0 || listTemplateBlocking.length > 0 || pageTemplateBlocking.length > 0 || serverListDataBlocking.length > 0 || semanticBlocking.length > 0 || listColumnContractBlocking.length > 0 || listCreationColumnBlocking.length > 0 || listViewTabContractBlocking.length > 0)) {
+if (strict && (blocking.length > 0 || listTemplateBlocking.length > 0 || pageTemplateBlocking.length > 0 || serverListDataBlocking.length > 0 || semanticBlocking.length > 0 || libraryAliasBlocking.length > 0 || listColumnContractBlocking.length > 0 || listCreationColumnBlocking.length > 0 || listViewTabContractBlocking.length > 0)) {
   process.exitCode = 1;
 }

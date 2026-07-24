@@ -5,6 +5,7 @@ import {
   AdminButton,
   AdminAvatar,
   AdminDrawer,
+  AdminFormItem,
   AdminInput,
   AdminModal,
   AdminPasswordInput,
@@ -244,7 +245,7 @@ export function AccountDrawers({ active, onClose }: AccountDrawersProps) {
             showUploadList={false}
             accept="image/jpeg,image/png,image/webp"
           >
-            <button className="account-drawer__avatar-upload" type="button" aria-label="上传头像">
+            <AdminButton className="account-drawer__avatar-upload" type="text" aria-label="上传头像">
               {getAvatarSrc(currentUser?.avatar_url || user?.avatar_url) ? (
                 <AdminAvatar
                   className="account-drawer__avatar account-drawer__avatar--image"
@@ -260,7 +261,7 @@ export function AccountDrawers({ active, onClose }: AccountDrawersProps) {
                 <CameraOutlined />
               </span>
               {uploadingAvatar ? <span className="account-drawer__avatar-loading">上传中</span> : null}
-            </button>
+            </AdminButton>
           </AdminUpload>
           <div className="account-drawer__profile-main">
             <strong>{currentUser?.real_name || user?.real_name || '-'}</strong>
@@ -314,10 +315,10 @@ export function AccountDrawers({ active, onClose }: AccountDrawersProps) {
           initialValues={preference}
           layout="vertical"
         >
-          <Form.Item name="default_route" label="默认进入页面" rules={[{ required: true, message: '请选择默认进入页面' }]}>
+          <AdminFormItem name="default_route" label="默认进入页面" rules={[{ required: true, message: '请选择默认进入页面' }]}>
             <AdminSelect options={routeOptions} />
-          </Form.Item>
-          <Form.Item name="default_page_size" label="列表默认条数" rules={[{ required: true, message: '请选择列表默认条数' }]}>
+          </AdminFormItem>
+          <AdminFormItem name="default_page_size" label="列表默认条数" rules={[{ required: true, message: '请选择列表默认条数' }]}>
             <AdminSelect
               options={[
                 { label: '10 条/页', value: 10 },
@@ -326,7 +327,7 @@ export function AccountDrawers({ active, onClose }: AccountDrawersProps) {
                 { label: '100 条/页', value: 100 }
               ]}
             />
-          </Form.Item>
+          </AdminFormItem>
         </Form>
       </AdminDrawer>
 
@@ -339,10 +340,10 @@ export function AccountDrawers({ active, onClose }: AccountDrawersProps) {
         onOk={handleChangePhone}
       >
         <Form className="account-drawer__form" form={phoneForm} layout="vertical">
-          <Form.Item name="currentPhone" label="原手机号">
+          <AdminFormItem name="currentPhone" label="原手机号">
             <AdminInput disabled placeholder="-" />
-          </Form.Item>
-          <Form.Item
+          </AdminFormItem>
+          <AdminFormItem
             name="newPhone"
             label="新手机号"
             rules={[
@@ -351,10 +352,10 @@ export function AccountDrawers({ active, onClose }: AccountDrawersProps) {
             ]}
           >
             <AdminInput placeholder="请输入新手机号" />
-          </Form.Item>
-          <Form.Item name="password" label="登录密码" rules={[{ required: true, message: '请输入登录密码' }]}>
+          </AdminFormItem>
+          <AdminFormItem name="password" label="登录密码" rules={[{ required: true, message: '请输入登录密码' }]}>
             <AdminPasswordInput placeholder="请输入登录密码" />
-          </Form.Item>
+          </AdminFormItem>
         </Form>
       </AdminModal>
 

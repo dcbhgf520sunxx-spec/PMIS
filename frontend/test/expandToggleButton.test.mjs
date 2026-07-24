@@ -47,3 +47,8 @@ test('基础组件的图标按钮展示附件下载动作', () => {
   assert.match(baseSection, /DownloadOutlined/);
   assert.match(baseSection, /<AdminIconAction label="下载" icon=\{<DownloadOutlined \/>\}/);
 });
+
+test('基础组件的图标按钮展示新窗口打开动作', () => {
+  assert.match(baseSection, /ExportOutlined/);
+  assert.match(baseSection, /<AdminIconAction label="新窗口打开" icon=\{<ExportOutlined \/>\}/);
+});

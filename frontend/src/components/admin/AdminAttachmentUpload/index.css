@@ -159,6 +159,25 @@ button.admin-attachment-upload__file-name.is-previewable:hover {
   white-space: nowrap;
 }
 
+.admin-attachment-upload__preview-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  padding-right: 28px;
+}
+
+.admin-attachment-upload__preview-title > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-attachment-upload__open-window {
+  flex: 0 0 auto;
+}
+
 .admin-attachment-upload__preview {
   display: grid;
   place-items: center;

@@ -5,6 +5,7 @@ import {
   CloseCircleFilled,
   CloudUploadOutlined,
   DownloadOutlined,
+  ExportOutlined,
   FileExcelOutlined,
   FileImageOutlined,
   FileOutlined,
@@ -22,7 +23,11 @@ import { AdminDeleteIconAction, AdminIconAction } from '../AdminIconAction';
 import { AdminModal } from '../AdminModal';
 import { AdminButton } from '../AdminPrimitives';
 import { useAdminFeedback } from '../AdminFeedback';
-import { formatAttachmentSize, validateAttachmentFile } from './validation';
+import {
+  ADMIN_ATTACHMENT_IMAGE_FORMATS,
+  formatAttachmentSize,
+  validateAttachmentFile
+} from './validation';
 import './index.css';
 
 export type AdminAttachmentStatus = 'uploading' | 'done' | 'error';
@@ -88,6 +93,7 @@ function errorMessageOf(error: unknown, fallback: string) {
 }
 
 type AttachmentUploadVariant = 'button' | 'dragger';
+const DEFAULT_UPLOAD_HINT = `可选择一个或多个文件；图片支持 ${ADMIN_ATTACHMENT_IMAGE_FORMATS.join('、')}`;
 
 function attachmentKind(attachment: AdminAttachment) {
   const name = attachment.name.toLowerCase();
@@ -283,7 +289,7 @@ function AttachmentUpload({
     commit(attachmentsRef.current.filter((item) => item.id !== attachment.id));
   };
 
-  const uploadHint = hint || '可选择一个或多个文件';
+  const uploadHint = hint || DEFAULT_UPLOAD_HINT;
   const beforeUpload = (file: RcFile) => {
     void uploadFile(file);
     return Upload.LIST_IGNORE;
@@ -317,7 +323,7 @@ function AttachmentUpload({
           >
             <AdminButton disabled={disabled} icon={<CloudUploadOutlined />}>选择文件</AdminButton>
           </Upload>
-          <span>{hint || '可选择一个或多个文件'}</span>
+          <span>{uploadHint}</span>
         </div>
       )) : null}
 
@@ -393,7 +399,23 @@ function AttachmentUpload({
 
       <AdminModal
         className="admin-attachment-upload__preview-modal"
-        title={preview ? `附件预览：${preview.name}` : '附件预览'}
+        title={(
+          <div className="admin-attachment-upload__preview-title">
+            <span title={preview?.name}>
+              {preview ? `附件预览：${preview.name}` : '附件预览'}
+            </span>
+            {preview ? (
+              <AdminIconAction
+                className="admin-attachment-upload__open-window"
+                label="新窗口打开"
+                icon={<ExportOutlined />}
+                href={preview.url}
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            ) : null}
+          </div>
+        )}
         open={Boolean(preview)}
         width={920}
         footer={null}
@@ -421,4 +443,9 @@ export function AdminAttachmentDragger(props: AdminAttachmentUploadProps) {
   return <AttachmentUpload {...props} variant="dragger" />;
 }
 
-export { formatAttachmentSize, matchesAttachmentAccept, validateAttachmentFile } from './validation';
+export {
+  ADMIN_ATTACHMENT_IMAGE_FORMATS,
+  formatAttachmentSize,
+  matchesAttachmentAccept,
+  validateAttachmentFile
+} from './validation';

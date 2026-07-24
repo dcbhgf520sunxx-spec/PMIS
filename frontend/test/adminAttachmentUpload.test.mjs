@@ -54,6 +54,24 @@ test('底座加载文件内容并统一预览图片和 PDF', () => {
   assert.match(styles, /admin-attachment-upload__preview/);
 });
 
+test('图片和 PDF 的预览弹窗使用带悬浮提示的新窗口图标入口', () => {
+  const source = read('src/components/admin/AdminAttachmentUpload/index.tsx');
+  const styles = read('src/components/admin/AdminAttachmentUpload/index.css');
+  const example = read('src/modules/design-system/pages/sections/input/AdvancedInputExamples.tsx');
+  const rules = read('../docs/ai-development-rules.md');
+
+  assert.match(source, /ExportOutlined/);
+  assert.match(source, /className="admin-attachment-upload__preview-title"/);
+  assert.match(source, /<AdminIconAction[\s\S]*label="新窗口打开"[\s\S]*icon=\{<ExportOutlined \/>\}/);
+  assert.match(source, /href=\{preview\.url\}/);
+  assert.match(source, /target="_blank"/);
+  assert.match(source, /rel="noopener noreferrer"/);
+  assert.doesNotMatch(source, />新窗口打开<\/AdminButton>/);
+  assert.match(styles, /\.admin-attachment-upload__preview-title/);
+  assert.match(example, /新窗口打开/);
+  assert.match(rules, /预览弹窗右上角提供“新窗口打开”/);
+});
+
 test('浏览器不支持的附件只提示下载查看且不加载预览内容', () => {
   const source = read('src/components/admin/AdminAttachmentUpload/index.tsx');
   const rules = read('../docs/ai-development-rules.md');

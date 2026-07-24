@@ -1,6 +1,6 @@
 import { Form } from 'antd';
 import type { FormInstance } from 'antd';
-import { AdminInput, AdminModal, AdminSelect } from '../../../components/admin';
+import { AdminFormItem, AdminInput, AdminModal, AdminSelect } from '../../../components/admin';
 import type { ArchiveRecord } from '../../../api/archiveApi';
 
 type ArchiveFormValue = {
@@ -39,12 +39,12 @@ export function ArchiveRecordModal({
       onOk={() => form.submit()}
     >
       <Form form={form} layout="vertical" preserve={false} onFinish={onSubmit}>
-        <Form.Item name="archiveTypeId" label="所属类型" rules={[{ required: true, message: '请选择所属类型' }]}>
+        <AdminFormItem name="archiveTypeId" label="所属类型" rules={[{ required: true, message: '请选择所属类型' }]}>
           <AdminSelect disabled={Boolean(editingArchive)} placeholder="请选择" options={typeOptions} />
-        </Form.Item>
-        <Form.Item name="name" label="档案名称" rules={[{ required: true, message: '请输入档案名称' }]}>
+        </AdminFormItem>
+        <AdminFormItem name="name" label="档案名称" rules={[{ required: true, message: '请输入档案名称' }]}>
           <AdminInput maxLength={100} placeholder="请输入档案名称" />
-        </Form.Item>
+        </AdminFormItem>
       </Form>
     </AdminModal>
   );

@@ -7,7 +7,7 @@ import { AdminSelect } from '../AdminSelect';
 import type { DetailMetaItem } from '../DetailMetaList';
 import { DetailMetaList } from '../DetailMetaList';
 import { HistoryTimeline, type HistoryTimelineItem } from '../HistoryTimeline';
-import { AdminTextAction } from '../AdminTextAction';
+import { ExpandToggleButton } from '../ExpandToggleButton';
 import { PageShell } from '../PageShell';
 import { SectionTitle } from '../SectionTitle';
 import { visibleStatusTitleItems } from './statusTitleItems';
@@ -298,12 +298,14 @@ export function HistoryTimelineSection({ items, sectionKey }: { items: HistoryTi
       sectionKey={sectionKey}
       inlineExtraPlacement="after-title"
       inlineExtra={(
-        <AdminTextAction
+        <ExpandToggleButton
+          collapseLabel="全部收起"
           disabled={expandableKeys.length === 0}
+          expandLabel="全部展开"
+          expanded={isAllExpanded}
+          variant="square"
           onClick={() => setExpandedKeys(isAllExpanded ? [] : expandableKeys)}
-        >
-          {isAllExpanded ? '全部收起' : '全部展开'}
-        </AdminTextAction>
+        />
       )}
     >
       <HistoryTimeline items={items} expandedKeys={expandedKeys} onExpandedKeysChange={setExpandedKeys} showBulkToggle={false} />
