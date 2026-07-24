@@ -4,15 +4,16 @@ const { ok, fail, failField } = require('../utils/response')
 const { formatHistoryChanges, groupOperationLogs } = require('../utils/operationHistory')
 const { allowedTaskStatuses, validateTaskStatusChange, resolveTaskStatusFields, calculateTaskOverdue, canCompleteParent, canLeaveCompletedSubtask } = require('../services/taskRules')
 
-const DETAIL_FIELD_ORDER = ['name', 'description', 'parent_task_id', 'source_type', 'project_id', 'requirement_id', 'owner_id', 'task_type', 'priority', 'status', 'is_overdue', 'start_date', 'expected_end_date', 'actual_end_date', 'suspend_date']
+const DETAIL_FIELD_ORDER = ['name', 'description', 'parent_task_id', 'source_type', 'project_id', 'requirement_id', 'owner_id', 'owner_ids', 'task_type', 'priority', 'status', 'is_overdue', 'start_date', 'expected_end_date', 'actual_end_date', 'suspend_date']
 const HISTORY_FIELD_LABELS = {
   name: '任务名称', description: '任务描述', parent_task_id: '所属主任务', source_type: '关联类型', project_id: '关联项目', requirement_id: '关联需求',
-  owner_id: '负责人', task_type: '任务类型', priority: '优先级', status: '任务状态', is_overdue: '逾期状态',
+  owner_id: '负责人', owner_ids: '负责人', task_type: '任务类型', priority: '优先级', status: '任务状态', is_overdue: '逾期状态',
   start_date: '启动时间', expected_end_date: '预计完成时间', actual_end_date: '实际完成时间', suspend_date: '暂停时间'
 }
 const HISTORY_DATE_FIELDS = new Set(['start_date', 'expected_end_date', 'actual_end_date', 'suspend_date'])
-const fields = `t.*,owner.real_name owner_name,creator.real_name creator_name,updater.real_name updater_name,project.name project_name,requirement.title requirement_name,archive.name task_type_name,parent.name parent_task_name,(SELECT COUNT(*)::INTEGER FROM pms_task child WHERE child.parent_task_id=t.id AND child.is_deleted=0)child_count,(SELECT COUNT(*)::INTEGER FROM pms_task child WHERE child.parent_task_id=t.id AND child.is_deleted=0 AND child.status=2)completed_child_count,CASE WHEN t.status=3 THEN(SELECT old_value::INTEGER FROM pms_op_log l WHERE l.module='任务' AND l.target_id=t.id AND l.action='状态变更' AND l.field_name='status' AND l.new_value='3' ORDER BY l.created_at DESC LIMIT 1)END previous_status`
-const taskJoins = ` FROM pms_task t JOIN pms_user owner ON owner.id=t.owner_id LEFT JOIN pms_user creator ON creator.id=t.creator_id LEFT JOIN pms_user updater ON updater.id=t.updater_id LEFT JOIN pms_project project ON project.id=t.project_id LEFT JOIN pms_requirement requirement ON requirement.id=t.requirement_id JOIN pms_archive archive ON archive.id=t.task_type LEFT JOIN pms_task parent ON parent.id=t.parent_task_id`
+const ownerNamesSql = `(SELECT STRING_AGG(owner_user.real_name,'、' ORDER BY task_owner.sort_order,task_owner.user_id) FROM pms_task_owner task_owner JOIN pms_user owner_user ON owner_user.id=task_owner.user_id WHERE task_owner.task_id=t.id)`
+const fields = `t.*,COALESCE((SELECT JSON_AGG(JSON_BUILD_OBJECT('id',owner_user.id,'name',owner_user.real_name) ORDER BY task_owner.sort_order,task_owner.user_id) FROM pms_task_owner task_owner JOIN pms_user owner_user ON owner_user.id=task_owner.user_id WHERE task_owner.task_id=t.id),'[]'::json) owners,COALESCE(${ownerNamesSql},'') owner_names,creator.real_name creator_name,updater.real_name updater_name,project.name project_name,requirement.title requirement_name,archive.name task_type_name,parent.name parent_task_name,(SELECT COUNT(*)::INTEGER FROM pms_task child WHERE child.parent_task_id=t.id AND child.is_deleted=0)child_count,(SELECT COUNT(*)::INTEGER FROM pms_task child WHERE child.parent_task_id=t.id AND child.is_deleted=0 AND child.status=2)completed_child_count,CASE WHEN t.status=3 THEN(SELECT old_value::INTEGER FROM pms_op_log l WHERE l.module='任务' AND l.target_id=t.id AND l.action='状态变更' AND l.field_name='status' AND l.new_value='3' ORDER BY l.created_at DESC LIMIT 1)END previous_status`
+const taskJoins = ` FROM pms_task t LEFT JOIN pms_user creator ON creator.id=t.creator_id LEFT JOIN pms_user updater ON updater.id=t.updater_id LEFT JOIN pms_project project ON project.id=t.project_id LEFT JOIN pms_requirement requirement ON requirement.id=t.requirement_id JOIN pms_archive archive ON archive.id=t.task_type LEFT JOIN pms_task parent ON parent.id=t.parent_task_id`
 
 function base(extra = fields) {
   return `SELECT ${extra}${taskJoins}`
@@ -25,11 +26,15 @@ function where(q) {
     sql += ' AND t.name ILIKE ?'
     params.push(`%${q.name}%`)
   }
-  for (const [key, column] of Object.entries({ source_type: 't.source_type', project_id: 't.project_id', requirement_id: 't.requirement_id', task_type: 't.task_type', priority: 't.priority', status: 't.status', is_overdue: 't.is_overdue', owner_id: 't.owner_id' })) {
+  for (const [key, column] of Object.entries({ source_type: 't.source_type', project_id: 't.project_id', requirement_id: 't.requirement_id', task_type: 't.task_type', priority: 't.priority', status: 't.status', is_overdue: 't.is_overdue' })) {
     if (q[key] !== undefined && q[key] !== '') {
       sql += ` AND ${column}=?`
       params.push(Number(q[key]))
     }
+  }
+  if (q.owner_id !== undefined && q.owner_id !== '') {
+    sql += ' AND EXISTS (SELECT 1 FROM pms_task_owner task_owner WHERE task_owner.task_id=t.id AND task_owner.user_id=?)'
+    params.push(Number(q.owner_id))
   }
   for (const [key, column, operator] of [['expected_end_date_from', 't.expected_end_date', '>='], ['expected_end_date_to', 't.expected_end_date', '<=']]) {
     if (q[key]) {
@@ -44,7 +49,7 @@ function getTaskSortConfig(sortField, sortOrder) {
   const sortMap = {
     name: 't.name',
     sourceName: 'COALESCE(project.name,requirement.title)',
-    ownerName: 'owner.real_name',
+    ownerNames: `COALESCE(${ownerNamesSql},'')`,
     taskTypeName: 'archive.name',
     priority: 't.priority',
     status: 't.status',
@@ -149,13 +154,43 @@ exports.listSubtasks = async (req, res) => {
   }
 }
 
+function normalizeOwnerIds(value) {
+  return [...new Set((Array.isArray(value) ? value : []).map(Number).filter((id) => Number.isInteger(id) && id > 0))]
+}
+
+async function loadOwners(connection, taskId) {
+  return connection.prepare(`SELECT task_owner.user_id id,owner_user.real_name name
+    FROM pms_task_owner task_owner JOIN pms_user owner_user ON owner_user.id=task_owner.user_id
+    WHERE task_owner.task_id=? ORDER BY task_owner.sort_order,task_owner.user_id`).all(taskId)
+}
+
+async function loadUsers(connection, ownerIds) {
+  if (!ownerIds.length) return []
+  const rows = await connection.prepare(`SELECT id,real_name name FROM pms_user
+    WHERE id IN (${ownerIds.map(() => '?').join(',')}) AND is_deleted=0 AND status=1`).all(...ownerIds)
+  const usersById = new Map(rows.map((row) => [Number(row.id), row]))
+  return ownerIds.map((id) => usersById.get(id)).filter(Boolean)
+}
+
+async function saveOwners(connection, taskId, ownerIds) {
+  await connection.prepare('DELETE FROM pms_task_owner WHERE task_id=?').run(taskId)
+  for (const [index, userId] of ownerIds.entries()) {
+    await connection.prepare('INSERT INTO pms_task_owner(task_id,user_id,sort_order)VALUES(?,?,?) RETURNING task_id AS id').run(taskId, userId, index)
+  }
+}
+
+function ownerNames(owners) {
+  return owners.map((owner) => owner.name).join('、')
+}
+
 async function validate(res, body, exclude) {
   if (!body.name?.trim()) {
     failField(res, 'name', '请填写任务名称')
     return false
   }
-  if (!body.owner_id) {
-    failField(res, 'owner_id', '请选择负责人')
+  const ownerIds = normalizeOwnerIds(body.owner_ids)
+  if (!ownerIds.length) {
+    failField(res, 'owner_ids', '请选择负责人')
     return false
   }
   if (!body.task_type) {
@@ -191,8 +226,9 @@ async function validate(res, body, exclude) {
     failField(res, 'requirement_id', '需求不存在或已删除')
     return false
   }
-  if (!(await db.prepare('SELECT id FROM pms_user WHERE id=? AND is_deleted=0 AND status=1').get(body.owner_id))) {
-    failField(res, 'owner_id', '负责人不存在或已停用')
+  const owners = await loadUsers(db, ownerIds)
+  if (owners.length !== ownerIds.length) {
+    failField(res, 'owner_ids', '部分负责人不存在或已停用')
     return false
   }
   if (!(await db.prepare("SELECT a.id FROM pms_archive a JOIN pms_archive_type t ON t.id=a.archive_type_id WHERE a.id=? AND a.is_deleted=0 AND a.status=1 AND t.is_deleted=0 AND t.status=1 AND t.name='任务类型'").get(body.task_type))) {
@@ -207,8 +243,12 @@ exports.create = async (req, res) => {
     if (!await validate(res, req.body)) return
     const body = req.body
     const overdue = calculateTaskOverdue(body.expected_end_date, 0)
-    const result = await db.prepare('INSERT INTO pms_task(name,description,source_type,project_id,requirement_id,owner_id,task_type,priority,status,is_overdue,start_date,expected_end_date,creator_id,updater_id)VALUES(?,?,?,?,?,?,?,?,0,?,?,?,?,?)').run(body.name.trim(), body.description || null, Number(body.source_type), Number(body.source_type) === 1 ? body.project_id : null, Number(body.source_type) === 2 ? body.requirement_id : null, body.owner_id, body.task_type, body.priority ?? 1, overdue, body.start_date || null, body.expected_end_date || null, req.user.id, req.user.id)
-    await db.writeLog(req.user.id, '新增', '任务', result.lastInsertRowid, null, null, null, req.ip, body.name.trim())
+    let result
+    await db.transaction(async (connection) => {
+      result = await connection.prepare('INSERT INTO pms_task(name,description,source_type,project_id,requirement_id,task_type,priority,status,is_overdue,start_date,expected_end_date,creator_id,updater_id)VALUES(?,?,?,?,?,?,?,0,?,?,?,?,?)').run(body.name.trim(), body.description || null, Number(body.source_type), Number(body.source_type) === 1 ? body.project_id : null, Number(body.source_type) === 2 ? body.requirement_id : null, body.task_type, body.priority ?? 1, overdue, body.start_date || null, body.expected_end_date || null, req.user.id, req.user.id)
+      await saveOwners(connection, result.lastInsertRowid, normalizeOwnerIds(body.owner_ids))
+      await connection.writeLog(req.user.id, '新增', '任务', result.lastInsertRowid, null, null, null, req.ip, body.name.trim())
+    })
     ok(res, { id: result.lastInsertRowid })
   } catch (error) {
     console.error(error)
@@ -230,8 +270,12 @@ exports.createSubtask = async (req, res) => {
     }
     if (!await validate(res, body)) return
     const overdue = calculateTaskOverdue(body.expected_end_date, 0)
-    const result = await db.prepare('INSERT INTO pms_task(name,description,parent_task_id,source_type,project_id,requirement_id,owner_id,task_type,priority,status,is_overdue,start_date,expected_end_date,creator_id,updater_id)VALUES(?,?,?,?,?,?,?,?,?,0,?,?,?,?,?)').run(body.name.trim(), body.description || null, parentTask.id, parentTask.source_type, parentTask.project_id, parentTask.requirement_id, body.owner_id, body.task_type, body.priority ?? 1, overdue, body.start_date || null, body.expected_end_date || null, req.user.id, req.user.id)
-    await db.writeLog(req.user.id, '新增', '任务', result.lastInsertRowid, 'parent_task_id', null, parentTask.id, req.ip, body.name.trim())
+    let result
+    await db.transaction(async (connection) => {
+      result = await connection.prepare('INSERT INTO pms_task(name,description,parent_task_id,source_type,project_id,requirement_id,task_type,priority,status,is_overdue,start_date,expected_end_date,creator_id,updater_id)VALUES(?,?,?,?,?,?,?,?,0,?,?,?,?,?)').run(body.name.trim(), body.description || null, parentTask.id, parentTask.source_type, parentTask.project_id, parentTask.requirement_id, body.task_type, body.priority ?? 1, overdue, body.start_date || null, body.expected_end_date || null, req.user.id, req.user.id)
+      await saveOwners(connection, result.lastInsertRowid, normalizeOwnerIds(body.owner_ids))
+      await connection.writeLog(req.user.id, '新增', '任务', result.lastInsertRowid, 'parent_task_id', null, parentTask.id, req.ip, body.name.trim())
+    })
     ok(res, { id: result.lastInsertRowid })
   } catch (error) {
     console.error(error)
@@ -243,6 +287,7 @@ exports.update = async (req, res) => {
   try {
     const old = await db.prepare('SELECT * FROM pms_task WHERE id=? AND is_deleted=0').get(req.params.id)
     if (!old) return fail(res, 404, 404, '任务不存在')
+    const oldOwners = await loadOwners(db, req.params.id)
     const requestedBody = req.body
     const childCount = Number((await db.prepare('SELECT COUNT(*) count FROM pms_task WHERE parent_task_id=? AND is_deleted=0').get(req.params.id))?.count || 0)
     if (!old.parent_task_id && childCount > 0) {
@@ -254,13 +299,20 @@ exports.update = async (req, res) => {
     const body = old.parent_task_id ? { ...requestedBody, source_type: old.source_type, project_id: old.project_id, requirement_id: old.requirement_id } : requestedBody
     if (!await validate(res, body, Number(req.params.id))) return
     const overdue = calculateTaskOverdue(body.expected_end_date, old.status)
-    await db.prepare('UPDATE pms_task SET name=?,description=?,source_type=?,project_id=?,requirement_id=?,owner_id=?,task_type=?,priority=?,is_overdue=?,start_date=?,expected_end_date=?,updater_id=?,updated_at=NOW()WHERE id=?').run(body.name.trim(), body.description || null, body.source_type, Number(body.source_type) === 1 ? body.project_id : null, Number(body.source_type) === 2 ? body.requirement_id : null, body.owner_id, body.task_type, body.priority ?? 1, overdue, body.start_date || null, body.expected_end_date || null, req.user.id, req.params.id)
     const changes = []
-    for (const field of ['name', 'description', 'source_type', 'project_id', 'requirement_id', 'owner_id', 'task_type', 'priority', 'is_overdue', 'start_date', 'expected_end_date']) {
+    for (const field of ['name', 'description', 'source_type', 'project_id', 'requirement_id', 'task_type', 'priority', 'is_overdue', 'start_date', 'expected_end_date']) {
       const next = field === 'is_overdue' ? overdue : (field === 'project_id' && Number(body.source_type) !== 1 ? null : field === 'requirement_id' && Number(body.source_type) !== 2 ? null : body[field])
       if (String(old[field] ?? '') !== String(next ?? '')) changes.push({ field, oldVal: old[field], newVal: next })
     }
-    if (changes.length) await db.writeLogs(req.user.id, '编辑', '任务', req.params.id, changes, req.ip, body.name.trim())
+    const nextOwnerIds = normalizeOwnerIds(body.owner_ids)
+    const oldOwnerIds = oldOwners.map((owner) => Number(owner.id))
+    const nextOwners = await loadUsers(db, nextOwnerIds)
+    if (oldOwnerIds.join(',') !== nextOwnerIds.join(',')) changes.push({ field: 'owner_ids', oldVal: ownerNames(oldOwners), newVal: ownerNames(nextOwners) })
+    await db.transaction(async (connection) => {
+      await connection.prepare('UPDATE pms_task SET name=?,description=?,source_type=?,project_id=?,requirement_id=?,task_type=?,priority=?,is_overdue=?,start_date=?,expected_end_date=?,updater_id=?,updated_at=NOW()WHERE id=?').run(body.name.trim(), body.description || null, body.source_type, Number(body.source_type) === 1 ? body.project_id : null, Number(body.source_type) === 2 ? body.requirement_id : null, body.task_type, body.priority ?? 1, overdue, body.start_date || null, body.expected_end_date || null, req.user.id, req.params.id)
+      await saveOwners(connection, req.params.id, nextOwnerIds)
+      if (changes.length) await connection.writeLogs(req.user.id, '编辑', '任务', req.params.id, changes, req.ip, body.name.trim())
+    })
     ok(res, null)
   } catch (error) {
     console.error(error)
@@ -271,18 +323,21 @@ exports.update = async (req, res) => {
 exports.batchAssign = async (req, res) => {
   try {
     const ids = [...new Set((Array.isArray(req.body.ids) ? req.body.ids : []).map(Number).filter((id) => Number.isInteger(id) && id > 0))]
-    const ownerId = Number(req.body.owner_id)
+    const ownerIds = normalizeOwnerIds(req.body.owner_ids)
     if (!ids.length) return fail(res, 400, 400, '请选择要指派的任务')
-    const owner = await db.prepare('SELECT id,real_name FROM pms_user WHERE id=? AND is_deleted=0 AND status=1').get(ownerId)
-    if (!owner) return fail(res, 400, 400, '负责人不存在或已停用')
+    if (!ownerIds.length) return failField(res, 'owner_ids', '请选择负责人')
+    const nextOwners = await loadUsers(db, ownerIds)
+    if (nextOwners.length !== ownerIds.length) return failField(res, 'owner_ids', '部分负责人不存在或已停用')
     let updated = 0
     await db.transaction(async (connection) => {
-      const rows = await connection.prepare(`SELECT id,name,owner_id FROM pms_task WHERE id IN (${ids.map(() => '?').join(',')}) AND is_deleted=0`).all(...ids)
+      const rows = await connection.prepare(`SELECT id,name FROM pms_task WHERE id IN (${ids.map(() => '?').join(',')}) AND is_deleted=0`).all(...ids)
       if (rows.length !== ids.length) throw new Error('部分任务不存在或已删除，请刷新后重试')
       for (const row of rows) {
-        if (Number(row.owner_id) === ownerId) continue
-        await connection.prepare('UPDATE pms_task SET owner_id=?,updater_id=?,updated_at=NOW()WHERE id=?').run(ownerId, req.user.id, row.id)
-        await connection.writeLog(req.user.id, '批量指派', '任务', row.id, 'owner_id', row.owner_id, ownerId, req.ip, row.name)
+        const oldOwners = await loadOwners(connection, row.id)
+        if (oldOwners.map((owner) => Number(owner.id)).join(',') === ownerIds.join(',')) continue
+        await saveOwners(connection, row.id, ownerIds)
+        await connection.prepare('UPDATE pms_task SET updater_id=?,updated_at=NOW()WHERE id=?').run(req.user.id, row.id)
+        await connection.writeLog(req.user.id, '批量指派', '任务', row.id, 'owner_ids', ownerNames(oldOwners), ownerNames(nextOwners), req.ip, row.name)
         updated += 1
       }
     })
@@ -356,15 +411,16 @@ exports.history = async (req, res) => {
       const rows = await db.prepare(`${sql} WHERE id IN (${values.map(() => '?').join(',')})`).all(...values)
       return new Map(rows.map((row) => [String(row.id), row.name]))
     }
-    const [projects, requirements, parents, owners, taskTypes] = await Promise.all([
+    const [projects, requirements, parents, taskTypes, owners] = await Promise.all([
       loadLookup('project_id', 'SELECT id,name FROM pms_project'),
       loadLookup('requirement_id', 'SELECT id,title name FROM pms_requirement'),
       loadLookup('parent_task_id', 'SELECT id,name FROM pms_task'),
-      loadLookup('owner_id', 'SELECT id,real_name name FROM pms_user'),
-      loadLookup('task_type', 'SELECT id,name FROM pms_archive')
+      loadLookup('task_type', 'SELECT id,name FROM pms_archive'),
+      loadLookup('owner_id', 'SELECT id,real_name name FROM pms_user')
     ])
     const valueLookups = {
-      source_type: new Map([['1', '项目'], ['2', '需求']]), project_id: projects, requirement_id: requirements, parent_task_id: parents, owner_id: owners, task_type: taskTypes,
+      source_type: new Map([['1', '项目'], ['2', '需求']]), project_id: projects, requirement_id: requirements, parent_task_id: parents, task_type: taskTypes,
+      owner_id: owners,
       priority: new Map([['0', '低'], ['1', '中'], ['2', '高']]), status: new Map([['0', '待处理'], ['1', '处理中'], ['2', '已完成'], ['3', '已暂停']]),
       is_overdue: new Map([['0', '未逾期'], ['1', '已逾期']])
     }

@@ -1,9 +1,10 @@
 const WORK_ORDER_STATUS_TRANSITIONS = {
   0: [1, 4],
   1: [2, 4],
-  2: [3, 4],
-  3: [4],
-  4: [0, 1, 2, 3]
+  2: [3, 4, 5],
+  3: [4, 5],
+  4: [0, 1, 2, 3],
+  5: [2]
 }
 
 function allowedWorkOrderStatuses(status) {
@@ -12,6 +13,15 @@ function allowedWorkOrderStatuses(status) {
 
 function resolveWorkOrderResultFields(status, body = {}, old = {}) {
   const target = Number(status)
+  if (target === 5) {
+    return {
+      resolveDate: old.resolve_date || null,
+      closeDate: null,
+      resultDesc: old.result_desc || null,
+      suspendDate: null,
+      activationReason: String(body.activation_reason || '').trim()
+    }
+  }
   if (target === 4) {
     return {
       resolveDate: old.resolve_date || null,
@@ -41,6 +51,8 @@ function resolveWorkOrderResultFields(status, body = {}, old = {}) {
 
 function validateWorkOrderResultFields(status, values) {
   const target = Number(status)
+  if (target === 5 && !values.activationReason) return '激活工单时必须填写激活原因'
+  if (target === 5 && values.activationReason.length > 100) return '激活原因不能超过100字'
   if (target === 2 && (!values.resolveDate || !values.resultDesc)) {
     return '标记为已解决时必须填写实际修复时间和处置结果'
   }
@@ -52,9 +64,17 @@ function validateWorkOrderResultFields(status, values) {
   return ''
 }
 
+function resolveWorkOrderActivationReason(status, body = {}, old = {}) {
+  const target = Number(status)
+  if (target === 0 || target === 1) return null
+  if (target === 5) return String(body.activation_reason || '').trim()
+  return old.activation_reason || null
+}
+
 module.exports = {
   WORK_ORDER_STATUS_TRANSITIONS,
   allowedWorkOrderStatuses,
   resolveWorkOrderResultFields,
+  resolveWorkOrderActivationReason,
   validateWorkOrderResultFields
 }

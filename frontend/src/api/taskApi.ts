@@ -3,10 +3,11 @@ import { request, unwrap } from './requestClient';
 import { arrayContract, objectContract } from './responseContract';
 import type { TaskFormValues, TaskPriority, TaskRecord, TaskStatus, TaskStatusUpdateResult } from '../modules/task/types';
 
-type Row = { id: number; name: string; description?: string; parent_task_id?: number; parent_task_name?: string; child_count?: number; completed_child_count?: number; source_type: 1 | 2; project_id?: number; project_name?: string; requirement_id?: number; requirement_name?: string; owner_id: number; owner_name: string; task_type: number; task_type_name: string; priority: number; status: number; previous_status?: number; is_overdue: number; start_date?: string; expected_end_date?: string; actual_end_date?: string; suspend_date?: string; creator_name?: string; updater_name?: string; created_at?: string; updated_at?: string };
+type Row = { id: number; name: string; description?: string; parent_task_id?: number; parent_task_name?: string; child_count?: number; completed_child_count?: number; source_type: 1 | 2; project_id?: number; project_name?: string; requirement_id?: number; requirement_name?: string; owners: Array<{id:number;name:string}>; owner_names: string; task_type: number; task_type_name: string; priority: number; status: number; previous_status?: number; is_overdue: number; start_date?: string; expected_end_date?: string; actual_end_date?: string; suspend_date?: string; creator_name?: string; updater_name?: string; created_at?: string; updated_at?: string };
 type Page = { list: Row[]; total: number; page: number; pageSize: number; viewCounts: { all: number; mine: number } };
 
-const rowContract = objectContract<Row>(['id', 'name', 'source_type', 'owner_id', 'owner_name', 'task_type', 'task_type_name', 'priority', 'status', 'is_overdue']);
+const ownerContract = objectContract<{id:number;name:string}>(['id', 'name']);
+const rowContract = objectContract<Row>(['id', 'name', 'source_type', 'owners', 'owner_names', 'task_type', 'task_type_name', 'priority', 'status', 'is_overdue'], { owners: arrayContract(ownerContract) });
 const pageContract = objectContract<Page>(['list', 'total', 'page', 'pageSize', 'viewCounts'], { list: arrayContract(rowContract) });
 const neighborsContract = objectContract<{ prevId: number | null; nextId: number | null; ordinal?: number; total?: number }>(['prevId', 'nextId']);
 const availableContract = objectContract<{ available: boolean }>(['available']);
@@ -24,7 +25,7 @@ function mapTask(row: Row): TaskRecord {
     childCount: Number(row.child_count || 0), completedChildCount: Number(row.completed_child_count || 0), sourceType: row.source_type,
     projectId: row.project_id ? String(row.project_id) : '', projectName: row.project_name || '-',
     requirementId: row.requirement_id ? String(row.requirement_id) : '', requirementName: row.requirement_name || '-',
-    ownerId: String(row.owner_id), ownerName: row.owner_name, taskType: String(row.task_type), taskTypeName: row.task_type_name,
+    ownerIds: row.owners.map((owner) => String(owner.id)), owners: row.owners.map((owner) => ({ id: String(owner.id), name: owner.name })), ownerNames: row.owner_names, taskType: String(row.task_type), taskTypeName: row.task_type_name,
     priority: Number(row.priority) as TaskPriority, status: Number(row.status) as TaskStatus,
     previousStatus: row.previous_status === undefined ? undefined : Number(row.previous_status) as TaskStatus,
     isOverdue: Boolean(Number(row.is_overdue)), startTime: dateText(row.start_date), expectedEndTime: dateText(row.expected_end_date),
@@ -62,13 +63,13 @@ export async function checkTaskName(name: string, excludeId?: string) {
 }
 
 const date = (value?: string) => value ? dayjs(value).format('YYYY-MM-DD') : null;
-const payload = (values: TaskFormValues) => ({ name: values.name, description: values.description || null, source_type: values.sourceType, project_id: values.sourceType === 1 ? Number(values.projectId) : null, requirement_id: values.sourceType === 2 ? Number(values.requirementId) : null, owner_id: Number(values.ownerId), task_type: Number(values.taskType), priority: Number(values.priority), start_date: date(values.startTime), expected_end_date: date(values.expectedEndTime) });
+const payload = (values: TaskFormValues) => ({ name: values.name, description: values.description || null, source_type: values.sourceType, project_id: values.sourceType === 1 ? Number(values.projectId) : null, requirement_id: values.sourceType === 2 ? Number(values.requirementId) : null, owner_ids: values.ownerIds.map(Number), task_type: Number(values.taskType), priority: Number(values.priority), start_date: date(values.startTime), expected_end_date: date(values.expectedEndTime) });
 
 export async function createTask(values: TaskFormValues) {
   return unwrap<{ id: number }>(request.post('/tasks', payload(values)), objectContract(['id']));
 }
 
-const subtaskPayload = (values: TaskFormValues) => ({ name: values.name, description: values.description || null, owner_id: Number(values.ownerId), task_type: Number(values.taskType), priority: Number(values.priority), start_date: date(values.startTime), expected_end_date: date(values.expectedEndTime) });
+const subtaskPayload = (values: TaskFormValues) => ({ name: values.name, description: values.description || null, owner_ids: values.ownerIds.map(Number), task_type: Number(values.taskType), priority: Number(values.priority), start_date: date(values.startTime), expected_end_date: date(values.expectedEndTime) });
 
 export async function createSubtask(parentId: string, values: TaskFormValues) {
   return unwrap<{ id: number }>(request.post(`/tasks/${parentId}/subtasks`, subtaskPayload(values)), objectContract(['id']));
@@ -83,8 +84,8 @@ export async function updateTask(id: string, values: TaskFormValues) {
   return unwrap<null>(request.put(`/tasks/${id}`, payload(values)));
 }
 
-export async function batchAssignTasks(ids: string[], ownerId: string) {
-  return unwrap<{ updated: number; requested: number }>(request.put('/tasks/batch-assign', { ids: ids.map(Number), owner_id: Number(ownerId) }), batchResultContract);
+export async function batchAssignTasks(ids: string[], ownerIds: string[]) {
+  return unwrap<{ updated: number; requested: number }>(request.put('/tasks/batch-assign', { ids: ids.map(Number), owner_ids: ownerIds.map(Number) }), batchResultContract);
 }
 
 export async function updateTaskStatus(id: string, status: TaskStatus, extra = {}) {

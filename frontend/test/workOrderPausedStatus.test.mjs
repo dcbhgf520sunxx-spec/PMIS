@@ -12,8 +12,8 @@ test('工单前端声明已暂停状态及完整流转矩阵', () => {
   assert.match(helpers, /已暂停/);
   assert.match(rules, /0:\s*\[1,\s*4\]/);
   assert.match(rules, /1:\s*\[2,\s*4\]/);
-  assert.match(rules, /2:\s*\[3,\s*4\]/);
-  assert.match(rules, /3:\s*\[4\]/);
+  assert.match(rules, /2:\s*\[3,\s*4,\s*5\]/);
+  assert.match(rules, /3:\s*\[4,\s*5\]/);
   assert.match(rules, /4:\s*\[0,\s*1,\s*2,\s*3\]/);
 });
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { message } from 'antd';
+import { App } from 'antd';
 import { useParams } from 'react-router-dom';
 import {
   AdminButton,
@@ -28,6 +28,7 @@ import './WorkOrderDetailPage.css';
 import { buildStatusPayload, statusTransitions } from './workOrderList.constants';
 
 export function WorkOrderDetailPage() {
+  const { message } = App.useApp();
   const { navigateWithReturn, returnToSource } = usePageReturnNavigation('/work-orders');
   const params = useParams();
   const [detail, setDetail] = useState<WorkOrderRecord>();
@@ -177,7 +178,10 @@ export function WorkOrderDetailPage() {
                 { label: '实际修复时间', value: detail.resolveDate || '-' },
                 { label: '关闭时间', value: detail.closeDate || '-' },
                 { label: '暂停时间', value: detail.suspendDate || '-' },
-                { label: '处置结果', value: detail.resultDesc || '-', wide: true, longText: true }
+                { label: '处置结果', value: detail.resultDesc || '-', wide: true, longText: true },
+                ...(detail.activationReason
+                  ? [{ label: '激活原因', value: detail.activationReason, wide: true, longText: true }]
+                  : [])
               ]}
             />
           </TemplateDetailSection>

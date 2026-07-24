@@ -2,7 +2,7 @@ import type { WorkOrderHistoryItem, WorkOrderProblemType, WorkOrderRecord, WorkO
 
 const problemTypes: WorkOrderProblemType[] = ['1', '2', '3', '4', '5'];
 const urgencies: WorkOrderUrgency[] = [2, 1, 0];
-const statuses: WorkOrderStatus[] = [0, 1, 2, 3, 4];
+const statuses: WorkOrderStatus[] = [0, 1, 2, 3, 4, 5];
 const followers = [
   { id: '1', employeeNo: 'A001', name: '管理员' },
   { id: '2', employeeNo: 'A002', name: '运维人员' },

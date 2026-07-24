@@ -1,4 +1,4 @@
-export type WorkOrderStatus = 0 | 1 | 2 | 3 | 4;
+export type WorkOrderStatus = 0 | 1 | 2 | 3 | 4 | 5;
 export type WorkOrderUrgency = 0 | 1 | 2;
 export type WorkOrderProblemType = string;
 
@@ -23,6 +23,7 @@ export type WorkOrderRecord = Record<string, unknown> & {
   closeDate?: string;
   suspendDate?: string;
   resultDesc?: string;
+  activationReason?: string;
   creatorName: string;
   createdAt: string;
   updaterName?: string;

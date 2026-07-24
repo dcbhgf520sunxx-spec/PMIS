@@ -59,3 +59,15 @@ test('新增等动作日志没有字段名时不生成空变更明细', () => {
   assert.equal(groups.length, 1)
   assert.deepEqual(groups[0].changes, [])
 })
+
+test('历史日志中的旧“空”字符串按真正空值返回', () => {
+  const changes = formatHistoryChanges([
+    { field_name: 'activation_reason', old_value: '原激活原因', new_value: '空' }
+  ], {
+    fieldLabels: { activation_reason: '激活原因' }
+  })
+
+  assert.deepEqual(changes, [
+    { field_name: '激活原因', old_value: '原激活原因', new_value: '' }
+  ])
+})

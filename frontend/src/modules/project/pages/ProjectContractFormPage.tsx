@@ -204,14 +204,14 @@ export function ProjectContractFormPage() {
       fieldNameMap={{ contract_code: 'contractCode', contract_name: 'contractName', supplier_id: 'supplierId', signed_date: 'signedDate', contract_amount: 'contractAmount', stages: 'stages' }}
       onSubmit={async (values) => {
         if (!params.id) return;
-        await saveProjectContract(params.id, values, exists);
+        const saveResult = await saveProjectContract(params.id, values, exists);
         setExists(true);
         for (const attachmentId of removedAttachmentIds) {
-          await deleteProjectContractAttachment(params.id, attachmentId);
+          await deleteProjectContractAttachment(params.id, attachmentId, saveResult.operationId);
           setRemovedAttachmentIds((current) => current.filter((id) => id !== attachmentId));
         }
         for (const attachment of attachmentFiles.filter((item) => isPendingAttachment(item) && item.rawFile)) {
-          const uploaded = await uploadProjectContractAttachment(params.id, attachment.rawFile as File);
+          const uploaded = await uploadProjectContractAttachment(params.id, attachment.rawFile as File, saveResult.operationId);
           setAttachmentFiles((current) => current.map((item) => item.id === attachment.id ? toAdminAttachment(uploaded) : item));
         }
         message.success(exists ? '合同保存成功' : '合同创建成功');

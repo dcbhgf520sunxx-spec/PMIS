@@ -5,6 +5,7 @@ import {
   AdminEmptyState,
   AdminAttachmentUpload,
   AdminTextAction,
+  DeleteConfirmAction,
   DetailMetaList,
   OperationColumnActions,
   PermissionButton,
@@ -15,7 +16,7 @@ import {
   type AdminAttachment,
   usePageReturnNavigation,
 } from '../../../components/admin';
-import { downloadProjectContractAttachment, getProject, getProjectContract, loadProjectContractAttachmentPreview } from '../../../api/projectApi';
+import { deleteProjectContract, downloadProjectContractAttachment, getProject, getProjectContract, loadProjectContractAttachmentPreview } from '../../../api/projectApi';
 import { getUserOptions } from '../../../api/userApi';
 import type { ProjectContractAttachment, ProjectContractRecord, ProjectPaymentRecord, ProjectPaymentStage } from '../types';
 import { ProjectPaymentModal } from '../components/ProjectPaymentModal';
@@ -110,7 +111,6 @@ export function ProjectContractDetailPage() {
     <>
       <TemplateDetailPage
         title="项目详情"
-        titleCode={contract?.contractCode}
         loading={loading}
         error={error}
         notFound={notFound}
@@ -127,9 +127,33 @@ export function ProjectContractDetailPage() {
           },
         }}
         actions={params.id ? (
-          <PermissionButton permission="project" type="primary" onClick={() => navigateWithReturn(`/projects/${params.id}/contract`)}>
-            {contract ? '编辑合同' : '新增合同'}
-          </PermissionButton>
+          <>
+            <PermissionButton permission="project" type="primary" onClick={() => navigateWithReturn(`/projects/${params.id}/contract`)}>
+              {contract ? '编辑合同' : '新增合同'}
+            </PermissionButton>
+            {contract ? (
+              <DeleteConfirmAction
+                entityName="合同"
+                targetName={contract.contractName}
+                successMessage="合同已删除"
+                description={(
+                  <div>
+                    {contract.paymentCount > 0 ? (
+                      <div>该合同已有 {contract.paymentCount} 笔付款记录，累计已付 {money(contract.paidAmount)} 元。</div>
+                    ) : null}
+                    <div>删除后合同、付款阶段、付款记录和附件将一并删除，且无法恢复。</div>
+                  </div>
+                )}
+                onConfirm={async () => {
+                  if (!params.id) return;
+                  await deleteProjectContract(params.id);
+                  refreshContract();
+                }}
+              >
+                删除合同
+              </DeleteConfirmAction>
+            ) : null}
+          </>
         ) : null}
       >
         <TemplateDetailSection title="合同信息" sectionKey="contract-basic">

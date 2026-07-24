@@ -79,7 +79,7 @@ test('新增档案类型生成序号时忽略业务英文编码', () => {
   )
 })
 
-test('工单后端校验固定选项、启用跟进人和暂停状态规则', () => {
+test('工单后端校验固定选项、启用跟进人、暂停和激活状态规则', () => {
   const workOrders = read('backend/src/controllers/workOrderController.js')
   const statusRules = read('backend/src/services/workOrderStatusRules.js')
   assert.match(workOrders, /validateActiveProduct\(product_id\)/)
@@ -88,8 +88,10 @@ test('工单后端校验固定选项、启用跟进人和暂停状态规则', ()
   assert.match(workOrders, /allowedWorkOrderStatuses/)
   assert.match(statusRules, /0:\s*\[1,\s*4\]/)
   assert.match(statusRules, /1:\s*\[2,\s*4\]/)
-  assert.match(statusRules, /2:\s*\[3,\s*4\]/)
+  assert.match(statusRules, /2:\s*\[3,\s*4,\s*5\]/)
+  assert.match(statusRules, /3:\s*\[4,\s*5\]/)
   assert.match(statusRules, /4:\s*\[0,\s*1,\s*2,\s*3\]/)
+  assert.match(statusRules, /5:\s*\[2\]/)
   assert.match(workOrders, /resolve_date[\s\S]*result_desc/)
   assert.match(workOrders, /close_date/)
   assert.match(workOrders, /WHERE id = \? AND status = \? AND is_deleted = 0/)

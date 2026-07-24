@@ -234,7 +234,7 @@ exports.update = async (req, res) => {
         await conn.prepare('INSERT INTO pms_user_role (user_id, role_id) VALUES (?, ?) ON CONFLICT (user_id, role_id) DO NOTHING').run(req.params.id, rid)
       }
 
-      const fmt = (v) => Array.isArray(v) ? `[${v.join(',')}]` : (v ?? '空')
+      const fmt = (v) => Array.isArray(v) ? `[${v.join(',')}]` : v
       await conn.writeLogs(operatorId, '编辑', '用户', req.params.id, changes.map((change) => ({
         ...change, oldVal: fmt(change.oldVal), newVal: fmt(change.newVal)
       })), req.ip)

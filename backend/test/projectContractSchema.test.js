@@ -57,8 +57,11 @@ test('项目合同供应商关联供应商基础档案并迁移历史名称', ()
 test('项目合同附件结构同步进入初始化和增量迁移', () => {
   const schema = read('db/init/001_schema.sql')
   const migrationPath = path.join(root, 'db/migrations/20260721_02_add_project_contract_attachment.sql')
+  const ossMigrationPath = path.join(root, 'db/migrations/20260724_02_use_contract_attachment_oss.sql')
   assert.ok(fs.existsSync(migrationPath), '缺少项目合同附件迁移')
+  assert.ok(fs.existsSync(ossMigrationPath), '缺少项目合同附件 OSS 迁移')
   const migration = fs.readFileSync(migrationPath, 'utf8')
+  const ossMigration = fs.readFileSync(ossMigrationPath, 'utf8')
 
   for (const source of [schema, migration]) {
     assert.match(source, /CREATE TABLE IF NOT EXISTS pms_project_contract_attachment/)
@@ -70,4 +73,20 @@ test('项目合同附件结构同步进入初始化和增量迁移', () => {
     assert.match(source, /uk_project_contract_attachment_storage_name/)
     assert.match(source, /idx_project_contract_attachment_contract_active/)
   }
+  assert.match(schema, /oss_response JSONB/)
+  assert.match(ossMigration, /ADD COLUMN IF NOT EXISTS oss_response JSONB/)
+})
+
+test('项目合同允许连同付款阶段、付款记录和附件整体软删除', () => {
+  const routes = read('src/routes/project.js')
+  const controller = read('src/controllers/projectContractController.js')
+
+  assert.match(routes, /router\.delete\('\/:id\/contract',\s*contractCtrl\.remove\)/)
+  assert.match(controller, /exports\.remove\s*=\s*async/)
+  assert.match(controller, /db\.transaction/)
+  assert.match(controller, /UPDATE pms_project_payment_record SET is_deleted = 1/)
+  assert.match(controller, /UPDATE pms_project_payment_stage SET is_deleted = 1/)
+  assert.match(controller, /UPDATE pms_project_contract_attachment SET is_deleted = 1/)
+  assert.match(controller, /UPDATE pms_project_contract SET is_deleted = 1/)
+  assert.match(controller, /'删除合同'/)
 })

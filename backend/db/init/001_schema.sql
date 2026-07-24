@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS pms_work_order (
   problem_type BIGINT NOT NULL,
   problem_desc TEXT NOT NULL,
   result_desc TEXT,
+  activation_reason TEXT,
   follower_id BIGINT NOT NULL REFERENCES pms_user(id),
   urgency SMALLINT NOT NULL DEFAULT 1,
   status SMALLINT NOT NULL DEFAULT 0,
@@ -99,7 +100,14 @@ CREATE TABLE IF NOT EXISTS pms_work_order (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT fk_pms_work_order_product
-    FOREIGN KEY (product_id) REFERENCES pms_product(id) ON DELETE RESTRICT
+    FOREIGN KEY (product_id) REFERENCES pms_product(id) ON DELETE RESTRICT,
+  CONSTRAINT chk_work_order_activation_reason CHECK (
+    (status <> 5 OR activation_reason IS NOT NULL)
+    AND (
+      activation_reason IS NULL
+      OR (btrim(activation_reason) <> '' AND char_length(activation_reason) <= 100)
+    )
+  )
 );
 
 CREATE TABLE IF NOT EXISTS pms_project (
@@ -152,6 +160,7 @@ CREATE TABLE IF NOT EXISTS pms_project_contract_attachment (
   contract_id BIGINT NOT NULL REFERENCES pms_project_contract(id) ON DELETE RESTRICT,
   original_name VARCHAR(255) NOT NULL,
   storage_name VARCHAR(255) NOT NULL,
+  oss_response JSONB,
   mime_type VARCHAR(150) NOT NULL,
   file_size BIGINT NOT NULL CHECK (file_size > 0 AND file_size <= 20971520),
   sort_order INTEGER NOT NULL DEFAULT 0,
@@ -275,7 +284,6 @@ CREATE TABLE IF NOT EXISTS pms_task (
   source_type SMALLINT NOT NULL CHECK (source_type IN (1,2)),
   project_id BIGINT REFERENCES pms_project(id) ON DELETE RESTRICT,
   requirement_id BIGINT REFERENCES pms_requirement(id) ON DELETE RESTRICT,
-  owner_id BIGINT NOT NULL REFERENCES pms_user(id) ON DELETE RESTRICT,
   task_type BIGINT NOT NULL REFERENCES pms_archive(id) ON DELETE RESTRICT,
   priority SMALLINT NOT NULL DEFAULT 1 CHECK (priority IN (0,1,2)),
   status SMALLINT NOT NULL DEFAULT 0 CHECK (status IN (0,1,2,3)),
@@ -286,6 +294,13 @@ CREATE TABLE IF NOT EXISTS pms_task (
   is_deleted SMALLINT NOT NULL DEFAULT 0 CHECK (is_deleted IN (0,1)),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CHECK ((source_type=1 AND project_id IS NOT NULL AND requirement_id IS NULL) OR (source_type=2 AND requirement_id IS NOT NULL AND project_id IS NULL))
+);
+
+CREATE TABLE IF NOT EXISTS pms_task_owner (
+  task_id BIGINT NOT NULL REFERENCES pms_task(id) ON DELETE CASCADE,
+  user_id BIGINT NOT NULL REFERENCES pms_user(id) ON DELETE RESTRICT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (task_id, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS pms_bug (
@@ -405,7 +420,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_task_name_active ON pms_task(name) WHERE is
 CREATE INDEX IF NOT EXISTS idx_task_project ON pms_task(project_id, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_task_requirement ON pms_task(requirement_id, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_task_parent ON pms_task(parent_task_id, is_deleted);
-CREATE INDEX IF NOT EXISTS idx_task_owner_status ON pms_task(owner_id, status, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_task_owner_user ON pms_task_owner(user_id, task_id);
 CREATE INDEX IF NOT EXISTS idx_task_type_status ON pms_task(task_type, status, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_task_expected_end ON pms_task(expected_end_date, is_deleted);
 CREATE UNIQUE INDEX IF NOT EXISTS uk_bug_title_active ON pms_bug(title) WHERE is_deleted = 0;

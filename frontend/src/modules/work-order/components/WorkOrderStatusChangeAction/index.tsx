@@ -29,7 +29,8 @@ const toneByStatus: Record<WorkOrderStatus, StatusChangeOption<WorkOrderStatus>[
   1: 'normal',
   2: 'success',
   3: 'danger',
-  4: 'danger'
+  4: 'danger',
+  5: 'danger'
 };
 
 function getTransitionTone(_current: WorkOrderStatus, target: WorkOrderStatus) {
@@ -74,6 +75,18 @@ export function WorkOrderStatusChangeAction({
               rules={[{ required: true, message: '请选择暂停时间' }]}
             >
               <AdminDatePicker placeholder="请选择暂停时间" />
+            </Form.Item>
+          ) : null}
+          {target === 5 ? (
+            <Form.Item
+              name="activationReason"
+              label="激活原因"
+              rules={[
+                { required: true, whitespace: true, message: '请输入激活原因' },
+                { max: 100, message: '激活原因不能超过100字' }
+              ]}
+            >
+              <AdminTextArea rows={3} maxLength={100} showCount placeholder="请输入激活原因" />
             </Form.Item>
           ) : null}
           {target === 2 || (workOrder.status === 4 && target === 3) ? (

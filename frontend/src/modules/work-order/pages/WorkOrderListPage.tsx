@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { Key } from 'react';
-import { message } from 'antd';
+import { App } from 'antd';
 import {
   ActionBar,
   AdminButton,
@@ -31,6 +31,7 @@ import { useWorkOrderListData } from './useWorkOrderListData';
 import './WorkOrderListPage.css';
 
 export function WorkOrderListPage() {
+  const { message } = App.useApp();
   const { currentPath, navigateWithReturn } = usePageReturnNavigation('/work-orders');
   const currentUser = useAuthStore((state) => state.user);
   const currentFollowerId = currentUser ? String(currentUser.id) : '';
@@ -125,7 +126,7 @@ export function WorkOrderListPage() {
       await reload();
       message.success('工单已删除');
     }
-  }), [listData.renderIndex, listData.sortState, navigateWithReturn, openDetail, problemTypeOptions, productOptions, reload, userOptions, viewKey]);
+  }), [listData.renderIndex, listData.sortState, message, navigateWithReturn, openDetail, problemTypeOptions, productOptions, reload, userOptions, viewKey]);
 
   const batch = useWorkOrderBatchActions({
     selectedRecords,
