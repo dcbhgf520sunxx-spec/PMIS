@@ -1,5 +1,6 @@
 export type TaskStatus = 0 | 1 | 2 | 3;
 export type TaskPriority = 0 | 1 | 2;
+export type TaskOwner = { id: string; name: string };
 
 export type TaskRecord = {
   id: string;
@@ -14,8 +15,9 @@ export type TaskRecord = {
   projectName: string;
   requirementId: string;
   requirementName: string;
-  ownerId: string;
-  ownerName: string;
+  ownerIds: string[];
+  owners: TaskOwner[];
+  ownerNames: string;
   taskType: string;
   taskTypeName: string;
   priority: TaskPriority;
@@ -39,7 +41,7 @@ export type TaskFormValues = {
   sourceType: 1 | 2;
   projectId?: string;
   requirementId?: string;
-  ownerId: string;
+  ownerIds: string[];
   taskType: string;
   priority: TaskPriority;
   startTime?: string;

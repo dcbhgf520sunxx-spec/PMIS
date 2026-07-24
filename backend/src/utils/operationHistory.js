@@ -40,6 +40,7 @@ function formatHistoryDate(value) {
 function formatHistoryChanges(changes, { fieldLabels = {}, dateFields = new Set(), valueLookups = {}, valueResolver } = {}) {
   return changes.map((change) => {
     const formatValue = (value) => {
+      if (value === '空') return ''
       if (valueResolver) {
         const resolved = valueResolver(change.field_name, value)
         if (resolved !== undefined) return resolved

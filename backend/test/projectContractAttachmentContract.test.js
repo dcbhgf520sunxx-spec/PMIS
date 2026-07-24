@@ -29,3 +29,31 @@ test('合同查询、上传、下载和删除附件均校验合同归属', () =>
   assert.match(controller, /Content-Disposition/)
   assert.match(controller, /is_deleted = 1/)
 })
+
+test('合同保存历史逐字段记录并将随保存附件关联到同一次操作', () => {
+  const controller = read('src/controllers/projectContractController.js')
+  const projectController = read('src/controllers/projectController.js')
+
+  assert.match(controller, /buildContractHistoryChanges/)
+  assert.match(controller, /createOperationId/)
+  assert.match(controller, /operation_id/)
+  assert.match(controller, /x-operation-id/)
+  assert.match(controller, /upsertOperationFieldLog/)
+  assert.match(controller, /'contract_attachment'/)
+  assert.match(controller, /action === '新增合同'/)
+  assert.doesNotMatch(controller, /'新增合同'[\s\S]{0,180}'contract'[\s\S]{0,180}contractLogValue/)
+  assert.doesNotMatch(controller, /'编辑合同'[\s\S]{0,180}'contract'[\s\S]{0,180}contractLogValue/)
+
+  for (const field of [
+    'contract_code',
+    'contract_name',
+    'contract_supplier',
+    'contract_signed_date',
+    'contract_amount',
+    'contract_remark',
+    'contract_stages',
+    'contract_attachment',
+  ]) {
+    assert.match(projectController, new RegExp(field))
+  }
+})

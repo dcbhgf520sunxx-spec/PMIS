@@ -43,6 +43,7 @@ export type ProjectContractRecord = {
   contractAmount: number;
   remark: string;
   paidAmount: number;
+  paymentCount: number;
   unpaidAmount: number;
   stages: ProjectPaymentStage[];
   attachments: ProjectContractAttachment[];

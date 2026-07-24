@@ -109,4 +109,33 @@ async function writeLogs(userId, action, module, targetId, changes, ip, targetNa
   return operationId
 }
 
-module.exports = { prepare, exec, transaction, writeLog, writeLogs, pool }
+function findOperationLog(operationId, module, targetId, userId) {
+  return prepare(`SELECT operation_id, action
+    FROM pms_op_log
+    WHERE operation_id = ? AND module = ? AND target_id = ? AND user_id = ?
+    ORDER BY id
+    LIMIT 1`).get(operationId, module, targetId, userId)
+}
+
+async function upsertOperationFieldLog(userId, action, module, targetId, fieldName, oldValue, newValue, ip, targetName, operationId) {
+  const existing = await prepare(`SELECT id
+    FROM pms_op_log
+    WHERE operation_id = ? AND field_name = ?
+    ORDER BY id
+    LIMIT 1`).get(operationId, fieldName)
+  if (existing) {
+    return prepare('UPDATE pms_op_log SET new_value = ? WHERE id = ?').run(newValue, existing.id)
+  }
+  return writeLog(userId, action, module, targetId, fieldName, oldValue, newValue, ip, targetName, operationId)
+}
+
+module.exports = {
+  exec,
+  findOperationLog,
+  pool,
+  prepare,
+  transaction,
+  upsertOperationFieldLog,
+  writeLog,
+  writeLogs,
+}

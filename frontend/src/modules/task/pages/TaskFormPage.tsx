@@ -64,7 +64,7 @@ export function TaskFormPage({ mode }: { mode: Mode }) {
           sourceType: row.sourceType,
           projectId: row.projectId || undefined,
           requirementId: row.requirementId || undefined,
-          ownerId: row.ownerId,
+          ownerIds: row.ownerIds,
           taskType: row.taskType,
           priority: row.priority,
           startTime: row.startTime || undefined,
@@ -105,7 +105,7 @@ export function TaskFormPage({ mode }: { mode: Mode }) {
     notFound={notFound}
     onRetry={() => setRevision((value) => value + 1)}
     onCancel={returnToSource}
-    fieldNameMap={{ source_type: 'sourceType', project_id: 'projectId', requirement_id: 'requirementId', owner_id: 'ownerId', task_type: 'taskType' }}
+    fieldNameMap={{ source_type: 'sourceType', project_id: 'projectId', requirement_id: 'requirementId', owner_ids: 'ownerIds', task_type: 'taskType' }}
     onSubmit={async (values) => {
       if (mode === 'edit' && params.id) await updateTask(params.id, values);
       else if (subtaskMode && params.id) await createSubtask(params.id, values);
@@ -130,7 +130,7 @@ export function TaskFormPage({ mode }: { mode: Mode }) {
     </TemplateFormSection>
     <TemplateFormSection title="处理信息">
       <div className="admin-template-form-page__grid">
-        <AdminProFormSelect name="ownerId" label="负责人" options={users} rules={[{ required: true, message: '请选择负责人' }]} />
+        <AdminProFormSelect name="ownerIds" label="负责人" mode="multiple" options={users} rules={[{ required: true, message: '请选择负责人' }]} />
         <AdminProFormDatePicker name="startTime" label="启动时间" />
         <AdminProFormDatePicker name="expectedEndTime" label="预计完成时间" />
       </div>

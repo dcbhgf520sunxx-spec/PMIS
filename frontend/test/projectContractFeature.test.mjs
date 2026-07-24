@@ -117,6 +117,12 @@ test('合同详情在金额字段后展示备注且空值显示占位符', async
   assert.match(detail, /\{\s*label:\s*'备注',\s*value:\s*contract\.remark\s*\|\|\s*'-',\s*wide:\s*true\s*\}/);
 });
 
+test('合同详情标题不重复展示合同编码', async () => {
+  const detail = await read('../src/modules/project/pages/ProjectContractDetailPage.tsx');
+  assert.doesNotMatch(detail, /titleCode=\{/);
+  assert.match(detail, /\{\s*label:\s*'合同编码',\s*value:\s*contract\.contractCode\s*\}/);
+});
+
 test('付款比例人工录入并自动计算计划金额', async () => {
   const calculationPath = new URL('../src/modules/project/projectContractCalculations.ts', import.meta.url);
   assert.equal(existsSync(calculationPath), true, '应提供付款阶段比例计算模块');
@@ -230,6 +236,17 @@ test('合同新增编辑复用底座上传组件并支持多个附件', async ()
   assert.match(types, /export type ProjectContractAttachment/);
 })
 
+test('合同保存将附件操作关联到同一条变更历史', async () => {
+  const form = await read('../src/modules/project/pages/ProjectContractFormPage.tsx');
+  const api = await read('../src/api/projectApi.ts');
+
+  assert.match(api, /operation_id/);
+  assert.match(api, /x-operation-id/);
+  assert.match(form, /const\s+saveResult\s*=\s*await\s+saveProjectContract/);
+  assert.match(form, /deleteProjectContractAttachment\(params\.id,\s*attachmentId,\s*saveResult\.operationId\)/);
+  assert.match(form, /uploadProjectContractAttachment\(params\.id,\s*attachment\.rawFile as File,\s*saveResult\.operationId\)/);
+})
+
 test('合同详情在合同信息最后展示附件并支持下载', async () => {
   const detail = await read('../src/modules/project/pages/ProjectContractDetailPage.tsx');
 
@@ -245,4 +262,20 @@ test('合同详情在合同信息最后展示附件并支持下载', async () =>
   assert.match(detail, /loadProjectContractAttachmentPreview/);
   assert.match(detail, /downloadProjectContractAttachment/);
   assert.doesNotMatch(detail, /TemplateDetailTableSection<ProjectContractAttachment>/);
+})
+
+test('合同详情支持提示付款影响后整体删除合同', async () => {
+  const detail = await read('../src/modules/project/pages/ProjectContractDetailPage.tsx');
+  const api = await read('../src/api/projectApi.ts');
+  const types = await read('../src/modules/project/types.ts');
+
+  assert.match(detail, /DeleteConfirmAction/);
+  assert.match(detail, /删除合同/);
+  assert.match(detail, /contract\.paymentCount/);
+  assert.match(detail, /合同、付款阶段、付款记录和附件/);
+  assert.match(detail, /deleteProjectContract\(params\.id\)/);
+  assert.match(api, /payment_count/);
+  assert.match(api, /export async function deleteProjectContract/);
+  assert.match(api, /request\.delete\(`\/projects\/\$\{projectId\}\/contract`\)/);
+  assert.match(types, /paymentCount:\s*number/);
 })

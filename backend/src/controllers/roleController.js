@@ -166,10 +166,7 @@ exports.update = async (req, res) => {
         'UPDATE pms_role SET code = ?, name = ?, description = ?, updater_id = ?, updated_at = NOW() WHERE id = ?'
       ).run(code, name, description || null, operatorId, req.params.id)
 
-      const fmt = (v) => v ?? '空'
-      await db.writeLogs(operatorId, '编辑', '角色', req.params.id, changes.map((change) => ({
-        ...change, oldVal: fmt(change.oldVal), newVal: fmt(change.newVal)
-      })), req.ip)
+      await db.writeLogs(operatorId, '编辑', '角色', req.params.id, changes, req.ip)
     }
 
     ok(res, null)

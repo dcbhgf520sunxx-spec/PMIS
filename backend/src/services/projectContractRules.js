@@ -54,7 +54,42 @@ function normalizePaymentMonth(value, today = new Date().toLocaleDateString('en-
   return `${text}-01`
 }
 
+function formatMoney(value) {
+  const cents = toCents(value)
+  if (cents === null) return String(value ?? '')
+  return `${cents / 100n}.${String(cents % 100n).padStart(2, '0')}`
+}
+
+function formatContractStages(stages) {
+  return (stages || [])
+    .map((stage) => `${String(stage.stage_name || '').trim()}：${formatMoney(stage.planned_amount)}`)
+    .join('；')
+}
+
+function buildContractHistoryChanges({ oldContract, oldStages, newContract, newSupplierName }) {
+  const changes = []
+  const addChange = (field, oldVal, newVal, oldCompare = oldVal, newCompare = newVal) => {
+    if (String(oldCompare ?? '') !== String(newCompare ?? '')) changes.push({ field, oldVal, newVal })
+  }
+
+  addChange('contract_code', oldContract.contract_code.trim(), newContract.contract_code.trim())
+  addChange('contract_name', oldContract.contract_name.trim(), newContract.contract_name.trim())
+  addChange(
+    'contract_supplier',
+    oldContract.supplier_name,
+    newSupplierName,
+    oldContract.supplier_id,
+    newContract.supplier_id
+  )
+  addChange('contract_signed_date', oldContract.signed_date, newContract.signed_date)
+  addChange('contract_amount', formatMoney(oldContract.contract_amount), formatMoney(newContract.contract_amount))
+  addChange('contract_remark', oldContract.remark || '', newContract.remark || '')
+  addChange('contract_stages', formatContractStages(oldStages), formatContractStages(newContract.stages))
+  return changes
+}
+
 module.exports = {
+  buildContractHistoryChanges,
   calculatePaymentSummary,
   normalizePaymentMonth,
   toCents,

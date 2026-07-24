@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Key } from 'react';
-import { message } from 'antd';
+import { App } from 'antd';
 import {
   AdminAlert,
   AdminButton,
@@ -31,6 +31,7 @@ export function useWorkOrderBatchActions({
   setSelectedRowKeys,
   reload
 }: UseWorkOrderBatchActionsParams) {
+  const { message } = App.useApp();
   const [batchStatusOpen, setBatchStatusOpen] = useState(false);
   const [batchAssignTarget, setBatchAssignTarget] = useState<string>();
   const [batchAssignSubmitting, setBatchAssignSubmitting] = useState(false);
@@ -38,7 +39,7 @@ export function useWorkOrderBatchActions({
   const sameStatus = selectedRecords.length === 0 || selectedRecords.every((item) => item.status === selectedRecords[0].status);
   const batchStatusOptions = statusOptions.filter((item) => {
     const first = selectedRecords[0];
-    return first ? statusTransitions[first.status].includes(item.value) : false;
+    return first ? item.value !== 5 && statusTransitions[first.status].includes(item.value) : false;
   });
   const batchAssignTargetName = userOptions.find((item) => item.value === batchAssignTarget)?.label || '-';
   const batchAssignAlreadyCount = batchAssignTarget

@@ -13,6 +13,7 @@ type WorkOrderResponse = {
   problem_type_name?: string;
   problem_desc: string;
   result_desc?: string;
+  activation_reason?: string;
   follower_id: number;
   follower_name?: string;
   urgency: number;
@@ -75,6 +76,7 @@ export type WorkOrderStatusPayload = {
   closeDate?: string | null;
   suspendDate?: string | null;
   resultDesc?: string | null;
+  activationReason?: string | null;
 };
 
 function dateText(value?: string) {
@@ -103,6 +105,7 @@ export function toWorkOrderRecord(row: WorkOrderResponse): WorkOrderRecord {
     closeDate: row.close_date ? dateText(row.close_date).slice(0, 10) : undefined,
     suspendDate: row.suspend_date ? dateText(row.suspend_date).slice(0, 10) : undefined,
     resultDesc: row.result_desc,
+    activationReason: row.activation_reason,
     creatorName: row.creator_name || '-',
     createdAt: dateText(row.created_at),
     updaterName: row.updater_name,
@@ -196,7 +199,8 @@ export async function updateWorkOrderStatus(id: string, payload: WorkOrderStatus
       resolve_date: payload.resolveDate,
       close_date: payload.closeDate,
       suspend_date: payload.suspendDate,
-      result_desc: payload.resultDesc
+      result_desc: payload.resultDesc,
+      activation_reason: payload.activationReason
     };
   return unwrap<null>(request.put(`/work-orders/${id}/status`, data));
 }

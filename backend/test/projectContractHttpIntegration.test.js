@@ -1,6 +1,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const bcrypt = require('bcryptjs')
+const http = require('node:http')
 
 const enabled = process.env.RUN_DB_INTEGRATION === '1'
 
@@ -11,6 +12,46 @@ async function readJson(response) {
 
 test('项目合同和分阶段付款真实接口流程', { skip: !enabled }, async () => {
   assert.equal(process.env.INTEGRATION_DB_ISOLATED, '1', '真实集成测试只能连接明确标记的隔离数据库')
+  const uploadedPdf = Buffer.from('%PDF-1.7 integration contract')
+  let ossUploadBody = ''
+  const ossServer = http.createServer((req, res) => {
+    if (req.method === 'POST' && req.url === '/oss/file/upload') {
+      const chunks = []
+      req.on('data', (chunk) => chunks.push(chunk))
+      req.on('end', () => {
+        ossUploadBody = Buffer.concat(chunks).toString('latin1')
+        const origin = `http://127.0.0.1:${ossServer.address().port}`
+        res.setHeader('content-type', 'application/json')
+        res.end(JSON.stringify({
+          code: 100,
+          msg: 'success',
+          data: [{
+            id: 'contract-integration-file',
+            fileName: '合同附件.pdf',
+            fileUrl: `${origin}/pmis/20260724/contract.pdf`,
+            fileSize: `${uploadedPdf.length} B`,
+            filePath: '20260724/contract.pdf',
+            fileExtName: 'pdf',
+          }],
+        }))
+      })
+      return
+    }
+    if (req.method === 'GET' && req.url === '/pmis/20260724/contract.pdf') {
+      res.setHeader('content-type', 'application/pdf')
+      res.end(uploadedPdf)
+      return
+    }
+    res.statusCode = 404
+    res.end()
+  })
+  await new Promise((resolve, reject) => {
+    ossServer.listen(0, '127.0.0.1', resolve)
+    ossServer.once('error', reject)
+  })
+  const ossOrigin = `http://127.0.0.1:${ossServer.address().port}`
+  process.env.CONTRACT_ATTACHMENT_OSS_UPLOAD_URL = `${ossOrigin}/oss/file/upload`
+  process.env.CONTRACT_ATTACHMENT_OSS_FILE_ORIGIN = ossOrigin
   const app = require('../src/app')
   const db = require('../src/db')
   const server = app.listen(0)
@@ -76,6 +117,7 @@ test('项目合同和分阶段付款真实接口流程', { skip: !enabled }, asy
       ],
     } })
     assert.equal(created.response.status, 200)
+    assert.match(created.body.data.operation_id, /^[0-9a-f-]{36}$/)
 
     const duplicate = await request(`/api/projects/${projectId}/contract`, { method: 'POST', body: {
       contract_code: `HT-${suffix}-2`, contract_name: '重复合同', supplier_id: supplierId, signed_date: '2026-07-20', contract_amount: '100.00',
@@ -97,13 +139,23 @@ test('项目合同和分阶段付款真实接口流程', { skip: !enabled }, asy
     attachmentForm.append('file', new Blob([Buffer.from('%PDF-1.7 integration contract')], { type: 'application/pdf' }), '合同附件.pdf')
     const attachmentResponse = await fetch(`${baseUrl}/api/projects/${projectId}/contract/attachments`, {
       method: 'POST',
-      headers: { authorization: `Bearer ${token}` },
+      headers: {
+        authorization: `Bearer ${token}`,
+        'x-operation-id': created.body.data.operation_id,
+      },
       body: attachmentForm,
     })
     const attachmentBody = await readJson(attachmentResponse)
     assert.equal(attachmentResponse.status, 200)
     assert.equal(attachmentBody.data.original_name, '合同附件.pdf')
+    assert.match(ossUploadBody, /name="bucketName"\r\n\r\npmis/)
     const attachmentId = attachmentBody.data.id
+    const storedAttachment = await db.prepare(
+      'SELECT storage_name, oss_response FROM pms_project_contract_attachment WHERE id = ?'
+    ).get(attachmentId)
+    assert.equal(storedAttachment.storage_name, '20260724/contract.pdf')
+    assert.equal(storedAttachment.oss_response.data[0].id, 'contract-integration-file')
+    assert.equal(storedAttachment.oss_response.code, 100)
 
     const withAttachment = await request(`/api/projects/${projectId}/contract`)
     assert.equal(withAttachment.body.data.attachments.length, 1)
@@ -113,7 +165,39 @@ test('项目合同和分阶段付款真实接口流程', { skip: !enabled }, asy
     const download = await fetch(`${baseUrl}/api/projects/${projectId}/contract/attachments/${attachmentId}/download`, { headers: { authorization: `Bearer ${token}` } })
     assert.equal(download.status, 200)
     assert.match(download.headers.get('content-disposition'), /合同附件\.pdf|%E5%90%88%E5%90%8C%E9%99%84%E4%BB%B6\.pdf/)
-    assert.equal(Buffer.from(await download.arrayBuffer()).toString(), '%PDF-1.7 integration contract')
+    assert.equal(Buffer.from(await download.arrayBuffer()).toString(), uploadedPdf.toString())
+
+    const createdHistory = await request(`/api/projects/${projectId}/history`)
+    const createHistoryItem = createdHistory.body.data.find((item) => item.action === '新增合同')
+    assert.deepEqual(createHistoryItem.changes, [])
+    assert.equal(createdHistory.body.data.some((item) => item.action === '上传合同附件'), false)
+
+    const updated = await request(`/api/projects/${projectId}/contract`, { method: 'PUT', body: {
+      contract_code: `HT-${suffix}`,
+      contract_name: '项目建设合同（变更）',
+      supplier_id: supplierId,
+      signed_date: '2026-07-20',
+      contract_amount: '100.00',
+      remark: '合同集成测试备注（变更）',
+      stages: detail.body.data.stages.map((stage) => ({
+        id: stage.id,
+        stage_name: stage.stage_name,
+        planned_amount: stage.planned_amount,
+      })),
+    } })
+    assert.equal(updated.response.status, 200)
+    assert.match(updated.body.data.operation_id, /^[0-9a-f-]{36}$/)
+    const deletedAttachment = await fetch(`${baseUrl}/api/projects/${projectId}/contract/attachments/${attachmentId}`, {
+      method: 'DELETE',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'x-operation-id': updated.body.data.operation_id,
+      },
+    })
+    assert.equal(deletedAttachment.status, 200)
+    const updatedHistory = await request(`/api/projects/${projectId}/history`)
+    const editHistoryItem = updatedHistory.body.data.find((item) => item.action === '编辑合同')
+    assert.deepEqual(editHistoryItem.changes.map((change) => change.field_name), ['合同名称', '备注', '合同附件'])
 
     for (const amount of ['30.00', '20.00']) {
       const payment = await request(`/api/projects/${projectId}/contract/stages/${stageId}/payments`, { method: 'POST', body: { payment_amount: amount, payment_month: '2026-07', handler_id: 1, remark: '集成测试付款' } })
@@ -121,6 +205,7 @@ test('项目合同和分阶段付款真实接口流程', { skip: !enabled }, asy
     }
     const paid = await request(`/api/projects/${projectId}/contract`)
     assert.equal(Number(paid.body.data.paid_amount), 50)
+    assert.equal(Number(paid.body.data.payment_count), 2)
     assert.equal(Number(paid.body.data.unpaid_amount), 50)
     assert.equal(Number(paid.body.data.stages[0].payment_status), 2)
 
@@ -148,12 +233,25 @@ test('项目合同和分阶段付款真实接口流程', { skip: !enabled }, asy
     const protectedSupplier = await request(`/api/archives/${supplierId}`, { method: 'DELETE' })
     assert.equal(protectedSupplier.response.status, 400)
     assert.match(protectedSupplier.body.message, /项目合同/)
-    const deletedAttachment = await request(`/api/projects/${projectId}/contract/attachments/${attachmentId}`, { method: 'DELETE' })
-    assert.equal(deletedAttachment.response.status, 200)
-    const withoutAttachment = await request(`/api/projects/${projectId}/contract`)
-    assert.deepEqual(withoutAttachment.body.data.attachments, [])
+
+    const deletedContract = await request(`/api/projects/${projectId}/contract`, { method: 'DELETE' })
+    assert.equal(deletedContract.response.status, 200)
+    const withoutContract = await request(`/api/projects/${projectId}/contract`)
+    assert.equal(withoutContract.body.data, null)
+    const deletedRows = await db.prepare(`SELECT contract.is_deleted contract_deleted,
+      stage.is_deleted stage_deleted, payment.is_deleted payment_deleted, attachment.is_deleted attachment_deleted
+      FROM pms_project_contract contract
+      JOIN pms_project_payment_stage stage ON stage.contract_id = contract.id
+      JOIN pms_project_payment_record payment ON payment.stage_id = stage.id
+      JOIN pms_project_contract_attachment attachment ON attachment.contract_id = contract.id
+      WHERE contract.id = ? AND payment.id = ?`).get(created.body.data.id, payments.body.data[0].id)
+    assert.deepEqual(
+      [deletedRows.contract_deleted, deletedRows.stage_deleted, deletedRows.payment_deleted, deletedRows.attachment_deleted].map(Number),
+      [1, 1, 1, 1]
+    )
   } finally {
     await new Promise((resolve) => server.close(resolve))
+    await new Promise((resolve) => ossServer.close(resolve))
     await db.pool.end()
   }
 })
