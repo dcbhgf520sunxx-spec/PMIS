@@ -97,6 +97,8 @@ export function AdvancedInputExamples({ richText, setRichText }: AdvancedInputEx
                   value={attachments}
                   onChange={setAttachments}
                   onUpload={simulateUpload}
+                  accept="image/*,.pdf"
+                  hint="此示例仅允许图片和 PDF；不支持的文件会直接提示，不进入附件列表"
                   onDownload={(attachment) => {
                     message.success(`开始下载：${attachment.name}`);
                   }}

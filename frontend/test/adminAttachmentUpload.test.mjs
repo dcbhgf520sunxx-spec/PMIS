@@ -25,7 +25,7 @@ test('底座提供完整附件组件并保持业务限制可选', () => {
   assert.match(source, /maxSize\?:/);
   assert.match(validation, /options\.maxSize !== undefined/);
   assert.match(validation, /if \(options\.accept/);
-  assert.match(source, /capacity !== undefined/);
+  assert.match(validation, /options\.currentCount >= capacity/);
   assert.doesNotMatch(source, /20\s*\*\s*1024|MAX_FILE_SIZE|MAX_ATTACHMENT_COUNT/);
   assert.doesNotMatch(validation, /20\s*\*\s*1024|MAX_FILE_SIZE|MAX_ATTACHMENT_COUNT/);
 });
