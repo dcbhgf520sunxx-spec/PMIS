@@ -3,6 +3,20 @@ export type AttachmentValidationOptions = {
   maxSize?: number;
 };
 
+export type AttachmentSelectionOptions = AttachmentValidationOptions & {
+  currentCount: number;
+  maxCount?: number;
+  multiple: boolean;
+  replacing?: boolean;
+};
+
+export type AttachmentSelectionDecision = {
+  accepted: true;
+} | {
+  accepted: false;
+  error: string;
+};
+
 export const ADMIN_ATTACHMENT_IMAGE_FORMATS = [
   'JPG',
   'JPEG',
@@ -78,4 +92,19 @@ export function validateAttachmentFile(file: File, options: AttachmentValidation
     return '不支持该文件格式';
   }
   return null;
+}
+
+export function validateAttachmentSelection(
+  file: File,
+  options: AttachmentSelectionOptions
+): AttachmentSelectionDecision {
+  const validationError = validateAttachmentFile(file, options);
+  if (validationError) return { accepted: false, error: validationError };
+
+  const capacity = options.multiple ? options.maxCount : 1;
+  if (!options.replacing && capacity !== undefined && options.currentCount >= capacity) {
+    return { accepted: false, error: `最多上传 ${capacity} 个附件` };
+  }
+
+  return { accepted: true };
 }

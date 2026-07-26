@@ -26,7 +26,7 @@ import { useAdminFeedback } from '../AdminFeedback';
 import {
   ADMIN_ATTACHMENT_IMAGE_FORMATS,
   formatAttachmentSize,
-  validateAttachmentFile
+  validateAttachmentSelection
 } from './validation';
 import './index.css';
 
@@ -182,18 +182,6 @@ function AttachmentUpload({
   };
 
   const uploadFile = async (file: RcFile, existingId?: string) => {
-    const validationError = validateAttachmentFile(file, { accept, maxSize });
-    if (validationError) {
-      message.error(`${file.name}：${validationError}`);
-      return;
-    }
-
-    const capacity = multiple ? maxCount : 1;
-    if (!existingId && capacity !== undefined && attachmentsRef.current.length >= capacity) {
-      message.error(`最多上传 ${capacity} 个附件`);
-      return;
-    }
-
     const temporaryId = existingId || `upload-${file.uid}`;
     const uploading: AdminAttachment = {
       id: temporaryId,
@@ -236,8 +224,24 @@ function AttachmentUpload({
     }
   };
 
+  const startUpload = (file: RcFile, existingId?: string) => {
+    const decision = validateAttachmentSelection(file, {
+      accept,
+      maxSize,
+      maxCount,
+      multiple,
+      currentCount: attachmentsRef.current.length,
+      replacing: Boolean(existingId)
+    });
+    if (!decision.accepted) {
+      message.error(`${file.name}：${decision.error}`);
+      return;
+    }
+    void uploadFile(file, existingId);
+  };
+
   const handleRetry = (attachment: AdminAttachment) => {
-    if (attachment.rawFile) void uploadFile(attachment.rawFile, attachment.id);
+    if (attachment.rawFile) startUpload(attachment.rawFile, attachment.id);
   };
 
   const handleDownload = async (attachment: AdminAttachment) => {
@@ -282,7 +286,7 @@ function AttachmentUpload({
 
   const uploadHint = hint || DEFAULT_UPLOAD_HINT;
   const beforeUpload = (file: RcFile) => {
-    void uploadFile(file);
+    startUpload(file);
     return Upload.LIST_IGNORE;
   };
 
@@ -438,5 +442,6 @@ export {
   ADMIN_ATTACHMENT_IMAGE_FORMATS,
   formatAttachmentSize,
   matchesAttachmentAccept,
+  validateAttachmentSelection,
   validateAttachmentFile
 } from './validation';
