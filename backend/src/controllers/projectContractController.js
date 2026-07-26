@@ -4,6 +4,8 @@ const { Readable } = require('node:stream')
 const { fail, failField, ok } = require('../utils/response')
 const {
   buildContractHistoryChanges,
+  buildPaymentCreationHistoryChanges,
+  buildPaymentHistoryChanges,
   normalizePaymentMonth,
   toCents,
   validateContractStages,
@@ -127,10 +129,6 @@ async function validateContract(res, projectId, body, excludeContractId) {
     return null
   }
   return { project, supplier }
-}
-
-function contractLogValue(body, supplierName = body.supplier_name) {
-  return `${body.contract_code.trim()}｜${body.contract_name.trim()}｜${supplierName}｜${Number(body.contract_amount).toFixed(2)}`
 }
 
 async function writeContractHistory(userId, action, projectId, changes, ip, projectName) {
@@ -306,7 +304,7 @@ exports.remove = async (req, res) => {
     for (const attachment of attachments) {
       if (!attachment.oss_response) await removeAttachmentFile(attachment.storage_name).catch(console.error)
     }
-    await db.writeLog(operatorId, '删除合同', '项目', req.params.id, 'contract', contractLogValue(contract), null, req.ip, contract.project_name)
+    await writeContractHistory(operatorId, '删除合同', req.params.id, [], req.ip, contract.project_name)
     ok(res, null)
   } catch (error) {
     if (error.statusCode === 404) return fail(res, 404, 404, error.message)
@@ -439,7 +437,7 @@ async function validatePayment(res, projectId, stageId, body, excludePaymentId) 
     failField(res, 'handler_id', '请选择经办人')
     return null
   }
-  const handler = await db.prepare('SELECT id FROM pms_user WHERE id = ? AND status = 1 AND is_deleted = 0').get(body.handler_id)
+  const handler = await db.prepare('SELECT id, real_name FROM pms_user WHERE id = ? AND status = 1 AND is_deleted = 0').get(body.handler_id)
   if (!handler) {
     failField(res, 'handler_id', '经办人不存在或已停用')
     return null
@@ -455,7 +453,7 @@ async function validatePayment(res, projectId, stageId, body, excludePaymentId) 
     failField(res, 'payment_amount', amountError)
     return null
   }
-  return { stage, paymentMonth }
+  return { stage, paymentMonth, handler }
 }
 
 exports.listPayments = async (req, res) => {
@@ -484,7 +482,16 @@ exports.createPayment = async (req, res) => {
       (stage_id, payment_amount, payment_month, handler_id, remark, creator_id, updater_id)
       VALUES (?, ?, ?, ?, ?, ?, ?)`)
       .run(req.params.stageId, req.body.payment_amount, validated.paymentMonth, req.body.handler_id, req.body.remark || null, operatorId, operatorId)
-    await db.writeLog(operatorId, '登记付款', '项目', req.params.id, 'payment', null, `${validated.stage.stage_name}｜${Number(req.body.payment_amount).toFixed(2)}｜${validated.paymentMonth.slice(0, 7)}`, req.ip, validated.stage.project_name)
+    const changes = buildPaymentCreationHistoryChanges({
+      stageName: validated.stage.stage_name,
+      payment: {
+        payment_amount: req.body.payment_amount,
+        payment_month: validated.paymentMonth,
+        handler_name: validated.handler.real_name,
+        remark: req.body.remark,
+      },
+    })
+    await db.writeLogs(operatorId, '登记付款', '项目', req.params.id, changes, req.ip, validated.stage.project_name)
     ok(res, { id: result.lastInsertRowid })
   } catch (error) {
     console.error(error)
@@ -494,9 +501,10 @@ exports.createPayment = async (req, res) => {
 
 exports.updatePayment = async (req, res) => {
   try {
-    const payment = await db.prepare(`SELECT r.*, s.id stage_id FROM pms_project_payment_record r
+    const payment = await db.prepare(`SELECT r.*, s.id stage_id, handler.real_name handler_name FROM pms_project_payment_record r
       JOIN pms_project_payment_stage s ON s.id = r.stage_id AND s.is_deleted = 0
       JOIN pms_project_contract c ON c.id = s.contract_id AND c.is_deleted = 0
+      JOIN pms_user handler ON handler.id = r.handler_id
       WHERE r.id = ? AND c.project_id = ? AND r.is_deleted = 0`).get(req.params.paymentId, req.params.id)
     if (!payment) return fail(res, 404, 404, '付款记录不存在')
     const validated = await validatePayment(res, req.params.id, payment.stage_id, req.body, payment.id)
@@ -504,7 +512,18 @@ exports.updatePayment = async (req, res) => {
     await db.prepare(`UPDATE pms_project_payment_record SET payment_amount = ?, payment_month = ?, handler_id = ?, remark = ?,
       updater_id = ?, updated_at = NOW() WHERE id = ?`)
       .run(req.body.payment_amount, validated.paymentMonth, req.body.handler_id, req.body.remark || null, req.user.id, payment.id)
-    await db.writeLog(req.user.id, '更正付款', '项目', req.params.id, 'payment', Number(payment.payment_amount).toFixed(2), Number(req.body.payment_amount).toFixed(2), req.ip, validated.stage.project_name)
+    const changes = buildPaymentHistoryChanges({
+      stageName: validated.stage.stage_name,
+      oldPayment: payment,
+      newPayment: {
+        payment_amount: req.body.payment_amount,
+        payment_month: validated.paymentMonth,
+        handler_id: validated.handler.id,
+        handler_name: validated.handler.real_name,
+        remark: req.body.remark,
+      },
+    })
+    if (changes.length) await db.writeLogs(req.user.id, '更正付款', '项目', req.params.id, changes, req.ip, validated.stage.project_name)
     ok(res, null)
   } catch (error) {
     console.error(error)

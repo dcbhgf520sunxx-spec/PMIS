@@ -75,3 +75,70 @@ export type ProjectPaymentFormValues = {
   handlerId: string;
   remark?: string;
 };
+
+export type ProjectPlanItemStatus = 0 | 1 | 2 | 3;
+export type ProjectPlanCollaborator = { id: string; name: string };
+export type ProjectPlanItem = {
+  id: string;
+  stageId: string;
+  name: string;
+  ownerId: string;
+  ownerName: string;
+  collaborators: ProjectPlanCollaborator[];
+  status: ProjectPlanItemStatus;
+  previousStatus?: ProjectPlanItemStatus;
+  pauseReason: string;
+  originalDueDate: string;
+  currentDueDate: string;
+  actualEndDate: string;
+  requiresDeliveryFile: boolean;
+  deliveryRequirement: string;
+  remark: string;
+  sortOrder: number;
+  adjustmentCount: number;
+  fileCount: number;
+  progressHint: string;
+};
+export type ProjectPlanStage = {
+  id: string;
+  projectId: string;
+  name: string;
+  description: string;
+  sortOrder: number;
+  itemCount: number;
+  completedCount: number;
+  minDueDate: string;
+  maxDueDate: string;
+  overdueCount: number;
+  items: ProjectPlanItem[];
+};
+export type ProjectStagePlan = {
+  project: { id: string; name: string };
+  stages: ProjectPlanStage[];
+};
+export type ProjectPlanItemForm = {
+  stageId: string;
+  name: string;
+  ownerId: string;
+  collaboratorIds: string[];
+  originalDueDate?: string;
+  requiresDeliveryFile: boolean;
+  deliveryRequirement?: string;
+  remark?: string;
+};
+export type ProjectPlanAdjustment = {
+  id: string;
+  oldDueDate: string;
+  newDueDate: string;
+  reason: string;
+  operatorName: string;
+  createdAt: string;
+};
+export type ProjectPlanDeliveryFile = {
+  id: string;
+  name: string;
+  contentType: string;
+  size: number;
+  uploaderName: string;
+  createdAt: string;
+};

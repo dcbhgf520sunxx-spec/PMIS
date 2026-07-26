@@ -1,7 +1,7 @@
 import { request, unwrap } from './requestClient';
 import { arrayContract, objectContract } from './responseContract';
 import type { PageResult } from '../types/api';
-import type { ProjectContractAttachment, ProjectContractFormValues, ProjectContractRecord, ProjectFormValues, ProjectPaymentFormValues, ProjectPaymentRecord, ProjectRecord, ProjectStatus } from '../modules/project/types';
+import type { ProjectContractAttachment, ProjectContractFormValues, ProjectContractRecord, ProjectFormValues, ProjectPaymentFormValues, ProjectPaymentRecord, ProjectPlanAdjustment, ProjectPlanDeliveryFile, ProjectPlanItemForm, ProjectPlanItemStatus, ProjectRecord, ProjectStagePlan, ProjectStatus } from '../modules/project/types';
 import dayjs from 'dayjs';
 type Row={id:number;name:string;description?:string;product_id:number;product_name:string;owner_id:number;owner_name:string;members?:Array<{id:number;name:string}>;status:number;previous_status?:number;is_overdue:number;start_date?:string;expected_end_date:string;actual_end_date?:string;suspend_date?:string;progress_text?:string;risk_text?:string;creator_name?:string;updater_name?:string;created_at?:string;updated_at?:string};
 const rowContract=objectContract<Row>(['id','name','product_id','product_name','owner_id','owner_name','status','is_overdue','expected_end_date']);
@@ -145,3 +145,40 @@ export async function updateProjectPayment(projectId: string, paymentId: string,
 export async function deleteProjectPayment(projectId: string, paymentId: string) {
   return unwrap<null>(request.delete(`/projects/${projectId}/contract/payments/${paymentId}`));
 }
+
+type PlanItemRow={id:number;stage_id:number;name:string;owner_id:number;owner_name:string;collaborators:Array<{id:number;name:string}>;status:number;previous_status?:number;pause_reason?:string;original_due_date:string;current_due_date:string;actual_end_date?:string;requires_delivery_file:number;delivery_requirement?:string;remark?:string;sort_order:number;adjustment_count:number;file_count:number;progress_hint?:string};
+type PlanStageRow={id:number;project_id:number;name:string;description?:string;sort_order:number;item_count:number;completed_count:number;min_due_date?:string;max_due_date?:string;overdue_count:number;items:PlanItemRow[]};
+type PlanResponse={project:{id:number;name:string};stages:PlanStageRow[]};
+const planItemContract=objectContract<PlanItemRow>(['id','stage_id','name','owner_id','owner_name','collaborators','status','original_due_date','current_due_date','requires_delivery_file','sort_order','adjustment_count','file_count']);
+const planStageContract=objectContract<PlanStageRow>(['id','project_id','name','sort_order','item_count','completed_count','overdue_count','items'],{items:arrayContract(planItemContract)});
+const planContract=objectContract<PlanResponse>(['project','stages'],{project:objectContract(['id','name']),stages:arrayContract(planStageContract)});
+const mapPlanItem=(row:PlanItemRow)=>({id:String(row.id),stageId:String(row.stage_id),name:row.name,ownerId:String(row.owner_id),ownerName:row.owner_name,collaborators:(row.collaborators||[]).map((item)=>({id:String(item.id),name:item.name})),status:Number(row.status) as ProjectPlanItemStatus,previousStatus:row.previous_status===undefined?undefined:Number(row.previous_status) as ProjectPlanItemStatus,pauseReason:row.pause_reason||'',originalDueDate:date(row.original_due_date),currentDueDate:date(row.current_due_date),actualEndDate:date(row.actual_end_date),requiresDeliveryFile:Boolean(Number(row.requires_delivery_file)),deliveryRequirement:row.delivery_requirement||'',remark:row.remark||'',sortOrder:Number(row.sort_order),adjustmentCount:Number(row.adjustment_count),fileCount:Number(row.file_count),progressHint:row.progress_hint||''});
+const itemPayload=(values:ProjectPlanItemForm)=>({stage_id:Number(values.stageId),name:values.name,owner_id:Number(values.ownerId),collaborator_ids:values.collaboratorIds.map(Number),original_due_date:values.originalDueDate?dayjs(values.originalDueDate).format('YYYY-MM-DD'):undefined,requires_delivery_file:values.requiresDeliveryFile?1:0,delivery_requirement:values.deliveryRequirement||null,remark:values.remark||null});
+
+export async function getProjectStagePlan(projectId:string):Promise<ProjectStagePlan>{
+  const result=await unwrap<PlanResponse>(request.get(`/projects/${projectId}/stage-plan`),planContract);
+  return {project:{id:String(result.project.id),name:result.project.name},stages:result.stages.map((stage)=>({id:String(stage.id),projectId:String(stage.project_id),name:stage.name,description:stage.description||'',sortOrder:Number(stage.sort_order),itemCount:Number(stage.item_count),completedCount:Number(stage.completed_count),minDueDate:date(stage.min_due_date),maxDueDate:date(stage.max_due_date),overdueCount:Number(stage.overdue_count),items:stage.items.map(mapPlanItem)}))};
+}
+export async function getProjectStagePlanHistory(projectId:string){return unwrap<ProjectHistoryItem[]>(request.get(`/projects/${projectId}/stage-plan/history`),historyContract)}
+export const createProjectPlanStage=(projectId:string,values:{name:string;description?:string})=>unwrap<{id:number}>(request.post(`/projects/${projectId}/stage-plan/stages`,values),idContract);
+export const updateProjectPlanStage=(projectId:string,stageId:string,values:{name:string;description?:string})=>unwrap<null>(request.put(`/projects/${projectId}/stage-plan/stages/${stageId}`,values));
+export const reorderProjectPlanStages=(projectId:string,ids:string[],movedId:string)=>unwrap<null>(request.put(`/projects/${projectId}/stage-plan/stages/reorder`,{ids:ids.map(Number),moved_id:Number(movedId)}));
+export const deleteProjectPlanStage=(projectId:string,stageId:string)=>unwrap<null>(request.delete(`/projects/${projectId}/stage-plan/stages/${stageId}`));
+export const createProjectPlanItem=(projectId:string,values:ProjectPlanItemForm)=>unwrap<{id:number}>(request.post(`/projects/${projectId}/stage-plan/items`,itemPayload(values)),idContract);
+export const createProjectPlanItems=(projectId:string,stageId:string,values:ProjectPlanItemForm[])=>unwrap<{ids:number[]}>(request.post(`/projects/${projectId}/stage-plan/items/batch`,{stage_id:Number(stageId),items:values.map(itemPayload)}),objectContract(['ids'],{ids:arrayContract((value):value is number=>Number.isSafeInteger(value))}));
+export const updateProjectPlanItem=(projectId:string,itemId:string,values:ProjectPlanItemForm)=>unwrap<null>(request.put(`/projects/${projectId}/stage-plan/items/${itemId}`,itemPayload(values)));
+export const reorderProjectPlanItems=(projectId:string,stageId:string,ids:string[],movedId:string)=>unwrap<null>(request.put(`/projects/${projectId}/stage-plan/stages/${stageId}/items/reorder`,{ids:ids.map(Number),moved_id:Number(movedId)}));
+export const changeProjectPlanItemStatus=(projectId:string,itemId:string,status:ProjectPlanItemStatus,extra:Record<string,unknown>={})=>unwrap<null>(request.put(`/projects/${projectId}/stage-plan/items/${itemId}/status`,{status,...extra}));
+export const adjustProjectPlanItem=(projectId:string,itemId:string,newDueDate:string,reason:string)=>unwrap<null>(request.post(`/projects/${projectId}/stage-plan/items/${itemId}/adjustments`,{new_due_date:dayjs(newDueDate).format('YYYY-MM-DD'),reason}));
+export async function getProjectPlanAdjustments(projectId:string,itemId:string):Promise<ProjectPlanAdjustment[]>{
+  const rows=await unwrap<any[]>(request.get(`/projects/${projectId}/stage-plan/items/${itemId}/adjustments`),arrayContract(objectContract(['id','old_due_date','new_due_date','reason','created_at'])));
+  return rows.map((row)=>({id:String(row.id),oldDueDate:date(row.old_due_date),newDueDate:date(row.new_due_date),reason:row.reason,operatorName:row.operator_name||'-',createdAt:dt(row.created_at)}));
+}
+export const deleteProjectPlanItem=(projectId:string,itemId:string)=>unwrap<null>(request.delete(`/projects/${projectId}/stage-plan/items/${itemId}`));
+const deliveryContract=objectContract<any>(['id','plan_item_id','original_name','mime_type','size_bytes','created_at']);
+const mapDelivery=(row:any):ProjectPlanDeliveryFile=>({id:String(row.id),name:row.original_name,contentType:row.mime_type,size:Number(row.size_bytes),uploaderName:row.uploader_name||'-',createdAt:dt(row.created_at)});
+export async function getProjectPlanFiles(projectId:string,itemId:string){return (await unwrap<any[]>(request.get(`/projects/${projectId}/stage-plan/items/${itemId}/files`),arrayContract(deliveryContract))).map(mapDelivery);}
+export async function uploadProjectPlanFile(projectId:string,itemId:string,file:File){const data=new FormData();data.append('file',file);return mapDelivery(await unwrap<any>(request.post(`/projects/${projectId}/stage-plan/items/${itemId}/files`,data),deliveryContract));}
+export const deleteProjectPlanFile=(projectId:string,itemId:string,fileId:string)=>unwrap<null>(request.delete(`/projects/${projectId}/stage-plan/items/${itemId}/files/${fileId}`));
+export async function downloadProjectPlanFile(projectId:string,itemId:string,fileId:string,name:string){const response=await request.get(`/projects/${projectId}/stage-plan/items/${itemId}/files/${fileId}/download`,{responseType:'blob'});const url=URL.createObjectURL(response.data);const anchor=document.createElement('a');anchor.href=url;anchor.download=name;anchor.click();URL.revokeObjectURL(url);}
+export async function loadProjectPlanFilePreview(projectId:string,itemId:string,fileId:string){const response=await request.get(`/projects/${projectId}/stage-plan/items/${itemId}/files/${fileId}/download`,{responseType:'blob'});return response.data as Blob;}

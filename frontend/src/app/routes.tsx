@@ -108,6 +108,7 @@ const ProjectFormPage = lazy(() => import('../modules/project/pages/ProjectFormP
 const ProjectDetailPage = lazy(() => import('../modules/project/pages/ProjectDetailPage').then((module) => ({ default: module.ProjectDetailPage })));
 const ProjectContractFormPage = lazy(() => import('../modules/project/pages/ProjectContractFormPage').then((module) => ({ default: module.ProjectContractFormPage })));
 const ProjectContractDetailPage = lazy(() => import('../modules/project/pages/ProjectContractDetailPage').then((module) => ({ default: module.ProjectContractDetailPage })));
+const ProjectStagePlanPage = lazy(() => import('../modules/project/pages/ProjectStagePlanPage').then((module) => ({ default: module.ProjectStagePlanPage })));
 const RequirementListPage = lazy(() => import('../modules/requirement/pages/RequirementListPage').then((module) => ({ default: module.RequirementListPage })));
 const RequirementFormPage = lazy(() => import('../modules/requirement/pages/RequirementFormPage').then((module) => ({ default: module.RequirementFormPage })));
 const RequirementDetailPage = lazy(() => import('../modules/requirement/pages/RequirementDetailPage').then((module) => ({ default: module.RequirementDetailPage })));
@@ -139,6 +140,7 @@ export const routes: RouteObject[] = [
       { path: 'projects/:id/edit', element: withRouteSuspense(<ProjectFormPage mode="edit" />) },
       { path: 'projects/:id/contract', element: withRouteSuspense(<ProjectContractFormPage />) },
       { path: 'projects/:id/contract-detail', element: withRouteSuspense(<ProjectContractDetailPage />) },
+      { path: 'projects/:id/stage-plan', element: withRouteSuspense(<ProjectStagePlanPage />) },
       { path: 'projects/:id', element: withRouteSuspense(<ProjectDetailPage />) },
       { path: 'requirements', element: withRouteSuspense(<RequirementListPage />) },
       { path: 'requirements/new', element: withRouteSuspense(<RequirementFormPage mode="create" />) },

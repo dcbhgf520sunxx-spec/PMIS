@@ -20,6 +20,8 @@ export type HistoryTimelineItem = {
   action: string;
   time: string;
   remark?: string;
+  /** diff 展示前后差异；values 仅展示当前值。 */
+  changeMode?: 'diff' | 'values';
   changes?: HistoryChange[];
 };
 
@@ -95,10 +97,14 @@ export function HistoryTimeline({ items, expandedKeys: controlledKeys, onExpande
                 {item.changes.map((change, index) => (
                   <div className="admin-history-timeline__change" key={`${change.field}-${index}`}>
                     <span>{change.field}：</span>
-                    <span className="admin-history-timeline__value is-before" title={typeof change.before === 'string' ? formatHistoryValue(change.field, change.before) as string : undefined}>
-                      {formatHistoryValue(change.field, change.before)}
-                    </span>
-                    <span className="admin-history-timeline__arrow"> → </span>
+                    {item.changeMode === 'values' ? null : (
+                      <>
+                        <span className="admin-history-timeline__value is-before" title={typeof change.before === 'string' ? formatHistoryValue(change.field, change.before) as string : undefined}>
+                          {formatHistoryValue(change.field, change.before)}
+                        </span>
+                        <span className="admin-history-timeline__arrow"> → </span>
+                      </>
+                    )}
                     <strong title={typeof change.after === 'string' ? formatHistoryValue(change.field, change.after) as string : undefined}>
                       {formatHistoryValue(change.field, change.after)}
                     </strong>

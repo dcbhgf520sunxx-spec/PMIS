@@ -2,12 +2,31 @@ import { useEffect, useState } from 'react';
 import { App } from 'antd';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { DeleteConfirmAction, DetailMetaList, HistoryTimelineSection, PermissionButton, RichTextViewer, TemplateDetailPage, TemplateDetailSection, usePageReturnNavigation } from '../../../components/admin';
+import type { HistoryTimelineItem } from '../../../components/admin';
 import { deleteProject, getProject, getProjectHistory, updateProjectStatus } from '../../../api/projectApi';
+import type { ProjectHistoryItem } from '../../../api/projectApi';
 import type { ProjectRecord } from '../types';
 import { renderProjectOverdue } from '../helpers';
 import { ProjectStatusChangeAction, renderProjectStatus } from '../components/ProjectStatusChangeAction';
 
 const dateValue = (value: unknown) => value && typeof value === 'object' && 'format' in value && typeof value.format === 'function' ? value.format('YYYY-MM-DD') : undefined;
+
+const mapProjectHistoryItem = (item: ProjectHistoryItem): HistoryTimelineItem => {
+  const isPaymentAction = item.action === '登记付款' || item.action === '更正付款';
+  const paymentStageChange = isPaymentAction
+    ? item.changes.find((change) => change.field_name === '付款阶段')
+    : undefined;
+  return {
+    id: String(item.id),
+    operator: item.operator,
+    action: paymentStageChange?.new_value ? `${item.action} · ${paymentStageChange.new_value}` : item.action,
+    time: String(item.created_at).slice(0, 19).replace('T', ' '),
+    changeMode: item.action === '登记付款' ? 'values' : 'diff',
+    changes: item.changes
+      .filter((change) => !isPaymentAction || change.field_name !== '付款阶段')
+      .map((change) => ({ field: change.field_name || '-', before: change.old_value, after: change.new_value })),
+  };
+};
 
 export function ProjectDetailPage() {
   const { navigateWithReturn, returnToSource } = usePageReturnNavigation('/projects');
@@ -16,7 +35,7 @@ export function ProjectDetailPage() {
   const navigate = useNavigate();
   const { message } = App.useApp();
   const [row, setRow] = useState<ProjectRecord>();
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<HistoryTimelineItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notFound, setNotFound] = useState(false);
@@ -28,13 +47,7 @@ export function ProjectDetailPage() {
     setError('');
     Promise.all([
       getProject(params.id).then(setRow),
-      getProjectHistory(params.id).then((items) => setHistory(items.map((item) => ({
-        id: String(item.id),
-        operator: item.operator,
-        action: item.action,
-        time: String(item.created_at).slice(0, 19).replace('T', ' '),
-        changes: item.changes.map((change) => ({ field: change.field_name || '-', before: change.old_value, after: change.new_value })),
-      })))),
+      getProjectHistory(params.id).then((items) => setHistory(items.map(mapProjectHistoryItem))),
     ]).catch((loadError) => {
       const text = loadError instanceof Error ? loadError.message : '加载失败';
       if (text.includes('不存在')) setNotFound(true); else setError(text);
@@ -55,10 +68,12 @@ export function ProjectDetailPage() {
         items: [
           { key: 'basic', title: '基本信息' },
           { key: 'contract', title: '合同信息' },
+          { key: 'stage-plan', title: '阶段主计划' },
         ],
         activeKey: 'basic',
         onChange: (key) => {
           if (key === 'contract' && row) navigate(`/projects/${row.id}/contract-detail${location.search}`);
+          if (key === 'stage-plan' && row) navigate(`/projects/${row.id}/stage-plan${location.search}`);
         },
       }}
       actions={row ? (
