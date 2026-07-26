@@ -88,8 +88,50 @@ function buildContractHistoryChanges({ oldContract, oldStages, newContract, newS
   return changes
 }
 
+function buildPaymentCreationHistoryChanges({ stageName, payment }) {
+  const changes = [
+    { field: 'payment_stage', oldVal: '', newVal: stageName },
+    { field: 'payment_amount', oldVal: '', newVal: formatMoney(payment.payment_amount) },
+    { field: 'payment_month', oldVal: '', newVal: String(payment.payment_month || '').slice(0, 7) },
+    { field: 'payment_handler', oldVal: '', newVal: payment.handler_name },
+  ]
+  if (payment.remark) changes.push({ field: 'payment_remark', oldVal: '', newVal: payment.remark })
+  return changes
+}
+
+function buildPaymentHistoryChanges({ stageName, oldPayment, newPayment }) {
+  const changes = []
+  const addChange = (field, oldVal, newVal, oldCompare = oldVal, newCompare = newVal) => {
+    if (String(oldCompare ?? '') !== String(newCompare ?? '')) changes.push({ field, oldVal, newVal })
+  }
+
+  addChange(
+    'payment_amount',
+    formatMoney(oldPayment.payment_amount),
+    formatMoney(newPayment.payment_amount)
+  )
+  addChange(
+    'payment_month',
+    String(oldPayment.payment_month || '').slice(0, 7),
+    String(newPayment.payment_month || '').slice(0, 7)
+  )
+  addChange(
+    'payment_handler',
+    oldPayment.handler_name,
+    newPayment.handler_name,
+    oldPayment.handler_id,
+    newPayment.handler_id
+  )
+  addChange('payment_remark', oldPayment.remark || '', newPayment.remark || '')
+  return changes.length
+    ? [{ field: 'payment_stage', oldVal: '', newVal: stageName }, ...changes]
+    : []
+}
+
 module.exports = {
   buildContractHistoryChanges,
+  buildPaymentCreationHistoryChanges,
+  buildPaymentHistoryChanges,
   calculatePaymentSummary,
   normalizePaymentMonth,
   toCents,

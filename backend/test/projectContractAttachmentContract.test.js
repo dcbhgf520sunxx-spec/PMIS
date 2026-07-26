@@ -57,3 +57,49 @@ test('合同保存历史逐字段记录并将随保存附件关联到同一次�
     assert.match(projectController, new RegExp(field))
   }
 })
+
+test('删除合同与新增合同一样只记录操作节点而不生成明细', () => {
+  const controller = read('src/controllers/projectContractController.js')
+  const projectController = read('src/controllers/projectController.js')
+
+  assert.match(
+    controller,
+    /writeContractHistory\(operatorId,\s*'删除合同',\s*req\.params\.id,\s*\[\]/
+  )
+  assert.doesNotMatch(
+    controller,
+    /db\.writeLog\(operatorId,\s*'删除合同',\s*'项目',\s*req\.params\.id,\s*'contract'/
+  )
+  assert.match(
+    projectController,
+    /group\.action === '删除合同'\s*\?\s*\[\]\s*:\s*formatHistoryChanges/
+  )
+})
+
+test('登记和更正付款按同一次操作逐字段记录变更历史', () => {
+  const controller = read('src/controllers/projectContractController.js')
+  const projectController = read('src/controllers/projectController.js')
+
+  assert.match(controller, /buildPaymentCreationHistoryChanges/)
+  assert.match(controller, /buildPaymentHistoryChanges/)
+  assert.match(controller, /db\.writeLogs\(operatorId,\s*'登记付款'/)
+  assert.match(controller, /db\.writeLogs\(req\.user\.id,\s*'更正付款'/)
+  assert.doesNotMatch(
+    controller,
+    /db\.writeLog\(operatorId,\s*'登记付款',\s*'项目',\s*req\.params\.id,\s*'payment'/
+  )
+  assert.doesNotMatch(
+    controller,
+    /db\.writeLog\(req\.user\.id,\s*'更正付款',\s*'项目',\s*req\.params\.id,\s*'payment'/
+  )
+
+  for (const [field, label] of [
+    ['payment_stage', '付款阶段'],
+    ['payment_amount', '本次付款金额（元）'],
+    ['payment_month', '付款时间'],
+    ['payment_handler', '经办人'],
+    ['payment_remark', '备注'],
+  ]) {
+    assert.match(projectController, new RegExp(`${field}: '${label}'`))
+  }
+})

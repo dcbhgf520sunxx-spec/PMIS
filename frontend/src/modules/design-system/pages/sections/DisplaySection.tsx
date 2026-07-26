@@ -63,6 +63,8 @@ const displaySpecs = [
 export function DisplaySection() {
   const [displayTablePage, setDisplayTablePage] = useState(1);
   const [displayTablePageSize, setDisplayTablePageSize] = useState(20);
+  const [sortableTableRows, setSortableTableRows] = useState(() => mockWorkOrders.slice(0, 4));
+  const [rowSortDisabled, setRowSortDisabled] = useState(false);
 
   const displayTableColumns = useMemo<ProColumns<WorkOrderRecord>[]>(() => [
     {
@@ -154,6 +156,29 @@ export function DisplaySection() {
       )
     }
   ], []);
+  const sortableTableColumns = useMemo<ProColumns<WorkOrderRecord>[]>(() => [
+    {
+      title: '序号',
+      valueType: 'index',
+      width: 64,
+      fixed: 'left',
+      search: false
+    },
+    {
+      title: '问题描述',
+      dataIndex: 'problemDesc',
+      width: 360,
+      ellipsis: true,
+      search: false
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 110,
+      search: false,
+      render: (_, record) => renderWorkOrderStatus(record.status)
+    }
+  ], []);
 
   return (
             <div className="design-system-page__section design-system-page__display">
@@ -216,6 +241,34 @@ export function DisplaySection() {
                           }}
                         />
                       )}
+                    />
+                  </div>
+                  <div className="design-system-page__display-row-sort-demo">
+                    <div className="design-system-page__display-row-sort-head">
+                      <div>
+                        <h4>行拖拽排序</h4>
+                        <ComponentEntry name="SearchTable rowDragSort" />
+                      </div>
+                      <AdminButton
+                        size="small"
+                        onClick={() => setRowSortDisabled((disabled) => !disabled)}
+                      >
+                        {rowSortDisabled ? '启用排序' : '禁用排序'}
+                      </AdminButton>
+                    </div>
+                    <p>按住最左侧拖动标识调整整行顺序；底座负责拖动反馈和新顺序，业务负责保存，保存失败时恢复原数据。</p>
+                    <SearchTable<WorkOrderRecord>
+                      columns={sortableTableColumns}
+                      customizable={false}
+                      dataSource={sortableTableRows}
+                      options={false}
+                      pagination={false}
+                      search={false}
+                      scroll={{ x: 576 }}
+                      rowDragSort={{
+                        disabled: rowSortDisabled,
+                        onChange: setSortableTableRows
+                      }}
                     />
                   </div>
                 </section>

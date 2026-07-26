@@ -24,7 +24,7 @@ export function FeedbackOverlays({ onOpenTableDrawer }: FeedbackOverlaysProps) {
                   <div className="design-system-page__input-panel-head">
                     <h3>弹窗与抽屉</h3>
                     <ComponentEntry name="AdminModal / AdminDrawer / TemplateDrawerTable / StatusFlowModal" />
-                    <p>弹窗用于短流程，抽屉用于侧向补充。通用按钮统一使用取消和确认。</p>
+                    <p>弹窗统一保持最小高度，内容增多时自然增高；达到视口上限后只滚动正文，标题和底部按钮保持可见。</p>
                   </div>
                   <div className="design-system-page__input-demo-list">
                     <div className="design-system-page__input-demo">

@@ -1,14 +1,27 @@
 import type { ProColumns, ProTableProps } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { ColumnHeightOutlined, SettingOutlined, TableOutlined, UndoOutlined } from '@ant-design/icons';
+import { ColumnHeightOutlined, HolderOutlined, SettingOutlined, TableOutlined, UndoOutlined } from '@ant-design/icons';
 import { Dropdown, Popover, Space } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { type DragEvent, type Key, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../../stores/authStore';
 import { AdminIconAction } from '../AdminIconAction';
 import './index.css';
 import { enforceFixedColumnState, type ColumnStateEntry } from './columnState';
 import { getListCellTitle, readListCellValue, type ListCellDataIndex } from './listCellTitle';
+import { moveTableRow } from './rowDragSort';
+
+export type SearchTableRowDragSortInfo<T> = {
+  activeRecord: T;
+  targetRecord: T;
+  fromIndex: number;
+  toIndex: number;
+};
+
+export type SearchTableRowDragSort<T> = {
+  disabled?: boolean;
+  onChange: (rows: T[], info: SearchTableRowDragSortInfo<T>) => Promise<void> | void;
+};
 
 export type SearchTableProps<
   T extends Record<string, unknown>,
@@ -17,6 +30,7 @@ export type SearchTableProps<
   columns: ProColumns<T>[];
   preferenceKey?: string;
   customizable?: boolean;
+  rowDragSort?: SearchTableRowDragSort<T>;
 };
 
 type ResizeHeaderCellProps = React.ThHTMLAttributes<HTMLTableCellElement> & {
@@ -42,6 +56,38 @@ function readTableJson<T>(key: string, fallback: T): T {
 
 function writeTableJson<T>(key: string, value: T) {
   localStorage.setItem(key, JSON.stringify(value));
+}
+
+function setTableRowDragPreview(event: DragEvent<HTMLElement>) {
+  const row = event.currentTarget.closest('tr');
+  if (!row || !event.dataTransfer) return;
+
+  const preview = row.cloneNode(true) as HTMLElement;
+  const rowRect = row.getBoundingClientRect();
+  const cells = Array.from(row.children) as HTMLElement[];
+  const previewCells = Array.from(preview.children) as HTMLElement[];
+
+  preview.className = 'admin-search-table__drag-preview';
+  preview.style.width = `${rowRect.width}px`;
+  previewCells.forEach((cell, index) => {
+    const width = cells[index]?.getBoundingClientRect().width;
+    if (width) cell.style.width = `${width}px`;
+  });
+
+  document.body.appendChild(preview);
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', '');
+  event.dataTransfer.setDragImage(preview, 28, Math.min(24, rowRect.height / 2));
+  window.setTimeout(() => preview.remove());
+}
+
+function resolveTableRowKey<T extends Record<string, unknown>>(
+  record: T,
+  index: number,
+  rowKey: SearchTableProps<T>['rowKey']
+): Key {
+  if (typeof rowKey === 'function') return rowKey(record, index);
+  return record[String(rowKey || 'id')] as Key;
 }
 
 function ResizeHeaderCell({
@@ -165,8 +211,12 @@ export function SearchTable<
     components,
     customizable = true,
     locale,
+    dataSource,
+    onRow,
     pagination,
     preferenceKey,
+    rowDragSort,
+    rowKey = 'id',
     ...restProps
   } = props;
   const location = useLocation();
@@ -185,6 +235,8 @@ export function SearchTable<
   const [tableSize, setTableSize] = useState<TableDensitySize>(() => (
     customizable ? readTableJson(tableSizeKey, 'small') : 'small'
   ));
+  const [draggingRowKey, setDraggingRowKey] = useState<Key>();
+  const [dragOverRowKey, setDragOverRowKey] = useState<Key>();
   const fixedColumnsSignature = JSON.stringify(columns.map((column, index) => ({
     key: getColumnKey(column, index),
     fixed: column.fixed
@@ -347,11 +399,146 @@ export function SearchTable<
     });
   }, [resizableColumns, scrollX]);
 
+  const getRecordKey = (record: T, index: number) => resolveTableRowKey(record, index, rowKey);
+  const getDropPosition = (recordKey: Key) => {
+    if (draggingRowKey === undefined || draggingRowKey === recordKey) return '';
+
+    const rows = dataSource || [];
+    const draggingIndex = rows.findIndex((item, index) => getRecordKey(item, index) === draggingRowKey);
+    const targetIndex = rows.findIndex((item, index) => getRecordKey(item, index) === recordKey);
+    if (draggingIndex < 0 || targetIndex < 0) return '';
+
+    return draggingIndex < targetIndex
+      ? 'is-admin-drag-over-after'
+      : 'is-admin-drag-over-before';
+  };
+
+  const commitRowMove = (activeKey: Key, targetKey: Key) => {
+    if (!rowDragSort || activeKey === targetKey) return;
+
+    const rows = dataSource || [];
+    const fromIndex = rows.findIndex((item, itemIndex) => getRecordKey(item, itemIndex) === activeKey);
+    const toIndex = rows.findIndex((item, itemIndex) => getRecordKey(item, itemIndex) === targetKey);
+    if (fromIndex < 0 || toIndex < 0) return;
+
+    const nextRows = moveTableRow(rows, activeKey, targetKey, getRecordKey);
+    void rowDragSort.onChange([...nextRows], {
+      activeRecord: rows[fromIndex],
+      targetRecord: rows[toIndex],
+      fromIndex,
+      toIndex
+    });
+  };
+
+  const tableColumns: ProColumns<T>[] = rowDragSort
+    ? [
+      {
+        title: '',
+        key: '__row-drag-sort__',
+        width: 42,
+        fixed: 'left',
+        search: false,
+        hideInSetting: true,
+        render: (_, record, index) => {
+          const recordKey = getRecordKey(record, index);
+          const disabled = Boolean(rowDragSort.disabled);
+          return (
+            <HolderOutlined
+              aria-label={disabled ? '当前不可调整顺序' : '拖动调整顺序'}
+              className={[
+                'admin-search-table__drag-handle',
+                disabled ? 'is-disabled' : ''
+              ].filter(Boolean).join(' ')}
+              draggable={!disabled}
+              role="button"
+              tabIndex={disabled ? -1 : 0}
+              title={disabled ? '当前不可调整顺序' : '拖动调整顺序'}
+              onKeyDown={(event) => {
+                if (disabled || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
+
+                event.preventDefault();
+                const rows = dataSource || [];
+                const currentIndex = rows.findIndex(
+                  (item, itemIndex) => getRecordKey(item, itemIndex) === recordKey
+                );
+                const targetIndex = currentIndex + (event.key === 'ArrowUp' ? -1 : 1);
+                if (currentIndex < 0 || targetIndex < 0 || targetIndex >= rows.length) return;
+
+                commitRowMove(recordKey, getRecordKey(rows[targetIndex], targetIndex));
+              }}
+              onDragStart={(event) => {
+                if (disabled) {
+                  event.preventDefault();
+                  return;
+                }
+                setTableRowDragPreview(event);
+                setDraggingRowKey(recordKey);
+              }}
+              onDragEnd={() => {
+                setDraggingRowKey(undefined);
+                setDragOverRowKey(undefined);
+              }}
+            />
+          );
+        }
+      },
+      ...adjustedColumns
+    ]
+    : adjustedColumns;
+
+  const handleRow = (record: T, index?: number) => {
+    const rowIndex = index ?? 0;
+    const originalProps = onRow?.(record, rowIndex) || {};
+    if (!rowDragSort || rowDragSort.disabled) return originalProps;
+
+    const recordKey = getRecordKey(record, rowIndex);
+    const isDragging = draggingRowKey === recordKey;
+    const isDragOver = dragOverRowKey === recordKey && draggingRowKey !== recordKey;
+
+    return {
+      ...originalProps,
+      className: [
+        originalProps.className,
+        isDragging ? 'is-admin-row-dragging' : '',
+        isDragOver ? 'is-admin-row-drag-over' : '',
+        isDragOver ? getDropPosition(recordKey) : ''
+      ].filter(Boolean).join(' '),
+      onDragEnter: (event: DragEvent<HTMLTableRowElement>) => {
+        originalProps.onDragEnter?.(event);
+        if (draggingRowKey !== undefined && draggingRowKey !== recordKey) {
+          setDragOverRowKey(recordKey);
+        }
+      },
+      onDragOver: (event: DragEvent<HTMLTableRowElement>) => {
+        originalProps.onDragOver?.(event);
+        event.preventDefault();
+        if (draggingRowKey !== undefined && draggingRowKey !== recordKey) {
+          setDragOverRowKey(recordKey);
+        }
+      },
+      onDragLeave: (event: DragEvent<HTMLTableRowElement>) => {
+        originalProps.onDragLeave?.(event);
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setDragOverRowKey(undefined);
+        }
+      },
+      onDrop: (event: DragEvent<HTMLTableRowElement>) => {
+        originalProps.onDrop?.(event);
+        event.preventDefault();
+        const activeKey = draggingRowKey;
+        setDraggingRowKey(undefined);
+        setDragOverRowKey(undefined);
+        if (activeKey !== undefined) commitRowMove(activeKey, recordKey);
+      }
+    };
+  };
+
   return (
     <ProTable<T, P>
-      rowKey="id"
+      rowKey={rowKey}
       className={['admin-search-table', className].filter(Boolean).join(' ')}
-      columns={adjustedColumns}
+      columns={tableColumns}
+      dataSource={dataSource}
       search={{ labelWidth: 88, defaultCollapsed: true }}
       options={customizable ? {
         density: false,
@@ -420,6 +607,7 @@ export function SearchTable<
           cell: ResizeHeaderCell
         }
       } : components}
+      onRow={handleRow}
       {...restProps}
     />
   );

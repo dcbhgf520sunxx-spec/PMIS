@@ -161,6 +161,7 @@ export function DetailTemplateDemo() {
       <HistoryTimelineSection
         sectionKey="history"
         items={[
+          { id: 'history-payment', operator: '业务管理员', action: '登记付款 · 阶段一', time: '2026-07-12 10:00', changeMode: 'values', changes: [{ field: '本次付款金额（元）', after: '20,000.00' }, { field: '付款时间', after: '2026-04' }] },
           { id: 'history-1', operator: '业务管理员', action: '更新负责区域', time: '2026-07-12 09:30', changes: [{ field: '负责区域', before: '总部园区', after: '总部园区、华东区域' }] },
           { id: 'history-2', operator: '系统管理员', action: '调整角色权限', time: '2026-07-10 16:45', changes: [{ field: '所属角色', before: '业务管理员', after: '系统管理员 / 业务管理员' }] },
           { id: 'history-3', operator: '张三', action: '完成安全验证', time: '2026-07-08 11:20' }

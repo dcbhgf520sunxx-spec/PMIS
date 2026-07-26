@@ -11,6 +11,37 @@
   box-shadow: none;
 }
 
+.design-system-page__display-row-sort-demo {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(220, 232, 247, 0.72);
+}
+
+.design-system-page__display-row-sort-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.design-system-page__display-row-sort-head > div {
+  display: grid;
+  gap: 8px;
+}
+
+.design-system-page__display-row-sort-head h4,
+.design-system-page__display-row-sort-demo p {
+  margin: 0;
+}
+
+.design-system-page__display-row-sort-demo p {
+  color: var(--app-text-subtle);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
 .design-system-page__display-keypoints {
   display: flex;
   flex-wrap: wrap;

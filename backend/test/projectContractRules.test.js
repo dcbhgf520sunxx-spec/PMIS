@@ -3,6 +3,8 @@ const assert = require('node:assert/strict')
 
 const {
   buildContractHistoryChanges,
+  buildPaymentCreationHistoryChanges,
+  buildPaymentHistoryChanges,
   calculatePaymentSummary,
   validateContractStages,
   validatePaymentAmount,
@@ -126,4 +128,88 @@ test('编辑合同忽略格式差异和未修改字段', () => {
   })
 
   assert.deepEqual(changes, [])
+})
+
+test('更正付款只记录实际修改字段并使用业务展示值', () => {
+  const changes = buildPaymentHistoryChanges({
+    stageName: '阶段一',
+    oldPayment: {
+      payment_amount: '30000.00',
+      payment_month: '2026-07-01',
+      handler_id: 1,
+      handler_name: '原经办人',
+      remark: '原备注',
+    },
+    newPayment: {
+      payment_amount: '3000',
+      payment_month: '2026-06-01',
+      handler_id: 2,
+      handler_name: '新经办人',
+      remark: '新备注',
+    },
+  })
+
+  assert.deepEqual(changes, [
+    { field: 'payment_stage', oldVal: '', newVal: '阶段一' },
+    { field: 'payment_amount', oldVal: '30000.00', newVal: '3000.00' },
+    { field: 'payment_month', oldVal: '2026-07', newVal: '2026-06' },
+    { field: 'payment_handler', oldVal: '原经办人', newVal: '新经办人' },
+    { field: 'payment_remark', oldVal: '原备注', newVal: '新备注' },
+  ])
+})
+
+test('更正付款忽略金额格式差异和未修改字段', () => {
+  const changes = buildPaymentHistoryChanges({
+    stageName: '阶段一',
+    oldPayment: {
+      payment_amount: '3000.00',
+      payment_month: '2026-07-01',
+      handler_id: 1,
+      handler_name: '经办人',
+      remark: null,
+    },
+    newPayment: {
+      payment_amount: '3000',
+      payment_month: '2026-07-01',
+      handler_id: 1,
+      handler_name: '经办人',
+      remark: '',
+    },
+  })
+
+  assert.deepEqual(changes, [])
+})
+
+test('登记付款按字段记录付款阶段和业务值', () => {
+  const changes = buildPaymentCreationHistoryChanges({
+    stageName: '阶段一',
+    payment: {
+      payment_amount: '26999',
+      payment_month: '2026-05-01',
+      handler_name: '孙鑫鑫',
+      remark: '首期付款',
+    },
+  })
+
+  assert.deepEqual(changes, [
+    { field: 'payment_stage', oldVal: '', newVal: '阶段一' },
+    { field: 'payment_amount', oldVal: '', newVal: '26999.00' },
+    { field: 'payment_month', oldVal: '', newVal: '2026-05' },
+    { field: 'payment_handler', oldVal: '', newVal: '孙鑫鑫' },
+    { field: 'payment_remark', oldVal: '', newVal: '首期付款' },
+  ])
+})
+
+test('登记付款未填写备注时不生成空备注明细', () => {
+  const changes = buildPaymentCreationHistoryChanges({
+    stageName: '阶段一',
+    payment: {
+      payment_amount: '26999',
+      payment_month: '2026-05-01',
+      handler_name: '孙鑫鑫',
+      remark: '',
+    },
+  })
+
+  assert.equal(changes.some((change) => change.field === 'payment_remark'), false)
 })

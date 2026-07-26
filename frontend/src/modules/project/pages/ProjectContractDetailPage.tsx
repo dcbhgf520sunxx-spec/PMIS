@@ -120,10 +120,12 @@ export function ProjectContractDetailPage() {
           items: [
             { key: 'basic', title: '基本信息' },
             { key: 'contract', title: '合同信息' },
+            { key: 'stage-plan', title: '阶段主计划' },
           ],
           activeKey: 'contract',
           onChange: (key) => {
             if (key === 'basic' && params.id) navigate(`/projects/${params.id}${location.search}`);
+            if (key === 'stage-plan' && params.id) navigate(`/projects/${params.id}/stage-plan${location.search}`);
           },
         }}
         actions={params.id ? (

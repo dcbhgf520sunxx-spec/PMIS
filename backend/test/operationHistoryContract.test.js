@@ -23,7 +23,7 @@ test('业务控制器禁止直接写 pms_op_log 或循环调用单条 writeLog',
 test('查询字段级操作日志的接口必须按操作标识聚合并提供详情字段顺序', () => {
   const violations = controllerSources
     .filter(({ source }) => /FROM pms_op_log/i.test(source) && /field_name/i.test(source))
-    .filter(({ source }) => !/groupOperationLogs\(logs,\s*DETAIL_FIELD_ORDER\)/.test(source))
+    .filter(({ source }) => !/groupOperationLogs\(logs,\s*DETAIL_FIELD_ORDER\)/.test(source) && !/buildProjectStagePlanHistory\(\w+,/.test(source))
     .map(({ name }) => name)
   assert.deepEqual(violations, [], `缺少 groupOperationLogs(logs, DETAIL_FIELD_ORDER): ${violations.join(', ')}`)
 })

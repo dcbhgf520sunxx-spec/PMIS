@@ -216,9 +216,32 @@ test('项目合同和分阶段付款真实接口流程', { skip: !enabled }, asy
     const payments = await request(`/api/projects/${projectId}/contract/stages/${stageId}/payments`)
     assert.equal(payments.response.status, 200)
     assert.equal(payments.body.data.length, 2)
+    const registrationHistory = await request(`/api/projects/${projectId}/history`)
+    const registrationHistoryItem = registrationHistory.body.data.find((item) => item.action === '登记付款')
+    assert.deepEqual(registrationHistoryItem.changes, [
+      { field_name: '付款阶段', old_value: '', new_value: '签约款' },
+      { field_name: '本次付款金额（元）', old_value: '', new_value: '20.00' },
+      { field_name: '付款时间', old_value: '', new_value: '2026-07' },
+      { field_name: '经办人', old_value: '', new_value: '管理员' },
+      { field_name: '备注', old_value: '', new_value: '集成测试付款' },
+    ])
 
-    const changed = await request(`/api/projects/${projectId}/contract/payments/${payments.body.data[0].id}`, { method: 'PUT', body: { payment_amount: '15.00', payment_month: '2026-07', handler_id: 1, remark: '更正金额' } })
+    const changed = await request(`/api/projects/${projectId}/contract/payments/${payments.body.data[0].id}`, { method: 'PUT', body: {
+      payment_amount: '15.00',
+      payment_month: '2026-06',
+      handler_id: testUser.lastInsertRowid,
+      remark: '更正金额',
+    } })
     assert.equal(changed.response.status, 200)
+    const changedHistory = await request(`/api/projects/${projectId}/history`)
+    const paymentHistoryItem = changedHistory.body.data.find((item) => item.action === '更正付款')
+    assert.deepEqual(paymentHistoryItem.changes, [
+      { field_name: '付款阶段', old_value: '', new_value: '签约款' },
+      { field_name: '本次付款金额（元）', old_value: '20.00', new_value: '15.00' },
+      { field_name: '付款时间', old_value: '2026-07', new_value: '2026-06' },
+      { field_name: '经办人', old_value: '管理员', new_value: '合同集成测试用户' },
+      { field_name: '备注', old_value: '集成测试付款', new_value: '更正金额' },
+    ])
     const removed = await request(`/api/projects/${projectId}/contract/payments/${payments.body.data[1].id}`, { method: 'DELETE' })
     assert.equal(removed.response.status, 200)
 
@@ -236,6 +259,9 @@ test('项目合同和分阶段付款真实接口流程', { skip: !enabled }, asy
 
     const deletedContract = await request(`/api/projects/${projectId}/contract`, { method: 'DELETE' })
     assert.equal(deletedContract.response.status, 200)
+    const deletedHistory = await request(`/api/projects/${projectId}/history`)
+    const deleteHistoryItem = deletedHistory.body.data.find((item) => item.action === '删除合同')
+    assert.deepEqual(deleteHistoryItem.changes, [])
     const withoutContract = await request(`/api/projects/${projectId}/contract`)
     assert.equal(withoutContract.body.data, null)
     const deletedRows = await db.prepare(`SELECT contract.is_deleted contract_deleted,
