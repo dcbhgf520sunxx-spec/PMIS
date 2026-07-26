@@ -7,12 +7,44 @@ const inputSource = readFileSync(new URL('../src/components/admin/AdminInput/ind
 const inputStyles = readFileSync(new URL('../src/components/admin/AdminInput/index.css', import.meta.url), 'utf8');
 const feedbackOverlaysSource = readFileSync(new URL('../src/modules/design-system/pages/sections/feedback/FeedbackOverlays.tsx', import.meta.url), 'utf8');
 
-test('AdminModal 将长内容限制在视口内并只滚动正文', () => {
-  assert.match(modalStyles, /\.admin-modal \.ant-modal-content\s*\{[\s\S]*max-height:\s*calc\(100(?:dvh|vh)\s*-\s*32px\)/);
-  assert.match(modalStyles, /\.admin-modal \.ant-modal-content\s*\{[\s\S]*display:\s*flex[\s\S]*flex-direction:\s*column[\s\S]*overflow:\s*hidden/);
-  assert.match(modalStyles, /\.admin-modal \.ant-modal-body\s*\{[\s\S]*flex:\s*0 1 auto[\s\S]*min-height:\s*0[\s\S]*overflow-y:\s*auto/);
-  assert.match(modalStyles, /\.admin-modal \.ant-modal-header,[\s\S]*\.admin-modal \.ant-modal-footer\s*\{[\s\S]*flex:\s*0 0 auto/);
-  assert.match(modalStyles, /@media[^\{]*(?:max-width|max-height)[\s\S]*\.admin-modal \.ant-modal-content\s*\{[\s\S]*max-height:\s*calc\(100dvh\s*-\s*16px\)/);
+function readCssBlock(source, selector, startAt = 0) {
+  const selectorIndex = source.indexOf(selector, startAt);
+  assert.notEqual(selectorIndex, -1, `未找到样式选择器：${selector}`);
+
+  const blockStart = source.indexOf('{', selectorIndex + selector.length);
+  assert.notEqual(blockStart, -1, `未找到样式块：${selector}`);
+
+  let depth = 0;
+  for (let index = blockStart; index < source.length; index += 1) {
+    if (source[index] === '{') depth += 1;
+    if (source[index] === '}') depth -= 1;
+    if (depth === 0) return source.slice(blockStart + 1, index);
+  }
+
+  assert.fail(`样式块未闭合：${selector}`);
+}
+
+test('AdminModal 保持统一最小高度，长内容限制在视口内并只滚动正文', () => {
+  const contentStyles = readCssBlock(modalStyles, '.admin-modal .ant-modal-content');
+  const bodyStyles = readCssBlock(modalStyles, '.admin-modal .ant-modal-body');
+  const fixedChromeStyles = readCssBlock(
+    modalStyles,
+    '.admin-modal .ant-modal-header,\n.admin-modal .ant-modal-footer',
+  );
+  const responsiveStyles = readCssBlock(modalStyles, '@media (max-width: 767px), (max-height: 639px)');
+  const responsiveContentStyles = readCssBlock(responsiveStyles, '.admin-modal .ant-modal-content');
+
+  assert.match(contentStyles, /min-height:\s*min\(280px,\s*calc\(100(?:dvh|vh)\s*-\s*32px\)\)/);
+  assert.match(contentStyles, /max-height:\s*calc\(100(?:dvh|vh)\s*-\s*32px\)/);
+  assert.match(contentStyles, /display:\s*flex/);
+  assert.match(contentStyles, /flex-direction:\s*column/);
+  assert.match(contentStyles, /overflow:\s*hidden/);
+  assert.match(bodyStyles, /flex:\s*1 1 auto/);
+  assert.match(bodyStyles, /min-height:\s*0/);
+  assert.match(bodyStyles, /overflow-y:\s*auto/);
+  assert.match(fixedChromeStyles, /flex:\s*0 0 auto/);
+  assert.match(responsiveContentStyles, /min-height:\s*min\(280px,\s*calc\(100dvh\s*-\s*16px\)\)/);
+  assert.match(responsiveContentStyles, /max-height:\s*calc\(100dvh\s*-\s*16px\)/);
 });
 
 test('日期类浮层挂到页面顶层并在极小视口内滚动', () => {

@@ -5,6 +5,7 @@ import {
   AdminDrawer,
   AdminInput,
   AdminModal,
+  AdminParagraph,
   AdminSelect,
   AdminSpace,
   AdminTextArea,
@@ -145,6 +146,9 @@ export function OverlayTemplateDemo() {
           message.success('普通弹窗模板已确认');
         }}
       >
+        <AdminParagraph>
+          内容较少时保持统一最小高度；内容增多后弹窗自然增高，达到视口上限后只滚动正文。
+        </AdminParagraph>
         <AdminTextArea rows={4} placeholder="请输入处理说明" />
       </AdminModal>
 
