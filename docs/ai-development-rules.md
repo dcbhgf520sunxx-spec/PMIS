@@ -39,6 +39,7 @@
 | 可编辑表格、动态明细、付款阶段、预算明细、表单中增删多行 | 在 `TemplateFormPage` 内使用 `AdminProFormEditableList`，通过 `fields` 组合 `AdminProForm*` 字段控件 | 业务方只定义字段、校验和默认值；底座统一列宽、序号、增删、最少行数、响应式以及保存取消 | `frontend/src/modules/design-system/pages/sections/input/EditableDetailListExamples.tsx` |
 | 附件、上传附件、多附件、已有附件、下载附件、删除附件 | 按钮选择使用 `AdminAttachmentUpload`，拖拽上传使用 `AdminAttachmentDragger`，由业务方传入附件数据、上传与删除动作，并通过 `onLoadPreview` 和 `onDownload` 分别提供预览内容与下载动作 | 两种入口共用附件列表、格式图标、上传进度、失败重试、名称预览、图标下载和删除确认；图片明确支持 JPG、JPEG、PNG、GIF、WEBP、BMP、SVG、AVIF、HEIC，PNG 的标准类型、旧类型和缺失类型均按扩展名正确识别；图片和 PDF 由底座弹窗预览，不支持在线预览的格式明确提示下载；文件格式、附件数量和附件大小仅在业务方明确传入规则时校验，校验不通过的文件在选择阶段直接提示，不调用上传接口、不进入附件列表 | `frontend/src/modules/design-system/pages/sections/input/AdvancedInputExamples.tsx` |
 | 左右分栏、拖拽面板、双栏工作台、目录与预览同屏 | 使用 `AdminSplitPane`，传入左右两侧内容；需要记住个人调整宽度时传唯一 `storageKey` | 底座统一承接拖拽、键盘调宽、左右宽度边界、窄屏上下堆叠和可选的个人宽度记忆；业务页面只放各自的列表、预览或详情内容。基础档案是已落地用法，判断能力时应同时核对该真实页面 | `frontend/src/modules/design-system/pages/sections/layout/SplitPaneExamples.tsx`、`frontend/src/modules/archive/pages/ArchivePage.tsx` |
+| 表格行拖拽排序、调整记录顺序、档案排序 | 使用 `SearchTable.rowDragSort`，业务通过 `onChange` 接收新顺序；不可排序时传 `disabled` | 底座固定左侧拖动入口并统一拖动行、插入位置和禁用反馈；业务负责把新顺序保存到接口，保存失败时恢复原数据。基础档案已复用该能力，不得在业务表格内重新实现拖拽事件和样式 | `frontend/src/modules/design-system/pages/sections/DisplaySection.tsx` 的“行拖拽排序”示例、`frontend/src/modules/archive/components/ArchiveRecordTable.tsx` |
 | 异步任务、后台处理中、解析进度、导出进度、失败重试 | 使用 `AdminAsyncTaskStatus`，传入任务状态、标题、进度、失败原因和重试回调 | 底座统一显示等待、执行中、完成、失败、进度和重试；运行中不重复暴露重试入口，业务负责真实任务接口、轮询或消息订阅 | `frontend/src/modules/design-system/pages/sections/feedback/AsyncTaskStatusExamples.tsx` |
 | 多步骤流程、阶段导航、办理步骤、审核步骤 | 使用 `AdminStepNavigation`，传入步骤项、当前步骤和切换回调 | 底座统一步骤导航外观、完成/当前/等待状态和窄屏表现；业务负责每一步的数据、校验、保存以及是否允许进入下一步 | `frontend/src/modules/design-system/pages/sections/layout/StepNavigationExamples.tsx` |
 
@@ -105,6 +106,7 @@ API 接入保持统一：
 - 本地数据排序交给 `useTemplateListPageData`，先排序过滤后的全量数据，再分页。
 - 服务端分页列表必须通过 `useTemplateServerListData` 请求数据，并把全部已提交筛选、当前视图和其他数据范围参数放入 `queryKey`。组件以查询上下文、分页和排序共同组成请求标识：上下文切换时立即隔离旧数据，统一输出加载和错误状态，只接收当前请求结果以避免请求乱序覆盖，并将页码原子重置为第一页。业务页面不得继续使用 `useEffect + setRows` 自行维护服务端列表，也不得只靠切换时清空数组遮盖问题。
 - 用户只切换页码时必须保留所选页码，不能被筛选重置逻辑拉回第一页；只有已提交筛选、当前视图或其他查询上下文真正变化时才重置为第一页。
+- 表格需要人工调整记录顺序时使用 `SearchTable.rowDragSort`，不得在业务页自行绑定原生行拖拽事件或复制拖动样式。底座只输出当前页的新顺序和拖动上下文；跨页顺序、排序字段写入、接口持久化以及保存失败后的数据恢复由业务模块处理。排序入口不可用时通过 `disabled` 明确展示禁用状态。
 - 分页配置通过 `TemplateListPage.pagination` 传入，不在业务页直接放 `TablePagination`。
 - 主子任务等低频层级列表继续使用 `TemplateListPage`，名称列通过 `HierarchyListCell` 统一方框开关、主子标识和子级缩进，不使用表格原生展开列，也不新增业务专用树表组件。父子数据按展示组平铺返回，父级记录分页，子级跟随父级且默认收起；父子关系校验、状态联动、进度汇总、权限和删除限制仍由业务模块处理。
 - 普通列表不传选择列、批量操作和已选数量，分页保持在右侧。

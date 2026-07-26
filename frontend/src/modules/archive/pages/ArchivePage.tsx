@@ -46,7 +46,6 @@ export function ArchivePage() {
   const [editingArchive, setEditingArchive] = useState<ArchiveRecord>();
   const [typeSubmitting, setTypeSubmitting] = useState(false);
   const [archiveSubmitting, setArchiveSubmitting] = useState(false);
-  const [draggingId, setDraggingId] = useState<string>();
   const archiveFiltersRef = useRef(archiveFilters);
 
   useEffect(() => {
@@ -239,17 +238,16 @@ export function ArchivePage() {
     message.success('排序已更新');
   };
 
-  const handleDropArchive = async (targetRecord: ArchiveRecord) => {
-    if (!draggingId || draggingId === targetRecord.id) return;
+  const handleSortArchive = async (activeRecord: ArchiveRecord, targetRecord: ArchiveRecord) => {
+    if (activeRecord.id === targetRecord.id) return;
 
-    const fromIndex = archiveRows.findIndex((item) => item.id === draggingId);
+    const fromIndex = archiveRows.findIndex((item) => item.id === activeRecord.id);
     const toIndex = archiveRows.findIndex((item) => item.id === targetRecord.id);
     if (fromIndex < 0 || toIndex < 0) return;
 
     const nextRows = [...archiveRows];
     const [moved] = nextRows.splice(fromIndex, 1);
     nextRows.splice(toIndex, 0, moved);
-    setDraggingId(undefined);
 
     try {
       await saveSort(nextRows);
@@ -323,9 +321,7 @@ export function ArchivePage() {
               onEdit={openArchiveModal}
               onToggleStatus={handleArchiveStatusChange}
               onDelete={handleDeleteArchive}
-              onDragStart={setDraggingId}
-              onDragEnd={() => setDraggingId(undefined)}
-              onDrop={handleDropArchive}
+              onSortChange={handleSortArchive}
             />
           ) : (
             <div className="archive-page__empty">
