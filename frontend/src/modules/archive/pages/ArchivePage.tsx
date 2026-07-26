@@ -238,17 +238,7 @@ export function ArchivePage() {
     message.success('排序已更新');
   };
 
-  const handleSortArchive = async (activeRecord: ArchiveRecord, targetRecord: ArchiveRecord) => {
-    if (activeRecord.id === targetRecord.id) return;
-
-    const fromIndex = archiveRows.findIndex((item) => item.id === activeRecord.id);
-    const toIndex = archiveRows.findIndex((item) => item.id === targetRecord.id);
-    if (fromIndex < 0 || toIndex < 0) return;
-
-    const nextRows = [...archiveRows];
-    const [moved] = nextRows.splice(fromIndex, 1);
-    nextRows.splice(toIndex, 0, moved);
-
+  const handleSortArchive = async (nextRows: ArchiveRecord[]) => {
     try {
       await saveSort(nextRows);
     } catch (error) {

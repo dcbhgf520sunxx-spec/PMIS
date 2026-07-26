@@ -76,6 +76,7 @@ function setTableRowDragPreview(event: DragEvent<HTMLElement>) {
 
   document.body.appendChild(preview);
   event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', '');
   event.dataTransfer.setDragImage(preview, 28, Math.min(24, rowRect.height / 2));
   window.setTimeout(() => preview.remove());
 }
@@ -412,6 +413,23 @@ export function SearchTable<
       : 'is-admin-drag-over-before';
   };
 
+  const commitRowMove = (activeKey: Key, targetKey: Key) => {
+    if (!rowDragSort || activeKey === targetKey) return;
+
+    const rows = dataSource || [];
+    const fromIndex = rows.findIndex((item, itemIndex) => getRecordKey(item, itemIndex) === activeKey);
+    const toIndex = rows.findIndex((item, itemIndex) => getRecordKey(item, itemIndex) === targetKey);
+    if (fromIndex < 0 || toIndex < 0) return;
+
+    const nextRows = moveTableRow(rows, activeKey, targetKey, getRecordKey);
+    void rowDragSort.onChange([...nextRows], {
+      activeRecord: rows[fromIndex],
+      targetRecord: rows[toIndex],
+      fromIndex,
+      toIndex
+    });
+  };
+
   const tableColumns: ProColumns<T>[] = rowDragSort
     ? [
       {
@@ -435,6 +453,19 @@ export function SearchTable<
               role="button"
               tabIndex={disabled ? -1 : 0}
               title={disabled ? '当前不可调整顺序' : '拖动调整顺序'}
+              onKeyDown={(event) => {
+                if (disabled || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
+
+                event.preventDefault();
+                const rows = dataSource || [];
+                const currentIndex = rows.findIndex(
+                  (item, itemIndex) => getRecordKey(item, itemIndex) === recordKey
+                );
+                const targetIndex = currentIndex + (event.key === 'ArrowUp' ? -1 : 1);
+                if (currentIndex < 0 || targetIndex < 0 || targetIndex >= rows.length) return;
+
+                commitRowMove(recordKey, getRecordKey(rows[targetIndex], targetIndex));
+              }}
               onDragStart={(event) => {
                 if (disabled) {
                   event.preventDefault();
@@ -493,23 +524,11 @@ export function SearchTable<
       },
       onDrop: (event: DragEvent<HTMLTableRowElement>) => {
         originalProps.onDrop?.(event);
+        event.preventDefault();
         const activeKey = draggingRowKey;
         setDraggingRowKey(undefined);
         setDragOverRowKey(undefined);
-        if (activeKey === undefined || activeKey === recordKey) return;
-
-        const rows = dataSource || [];
-        const fromIndex = rows.findIndex((item, itemIndex) => getRecordKey(item, itemIndex) === activeKey);
-        const toIndex = rows.findIndex((item, itemIndex) => getRecordKey(item, itemIndex) === recordKey);
-        if (fromIndex < 0 || toIndex < 0) return;
-
-        const nextRows = moveTableRow(rows, activeKey, recordKey, getRecordKey);
-        void rowDragSort.onChange([...nextRows], {
-          activeRecord: rows[fromIndex],
-          targetRecord: rows[toIndex],
-          fromIndex,
-          toIndex
-        });
+        if (activeKey !== undefined) commitRowMove(activeKey, recordKey);
       }
     };
   };

@@ -20,7 +20,7 @@ type ArchiveRecordTableProps = {
   onEdit: (record: ArchiveRecord) => void;
   onToggleStatus: (record: ArchiveRecord) => Promise<void> | void;
   onDelete: (record: ArchiveRecord) => Promise<void> | void;
-  onSortChange: (activeRecord: ArchiveRecord, targetRecord: ArchiveRecord) => Promise<void> | void;
+  onSortChange: (rows: ArchiveRecord[]) => Promise<void> | void;
 };
 
 export function ArchiveRecordTable({
@@ -101,7 +101,7 @@ export function ArchiveRecordTable({
         tableAlertRender: false,
         scroll: { x: 860 },
         rowDragSort: {
-          onChange: (_, { activeRecord, targetRecord }) => onSortChange(activeRecord, targetRecord)
+          onChange: (nextRows) => onSortChange(nextRows)
         }
       }}
     />
