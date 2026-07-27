@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { App } from 'antd';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { DeleteConfirmAction, DetailMetaList, HistoryTimelineSection, PermissionButton, RichTextViewer, TemplateDetailPage, TemplateDetailSection, usePageReturnNavigation } from '../../../components/admin';
+import { DeleteConfirmAction, DetailMetaList, HistoryTimelineSection, PermissionButton, TemplateDetailPage, TemplateDetailSection, usePageReturnNavigation } from '../../../components/admin';
 import type { HistoryTimelineItem } from '../../../components/admin';
 import { deleteProject, getProject, getProjectHistory, updateProjectStatus } from '../../../api/projectApi';
 import type { ProjectHistoryItem } from '../../../api/projectApi';
@@ -104,7 +104,7 @@ export function ProjectDetailPage() {
               { label: '负责人', value: row.ownerName }, { label: '项目成员', value: row.members.map((member) => member.name).join('、') || '-' },
               { label: '启动时间', value: row.startDate }, { label: '预计完成时间', value: row.expectedEndDate },
               { label: '实际完成时间', value: row.actualEndDate }, { label: '暂停时间', value: row.suspendDate },
-              { label: '项目描述', value: <RichTextViewer value={row.description} />, wide: true },
+              { label: '项目描述', value: row.description, wide: true, longText: true },
             ]} />
           </TemplateDetailSection>
           <TemplateDetailSection title="进展与风险" sectionKey="project-progress">

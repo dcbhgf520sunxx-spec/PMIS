@@ -106,7 +106,7 @@ test('合同新增编辑支持非必填备注并提交到真实接口', async ()
   assert.match(types, /ProjectContractFormValues[\s\S]*remark\?:\s*string/);
 });
 
-test('合同详情在金额字段后展示备注且空值显示占位符', async () => {
+test('合同详情在金额字段后完整展示备注并由底座处理空值', async () => {
   const detail = await read('../src/modules/project/pages/ProjectContractDetailPage.tsx');
   const amountFieldStart = detail.indexOf("label: '未付金额（元）'");
   const remarkFieldStart = detail.indexOf("label: '备注'");
@@ -114,7 +114,7 @@ test('合同详情在金额字段后展示备注且空值显示占位符', async
 
   assert.ok(amountFieldStart >= 0 && amountFieldStart < remarkFieldStart);
   assert.ok(remarkFieldStart < attachmentFieldStart);
-  assert.match(detail, /\{\s*label:\s*'备注',\s*value:\s*contract\.remark\s*\|\|\s*'-',\s*wide:\s*true\s*\}/);
+  assert.match(detail, /\{\s*label:\s*'备注',\s*value:\s*contract\.remark,\s*wide:\s*true,\s*longText:\s*true\s*\}/);
 });
 
 test('合同详情标题不重复展示合同编码', async () => {

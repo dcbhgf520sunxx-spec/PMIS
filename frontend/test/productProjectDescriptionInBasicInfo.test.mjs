@@ -8,7 +8,7 @@ for (const [name, path, label] of [
 ]) {
   test(`${name}把描述作为基本信息中的整行字段`, () => {
     const source = readFileSync(path, 'utf8');
-    assert.match(source, new RegExp(`label: '${label}', value: <RichTextViewer[\\s\\S]*wide: true`));
+    assert.match(source, new RegExp(`label: '${label}', value: row\\.description, wide: true, longText: true`));
     assert.doesNotMatch(source, new RegExp(`<TemplateDetailSection title="${label}">`));
   });
 }

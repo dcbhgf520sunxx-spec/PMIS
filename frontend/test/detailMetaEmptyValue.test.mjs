@@ -38,14 +38,23 @@ test('富文本没有内容时默认显示短横线', () => {
 
 test('PMIS 业务详情直接复用富文本空值规则', () => {
   for (const file of [
-    '../src/modules/product/pages/ProductDetailPage.tsx',
-    '../src/modules/project/pages/ProjectDetailPage.tsx',
     '../src/modules/requirement/pages/RequirementDetailPage.tsx',
     '../src/modules/bug/pages/BugDetailPage.tsx',
     '../src/modules/task/pages/TaskDetailPage.tsx'
   ]) {
     const source = readFileSync(new URL(file, import.meta.url), 'utf8');
     assert.match(source, /<RichTextViewer value=\{row\.description\}/);
+    assert.doesNotMatch(source, /暂无描述|暂无内容/);
+  }
+});
+
+test('产品和项目普通多行描述直接复用详情长文本空值规则', () => {
+  for (const file of [
+    '../src/modules/product/pages/ProductDetailPage.tsx',
+    '../src/modules/project/pages/ProjectDetailPage.tsx'
+  ]) {
+    const source = readFileSync(new URL(file, import.meta.url), 'utf8');
+    assert.match(source, /value: row\.description, wide: true, longText: true/);
     assert.doesNotMatch(source, /暂无描述|暂无内容/);
   }
 });

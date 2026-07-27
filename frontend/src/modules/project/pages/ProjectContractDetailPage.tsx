@@ -164,7 +164,7 @@ export function ProjectContractDetailPage() {
             { label: '合同名称', value: contract.contractName }, { label: '供应商', value: contract.supplierName },
             { label: '签订时间', value: contract.signedDate }, { label: '合同金额（元）', value: money(contract.contractAmount) },
             { label: '已付金额（元）', value: money(contract.paidAmount) }, { label: '未付金额（元）', value: money(contract.unpaidAmount) },
-            { label: '备注', value: contract.remark || '-', wide: true },
+            { label: '备注', value: contract.remark, wide: true, longText: true },
             {
               label: '合同附件',
               wide: true,
