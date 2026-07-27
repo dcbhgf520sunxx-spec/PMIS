@@ -59,6 +59,7 @@ ALLOWED_ORIGIN=https://你的域名或IP
 # 企业微信工作台单点登录
 WECOM_CORP_ID=企业ID
 WECOM_AGENT_ID=自建应用AgentId
+WECOM_SECRET=自建应用Secret
 WECOM_USER_ID_URL=http://内部服务/shr/person/getWxUserId
 WECOM_CALLBACK_URL=https://你的域名或IP/api/auth/wecom/callback
 WECOM_FRONTEND_URL=https://你的域名或IP
@@ -77,10 +78,11 @@ chmod 600 backend/.env
 - 应用主页填写 `https://你的域名或IP/api/auth/wecom/start`。
 - 网页授权可信域名必须与 `WECOM_CALLBACK_URL` 的域名和端口完全一致；地址带端口时，可信域名也必须登记同一端口。
 - 应用可见范围包含所有需要使用 PMIS 的成员。
-- 正式服务器必须能够访问 `WECOM_USER_ID_URL`；该内部接口接收企微 OAuth `code`，成功时返回 `{ "code": 100, "msg": "success", "data": "账号" }`。
+- 调用企业微信接口的生产服务器出口 IP 加入应用可信 IP。
+- 正式服务器必须能够访问 `WECOM_USER_ID_URL`；该内部接口接收企微 `UserId`，成功时返回 `{ "code": 100, "msg": "success", "data": "账号" }`。
 - 内部接口返回的 `data` 必须与 PMIS 用户的 `employee_no` 完全一致；不存在或停用的 PMIS 账号会拒绝登录。
 
-修改企微配置后重启后端：
+`WECOM_SECRET` 只能保存在 `/opt/pmis/shared/backend.env`，不要写入 Nginx、前端环境变量、部署包或 Git。修改企微配置后重启后端：
 
 ```bash
 sudo systemctl restart pmis-backend
