@@ -13,10 +13,19 @@
 
 ```http
 Authorization: Bearer <智能体 Query 或 Action 凭据>
-X-PMIS-Employee-No: <平台自动注入的员工号>
+X-PMIS-Employee-No: v1.<时间戳>.<随机IV>.<员工号密文>.<认证标签>
 ```
 
-智能体凭据只识别调用平台，员工号用于识别本次对话的实际操作人。平台必须覆盖而不是透传用户自行填写的员工号，并妥善保管智能体凭据。
+智能体凭据只识别调用平台，员工号密文用于识别本次对话的实际操作人。平台必须在每次请求时从当前登录用户取得工号并动态生成该请求头，不能保存、透传或接受用户自行填写的明文工号。PMIS 只接受 5 分钟内生成的 AES-256-GCM 密文，密钥由对应 Bearer 凭据派生；密文被篡改、过期或换用其他凭据时均会拒绝。
+
+NexusAgent 配置 PMIS MCP 时，请求头填写：
+
+```text
+Authorization = Bearer <Query 或 Action Key>
+X-PMIS-Employee-No = {{PMIS_ENCRYPTED_EMPLOYEE_NO}}
+```
+
+`{{PMIS_ENCRYPTED_EMPLOYEE_NO}}` 只是平台动态注入标记，不包含工号。NexusAgent 在实际调用前用当前登录用户的 `username`（公司 HR 同步规则中即员工工号）替换为短时密文。其他 MCP 服务不会处理该标记。
 
 ## 环境配置
 
