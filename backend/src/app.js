@@ -11,6 +11,7 @@ const { checkPermission } = require('./middleware/checkPermission')
 const userRoutes = require('./routes/user')
 const userController = require('./controllers/userController')
 const authRoutes = require('./routes/auth')
+const wecomAuthRoutes = require('./routes/wecomAuth')
 const roleRoutes = require('./routes/role')
 const roleController = require('./controllers/roleController')
 const menuRoutes = require('./routes/menu')
@@ -39,6 +40,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 
 // 公开接口（不需要登录）
 app.use('/api/auth', authRoutes)
+app.use('/api/auth', wecomAuthRoutes)
 app.get('/api/health', async (req, res) => {
   try {
     await db.prepare('SELECT 1 as ok').get()

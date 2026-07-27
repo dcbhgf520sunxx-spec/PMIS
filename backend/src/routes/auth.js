@@ -2,13 +2,14 @@ const express = require('express')
 const router = express.Router()
 const db = require('../db')
 const bcrypt = require('bcryptjs')
-const jwt = require('jsonwebtoken')
 const { requestTicket } = require('../services/ssoService')
 const { verifyToken } = require('../middleware/auth')
 const accessLogService = require('../services/accessLogService')
 const accountService = require('../services/accountService')
+const { createAuthSessionService } = require('../services/authSessionService')
 const { ok, fail } = require('../utils/response')
-const { includeParentMenus } = require('../services/menuHierarchy')
+
+const authSessionService = createAuthSessionService()
 
 // Simple in-memory rate limiter for login
 const loginAttempts = new Map()
@@ -30,15 +31,6 @@ async function safeRecordLoginFailure(payload) {
     await accessLogService.recordLoginFailure(payload)
   } catch (err) {
     console.error('access log write failed:', err.message)
-  }
-}
-
-async function safeRecordLoginSuccess(payload) {
-  try {
-    return await accessLogService.recordLoginSuccess(payload)
-  } catch (err) {
-    console.error('access log write failed:', err.message)
-    return null
   }
 }
 
@@ -91,41 +83,13 @@ router.post('/login', async (req, res) => {
     // Reset attempts on successful login
     loginAttempts.delete(clientIp)
 
-    // Get user menus (auto-include parent dirs for tree rendering)
-    const menus = await db.prepare(`
-      SELECT DISTINCT m.*
-      FROM pms_menu m
-      INNER JOIN pms_role_menu rm ON m.id = rm.menu_id
-      INNER JOIN pms_user_role ur ON rm.role_id = ur.role_id
-      WHERE ur.user_id = ? AND m.is_deleted = 0 AND m.status = 1
-      ORDER BY m.sort_order, m.id
-    `).all(row.id)
-
-    const homeMenu = await db.prepare(
-      "SELECT * FROM pms_menu WHERE path = '/home' AND is_deleted = 0 AND status = 1"
-    ).get()
-    if (homeMenu && !menus.some(m => m.id === homeMenu.id)) {
-      menus.push(homeMenu)
-      menus.sort((a, b) => (a.sort_order - b.sort_order) || (a.id - b.id))
-    }
-
-    const allMenus = await db.prepare('SELECT * FROM pms_menu WHERE is_deleted = 0').all()
-    const resolvedMenus = includeParentMenus(menus, allMenus)
-
-    const accessSessionId = await safeRecordLoginSuccess({ user: row, account, req })
-    if (!accessSessionId) throw new Error('登录会话创建失败')
-    const roles = await db.prepare(`
-      SELECT r.code FROM pms_user_role ur
-      INNER JOIN pms_role r ON r.id = ur.role_id
-      WHERE ur.user_id = ? AND r.is_deleted = 0
-    `).all(row.id)
-    const token = jwt.sign(
-      { userId: row.id, employeeNo: row.employee_no, sessionId: accessSessionId },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    )
-
-    ok(res, { token, first_login: row.first_login, access_session_id: accessSessionId, user: { id: row.id, employee_no: row.employee_no, real_name: row.real_name, phone: row.phone, avatar_url: row.avatar_url, roles: roles.map(item => item.code) }, menus: resolvedMenus }, '登录成功')
+    const result = await authSessionService.createSession({
+      user: row,
+      account,
+      req,
+      authMethod: 'password'
+    })
+    ok(res, result, '登录成功')
   } catch (err) {
     console.error(err)
     res.status(500).json({ code: 500, message: '登录失败', data: null })

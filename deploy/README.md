@@ -55,6 +55,13 @@ DB_PASSWORD=你的密码
 DB_NAME=pmis
 JWT_SECRET=请替换为随机密钥
 ALLOWED_ORIGIN=https://你的域名或IP
+
+# 企业微信工作台单点登录
+WECOM_CORP_ID=企业ID
+WECOM_AGENT_ID=自建应用AgentId
+WECOM_SECRET=自建应用Secret
+WECOM_CALLBACK_URL=https://你的域名或IP/api/auth/wecom/callback
+WECOM_FRONTEND_URL=https://你的域名或IP
 ```
 
 环境文件包含数据库密码和 JWT 密钥，创建后必须限制为仅部署账号可读写：
@@ -62,6 +69,24 @@ ALLOWED_ORIGIN=https://你的域名或IP
 ```bash
 chmod 600 backend/.env
 ```
+
+### 企业微信工作台配置
+
+在企业微信管理后台创建或选择一个自建应用，并完成以下配置：
+
+- 应用主页填写 `https://你的域名或IP/api/auth/wecom/start`。
+- 网页授权可信域名必须与 `WECOM_CALLBACK_URL` 的域名和端口完全一致；地址带端口时，可信域名也必须登记同一端口。
+- 应用可见范围包含所有需要使用 PMIS 的成员。
+- 调用企业微信接口的生产服务器出口 IP 加入应用可信 IP。
+- 企微成员 `UserId` 必须与 PMIS 用户的 `employee_no` 完全一致；不存在或停用的 PMIS 账号会拒绝登录。
+
+`WECOM_SECRET` 只能保存在 `/opt/pmis/shared/backend.env`，不要写入 Nginx、前端环境变量、部署包或 Git。修改企微配置后重启后端：
+
+```bash
+sudo systemctl restart pmis-backend
+```
+
+工作台单点使用企业微信静默授权；现有工号/手机号密码登录继续保留。企微登录不会修改数据库中的 `first_login`，但本次企微会话可直接进入业务页面；以后使用密码登录时仍执行首次改密规则。
 
 新环境执行 `backend/db/init/001_schema.sql` 初始化 PostgreSQL 后，只登记已包含在初始化脚本中的迁移基线：
 
