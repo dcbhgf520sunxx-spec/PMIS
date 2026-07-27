@@ -63,8 +63,8 @@ test('企微身份交换只在后端获取并缓存应用 access_token', async (
     return jsonResponse({
       errcode: 0,
       errmsg: 'ok',
-      UserId: requestUrl.searchParams.get('code') === 'code-a' ? 'EMP001' : 'EMP002',
-      DeviceId: 'device-id'
+      userid: requestUrl.searchParams.get('code') === 'code-a' ? 'EMP001' : 'EMP002',
+      deviceid: 'device-id'
     })
   }
   const service = createWecomAuthService({
@@ -98,7 +98,7 @@ test('企微提前判定 access_token 失效时只刷新一次后重试身份交
     if (accessToken === 'expired-token') {
       return jsonResponse({ errcode: 40014, errmsg: 'invalid access_token' })
     }
-    return jsonResponse({ errcode: 0, errmsg: 'ok', UserId: 'EMP001', DeviceId: 'device-id' })
+    return jsonResponse({ errcode: 0, errmsg: 'ok', userid: 'EMP001', deviceid: 'device-id' })
   }
   const service = createWecomAuthService({
     env: createEnv(),
