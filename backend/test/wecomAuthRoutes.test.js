@@ -21,6 +21,7 @@ async function listen(router) {
 
 function createFixture(overrides = {}) {
   const calls = []
+  const callbackErrors = []
   const service = {
     issueOAuthState() {
       return 'state-a'
@@ -75,8 +76,10 @@ function createFixture(overrides = {}) {
       resolveAccount,
       createSession,
       frontendBaseUrl: 'http://gcglsys.znjs.com:9088',
-      secureCookies: false
-    })
+      secureCookies: false,
+      onCallbackError: overrides.onCallbackError || ((details) => callbackErrors.push(details))
+    }),
+    callbackErrors
   }
 }
 
@@ -136,6 +139,37 @@ test('OAuth state 不匹配时拒绝身份交换', async (t) => {
   assert.equal(response.status, 302)
   assert.equal(response.headers.get('location'), 'http://gcglsys.znjs.com:9088/login?wecom_error=invalid_state')
   assert.deepEqual(fixture.calls, [])
+})
+
+test('企微接口回调失败时只记录安全错误标识', async (t) => {
+  const upstreamError = new Error('sensitive upstream detail')
+  upstreamError.errcode = 60020
+  const fixture = createFixture({
+    service: {
+      async getUserId() {
+        throw upstreamError
+      }
+    }
+  })
+  const server = await listen(fixture.router)
+  t.after(server.close)
+
+  const response = await fetch(
+    `${server.baseUrl}/api/auth/wecom/callback?code=secret-code&state=state-a`,
+    {
+      redirect: 'manual',
+      headers: { cookie: 'pmis_wecom_state=state-a' }
+    }
+  )
+
+  assert.equal(response.status, 302)
+  assert.equal(response.headers.get('location'), 'http://gcglsys.znjs.com:9088/login?wecom_error=login_failed')
+  assert.deepEqual(fixture.callbackErrors, [{
+    code: null,
+    errcode: 60020,
+    name: 'Error'
+  }])
+  assert.doesNotMatch(JSON.stringify(fixture.callbackErrors), /secret-code|sensitive upstream detail/)
 })
 
 test('一次性票据兑换为现有 PMIS 会话并明确跳过首次改密', async (t) => {
