@@ -1,14 +1,13 @@
 const assert = require('node:assert/strict')
-const { readFileSync } = require('node:fs')
+const { existsSync, readFileSync } = require('node:fs')
 const test = require('node:test')
 
-test('工单有效数据唯一索引同步到初始化结构和迁移', () => {
+test('工单问题描述允许重复且旧唯一索引由迁移删除', () => {
   const schema = readFileSync('db/init/001_schema.sql', 'utf8')
-  const migration = readFileSync('db/migrations/20260712_add_work_order_problem_desc_unique.sql', 'utf8')
+  const migrationPath = 'db/migrations/20260727_01_drop_work_order_problem_desc_unique.sql'
+  const migration = existsSync(migrationPath) ? readFileSync(migrationPath, 'utf8') : ''
 
-  for (const source of [schema, migration]) {
-    assert.match(source, /uk_work_order_problem_desc_active/)
-    assert.match(source, /md5\(problem_desc\)/)
-    assert.match(source, /WHERE is_deleted = 0/)
-  }
+  assert.doesNotMatch(schema, /uk_work_order_problem_desc_active/)
+  assert.match(migration, /SET LOCAL lock_timeout = '5s'/)
+  assert.match(migration, /DROP INDEX IF EXISTS uk_work_order_problem_desc_active/)
 })

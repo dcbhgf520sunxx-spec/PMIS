@@ -503,7 +503,6 @@ CREATE INDEX IF NOT EXISTS idx_bug_assignee_status ON pms_bug(assignee_id, statu
 CREATE INDEX IF NOT EXISTS idx_bug_type_status ON pms_bug(bug_type_id, status, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_bug_severity_status ON pms_bug(severity, status, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_bug_created_at ON pms_bug(created_at DESC, id DESC) WHERE is_deleted = 0;
-CREATE UNIQUE INDEX IF NOT EXISTS uk_work_order_problem_desc_active ON pms_work_order(md5(problem_desc)) WHERE is_deleted = 0;
 CREATE INDEX IF NOT EXISTS idx_archive_type ON pms_archive(archive_type_id, is_deleted);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_pms_archive_type_code_active ON pms_archive_type(code) WHERE is_deleted = 0;
 CREATE UNIQUE INDEX IF NOT EXISTS ux_pms_archive_type_prefix_active ON pms_archive_type(code_prefix) WHERE is_deleted = 0;
