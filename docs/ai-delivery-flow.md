@@ -50,6 +50,7 @@
 
 - `/api/auth`、`/api/health` 是公开接口。
 - `/api/user-options`、`/api/role-options`、`/api/archive-options/by-type-name`、`/api/messages` 是所有登录用户共用的下拉选项或个人消息接口，只要求登录。
+- `/api/mcp` 使用独立的智能体凭据、平台员工号和员工现有菜单权限鉴权，不使用网页端 JWT；门禁要求固定挂载 `mcpRoutes`。
 - 其他 `/api` 业务接口必须同时挂载 `verifyToken` 和 `checkPermission`。如确需新增例外，必须先说明用途和影响，再同步修改门禁白名单与本文档。
 
 ## 状态

@@ -25,6 +25,7 @@ const projectRoutes = require('./routes/project')
 const requirementRoutes = require('./routes/requirement')
 const taskRoutes = require('./routes/task')
 const bugRoutes = require('./routes/bug')
+const mcpRoutes = require('./routes/mcp')
 
 const app = express()
 const { allowedOrigin } = validateRuntimeConfig()
@@ -68,6 +69,7 @@ app.use('/api/requirements', verifyToken, checkPermission('/requirements'), requ
 app.use('/api/tasks', verifyToken, checkPermission('/tasks'), taskRoutes)
 app.use('/api/bugs', verifyToken, checkPermission('/bugs'), bugRoutes)
 app.use('/api/access-logs', verifyToken, checkPermission('/access-logs'), accessLogRoutes)
+app.use('/api/mcp', mcpRoutes)
 
 app.use((err, req, res, _next) => {
   console.error(`[${req.requestId || 'unknown'}]`, err.stack)

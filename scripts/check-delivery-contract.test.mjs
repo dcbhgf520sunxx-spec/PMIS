@@ -172,6 +172,27 @@ test('allows explicit public and login-only shared APIs', () => {
   assert.deepEqual(checkDeliveryContract(root), []);
 });
 
+test('allows the documented MCP API only through its dedicated authentication router', () => {
+  const root = createProject();
+  write(root, 'backend/src/routes/mcp.js', 'module.exports = {}');
+  write(root, 'backend/src/app.js', [
+    "const ordersRoutes = require('./routes/orders')",
+    "const mcpRoutes = require('./routes/mcp')",
+    "app.use('/api/orders', verifyToken, checkPermission('/orders'), ordersRoutes)",
+    "app.use('/api/mcp', mcpRoutes)"
+  ].join('\n'));
+
+  assert.deepEqual(checkDeliveryContract(root), []);
+
+  write(root, 'backend/src/app.js', [
+    "const ordersRoutes = require('./routes/orders')",
+    "const mcpRoutes = require('./routes/mcp')",
+    "app.use('/api/orders', verifyToken, checkPermission('/orders'), ordersRoutes)",
+    "app.use('/api/mcp', ordersRoutes)"
+  ].join('\n'));
+  assert.ok(checkDeliveryContract(root).includes('MCP接口 /api/mcp 必须挂载独立MCP鉴权路由'));
+});
+
 test('requires login middleware to run before permission middleware', () => {
   const root = createProject();
   write(root, 'backend/src/app.js', [

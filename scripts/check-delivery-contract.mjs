@@ -8,6 +8,7 @@ const AUTHENTICATED_ONLY_API_PATHS = new Set([
   '/api/archive-options/by-type-name',
   '/api/messages'
 ]);
+const MCP_API_PATHS = new Set(['/api/mcp']);
 const DATABASE_STRUCTURE_SQL = /\b(?:CREATE\s+(?:UNIQUE\s+)?INDEX|CREATE\s+TABLE|ALTER\s+TABLE|DROP\s+(?:TABLE|INDEX))\b/i;
 
 function stripSqlComments(source) {
@@ -71,6 +72,10 @@ export function checkDeliveryContract(rootDir, { changedFiles = [], changedRoute
 
     const lineEnd = app.indexOf('\n', apiMount.index);
     const line = app.slice(apiMount.index, lineEnd === -1 ? app.length : lineEnd);
+    if (MCP_API_PATHS.has(apiPath)) {
+      if (!line.includes('mcpRoutes')) errors.push(`MCP接口 ${apiPath} 必须挂载独立MCP鉴权路由`);
+      continue;
+    }
 
     const verifyIndex = line.indexOf('verifyToken');
     if (verifyIndex === -1) {
