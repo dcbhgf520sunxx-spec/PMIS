@@ -18,7 +18,7 @@ function createEnv() {
   return {
     WECOM_CORP_ID: 'ww-test-corp',
     WECOM_AGENT_ID: '1000001',
-    WECOM_SECRET: 'server-only-secret',
+    WECOM_USER_ID_URL: 'http://172.16.0.45:8500/shr/person/getWxUserId',
     WECOM_CALLBACK_URL: 'http://gcglsys.znjs.com:9088/api/auth/wecom/callback'
   }
 }
@@ -44,27 +44,23 @@ test('企微授权地址使用静默授权并绑定应用和回调地址', () =>
 
 test('企微配置缺失时不生成不完整的授权地址', () => {
   const env = createEnv()
-  delete env.WECOM_SECRET
+  delete env.WECOM_USER_ID_URL
 
   assert.throws(
     () => createWecomAuthService({ env }),
-    /WECOM_SECRET/
+    /WECOM_USER_ID_URL/
   )
 })
 
-test('企微身份交换只在后端获取并缓存应用 access_token', async () => {
+test('企微身份通过公司内部接口将 OAuth code 转换为工号', async () => {
   const requests = []
   const fetchImpl = async (url) => {
     requests.push(String(url))
-    if (String(url).includes('/cgi-bin/gettoken')) {
-      return jsonResponse({ errcode: 0, errmsg: 'ok', access_token: 'token-a', expires_in: 7200 })
-    }
     const requestUrl = new URL(url)
     return jsonResponse({
-      errcode: 0,
-      errmsg: 'ok',
-      userid: requestUrl.searchParams.get('code') === 'code-a' ? 'EMP001' : 'EMP002',
-      deviceid: 'device-id'
+      code: 100,
+      msg: 'success',
+      data: requestUrl.searchParams.get('code') === 'code-a' ? 'EMP001' : 'EMP002'
     })
   }
   const service = createWecomAuthService({
@@ -75,40 +71,21 @@ test('企微身份交换只在后端获取并缓存应用 access_token', async (
 
   assert.equal(await service.getUserId('code-a'), 'EMP001')
   assert.equal(await service.getUserId('code-b'), 'EMP002')
-  assert.equal(requests.filter((url) => url.includes('/cgi-bin/gettoken')).length, 1)
-  assert.equal(requests.filter((url) => url.includes('/cgi-bin/auth/getuserinfo')).length, 2)
-  assert.ok(requests.every((url) => !url.includes('server-only-secret') || url.includes('/cgi-bin/gettoken')))
+  assert.equal(requests.length, 2)
+  assert.ok(requests.every((url) => url.startsWith('http://172.16.0.45:8500/shr/person/getWxUserId?')))
+  assert.deepEqual(requests.map((url) => new URL(url).searchParams.get('code')), ['code-a', 'code-b'])
 })
 
-test('企微提前判定 access_token 失效时只刷新一次后重试身份交换', async () => {
-  let tokenRequests = 0
-  let identityRequests = 0
-  const fetchImpl = async (url) => {
-    if (String(url).includes('/cgi-bin/gettoken')) {
-      tokenRequests += 1
-      return jsonResponse({
-        errcode: 0,
-        errmsg: 'ok',
-        access_token: tokenRequests === 1 ? 'expired-token' : 'fresh-token',
-        expires_in: 7200
-      })
-    }
-    identityRequests += 1
-    const accessToken = new URL(url).searchParams.get('access_token')
-    if (accessToken === 'expired-token') {
-      return jsonResponse({ errcode: 40014, errmsg: 'invalid access_token' })
-    }
-    return jsonResponse({ errcode: 0, errmsg: 'ok', userid: 'EMP001', deviceid: 'device-id' })
-  }
+test('公司内部 UserId 转换失败时拒绝企微登录', async () => {
   const service = createWecomAuthService({
     env: createEnv(),
-    fetchImpl,
-    now: () => 1_000_000
+    fetchImpl: async () => jsonResponse({ code: 500, msg: 'failed', data: null })
   })
 
-  assert.equal(await service.getUserId('code-a'), 'EMP001')
-  assert.equal(tokenRequests, 2)
-  assert.equal(identityRequests, 2)
+  await assert.rejects(
+    service.getUserId('code-a'),
+    (error) => error.errcode === 500
+  )
 })
 
 test('一次性登录票据兑换后立即失效且过期票据不能使用', () => {
