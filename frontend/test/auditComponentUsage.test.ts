@@ -362,6 +362,82 @@ function runStrictAuditFiles(files: Record<string, string>) {
   return result;
 }
 
+test('组件审计阻断普通多行字段在详情页误用富文本展示', () => {
+  const result = runStrictAuditFiles({
+    'customer/pages/CustomerFormPage.tsx': `
+      export function CustomerFormPage() {
+        usePageReturnNavigation();
+        return <TemplateFormPage>
+          <AdminProFormTextArea name="remark" label="备注" />
+        </TemplateFormPage>;
+      }
+    `,
+    'customer/pages/CustomerDetailPage.tsx': `
+      export function CustomerDetailPage() {
+        usePageReturnNavigation();
+        return <TemplateDetailPage>
+          <DetailMetaList items={[
+            { label: '备注', value: <RichTextViewer value={row.remark} />, wide: true }
+          ]} />
+        </TemplateDetailPage>;
+      }
+    `
+  });
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /普通多行字段 remark.*RichTextViewer/);
+});
+
+test('组件审计阻断普通多行字段在详情页遗漏长文本声明', () => {
+  const result = runStrictAuditFiles({
+    'customer/pages/CustomerFormPage.tsx': `
+      export function CustomerFormPage() {
+        usePageReturnNavigation();
+        return <TemplateFormPage>
+          <AdminProFormTextArea name="description" label="描述" />
+        </TemplateFormPage>;
+      }
+    `,
+    'customer/pages/CustomerDetailPage.tsx': `
+      export function CustomerDetailPage() {
+        usePageReturnNavigation();
+        return <TemplateDetailPage>
+          <DetailMetaList items={[
+            { label: '描述', value: row.description, wide: true }
+          ]} />
+        </TemplateDetailPage>;
+      }
+    `
+  });
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /普通多行字段 description.*longText/);
+});
+
+test('组件审计允许普通多行字段和富文本字段使用各自正确的详情展示', () => {
+  const result = runStrictAuditFiles({
+    'customer/pages/CustomerFormPage.tsx': `
+      export function CustomerFormPage() {
+        usePageReturnNavigation();
+        return <TemplateFormPage>
+          <AdminProFormTextArea name="remark" label="备注" />
+          <AdminProFormRichDescription name="description" label="详细描述" />
+        </TemplateFormPage>;
+      }
+    `,
+    'customer/pages/CustomerDetailPage.tsx': `
+      export function CustomerDetailPage() {
+        usePageReturnNavigation();
+        return <TemplateDetailPage>
+          <DetailMetaList items={[
+            { label: '备注', value: row.remark, wide: true, longText: true },
+            { label: '详细描述', value: <RichTextViewer value={row.description} />, wide: true }
+          ]} />
+        </TemplateDetailPage>;
+      }
+    `
+  });
+  assert.equal(result.status, 0, result.stdout);
+});
+
 test('组件审计阻断普通分类标签自行指定颜色', () => {
   const result = runStrictAudit(
     'export function TaskSourceTag() { return <AdminTag color="purple">需求</AdminTag>; }',
