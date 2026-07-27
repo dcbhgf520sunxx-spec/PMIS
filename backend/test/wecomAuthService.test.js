@@ -18,6 +18,7 @@ function createEnv() {
   return {
     WECOM_CORP_ID: 'ww-test-corp',
     WECOM_AGENT_ID: '1000001',
+    WECOM_SECRET: 'server-only-secret',
     WECOM_USER_ID_URL: 'http://172.16.0.45:8500/shr/person/getWxUserId',
     WECOM_CALLBACK_URL: 'http://gcglsys.znjs.com:9088/api/auth/wecom/callback'
   }
@@ -52,15 +53,25 @@ test('企微配置缺失时不生成不完整的授权地址', () => {
   )
 })
 
-test('企微身份通过公司内部接口将 OAuth code 转换为工号', async () => {
+test('企微 OAuth code 先换 UserId 再通过公司内部接口转换为工号', async () => {
   const requests = []
   const fetchImpl = async (url) => {
     requests.push(String(url))
     const requestUrl = new URL(url)
+    if (requestUrl.pathname === '/cgi-bin/gettoken') {
+      return jsonResponse({ errcode: 0, errmsg: 'ok', access_token: 'token-a', expires_in: 7200 })
+    }
+    if (requestUrl.pathname === '/cgi-bin/auth/getuserinfo') {
+      return jsonResponse({
+        errcode: 0,
+        errmsg: 'ok',
+        userid: requestUrl.searchParams.get('code') === 'code-a' ? 'WX001' : 'WX002'
+      })
+    }
     return jsonResponse({
       code: 100,
       msg: 'success',
-      data: requestUrl.searchParams.get('code') === 'code-a' ? 'EMP001' : 'EMP002'
+      data: requestUrl.searchParams.get('code') === 'WX001' ? 'EMP001' : 'EMP002'
     })
   }
   const service = createWecomAuthService({
@@ -71,15 +82,29 @@ test('企微身份通过公司内部接口将 OAuth code 转换为工号', async
 
   assert.equal(await service.getUserId('code-a'), 'EMP001')
   assert.equal(await service.getUserId('code-b'), 'EMP002')
-  assert.equal(requests.length, 2)
-  assert.ok(requests.every((url) => url.startsWith('http://172.16.0.45:8500/shr/person/getWxUserId?')))
-  assert.deepEqual(requests.map((url) => new URL(url).searchParams.get('code')), ['code-a', 'code-b'])
+  assert.equal(requests.filter((url) => url.includes('/cgi-bin/gettoken')).length, 1)
+  assert.equal(requests.filter((url) => url.includes('/cgi-bin/auth/getuserinfo')).length, 2)
+  assert.deepEqual(
+    requests
+      .filter((url) => url.startsWith('http://172.16.0.45:8500/shr/person/getWxUserId?'))
+      .map((url) => new URL(url).searchParams.get('code')),
+    ['WX001', 'WX002']
+  )
 })
 
 test('公司内部 UserId 转换失败时拒绝企微登录', async () => {
   const service = createWecomAuthService({
     env: createEnv(),
-    fetchImpl: async () => jsonResponse({ code: 500, msg: 'failed', data: null })
+    fetchImpl: async (url) => {
+      const requestUrl = new URL(url)
+      if (requestUrl.pathname === '/cgi-bin/gettoken') {
+        return jsonResponse({ errcode: 0, errmsg: 'ok', access_token: 'token-a', expires_in: 7200 })
+      }
+      if (requestUrl.pathname === '/cgi-bin/auth/getuserinfo') {
+        return jsonResponse({ errcode: 0, errmsg: 'ok', userid: 'WX001' })
+      }
+      return jsonResponse({ code: 500, msg: 'failed', data: null })
+    }
   })
 
   await assert.rejects(

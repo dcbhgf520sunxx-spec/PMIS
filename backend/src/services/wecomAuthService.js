@@ -1,6 +1,7 @@
 const crypto = require('crypto')
 
 const LOGIN_TICKET_TTL_MS = 60_000
+const ACCESS_TOKEN_REFRESH_MARGIN_MS = 60_000
 
 function requireConfig(env, name) {
   const value = String(env[name] || '').trim()
@@ -16,9 +17,11 @@ function createWecomAuthService({
 } = {}) {
   const corpId = requireConfig(env, 'WECOM_CORP_ID')
   const agentId = requireConfig(env, 'WECOM_AGENT_ID')
+  const secret = requireConfig(env, 'WECOM_SECRET')
   const userIdUrl = requireConfig(env, 'WECOM_USER_ID_URL')
   const callbackUrl = requireConfig(env, 'WECOM_CALLBACK_URL')
   const loginTickets = new Map()
+  let accessTokenCache = null
 
   function buildAuthorizationUrl(state) {
     const url = new URL('https://open.weixin.qq.com/connect/oauth2/authorize')
@@ -32,10 +35,48 @@ function createWecomAuthService({
     return url.toString()
   }
 
-  async function getUserId(code) {
-    if (!String(code || '').trim()) throw new Error('企微授权 code 不能为空')
-    const url = new URL(userIdUrl)
+  async function readWecomResponse(response, fallbackMessage) {
+    const body = await response.json()
+    if (!response.ok || Number(body.errcode || 0) !== 0) {
+      const error = new Error(fallbackMessage)
+      error.errcode = Number(body.errcode || response.status)
+      throw error
+    }
+    return body
+  }
+
+  async function getAccessToken() {
+    if (accessTokenCache && accessTokenCache.expiresAt > now() + ACCESS_TOKEN_REFRESH_MARGIN_MS) {
+      return accessTokenCache.value
+    }
+    const url = new URL('https://qyapi.weixin.qq.com/cgi-bin/gettoken')
+    url.searchParams.set('corpid', corpId)
+    url.searchParams.set('corpsecret', secret)
+    const response = await fetchImpl(url)
+    const body = await readWecomResponse(response, '获取企微访问凭证失败')
+    if (!body.access_token) throw new Error('企微未返回 access_token')
+    accessTokenCache = {
+      value: body.access_token,
+      expiresAt: now() + Number(body.expires_in || 7200) * 1000
+    }
+    return accessTokenCache.value
+  }
+
+  async function fetchWecomUserId(code) {
+    const accessToken = await getAccessToken()
+    const url = new URL('https://qyapi.weixin.qq.com/cgi-bin/auth/getuserinfo')
+    url.searchParams.set('access_token', accessToken)
     url.searchParams.set('code', code)
+    const response = await fetchImpl(url)
+    const body = await readWecomResponse(response, '获取企微用户身份失败')
+    const userId = String(body.userid || '').trim()
+    if (!userId) throw new Error('企微未返回成员 UserId')
+    return userId
+  }
+
+  async function convertUserId(wecomUserId) {
+    const url = new URL(userIdUrl)
+    url.searchParams.set('code', wecomUserId)
     const response = await fetchImpl(url)
     const body = await response.json()
     if (!response.ok || Number(body.code) !== 100) {
@@ -43,9 +84,22 @@ function createWecomAuthService({
       error.errcode = Number(body.code || response.status)
       throw error
     }
-    const userId = String(body.data || '').trim()
-    if (!userId) throw new Error('公司内部企微身份转换未返回 UserId')
-    return userId
+    const account = String(body.data || '').trim()
+    if (!account) throw new Error('公司内部企微身份转换未返回账号')
+    return account
+  }
+
+  async function getUserId(code) {
+    if (!String(code || '').trim()) throw new Error('企微授权 code 不能为空')
+    let wecomUserId
+    try {
+      wecomUserId = await fetchWecomUserId(code)
+    } catch (error) {
+      if (![40014, 42001].includes(error.errcode)) throw error
+      accessTokenCache = null
+      wecomUserId = await fetchWecomUserId(code)
+    }
+    return convertUserId(wecomUserId)
   }
 
   function issueOAuthState() {
