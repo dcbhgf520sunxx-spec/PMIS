@@ -1,5 +1,5 @@
-import { type FormEvent, type MouseEvent, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { type FormEvent, type MouseEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { App, Button, Card, Input, Typography } from 'antd';
 import {
   ApartmentOutlined,
@@ -12,10 +12,11 @@ import {
   UserOutlined
 } from '@ant-design/icons';
 import { logoutAccessSession } from '../../../api/accessLogApi';
-import { derivePermissions, getUserPreference, login } from '../../../api/authApi';
+import { derivePermissions, exchangeWecomTicket, getUserPreference, login } from '../../../api/authApi';
 import { PasswordChangeModal } from '../../account/components/PasswordChangeModal';
 import { useAuthStore } from '../../../stores/authStore';
 import robotMini from '../../../assets/login/robot-mini.png';
+import { parseWecomLoginSearch } from '../wecomLogin';
 import './LoginPage.css';
 
 type FocusedField = 'account' | 'password' | null;
@@ -29,6 +30,7 @@ type Ripple = {
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { message } = App.useApp();
   const setAuth = useAuthStore((state) => state.setAuth);
   const setPreference = useAuthStore((state) => state.setPreference);
@@ -42,13 +44,46 @@ export function LoginPage() {
   const [ripples, setRipples] = useState<Ripple[]>([]);
   const [buttonPressed, setButtonPressed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const handledWecomQuery = useRef('');
 
-  const enterPreferredPage = async () => {
+  const enterPreferredPage = useCallback(async () => {
     const preference = await getUserPreference();
     setPreference(preference);
     message.success('登录成功');
     navigate(preference.default_route || '/home', { replace: true });
-  };
+  }, [message, navigate, setPreference]);
+
+  useEffect(() => {
+    const query = parseWecomLoginSearch(location.search);
+    const queryKey = query.ticket ? `ticket:${query.ticket}` : query.errorMessage ? `error:${location.search}` : '';
+    if (!queryKey || handledWecomQuery.current === queryKey) return;
+    handledWecomQuery.current = queryKey;
+
+    if (query.errorMessage) {
+      message.error(query.errorMessage);
+      navigate('/login', { replace: true });
+      return;
+    }
+
+    setSubmitting(true);
+    exchangeWecomTicket(query.ticket as string)
+      .then(async (result) => {
+        setAuth({
+          token: result.token,
+          user: result.user,
+          menus: result.menus,
+          permissions: derivePermissions(result.menus),
+          accessSessionId: result.access_session_id,
+          mustChangePassword: false
+        });
+        await enterPreferredPage();
+      })
+      .catch((error) => {
+        message.error(error instanceof Error ? error.message : '企微登录失败');
+        navigate('/login', { replace: true });
+      })
+      .finally(() => setSubmitting(false));
+  }, [enterPreferredPage, location.search, message, navigate, setAuth]);
 
   const handleForcedPasswordExit = async () => {
     await logoutAccessSession(accessSessionId).catch(() => undefined);

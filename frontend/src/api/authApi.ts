@@ -23,6 +23,13 @@ export function login(params: LoginParams) {
   return unwrap<LoginResult>(request.post('/auth/login', params), loginContract);
 }
 
+export function exchangeWecomTicket(ticket: string) {
+  return unwrap<LoginResult>(
+    request.post('/auth/wecom/exchange', { ticket }),
+    loginContract
+  );
+}
+
 export type CurrentUserResult = {
   id: number;
   employee_no: string;
