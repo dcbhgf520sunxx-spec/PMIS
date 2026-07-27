@@ -64,6 +64,16 @@ function createWecomAuthRouter(options = {}) {
     return defaultSessionService.createSession
   }
 
+  function reportCallbackError(error) {
+    const details = {
+      code: typeof error?.code === 'string' ? error.code : null,
+      errcode: Number.isFinite(Number(error?.errcode)) ? Number(error.errcode) : null,
+      name: typeof error?.name === 'string' ? error.name : 'Error'
+    }
+    if (options.onCallbackError) return options.onCallbackError(details)
+    console.error('[WeCom SSO] callback failed', details)
+  }
+
   async function getAccount(userId) {
     return (options.resolveAccount || resolveWecomAccount)(userId)
   }
@@ -108,6 +118,7 @@ function createWecomAuthRouter(options = {}) {
         : error.code === 'WECOM_ACCOUNT_DISABLED'
           ? 'account_disabled'
           : 'login_failed'
+      if (errorCode === 'login_failed') reportCallbackError(error)
       return redirectToLogin(res, { wecom_error: errorCode })
     }
   })
