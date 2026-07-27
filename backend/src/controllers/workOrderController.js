@@ -62,10 +62,6 @@ async function validateActiveProduct(productId) {
   return row ? '' : '所属产品不存在或已停用'
 }
 
-function isProblemDescriptionUniqueViolation(error) {
-  return error?.code === '23505' && error?.constraint === 'uk_work_order_problem_desc_active'
-}
-
 const WORK_ORDER_SORT_MAP = {
   problem_desc: 'w.problem_desc', product_id: 'p.name', problem_type: 'pt.name', urgency: 'w.urgency', status: 'w.status',
   is_overdue: 'w.is_overdue', follower_name: 'w.follower_id', follower_id: 'w.follower_id',
@@ -210,12 +206,6 @@ exports.create = async (req, res) => {
     const safeProblemDesc = sanitizeRichText(problem_desc)
     if (!safeProblemDesc.trim()) return failField(res, 'problem_desc', '问题描述不能为空')
 
-    // Validate problem_desc uniqueness
-    if (safeProblemDesc) {
-      const exists = await db.prepare('SELECT id FROM pms_work_order WHERE problem_desc = ? AND is_deleted = 0').get(safeProblemDesc)
-      if (exists) return failField(res, 'problem_desc', '问题描述已存在，请勿重复创建')
-    }
-
     const productError = await validateActiveProduct(product_id)
     if (productError) return failField(res, 'product_id', productError)
     const problemTypeError = await validateActiveArchive(problem_type, 'PT', '问题类型')
@@ -236,9 +226,6 @@ exports.create = async (req, res) => {
     await db.writeLog(operatorId, '新增', '运维工单', result.lastInsertRowid, null, null, JSON.stringify({ product_id, problem_type, follower_id, urgency }), req.ip)
     ok(res, { id: result.lastInsertRowid })
   } catch (err) {
-    if (isProblemDescriptionUniqueViolation(err)) {
-      return failField(res, 'problem_desc', '问题描述已存在，请勿重复创建')
-    }
     console.error(err)
     fail(res, 500, 500, '创建失败')
   }
@@ -252,11 +239,6 @@ exports.update = async (req, res) => {
     const safeProblemDesc = sanitizeRichText(problem_desc)
     const safeResultDesc = result_desc === undefined ? undefined : sanitizeRichText(result_desc)
     if (!safeProblemDesc.trim()) return failField(res, 'problem_desc', '问题描述不能为空')
-
-    if (safeProblemDesc) {
-      const exists = await db.prepare('SELECT id FROM pms_work_order WHERE problem_desc = ? AND is_deleted = 0 AND id <> ?').get(safeProblemDesc, req.params.id)
-      if (exists) return failField(res, 'problem_desc', '问题描述已存在，请勿重复创建')
-    }
 
     const old = await db.prepare('SELECT product_id, problem_type, problem_desc, result_desc, follower_id, urgency, status, is_overdue, expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time FROM pms_work_order WHERE id = ? AND is_deleted = 0').get(req.params.id)
     if (!old) return fail(res, 404, 404, '数据不存在或已被删除')
@@ -334,9 +316,6 @@ exports.update = async (req, res) => {
 
     ok(res, null)
   } catch (err) {
-    if (isProblemDescriptionUniqueViolation(err)) {
-      return failField(res, 'problem_desc', '问题描述已存在，请勿重复创建')
-    }
     console.error(err)
     fail(res, 500, 500, '更新失败')
   }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { App, Space } from 'antd';
 import type { RuleObject } from 'antd/es/form';
 import dayjs from 'dayjs';
@@ -17,8 +17,10 @@ import { getUserOptions } from '../../../api/userApi';
 import { getArchiveOptionsByTypeName } from '../../../api/archiveApi';
 import { getProductOptions } from '../../../api/productApi';
 import { createWorkOrder, getWorkOrder, updateWorkOrder, type WorkOrderFormPayload } from '../../../api/workOrderApi';
+import { useAuthStore } from '../../../stores/authStore';
 import type { WorkOrderRecord } from '../types';
 import { urgencyOptions } from '../helpers';
+import { buildWorkOrderCreateInitialValues } from './workOrderFormDefaults';
 
 type WorkOrderFormValues = Record<string, unknown> & {
   problemDesc: string;
@@ -71,6 +73,7 @@ export function WorkOrderFormPage({ mode }: { mode: 'create' | 'edit' | 'copy' }
   const { returnToSource } = usePageReturnNavigation('/work-orders');
   const params = useParams();
   const { message } = App.useApp();
+  const currentUser = useAuthStore((state) => state.user);
   const [source, setSource] = useState<WorkOrderRecord>();
   const [userOptions, setUserOptions] = useState<Array<{ label: string; value: string }>>([]);
   const [productOptions, setProductOptions] = useState<Array<{ label: string; value: string }>>([]);
@@ -79,7 +82,13 @@ export function WorkOrderFormPage({ mode }: { mode: 'create' | 'edit' | 'copy' }
   const [loadError, setLoadError] = useState('');
   const [notFound, setNotFound] = useState(false);
   const [reloadRevision, setReloadRevision] = useState(0);
-  const initialValues = source && mode !== 'create' ? toInitialValues(source) : undefined;
+  const initialValues = useMemo(() => (
+    source && mode !== 'create'
+      ? toInitialValues(source)
+      : mode === 'create'
+        ? buildWorkOrderCreateInitialValues(currentUser?.id)
+        : undefined
+  ), [currentUser?.id, mode, source]);
   const title = mode === 'edit' ? '编辑工单' : mode === 'copy' ? '复制工单' : '新增工单';
 
   useEffect(() => {
