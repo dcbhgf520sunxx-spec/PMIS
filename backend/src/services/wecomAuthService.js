@@ -82,8 +82,8 @@ function createWecomAuthService({
       accessTokenCache = null
       body = await fetchUserIdentity(code)
     }
-    if (!body.UserId) throw new Error('企微未返回成员 UserId')
-    return body.UserId
+    if (!body.userid) throw new Error('企微未返回成员 UserId')
+    return body.userid
   }
 
   function issueOAuthState() {
