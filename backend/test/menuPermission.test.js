@@ -5,11 +5,11 @@ const test = require('node:test')
 const { includeParentMenus } = require('../src/services/menuHierarchy')
 
 const rootDir = join(__dirname, '..')
-const authSource = readFileSync(join(rootDir, 'src/routes/auth.js'), 'utf8')
+const authSessionSource = readFileSync(join(rootDir, 'src/services/authSessionService.js'), 'utf8')
 const controllerSource = readFileSync(join(rootDir, 'src/controllers/menuController.js'), 'utf8')
 
 test('登录菜单和用户菜单复用父级补全能力', () => {
-  assert.match(authSource, /includeParentMenus/)
+  assert.match(authSessionSource, /includeParentMenus/)
   assert.match(controllerSource, /includeParentMenus/)
 })
 

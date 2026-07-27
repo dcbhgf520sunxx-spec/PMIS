@@ -9,6 +9,11 @@ const FIRST_LOGIN_ALLOWED_PATHS = new Set([
   '/api/auth/heartbeat'
 ])
 
+function requiresPasswordChange({ decoded, user, requestPath }) {
+  if (decoded.authMethod === 'wecom') return false
+  return Number(user.first_login) === 1 && !FIRST_LOGIN_ALLOWED_PATHS.has(requestPath)
+}
+
 /**
  * JWT 身份验证中间件
  * - 验证请求头中的 Authorization Bearer Token
@@ -44,7 +49,7 @@ async function verifyToken(req, res, next) {
     }
 
     const requestPath = req.originalUrl.split('?')[0]
-    if (req.user.firstLogin && !FIRST_LOGIN_ALLOWED_PATHS.has(requestPath)) {
+    if (requiresPasswordChange({ decoded, user, requestPath })) {
       return fail(res, 403, 403, '首次登录请先修改密码')
     }
     next()
@@ -56,4 +61,4 @@ async function verifyToken(req, res, next) {
   }
 }
 
-module.exports = { verifyToken }
+module.exports = { requiresPasswordChange, verifyToken }
