@@ -57,7 +57,7 @@ async function readStageResource(parsed, uri) {
 }
 
 async function listResourceTemplates(context) {
-  if (!context.allowedMenuPaths.has('/projects')) return []
+  if (!context.allowedMenuPaths?.has('/projects')) return []
   return [
     {
       uriTemplate: 'pmis://projects/{projectId}/contract/attachments/{attachmentId}',
@@ -75,7 +75,7 @@ async function listResourceTemplates(context) {
 }
 
 async function readResource(uri, context) {
-  if (!context.allowedMenuPaths.has('/projects')) throw new Error('没有项目管理权限')
+  if (!context.allowedMenuPaths?.has('/projects')) throw new Error('资源读取需要员工身份参数')
   const parsed = parsePmisResourceUri(uri)
   return parsed.type === 'contract'
     ? readContractResource(parsed, uri)

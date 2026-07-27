@@ -2,6 +2,8 @@ const { getToolDefinition } = require('./catalog')
 const { dispatchQueryTool } = require('./queryTools')
 const { dispatchActionTool } = require('./actionTools')
 const { recordMcpAudit } = require('../services/mcpAuditService')
+const db = require('../db')
+const permissionService = require('../services/mcpPermissionService')
 
 const ANALYSIS_DOMAIN_MENU_PATHS = {
   product: '/products',
@@ -44,24 +46,48 @@ function validateToolPermission(definition, args, context) {
   if (menuPath && !context.allowedMenuPaths.has(menuPath)) throw new Error('没有该业务模块权限')
 }
 
+async function resolveEmployeeContext(args, context, {
+  database = db,
+  permissions = permissionService,
+} = {}) {
+  const employeeNo = String(args?.employee_no || '').trim()
+  if (!employeeNo) throw new Error('缺少参数：employee_no')
+  const user = await database.prepare(`
+    SELECT id, employee_no, real_name, status, is_deleted
+    FROM pms_user
+    WHERE employee_no = ?
+  `).get(employeeNo)
+  if (!user) throw new Error('当前员工不存在')
+  if (Number(user.status) !== 1 || Number(user.is_deleted) === 1) throw new Error('当前员工已停用')
+  return {
+    ...context,
+    user: { id: user.id, employeeNo: user.employee_no, realName: user.real_name },
+    allowedMenuPaths: await permissions.getAllowedMenuPaths(user.id),
+  }
+}
+
 async function dispatchMcpTool(name, args, context) {
   const startedAt = Date.now()
   let definition
   let result
+  let employeeContext = context
   try {
     definition = getToolDefinition(name, context.endpointType)
     if (!definition) throw new Error('工具不存在或入口类型不匹配')
     validateToolArguments(definition, args)
-    validateToolPermission(definition, args, context)
-    result = await (context.endpointType === 'query'
-      ? dispatchQueryTool(name, args, context)
-      : dispatchActionTool(name, args, context))
+    employeeContext = await resolveEmployeeContext(args, context)
+    validateToolPermission(definition, args, employeeContext)
+    const businessArgs = { ...args }
+    delete businessArgs.employee_no
+    result = await (employeeContext.endpointType === 'query'
+      ? dispatchQueryTool(name, businessArgs, employeeContext)
+      : dispatchActionTool(name, businessArgs, employeeContext))
   } catch (error) {
     await recordMcpAudit({
       requestId: context.auditRequestId,
       clientId: context.client.id,
-      userId: context.user.id,
-      employeeNo: context.user.employeeNo,
+      userId: employeeContext.user?.id,
+      employeeNo: employeeContext.user?.employeeNo || String(args?.employee_no || '').trim() || null,
       endpointType: context.endpointType,
       protocolMethod: 'tools/call',
       toolName: name,
@@ -80,8 +106,8 @@ async function dispatchMcpTool(name, args, context) {
   await recordMcpAudit({
     requestId: context.auditRequestId,
     clientId: context.client.id,
-    userId: context.user.id,
-    employeeNo: context.user.employeeNo,
+    userId: employeeContext.user.id,
+    employeeNo: employeeContext.user.employeeNo,
     endpointType: context.endpointType,
     protocolMethod: 'tools/call',
     toolName: name,
@@ -97,4 +123,9 @@ async function dispatchMcpTool(name, args, context) {
   return result
 }
 
-module.exports = { dispatchMcpTool, validateToolArguments, validateToolPermission }
+module.exports = {
+  dispatchMcpTool,
+  resolveEmployeeContext,
+  validateToolArguments,
+  validateToolPermission,
+}

@@ -8,6 +8,7 @@ const bug = require('../controllers/bugController')
 const workOrder = require('../controllers/workOrderController')
 const { invokeController } = require('./controllerAdapter')
 const { analyzeBusinessData } = require('../services/mcpAnalysisService')
+const fileResources = require('./fileResources')
 
 const handlers = {
   product_search: [product.list, (a) => ({ query: normalizeQuery(a) })],
@@ -78,6 +79,23 @@ function unwrapEnvelope(envelope) {
 
 async function dispatchQueryTool(name, args, context) {
   if (name === 'business_analyze') return analyzeBusinessData(args)
+  if (name === 'contract_attachment_read') {
+    const projectId = required(args.project_id, 'project_id')
+    const attachmentId = required(args.attachment_id, 'attachment_id')
+    return fileResources.readResource(
+      `pmis://projects/${projectId}/contract/attachments/${attachmentId}`,
+      context
+    )
+  }
+  if (name === 'stage_delivery_read') {
+    const projectId = required(args.project_id, 'project_id')
+    const itemId = required(args.item_id, 'item_id')
+    const fileId = required(args.file_id, 'file_id')
+    return fileResources.readResource(
+      `pmis://projects/${projectId}/stage-plan/items/${itemId}/files/${fileId}`,
+      context
+    )
+  }
   const definition = handlers[name]
   if (!definition) throw new Error('查询工具不存在或无权限')
   const [handler, buildInput] = definition

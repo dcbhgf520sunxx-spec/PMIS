@@ -9,14 +9,13 @@
 
 范围包括产品、项目、阶段主计划、合同与付款、需求、任务、BUG、工单及相关业务附件。不提供用户、角色、菜单、权限、基础档案、系统配置或任意 SQL 能力。
 
-传输协议使用 MCP Streamable HTTP。连接凭据和员工身份分开传递：
+传输协议使用 MCP Streamable HTTP。请求头只传连接凭据：
 
 ```http
 Authorization: Bearer <智能体 Query 或 Action 凭据>
-X-PMIS-Employee-No: <平台自动注入的员工号>
 ```
 
-智能体凭据只识别调用平台，员工号用于识别本次对话的实际操作人。平台必须覆盖而不是透传用户自行填写的员工号，并妥善保管智能体凭据。
+每个业务工具的请求参数都必须传 `employee_no`，用于识别本次调用的实际操作人。服务端按该工号加载 PMIS 用户、菜单权限和审计身份。智能体凭据只识别调用平台，平台必须妥善保管凭据。
 
 ## 环境配置
 
@@ -50,22 +49,22 @@ Query 凭据不能调用 Action 入口，Action 凭据也不能调用 Query 入�
 
 ## 智能体调用规则
 
-服务会根据员工当前已有的 PMIS 菜单权限动态裁剪工具。例如员工没有项目管理权限时，不会看到项目、阶段计划、合同、付款和项目附件相关工具。MCP 不新增或维护权限。
+工具发现阶段会返回当前 Query 或 Action 入口的完整工具列表。执行工具时，服务根据必填的 `employee_no` 加载员工当前已有的 PMIS 菜单权限；员工没有对应权限时拒绝执行。MCP 不新增或维护权限。
 
-查询工具只接受声明过的筛选字段，分页单次最多 100 条；分析工具只允许预定义业务域和指标，不接受 SQL。附件通过以下资源地址读取：
+查询工具只接受声明过的筛选字段，分页单次最多 100 条；分析工具只允许预定义业务域和指标，不接受 SQL。项目附件通过带员工身份的查询工具读取：
 
 ```text
-pmis://projects/{projectId}/contract/attachments/{attachmentId}
-pmis://projects/{projectId}/stage-plan/items/{itemId}/files/{fileId}
+contract_attachment_read(employee_no, project_id, attachment_id)
+stage_delivery_read(employee_no, project_id, item_id, file_id)
 ```
 
 Action 工具采用两步确认：
 
-1. 首次调用传 `mode: "preview"` 和完整业务参数，返回 `confirmationId`、风险等级、操作人和变更摘要。
-2. 用户确认后，在 5 分钟内使用完全相同的业务参数调用 `mode: "execute"`，并传回 `confirmation_id`。
+1. 首次调用传 `employee_no`、`mode: "preview"` 和完整业务参数，返回 `confirmationId`、风险等级、操作人和变更摘要。
+2. 用户确认后，在 5 分钟内使用相同的 `employee_no` 和业务参数调用 `mode: "execute"`，并传回 `confirmation_id`。
 
 业务参数、员工、智能体、工具或确认号任一变化，服务都会拒绝执行。确认号只能使用一次。建议每次业务操作同时传入唯一的 `idempotency_key`。
 
 ## 审计
 
-MCP 初始化、工具发现、查询、操作预览、操作执行和资源读取均写入 `pms_mcp_audit_log`。操作确认记录写入 `pms_mcp_action_ticket`。审计记录保留员工号、智能体、工具、目标、结果和耗时，但会脱敏凭据并移除文件正文。
+MCP 初始化、工具发现、查询、操作预览、操作执行和附件读取均写入 `pms_mcp_audit_log`。操作确认记录写入 `pms_mcp_action_ticket`。业务工具审计保留请求参数中的员工号、智能体、工具、目标、结果和耗时，但会脱敏凭据并移除文件正文。

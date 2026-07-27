@@ -3,6 +3,7 @@ const QUERY_TOOLS = [
   ['project_search', '/projects'], ['project_get', '/projects'], ['project_history', '/projects'],
   ['stage_plan_get', '/projects'], ['stage_plan_history', '/projects'],
   ['contract_get', '/projects'], ['payment_search', '/projects'],
+  ['contract_attachment_read', '/projects'], ['stage_delivery_read', '/projects'],
   ['requirement_search', '/requirements'], ['requirement_get', '/requirements'], ['requirement_history', '/requirements'],
   ['task_search', '/tasks'], ['task_get', '/tasks'], ['task_history', '/tasks'],
   ['bug_search', '/bugs'], ['bug_get', '/bugs'], ['bug_history', '/bugs'],
@@ -31,6 +32,7 @@ const idField = { type: ['integer', 'string'] }
 const numberField = { type: ['number', 'string'] }
 const scalarField = { type: ['string', 'number', 'integer', 'boolean', 'null'] }
 const idArrayField = { type: 'array', items: idField, maxItems: 500 }
+const employeeNoField = { type: 'string', minLength: 1, description: '当前操作人的员工工号' }
 const controlProperties = {
   mode: { type: 'string', enum: ['preview', 'execute'] },
   confirmation_id: { type: 'string', format: 'uuid' },
@@ -106,25 +108,44 @@ function actionGroup(name) {
 }
 
 function queryInputSchema(name) {
+  let schema
   if (getByIdTools.has(name)) {
-    return { type: 'object', properties: { id: idField }, required: ['id'], additionalProperties: false }
-  }
-  if (projectIdTools.has(name)) {
-    return { type: 'object', properties: { project_id: idField }, required: ['project_id'], additionalProperties: false }
-  }
-  if (name === 'payment_search') {
-    return {
+    schema = { type: 'object', properties: { id: idField }, required: ['id'], additionalProperties: false }
+  } else if (projectIdTools.has(name)) {
+    schema = { type: 'object', properties: { project_id: idField }, required: ['project_id'], additionalProperties: false }
+  } else if (name === 'payment_search') {
+    schema = {
       type: 'object',
       properties: { project_id: idField, stage_id: idField },
       required: ['project_id', 'stage_id'],
       additionalProperties: false,
     }
+  } else if (name === 'contract_attachment_read') {
+    schema = {
+      type: 'object',
+      properties: { project_id: idField, attachment_id: idField },
+      required: ['project_id', 'attachment_id'],
+      additionalProperties: false,
+    }
+  } else if (name === 'stage_delivery_read') {
+    schema = {
+      type: 'object',
+      properties: { project_id: idField, item_id: idField, file_id: idField },
+      required: ['project_id', 'item_id', 'file_id'],
+      additionalProperties: false,
+    }
+  } else {
+    schema = {
+      type: 'object',
+      properties: querySchemas[name] || {},
+      required: name === 'business_analyze' ? ['domain', 'metric'] : [],
+      additionalProperties: false,
+    }
   }
   return {
-    type: 'object',
-    properties: querySchemas[name] || {},
-    required: name === 'business_analyze' ? ['domain', 'metric'] : undefined,
-    additionalProperties: false,
+    ...schema,
+    properties: { employee_no: employeeNoField, ...schema.properties },
+    required: ['employee_no', ...(schema.required || [])],
   }
 }
 
@@ -145,7 +166,12 @@ function actionInputSchema(name) {
     if (key in properties) properties[key] = idField
   }
   for (const key of ['contract_amount', 'payment_amount']) if (key in properties) properties[key] = numberField
-  return { type: 'object', properties, required: actionRequired[name], additionalProperties: false }
+  return {
+    type: 'object',
+    properties: { employee_no: employeeNoField, ...properties },
+    required: ['employee_no', ...(actionRequired[name] || [])],
+    additionalProperties: false,
+  }
 }
 
 function titleFromName(name) {
@@ -175,6 +201,7 @@ const toolCatalog = [
 function filterToolsForContext(context) {
   return toolCatalog.filter((tool) => {
     if (tool._meta.endpointType !== context.endpointType) return false
+    if (!context.allowedMenuPaths) return true
     if (!tool._meta.menuPath) {
       return context.endpointType === 'query' && context.allowedMenuPaths.size > 0
     }

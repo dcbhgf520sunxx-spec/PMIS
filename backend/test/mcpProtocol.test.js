@@ -51,6 +51,31 @@ test('tool filtering separates Query and Action credentials even with the same m
   assert.equal(actionNames.includes('task_search'), false)
 })
 
+test('every MCP business tool requires employee_no in its request arguments', () => {
+  for (const endpointType of ['query', 'action']) {
+    const tools = filterToolsForContext({ endpointType })
+    assert.equal(tools.length > 0, true)
+    for (const tool of tools) {
+      assert.equal(tool.inputSchema.properties.employee_no.type, 'string', tool.name)
+      assert.equal(tool.inputSchema.required.includes('employee_no'), true, tool.name)
+    }
+  }
+})
+
+test('attachment reads remain available as employee-scoped query tools', () => {
+  const tools = filterToolsForContext({ endpointType: 'query' })
+  const byName = new Map(tools.map((tool) => [tool.name, tool]))
+
+  assert.deepEqual(
+    byName.get('contract_attachment_read').inputSchema.required,
+    ['employee_no', 'project_id', 'attachment_id']
+  )
+  assert.deepEqual(
+    byName.get('stage_delivery_read').inputSchema.required,
+    ['employee_no', 'project_id', 'item_id', 'file_id']
+  )
+})
+
 test('controller adapter preserves delegated operator identity and PMIS response envelope', async () => {
   const result = await invokeController(async (req, res) => {
     res.status(200).json({
@@ -92,9 +117,12 @@ test('Origin validation rejects untrusted browser origins and allows non-browser
 test('tool schemas reject unknown fields and require business identifiers', () => {
   const context = { endpointType: 'query', allowedMenuPaths: new Set(['/projects']) }
   const definition = require('../src/mcp/catalog').getToolDefinition('project_get', 'query')
-  assert.doesNotThrow(() => validateToolArguments(definition, { id: 1 }))
-  assert.throws(() => validateToolArguments(definition, {}), /缺少参数/)
-  assert.throws(() => validateToolArguments(definition, { id: 1, sql: 'SELECT 1' }), /不支持的参数/)
+  assert.doesNotThrow(() => validateToolArguments(definition, { employee_no: 'JS001', id: 1 }))
+  assert.throws(() => validateToolArguments(definition, { employee_no: 'JS001' }), /缺少参数/)
+  assert.throws(
+    () => validateToolArguments(definition, { employee_no: 'JS001', id: 1, sql: 'SELECT 1' }),
+    /不支持的参数/
+  )
   assert.equal(filterToolsForContext(context).find((tool) => tool.name === 'project_get').inputSchema.additionalProperties, false)
 })
 

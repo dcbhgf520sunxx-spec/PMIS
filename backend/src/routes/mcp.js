@@ -52,8 +52,8 @@ async function auditProtocolRequest(req, resultStatus, error) {
   await recordMcpAudit({
     requestId: context.auditRequestId,
     clientId: context.client.id,
-    userId: context.user.id,
-    employeeNo: context.user.employeeNo,
+    userId: context.user?.id,
+    employeeNo: context.user?.employeeNo,
     endpointType: context.endpointType,
     protocolMethod,
     input: req.body?.params || {},
