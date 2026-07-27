@@ -4,12 +4,16 @@ const test = require('node:test')
 const { createMcpAuth, parseBearerToken } = require('../src/middleware/mcpAuth')
 const { redactAuditInput } = require('../src/services/mcpAuditService')
 const {
+  encryptEmployeeIdentity,
+} = require('../src/services/mcpEmployeeIdentityCrypto')
+const {
   canonicalizeActionArguments,
   createMcpActionTicketService,
   hashActionArguments,
 } = require('../src/services/mcpActionTicketService')
 
-test('MCP identity accepts employee number only from the trusted request header', async () => {
+test('MCP identity accepts only a short-lived encrypted employee header', async () => {
+  const token = 'agent-token'
   const auth = createMcpAuth({
     credentialService: { authenticateClient: async () => ({ id: 3, endpoint_type: 'query' }) },
     db: {
@@ -23,8 +27,8 @@ test('MCP identity accepts employee number only from the trusted request header'
   })
   const principal = await auth.resolvePrincipal({
     headers: {
-      authorization: 'Bearer agent-token',
-      'x-pmis-employee-no': 'JS001'
+      authorization: `Bearer ${token}`,
+      'x-pmis-employee-no': encryptEmployeeIdentity('JS001', token)
     },
     body: { employee_no: 'admin' },
     ip: '127.0.0.1'
@@ -36,7 +40,35 @@ test('MCP identity accepts employee number only from the trusted request header'
   assert.equal(parseBearerToken('Basic abc'), null)
 })
 
+test('MCP identity rejects plaintext, tampered, expired or token-mismatched employee headers', async () => {
+  const token = 'agent-token'
+  const auth = createMcpAuth({
+    credentialService: { authenticateClient: async () => ({ id: 3 }) },
+    db: { prepare: () => ({ get: async () => ({ id: 1, status: 1, is_deleted: 0 }) }) },
+    permissionService: { getAllowedMenuPaths: async () => new Set() }
+  })
+  const current = encryptEmployeeIdentity('JS001', token)
+  const tamperedParts = current.split('.')
+  tamperedParts[3] = `${tamperedParts[3][0] === 'A' ? 'B' : 'A'}${tamperedParts[3].slice(1)}`
+  const tampered = tamperedParts.join('.')
+  const expired = encryptEmployeeIdentity('JS001', token, { now: Date.now() - 10 * 60 * 1000 })
+
+  await assert.rejects(auth.resolvePrincipal({
+    headers: { authorization: `Bearer ${token}`, 'x-pmis-employee-no': 'JS001' }
+  }, 'query'), /密文格式/)
+  await assert.rejects(auth.resolvePrincipal({
+    headers: { authorization: `Bearer ${token}`, 'x-pmis-employee-no': tampered }
+  }, 'query'), /校验失败/)
+  await assert.rejects(auth.resolvePrincipal({
+    headers: { authorization: `Bearer ${token}`, 'x-pmis-employee-no': expired }
+  }, 'query'), /已过期/)
+  await assert.rejects(auth.resolvePrincipal({
+    headers: { authorization: 'Bearer other-token', 'x-pmis-employee-no': current }
+  }, 'query'), /校验失败/)
+})
+
 test('MCP identity rejects a missing, unknown, disabled or deleted employee', async () => {
+  const token = 'agent-token'
   const rows = [null, { id: 1, status: 0, is_deleted: 0 }, { id: 2, status: 1, is_deleted: 1 }]
   const auth = createMcpAuth({
     credentialService: { authenticateClient: async () => ({ id: 3 }) },
@@ -47,7 +79,10 @@ test('MCP identity rejects a missing, unknown, disabled or deleted employee', as
   await assert.rejects(auth.resolvePrincipal({ headers: { authorization: 'Bearer x' } }, 'query'), /员工号/)
   for (const expected of [/不存在/, /已停用/, /已停用/]) {
     await assert.rejects(auth.resolvePrincipal({
-      headers: { authorization: 'Bearer x', 'x-pmis-employee-no': 'JS001' }
+      headers: {
+        authorization: `Bearer ${token}`,
+        'x-pmis-employee-no': encryptEmployeeIdentity('JS001', token)
+      }
     }, 'query'), expected)
   }
 })

@@ -1,6 +1,7 @@
 const db = require('../db')
 const crypto = require('node:crypto')
 const credentialService = require('../services/mcpCredentialService')
+const { decryptEmployeeIdentity } = require('../services/mcpEmployeeIdentityCrypto')
 const permissionService = require('../services/mcpPermissionService')
 const { fail } = require('../utils/response')
 
@@ -32,8 +33,14 @@ function createMcpAuth({
       throw new McpAuthError(error.message)
     }
 
-    const employeeNo = String(req.headers?.['x-pmis-employee-no'] || '').trim()
-    if (!employeeNo) throw new McpAuthError('缺少平台自动传入的员工号', 400)
+    const encryptedEmployeeNo = String(req.headers?.['x-pmis-employee-no'] || '').trim()
+    if (!encryptedEmployeeNo) throw new McpAuthError('缺少平台自动传入的员工号密文', 400)
+    let employeeNo
+    try {
+      employeeNo = decryptEmployeeIdentity(encryptedEmployeeNo, token)
+    } catch (error) {
+      throw new McpAuthError(error.message, 400)
+    }
     const user = await database.prepare(`
       SELECT id, employee_no, real_name, status, is_deleted
       FROM pms_user
