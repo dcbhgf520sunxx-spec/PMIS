@@ -798,6 +798,143 @@ function collectListViewTabContractViolations(files) {
   });
 }
 
+function collectDetailLongTextContractViolations(files) {
+  const filesByModule = new Map();
+  for (const file of files) {
+    const moduleName = relative(modulesDir, file).split('/')[0];
+    const moduleFiles = filesByModule.get(moduleName) || [];
+    moduleFiles.push(file);
+    filesByModule.set(moduleName, moduleFiles);
+  }
+
+  const staticAttributeName = (node) => {
+    const nameAttribute = attribute(node, 'name');
+    const initializer = nameAttribute?.initializer;
+    if (!initializer) return '';
+    if (ts.isStringLiteral(initializer)) return initializer.text;
+    if (!ts.isJsxExpression(initializer) || !initializer.expression) return '';
+    if (ts.isStringLiteral(initializer.expression)) return initializer.expression.text;
+    if (ts.isArrayLiteralExpression(initializer.expression)
+      && initializer.expression.elements.length === 1
+      && ts.isStringLiteral(initializer.expression.elements[0])) {
+      return initializer.expression.elements[0].text;
+    }
+    return '';
+  };
+
+  const unwrapExpression = (expression, variables) => {
+    if (ts.isParenthesizedExpression(expression) || ts.isAsExpression(expression)
+      || ts.isTypeAssertionExpression(expression) || ts.isSatisfiesExpression(expression)) {
+      return unwrapExpression(expression.expression, variables);
+    }
+    if (ts.isIdentifier(expression) && variables.has(expression.text)) {
+      return unwrapExpression(variables.get(expression.text), variables);
+    }
+    return expression;
+  };
+
+  const detailItems = (sourceFile) => {
+    const variables = new Map();
+    const lists = [];
+    const collect = (node) => {
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
+        variables.set(node.name.text, node.initializer);
+      }
+      if ((ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node))
+        && jsxTagName(node, sourceFile) === 'DetailMetaList') {
+        lists.push(node);
+      }
+      ts.forEachChild(node, collect);
+    };
+    collect(sourceFile);
+
+    return lists.flatMap((list) => {
+      const itemsAttribute = attribute(list, 'items');
+      const expression = itemsAttribute?.initializer && ts.isJsxExpression(itemsAttribute.initializer)
+        ? itemsAttribute.initializer.expression
+        : undefined;
+      const items = expression ? unwrapExpression(expression, variables) : undefined;
+      return items && ts.isArrayLiteralExpression(items)
+        ? items.elements.filter(ts.isObjectLiteralExpression)
+        : [];
+    });
+  };
+
+  return [...filesByModule.values()].flatMap((moduleFiles) => {
+    const plainMultilineFields = new Set();
+
+    for (const file of moduleFiles.filter((candidate) => candidate.endsWith('FormPage.tsx'))) {
+      const source = readFileSync(file, 'utf8');
+      const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+      const visit = (node) => {
+        if ((ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node))
+          && jsxTagName(node, sourceFile) === 'AdminProFormTextArea') {
+          const fieldName = staticAttributeName(node);
+          if (fieldName) plainMultilineFields.add(fieldName);
+        }
+        ts.forEachChild(node, visit);
+      };
+      visit(sourceFile);
+    }
+
+    if (plainMultilineFields.size === 0) return [];
+
+    return moduleFiles
+      .filter((file) => file.endsWith('DetailPage.tsx'))
+      .flatMap((file) => {
+        const source = readFileSync(file, 'utf8');
+        const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+        return detailItems(sourceFile).flatMap((item) => {
+          const value = objectProperty(item, 'value')?.initializer;
+          if (!value) return [];
+
+          const referencedFields = new Set();
+          let usesRichTextViewer = false;
+          const inspectValue = (node) => {
+            if ((ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node))
+              && jsxTagName(node, sourceFile) === 'RichTextViewer') {
+              usesRichTextViewer = true;
+            }
+            if (ts.isPropertyAccessExpression(node) && plainMultilineFields.has(node.name.text)) {
+              referencedFields.add(node.name.text);
+            }
+            if (ts.isElementAccessExpression(node)
+              && node.argumentExpression
+              && ts.isStringLiteral(node.argumentExpression)
+              && plainMultilineFields.has(node.argumentExpression.text)) {
+              referencedFields.add(node.argumentExpression.text);
+            }
+            ts.forEachChild(node, inspectValue);
+          };
+          inspectValue(value);
+
+          const hasLongText = propertyText(item, 'longText', sourceFile) === 'true';
+          return [...referencedFields].flatMap((fieldName) => {
+            if (usesRichTextViewer) {
+              return [finding(
+                file,
+                sourceFile,
+                item,
+                `普通多行字段 ${fieldName} 不得使用 RichTextViewer；应直接传入原始值并声明 longText: true`,
+                fieldName
+              )];
+            }
+            if (!hasLongText) {
+              return [finding(
+                file,
+                sourceFile,
+                item,
+                `普通多行字段 ${fieldName} 在详情页必须声明 longText: true，保留录入时的回车换行`,
+                fieldName
+              )];
+            }
+            return [];
+          });
+        });
+      });
+  });
+}
+
 const files = walk(modulesDir).filter((file) => {
   const normalized = relative(modulesDir, file).split('/');
   return !excludedPathParts.includes(normalized[0]);
@@ -816,17 +953,18 @@ const libraryAliasBlocking = collectLibraryAliasViolations(files);
 const listColumnContractBlocking = collectListColumnContractViolations(files);
 const listCreationColumnBlocking = collectListCreationColumnViolations(files);
 const listViewTabContractBlocking = collectListViewTabContractViolations(files);
+const detailLongTextContractBlocking = collectDetailLongTextContractViolations(sourceFiles);
 const warnings = collectMatches(files, warningRules, 'WARN');
 
 console.log('组件接入审计');
 console.log(`扫描文件：${files.length}`);
-console.log(`阻断项：${blocking.length + listTemplateBlocking.length + pageTemplateBlocking.length + serverListDataBlocking.length + semanticBlocking.length + libraryAliasBlocking.length + listColumnContractBlocking.length + listCreationColumnBlocking.length + listViewTabContractBlocking.length}`);
+console.log(`阻断项：${blocking.length + listTemplateBlocking.length + pageTemplateBlocking.length + serverListDataBlocking.length + semanticBlocking.length + libraryAliasBlocking.length + listColumnContractBlocking.length + listCreationColumnBlocking.length + listViewTabContractBlocking.length + detailLongTextContractBlocking.length}`);
 console.log(`提醒项：${warnings.length}`);
 
-for (const item of [...blocking, ...listTemplateBlocking, ...pageTemplateBlocking, ...serverListDataBlocking, ...semanticBlocking, ...libraryAliasBlocking, ...listColumnContractBlocking, ...listCreationColumnBlocking, ...listViewTabContractBlocking, ...warnings]) {
+for (const item of [...blocking, ...listTemplateBlocking, ...pageTemplateBlocking, ...serverListDataBlocking, ...semanticBlocking, ...libraryAliasBlocking, ...listColumnContractBlocking, ...listCreationColumnBlocking, ...listViewTabContractBlocking, ...detailLongTextContractBlocking, ...warnings]) {
   console.log(`${item.level} ${item.file}:${item.line} ${item.token} ${item.reason}`);
 }
 
-if (strict && (blocking.length > 0 || listTemplateBlocking.length > 0 || pageTemplateBlocking.length > 0 || serverListDataBlocking.length > 0 || semanticBlocking.length > 0 || libraryAliasBlocking.length > 0 || listColumnContractBlocking.length > 0 || listCreationColumnBlocking.length > 0 || listViewTabContractBlocking.length > 0)) {
+if (strict && (blocking.length > 0 || listTemplateBlocking.length > 0 || pageTemplateBlocking.length > 0 || serverListDataBlocking.length > 0 || semanticBlocking.length > 0 || libraryAliasBlocking.length > 0 || listColumnContractBlocking.length > 0 || listCreationColumnBlocking.length > 0 || listViewTabContractBlocking.length > 0 || detailLongTextContractBlocking.length > 0)) {
   process.exitCode = 1;
 }
