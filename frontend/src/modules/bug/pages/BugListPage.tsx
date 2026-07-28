@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Key } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
 import { App } from 'antd';
-import { ActionBar, AdminButton, AdminInput, AdminRangePicker, AdminSelect, AdminTextAction, CompactFilterBar, createDetailNeighborContext, createListFilterItems, DeleteConfirmAction, DetailLinkCell, OperationColumnActions, PermissionButton, saveDetailNeighborContext, TemplateListPage, useCommittedFilters, useTemplateServerListData, ViewTabs , listRouteCodecs, useListViewState, usePageReturnNavigation } from '../../../components/admin';
+import { ActionBar, AdminButton, AdminInput, AdminRangePicker, AdminSelect, AdminTextAction, CompactFilterBar, createDetailNeighborContext, createListFilterItems, DeleteConfirmAction, DetailLinkCell, OperationColumnActions, PermissionButton, resolveListViewFilter, saveDetailNeighborContext, TemplateListPage, useCommittedFilters, useTemplateServerListData, ViewTabs , listRouteCodecs, useListViewState, usePageReturnNavigation } from '../../../components/admin';
 import { deleteBug, getBugList, getBugProjectOptions, getBugRequirementOptions, updateBugStatus } from '../../../api/bugApi';
 import { getUserOptions } from '../../../api/userApi';
 import { getArchiveOptionsByTypeName } from '../../../api/archiveApi';
@@ -27,8 +27,8 @@ export function BugListPage() {
     queryKey: ['bugs', filters.appliedFilters, filters.revision, view],
     request: async ({ current, pageSize, sortField, sortOrder }) => {
       const range = filters.appliedFilters.createdAtRange || [];
-      const assigneeId = view === 'all' ? filters.appliedFilters.assigneeId : undefined;
-      const result = await getBugList({ view, title: filters.appliedFilters.title || undefined, source_type: filters.appliedFilters.sourceType, project_id: filters.appliedFilters.projectId, requirement_id: filters.appliedFilters.requirementId, bug_type_id: filters.appliedFilters.bugTypeId, severity: filters.appliedFilters.severity, status: filters.appliedFilters.status, assignee_id: assigneeId, filter_assignee_id: assigneeId, creator_id: filters.appliedFilters.creatorId, created_at_from: date(range[0]), created_at_to: date(range[1]), sort_field: sortField, sort_order: sortOrder, page: current, pageSize });
+      const assignee = resolveListViewFilter(view, filters.appliedFilters.assigneeId);
+      const result = await getBugList({ view, title: filters.appliedFilters.title || undefined, source_type: filters.appliedFilters.sourceType, project_id: filters.appliedFilters.projectId, requirement_id: filters.appliedFilters.requirementId, bug_type_id: filters.appliedFilters.bugTypeId, severity: filters.appliedFilters.severity, status: filters.appliedFilters.status, assignee_id: assignee.scopeValue, filter_assignee_id: assignee.filterValue, creator_id: filters.appliedFilters.creatorId, created_at_from: date(range[0]), created_at_to: date(range[1]), sort_field: sortField, sort_order: sortOrder, page: current, pageSize });
       return { list: result.list, total: result.total, meta: { viewCounts: result.viewCounts } };
     },
     urlSync: true
@@ -44,7 +44,7 @@ export function BugListPage() {
     return () => { cancelled = true; };
   }, [optionsRevision]);
 
-  const buildQuery = () => { const range = filters.appliedFilters.createdAtRange || []; const assigneeId = view === 'all' ? filters.appliedFilters.assigneeId : undefined; return { view, title: filters.appliedFilters.title || undefined, source_type: filters.appliedFilters.sourceType, project_id: filters.appliedFilters.projectId, requirement_id: filters.appliedFilters.requirementId, bug_type_id: filters.appliedFilters.bugTypeId, severity: filters.appliedFilters.severity, status: filters.appliedFilters.status, assignee_id: assigneeId, filter_assignee_id: assigneeId, creator_id: filters.appliedFilters.creatorId, created_at_from: date(range[0]), created_at_to: date(range[1]), sort_field: list.sortState.field, sort_order: list.sortState.order }; };
+  const buildQuery = () => { const range = filters.appliedFilters.createdAtRange || []; const assignee = resolveListViewFilter(view, filters.appliedFilters.assigneeId); return { view, title: filters.appliedFilters.title || undefined, source_type: filters.appliedFilters.sourceType, project_id: filters.appliedFilters.projectId, requirement_id: filters.appliedFilters.requirementId, bug_type_id: filters.appliedFilters.bugTypeId, severity: filters.appliedFilters.severity, status: filters.appliedFilters.status, assignee_id: assignee.scopeValue, filter_assignee_id: assignee.filterValue, creator_id: filters.appliedFilters.creatorId, created_at_from: date(range[0]), created_at_to: date(range[1]), sort_field: list.sortState.field, sort_order: list.sortState.order }; };
   const selectedRecords = useMemo(() => { const map = new Map(list.sortedRows.map((row) => [row.id, row])); return selectedRowKeys.map((key) => map.get(String(key))).filter((row): row is BugRecord => Boolean(row)); }, [selectedRowKeys, list.sortedRows]);
   const sameStatus = selectedRecords.length > 0 && selectedRecords.every((row) => row.status === selectedRecords[0].status); const clearSelection = () => setSelectedRowKeys([]); const batch = useBugBatchActions({ selectedRecords, users, clearSelection, reload: load });
   const openDetail = (row: BugRecord) => { saveDetailNeighborContext(createDetailNeighborContext({ moduleKey: 'bug', routeBase: '/bugs', sourcePath: currentPath, params: buildQuery() })); navigate(`/bugs/${row.id}`); };
