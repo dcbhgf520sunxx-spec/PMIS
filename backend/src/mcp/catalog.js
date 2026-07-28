@@ -28,10 +28,12 @@ const ACTION_TOOLS = [
 ]
 
 const stringField = { type: 'string' }
-const idField = { type: ['integer', 'string'] }
-const numberField = { type: ['number', 'string'] }
+const nullableStringField = { type: ['string', 'null'] }
+const idField = { type: ['integer', 'string', 'null'] }
+const arrayIdField = { type: ['integer', 'string'] }
+const numberField = { type: ['number', 'string', 'null'] }
 const scalarField = { type: ['string', 'number', 'integer', 'boolean', 'null'] }
-const idArrayField = { type: 'array', items: idField, maxItems: 500 }
+const idArrayField = { type: 'array', items: arrayIdField, minItems: 1, maxItems: 500 }
 const controlProperties = {
   mode: { type: 'string', enum: ['preview', 'execute'] },
   confirmation_id: { type: 'string', format: 'uuid' },
@@ -76,32 +78,49 @@ const actionFieldNames = {
   task: ['id', 'parent_id', 'name', 'description', 'source_type', 'project_id', 'requirement_id', 'task_type', 'priority', 'owner_ids', 'status', 'start_date', 'expected_end_date', 'actual_end_date', 'pause_date', 'completion_status', 'ids'],
   bug: ['id', 'title', 'description', 'source_type', 'project_id', 'requirement_id', 'bug_type_id', 'severity', 'assignee_id', 'status', 'resolution_id', 'resolve_date', 'close_date', 'pause_date', 'ids'],
   work_order: ['id', 'product_id', 'problem_type', 'problem_desc', 'result_desc', 'follower_id', 'urgency', 'status', 'expected_resolve_date', 'resolve_date', 'close_date', 'suspend_date', 'activation_reason', 'submitter_name', 'submitter_dept', 'submit_time', 'ids'],
-  stage: ['project_id', 'stage_id', 'item_id', 'name', 'description', 'ids', 'moved_id', 'owner_id', 'original_due_date', 'requires_delivery_file', 'remark', 'items', 'status', 'pause_reason', 'actual_end_date', 'new_due_date', 'reason', 'files'],
+  stage: ['project_id', 'stage_id', 'item_id', 'name', 'description', 'ids', 'moved_id', 'owner_id', 'collaborator_ids', 'original_due_date', 'requires_delivery_file', 'remark', 'items', 'status', 'pause_reason', 'actual_end_date', 'new_due_date', 'reason', 'files'],
   contract: ['project_id', 'contract_code', 'contract_name', 'supplier_id', 'supplier_name', 'signed_date', 'contract_amount', 'remark', 'stages'],
   payment: ['project_id', 'stage_id', 'payment_id', 'payment_amount', 'payment_month', 'handler_id', 'remark'],
   file: ['project_id', 'item_id', 'attachment_id', 'file_id', 'file_name', 'mime_type', 'content_base64'],
 }
 
 const actionRequired = {
-  product_update: ['id'], product_change_status: ['id'], product_delete: ['id'],
-  project_update: ['id'], project_change_status: ['id'], project_delete: ['id'],
-  requirement_update: ['id'], requirement_change_status: ['id'], requirement_delete: ['id'],
-  task_create_subtask: ['parent_id'], task_update: ['id'], task_assign: ['ids'],
-  task_change_status: ['id'], task_delete: ['id'],
-  bug_update: ['id'], bug_assign: ['ids'], bug_change_status: ['id'], bug_delete: ['id'],
-  work_order_update: ['id'], work_order_assign: ['ids'], work_order_change_status: ['id'], work_order_delete: ['id'],
-  stage_create: ['project_id'], stage_update: ['project_id', 'stage_id'],
+  product_create: ['name', 'owner_id', 'idempotency_key'],
+  product_update: ['id', 'name', 'owner_id'], product_change_status: ['id', 'status'], product_delete: ['id'],
+  project_create: ['name', 'product_id', 'owner_id', 'expected_end_date', 'idempotency_key'],
+  project_update: ['id', 'name', 'product_id', 'owner_id', 'expected_end_date'],
+  project_change_status: ['id', 'status'], project_delete: ['id'],
+  requirement_create: ['title', 'requirement_type', 'product_id', 'owner_id', 'submitter_name', 'submit_date', 'idempotency_key'],
+  requirement_update: ['id', 'title', 'requirement_type', 'product_id', 'owner_id', 'submitter_name', 'submit_date'],
+  requirement_change_status: ['id', 'status'], requirement_delete: ['id'],
+  task_create: ['name', 'source_type', 'task_type', 'owner_ids', 'idempotency_key'],
+  task_create_subtask: ['parent_id', 'name', 'task_type', 'owner_ids', 'idempotency_key'],
+  task_update: ['id', 'name', 'source_type', 'task_type', 'owner_ids'], task_assign: ['ids', 'owner_ids'],
+  task_change_status: ['id', 'status'], task_delete: ['id'],
+  bug_create: ['title', 'source_type', 'bug_type_id', 'severity', 'assignee_id', 'idempotency_key'],
+  bug_update: ['id', 'title', 'source_type', 'bug_type_id', 'severity', 'assignee_id'],
+  bug_assign: ['ids', 'assignee_id'], bug_change_status: ['id', 'status'], bug_delete: ['id'],
+  work_order_create: ['product_id', 'problem_type', 'problem_desc', 'follower_id', 'urgency', 'expected_resolve_date', 'submitter_name', 'submitter_dept', 'submit_time', 'idempotency_key'],
+  work_order_update: ['id', 'product_id', 'problem_type', 'problem_desc', 'follower_id', 'urgency', 'expected_resolve_date', 'submitter_name', 'submitter_dept', 'submit_time'],
+  work_order_assign: ['ids', 'follower_id'], work_order_change_status: ['id', 'status'], work_order_delete: ['id'],
+  stage_create: ['project_id', 'name', 'idempotency_key'], stage_update: ['project_id', 'stage_id', 'name'],
   stage_reorder: ['project_id', 'ids'], stage_delete: ['project_id', 'stage_id'],
-  stage_item_create: ['project_id', 'stage_id'], stage_item_batch_create: ['project_id', 'stage_id', 'items'],
-  stage_item_update: ['project_id', 'item_id'], stage_item_reorder: ['project_id', 'stage_id', 'ids'],
-  stage_item_change_status: ['project_id', 'item_id'], stage_item_adjust: ['project_id', 'item_id'],
+  stage_item_create: ['project_id', 'stage_id', 'name', 'owner_id', 'original_due_date', 'idempotency_key'],
+  stage_item_batch_create: ['project_id', 'stage_id', 'items', 'idempotency_key'],
+  stage_item_update: ['project_id', 'item_id', 'stage_id', 'name', 'owner_id'],
+  stage_item_reorder: ['project_id', 'stage_id', 'ids'],
+  stage_item_change_status: ['project_id', 'item_id', 'status'],
+  stage_item_adjust: ['project_id', 'item_id', 'new_due_date', 'reason'],
   stage_item_delete: ['project_id', 'item_id'],
-  contract_create: ['project_id'], contract_update: ['project_id'], contract_delete: ['project_id'],
-  payment_create: ['project_id', 'stage_id'], payment_update: ['project_id', 'payment_id'],
+  contract_create: ['project_id', 'contract_code', 'contract_name', 'supplier_id', 'signed_date', 'contract_amount', 'stages', 'idempotency_key'],
+  contract_update: ['project_id', 'contract_code', 'contract_name', 'supplier_id', 'signed_date', 'contract_amount', 'stages'],
+  contract_delete: ['project_id'],
+  payment_create: ['project_id', 'stage_id', 'payment_amount', 'payment_month', 'handler_id', 'idempotency_key'],
+  payment_update: ['project_id', 'payment_id', 'payment_amount', 'payment_month', 'handler_id'],
   payment_delete: ['project_id', 'payment_id'],
-  contract_attachment_upload: ['project_id', 'file_name', 'content_base64'],
+  contract_attachment_upload: ['project_id', 'file_name', 'content_base64', 'idempotency_key'],
   contract_attachment_delete: ['project_id', 'attachment_id'],
-  stage_delivery_upload: ['project_id', 'item_id', 'file_name', 'content_base64'],
+  stage_delivery_upload: ['project_id', 'item_id', 'file_name', 'content_base64', 'idempotency_key'],
   stage_delivery_delete: ['project_id', 'item_id', 'file_id'],
 }
 
@@ -131,22 +150,126 @@ function actionInputSchema(name) {
     ...controlProperties,
     ...fields(actionFieldNames[group] || []),
   }
-  if ('member_ids' in properties || 'owner_ids' in properties || 'ids' in properties) {
-    for (const key of ['member_ids', 'owner_ids', 'ids']) if (key in properties) properties[key] = idArrayField
+  if ('member_ids' in properties || 'owner_ids' in properties || 'collaborator_ids' in properties || 'ids' in properties) {
+    for (const key of ['member_ids', 'owner_ids', 'collaborator_ids', 'ids']) if (key in properties) properties[key] = idArrayField
   }
-  if ('items' in properties) properties.items = { type: 'array', items: { type: 'object', additionalProperties: scalarField }, maxItems: 100 }
-  if ('stages' in properties) properties.stages = { type: 'array', items: { type: 'object', additionalProperties: scalarField }, maxItems: 100 }
-  if ('files' in properties) properties.files = { type: 'array', items: { type: 'object', additionalProperties: scalarField }, maxItems: 20 }
+  if ('items' in properties) properties.items = {
+    type: 'array',
+    minItems: 1,
+    maxItems: 100,
+    items: {
+      type: 'object',
+      properties: {
+        name: stringField,
+        owner_id: idField,
+        collaborator_ids: idArrayField,
+        original_due_date: stringField,
+        requires_delivery_file: scalarField,
+        remark: stringField,
+      },
+      required: ['name', 'owner_id', 'original_due_date'],
+      additionalProperties: false,
+    },
+  }
+  if ('stages' in properties) properties.stages = {
+    type: 'array',
+    minItems: 1,
+    maxItems: 100,
+    items: {
+      type: 'object',
+      properties: {
+        id: idField,
+        stage_name: stringField,
+        planned_amount: numberField,
+      },
+      required: ['stage_name', 'planned_amount'],
+      additionalProperties: false,
+    },
+  }
+  if ('files' in properties) properties.files = {
+    type: 'array',
+    maxItems: 20,
+    items: {
+      type: 'object',
+      properties: {
+        file_name: stringField,
+        mime_type: stringField,
+        content_base64: { type: 'string', maxLength: 12 * 1024 * 1024 },
+      },
+      required: ['file_name', 'content_base64'],
+      additionalProperties: false,
+    },
+  }
   if ('content_base64' in properties) properties.content_base64 = { type: 'string', maxLength: 12 * 1024 * 1024 }
-  for (const key of ['id', 'parent_id', 'project_id', 'stage_id', 'item_id', 'payment_id', 'attachment_id', 'file_id', 'owner_id', 'product_id']) {
+  for (const key of [
+    'name', 'description', 'title', 'start_date', 'expected_end_date', 'actual_end_date', 'suspend_date',
+    'progress_text', 'risk_text', 'submitter_name', 'submitter_dept', 'submit_date', 'pause_date',
+    'completion_status', 'problem_desc', 'result_desc', 'expected_resolve_date', 'resolve_date', 'close_date',
+    'activation_reason', 'submit_time', 'original_due_date', 'remark', 'pause_reason', 'new_due_date', 'reason',
+    'contract_code', 'contract_name', 'supplier_name', 'signed_date', 'payment_month', 'file_name', 'mime_type',
+  ]) {
+    if (key in properties) properties[key] = nullableStringField
+  }
+  for (const key of ['status', 'requirement_type', 'priority', 'source_type', 'severity', 'urgency', 'requires_delivery_file']) {
+    if (key in properties) properties[key] = numberField
+  }
+  for (const key of ['id', 'parent_id', 'project_id', 'stage_id', 'item_id', 'payment_id', 'attachment_id', 'file_id', 'owner_id', 'product_id', 'supplier_id', 'handler_id', 'assignee_id', 'follower_id', 'task_type', 'bug_type_id', 'resolution_id']) {
     if (key in properties) properties[key] = idField
   }
+  if ('moved_id' in properties) properties.moved_id = idField
   for (const key of ['contract_amount', 'payment_amount']) if (key in properties) properties[key] = numberField
   return { type: 'object', properties, required: actionRequired[name], additionalProperties: false }
 }
 
 function titleFromName(name) {
   return name.split('_').map((part) => part[0].toUpperCase() + part.slice(1)).join(' ')
+}
+
+const actionEntityLabels = {
+  product: '产品',
+  project: '项目',
+  requirement: '需求',
+  task: '任务',
+  bug: 'BUG',
+  work_order: '运维工单',
+}
+
+function actionTitle(name) {
+  const type = Object.keys(actionEntityLabels).find((prefix) => name.startsWith(`${prefix}_`))
+  if (type) {
+    const entity = actionEntityLabels[type]
+    const operation = name.slice(type.length + 1)
+    if (operation === 'create') return `新增${entity}`
+    if (operation === 'create_subtask') return '新增子任务'
+    if (operation === 'update') return `编辑${entity}`
+    if (operation === 'assign') return `批量指派${entity}`
+    if (operation === 'change_status') return `变更${entity}状态`
+    if (operation === 'delete') return `删除${entity}`
+  }
+  const special = {
+    stage_create: '新增项目阶段',
+    stage_update: '编辑项目阶段',
+    stage_reorder: '调整项目阶段顺序',
+    stage_delete: '删除项目阶段',
+    stage_item_create: '新增关键事项',
+    stage_item_batch_create: '批量新增关键事项',
+    stage_item_update: '编辑关键事项',
+    stage_item_reorder: '调整关键事项顺序',
+    stage_item_change_status: '变更关键事项状态',
+    stage_item_adjust: '调整关键事项计划',
+    stage_item_delete: '删除关键事项',
+    contract_create: '新增项目合同',
+    contract_update: '编辑项目合同',
+    contract_delete: '删除项目合同',
+    payment_create: '登记付款',
+    payment_update: '更正付款',
+    payment_delete: '删除付款',
+    contract_attachment_upload: '上传合同附件',
+    contract_attachment_delete: '删除合同附件',
+    stage_delivery_upload: '上传关键事项交付文件',
+    stage_delivery_delete: '删除关键事项交付文件',
+  }
+  return special[name] || titleFromName(name)
 }
 
 const queryDescriptions = {
@@ -159,10 +282,10 @@ const queryDescriptions = {
 function baseDefinition([name, menuPath], endpointType) {
   return {
     name,
-    title: titleFromName(name),
+    title: endpointType === 'action' ? actionTitle(name) : titleFromName(name),
     description: endpointType === 'query'
       ? queryDescriptions[name] || `查询PMIS业务数据：${name}；搜索工具可不传任何参数`
-      : `预览或执行PMIS业务操作：${name}`,
+      : `${actionTitle(name)}。必须先使用 preview 获取当前目标、风险和一次性确认号；仅在用户确认后，才使用完全相同的业务参数和确认号执行 execute。`,
     inputSchema: endpointType === 'query' ? queryInputSchema(name) : actionInputSchema(name),
     annotations: endpointType === 'query'
       ? { readOnlyHint: true, destructiveHint: false, idempotentHint: true }

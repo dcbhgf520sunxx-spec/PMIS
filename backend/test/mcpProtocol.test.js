@@ -47,6 +47,46 @@ test('MCP server initializes and exposes only endpoint and menu-permitted tools'
   assert.equal(names.includes('project_create'), false)
 })
 
+test('MCP tool failures expose a machine-readable error code and field errors', async (t) => {
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
+  const context = {
+    endpointType: 'action',
+    allowedMenuPaths: new Set(['/tasks']),
+    user: { id: 8, employeeNo: 'JS001' },
+    client: { id: 3 },
+  }
+  const server = createMcpServer({
+    context,
+    dispatch: async () => {
+      const error = new Error('任务名称已存在')
+      error.code = 'MCP_BUSINESS_VALIDATION'
+      error.fieldErrors = { name: '任务名称已存在' }
+      throw error
+    },
+  })
+  const client = new Client({ name: 'test-client', version: '1.0.0' })
+  t.after(async () => {
+    await client.close()
+    await server.close()
+  })
+
+  await server.connect(serverTransport)
+  await client.connect(clientTransport)
+  const result = await client.callTool({
+    name: 'task_delete',
+    arguments: { id: 9 },
+  })
+
+  assert.equal(result.isError, true)
+  assert.deepEqual(result.structuredContent, {
+    error: {
+      code: 'MCP_BUSINESS_VALIDATION',
+      message: '任务名称已存在',
+      fieldErrors: { name: '任务名称已存在' },
+    },
+  })
+})
+
 test('tool filtering separates Query and Action credentials even with the same menu permissions', () => {
   const allowedMenuPaths = new Set(['/products', '/projects', '/tasks'])
   const queryNames = filterToolsForContext({ endpointType: 'query', allowedMenuPaths }).map((tool) => tool.name)
@@ -272,6 +312,147 @@ test('action controller input preserves real business foreign keys', () => {
   assert.equal(taskInput.body.requirement_id, 20)
   assert.equal(stageItemInput.body.stage_id, 4)
   assert.equal(stageItemInput.body.project_id, 12)
+})
+
+test('action schemas require complete create inputs and retry-safe idempotency keys', () => {
+  const { getToolDefinition } = require('../src/mcp/catalog')
+  const cases = [
+    ['product_create', { name: '产品', owner_id: 8 }, ['idempotency_key']],
+    ['project_create', { name: '项目', product_id: 1, owner_id: 8, expected_end_date: '2026-08-31' }, ['idempotency_key']],
+    ['requirement_create', {
+      title: '需求', requirement_type: 1, product_id: 1, owner_id: 8,
+      submitter_name: '张三', submit_date: '2026-07-28',
+    }, ['idempotency_key']],
+    ['task_create', {
+      name: '任务', source_type: 1, project_id: 1, task_type: 2, owner_ids: [8],
+    }, ['idempotency_key']],
+    ['bug_create', {
+      title: 'BUG', source_type: 1, project_id: 1, bug_type_id: 2, severity: 2, assignee_id: 8,
+    }, ['idempotency_key']],
+    ['work_order_create', {
+      product_id: 1, problem_type: 2, problem_desc: '无法登录', follower_id: 8,
+      urgency: 1, expected_resolve_date: '2026-07-29', submitter_name: '张三',
+      submitter_dept: '技术部', submit_time: '2026-07-28',
+    }, ['idempotency_key']],
+    ['stage_create', { project_id: 1, name: '启动' }, ['idempotency_key']],
+    ['stage_item_create', {
+      project_id: 1, stage_id: 2, name: '上线', owner_id: 8, original_due_date: '2026-08-01',
+    }, ['idempotency_key']],
+    ['contract_create', {
+      project_id: 1, contract_code: 'HT-001', contract_name: '建设合同',
+      supplier_id: 3, signed_date: '2026-07-28', contract_amount: 100,
+      stages: [{ stage_name: '首付款', planned_amount: 100 }],
+    }, ['idempotency_key']],
+    ['payment_create', {
+      project_id: 1, stage_id: 2, payment_amount: 100,
+      payment_month: '2026-07', handler_id: 8,
+    }, ['idempotency_key']],
+    ['contract_attachment_upload', {
+      project_id: 1, file_name: '合同.pdf', content_base64: 'YQ==',
+    }, ['idempotency_key']],
+  ]
+
+  for (const [name, args, missing] of cases) {
+    const definition = getToolDefinition(name, 'action')
+    assert.throws(() => validateToolArguments(definition, args), new RegExp(`缺少参数：${missing.join('、')}`), name)
+    assert.doesNotThrow(() => validateToolArguments(definition, {
+      ...args,
+      idempotency_key: `${name}-20260728-1`,
+    }), name)
+  }
+})
+
+test('action argument validation rejects malformed types, nested values and execute confirmations', () => {
+  const { getToolDefinition } = require('../src/mcp/catalog')
+  const taskAssign = getToolDefinition('task_assign', 'action')
+  const taskCreate = getToolDefinition('task_create', 'action')
+  const contractCreate = getToolDefinition('contract_create', 'action')
+  const taskDelete = getToolDefinition('task_delete', 'action')
+
+  assert.throws(
+    () => validateToolArguments(taskAssign, { ids: '1,2', owner_ids: [8] }),
+    /ids参数类型不合法/
+  )
+  assert.throws(
+    () => validateToolArguments(getToolDefinition('product_create', 'action'), {
+      name: 123,
+      owner_id: 8,
+      idempotency_key: 'product-1',
+    }),
+    /name参数类型不合法/
+  )
+  assert.throws(
+    () => validateToolArguments(getToolDefinition('work_order_create', 'action'), {
+      product_id: 1,
+      problem_type: 2,
+      problem_desc: '无法登录',
+      follower_id: 8,
+      urgency: true,
+      expected_resolve_date: '2026-07-29',
+      submitter_name: '张三',
+      submitter_dept: '技术部',
+      submit_time: '2026-07-28',
+      idempotency_key: 'work-order-1',
+    }),
+    /urgency参数类型不合法/
+  )
+  assert.throws(
+    () => validateToolArguments(taskAssign, { ids: [1, { id: 2 }], owner_ids: [8] }),
+    /ids\[1\]参数类型不合法/
+  )
+  assert.throws(
+    () => validateToolArguments(contractCreate, {
+      project_id: 1,
+      contract_code: 'HT-001',
+      contract_name: '建设合同',
+      supplier_id: 3,
+      signed_date: '2026-07-28',
+      contract_amount: 100,
+      stages: [{ stage_name: ['错误'], planned_amount: 100 }],
+      idempotency_key: 'contract-1',
+    }),
+    /stages\[0\]\.stage_name参数类型不合法/
+  )
+  assert.throws(
+    () => validateToolArguments(taskCreate, {
+      name: '任务',
+      source_type: 1,
+      project_id: 1,
+      task_type: 2,
+      owner_ids: [],
+      idempotency_key: 'task-1',
+    }),
+    /owner_ids参数数量不足/
+  )
+  assert.throws(
+    () => validateToolArguments(contractCreate, {
+      project_id: 1,
+      contract_code: 'HT-001',
+      contract_name: '建设合同',
+      supplier_id: 3,
+      signed_date: '2026-07-28',
+      contract_amount: 100,
+      stages: [{}],
+      idempotency_key: 'contract-1',
+    }),
+    /缺少参数：stages\[0\]\.stage_name、stages\[0\]\.planned_amount/
+  )
+  assert.throws(
+    () => validateToolArguments(taskDelete, { id: 1, mode: 'execute' }),
+    /缺少操作确认号/
+  )
+  assert.throws(
+    () => validateToolArguments(taskDelete, { id: 1, mode: 'execute', confirmation_id: 'not-a-uuid' }),
+    /confirmation_id格式不合法/
+  )
+})
+
+test('action tool discovery uses Chinese operation titles and explains two-step confirmation', () => {
+  const definition = require('../src/mcp/catalog').getToolDefinition('task_change_status', 'action')
+  assert.equal(definition.title, '变更任务状态')
+  assert.match(definition.description, /先使用 preview/)
+  assert.match(definition.description, /用户确认/)
+  assert.match(definition.description, /execute/)
 })
 
 test('MCP rate limit isolates clients and rejects requests above the configured window', () => {
