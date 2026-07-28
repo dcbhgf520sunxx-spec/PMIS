@@ -87,6 +87,46 @@ test('MCP tool failures expose a machine-readable error code and field errors', 
   })
 })
 
+test('MCP tool failures hide raw infrastructure errors behind a stable contract error', async (t) => {
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
+  const context = {
+    endpointType: 'action',
+    allowedMenuPaths: new Set(['/tasks']),
+    user: { id: 8, employeeNo: 'JS001' },
+    client: { id: 3 },
+  }
+  const server = createMcpServer({
+    context,
+    dispatch: async () => {
+      throw Object.assign(new Error('duplicate key value violates unique constraint secret_name'), {
+        code: '23505',
+      })
+    },
+  })
+  const client = new Client({ name: 'test-client', version: '1.0.0' })
+  t.after(async () => {
+    await client.close()
+    await server.close()
+  })
+
+  await server.connect(serverTransport)
+  await client.connect(clientTransport)
+  const result = await client.callTool({
+    name: 'task_delete',
+    arguments: { id: 9 },
+  })
+
+  assert.equal(result.isError, true)
+  assert.deepEqual(result.structuredContent, {
+    error: {
+      code: 'MCP_TOOL_ERROR',
+      message: 'MCP工具执行失败',
+      originalCode: '23505',
+    },
+  })
+  assert.doesNotMatch(result.content[0].text, /secret_name/)
+})
+
 test('tool filtering separates Query and Action credentials even with the same menu permissions', () => {
   const allowedMenuPaths = new Set(['/products', '/projects', '/tasks'])
   const queryNames = filterToolsForContext({ endpointType: 'query', allowedMenuPaths }).map((tool) => tool.name)
@@ -354,7 +394,11 @@ test('action schemas require complete create inputs and retry-safe idempotency k
 
   for (const [name, args, missing] of cases) {
     const definition = getToolDefinition(name, 'action')
-    assert.throws(() => validateToolArguments(definition, args), new RegExp(`缺少参数：${missing.join('、')}`), name)
+    assert.throws(
+      () => validateToolArguments(definition, args),
+      (error) => error.message === `缺少参数：${missing.join('、')}`,
+      name
+    )
     assert.doesNotThrow(() => validateToolArguments(definition, {
       ...args,
       idempotency_key: `${name}-20260728-1`,
@@ -444,6 +488,36 @@ test('action argument validation rejects malformed types, nested values and exec
   assert.throws(
     () => validateToolArguments(taskDelete, { id: 1, mode: 'execute', confirmation_id: 'not-a-uuid' }),
     /confirmation_id格式不合法/
+  )
+  assert.throws(
+    () => validateToolArguments(
+      {
+        name: 'future_source_action',
+        _meta: { endpointType: 'action', requiresSourceTarget: true },
+        inputSchema: {
+          type: 'object',
+          properties: { source_type: { type: 'number' }, project_id: { type: 'integer' } },
+          required: ['source_type'],
+          additionalProperties: false,
+        },
+      },
+      { source_type: 1 }
+    ),
+    /缺少参数：project_id/
+  )
+  assert.throws(
+    () => validateToolArguments(getToolDefinition('stage_item_batch_create', 'action'), {
+      project_id: 1,
+      stage_id: 2,
+      items: [{
+        name: '上线',
+        owner_id: 8,
+        original_due_date: '2026-08-01',
+        requires_delivery_file: true,
+      }],
+      idempotency_key: 'stage-items-1',
+    }),
+    /items\[0\]\.requires_delivery_file参数类型不合法/
   )
 })
 

@@ -161,7 +161,10 @@ test('action ticket rejects changed user, tool, arguments, expiry and replay', a
 })
 
 test('action ticket returns a stable business error when an idempotency key is reused', async () => {
-  const duplicateError = Object.assign(new Error('duplicate key value violates unique constraint'), { code: '23505' })
+  const duplicateError = Object.assign(new Error('duplicate key value violates unique constraint'), {
+    code: '23505',
+    constraint: 'ux_mcp_ticket_idempotency',
+  })
   const service = createMcpActionTicketService({
     db: {
       prepare: () => ({
@@ -183,26 +186,60 @@ test('action ticket returns a stable business error when an idempotency key is r
   )
 })
 
+test('action ticket does not misclassify unrelated unique violations as idempotency conflicts', async () => {
+  const duplicateError = Object.assign(new Error('primary key collision'), {
+    code: '23505',
+    constraint: 'pms_mcp_action_ticket_pkey',
+  })
+  const service = createMcpActionTicketService({
+    db: {
+      prepare: () => ({
+        run: async () => { throw duplicateError },
+      }),
+    },
+  })
+
+  await assert.rejects(
+    service.createTicket(
+      { client: { id: 3 }, user: { id: 8, employeeNo: 'JS001' } },
+      'task_create',
+      { name: '任务', idempotency_key: 'task-1' },
+      { tool: 'task_create' },
+    ),
+    (error) => error === duplicateError
+  )
+})
+
 test('action ticket failures expose stable machine-readable confirmation codes', async () => {
   const context = { client: { id: 3 }, user: { id: 8, employeeNo: 'JS001' } }
   const args = { id: 9 }
+  let status = 'pending'
+  const row = {
+    id: 'ticket-1',
+    client_id: 3,
+    user_id: 8,
+    employee_no: 'JS001',
+    tool_name: 'task_delete',
+    arguments_hash: hashActionArguments(args),
+    status,
+    expires_at: '2026-07-28T00:00:30.000Z',
+  }
   const service = createMcpActionTicketService({
     db: {
-      transaction: async (fn) => fn({
-        prepare: () => ({
-          get: async () => ({
-            id: 'ticket-1',
-            client_id: 3,
-            user_id: 8,
-            employee_no: 'JS001',
-            tool_name: 'task_delete',
-            arguments_hash: hashActionArguments(args),
-            status: 'pending',
-            expires_at: '2026-07-28T00:00:30.000Z',
+      transaction: async (fn) => {
+        let transactionStatus = status
+        const result = await fn({
+          prepare: () => ({
+            get: async () => ({ ...row, status: transactionStatus }),
+            run: async () => {
+              transactionStatus = 'expired'
+              return { changes: 1 }
+            },
           }),
-          run: async () => ({ changes: 1 }),
-        }),
-      }),
+        })
+        status = transactionStatus
+        return result
+      },
     },
     now: () => new Date('2026-07-28T00:01:00.000Z'),
   })
@@ -211,4 +248,5 @@ test('action ticket failures expose stable machine-readable confirmation codes',
     service.consumeTicket(context, 'task_delete', args, 'ticket-1'),
     (error) => error.code === 'MCP_CONFIRMATION_EXPIRED' && /已过期/.test(error.message)
   )
+  assert.equal(status, 'expired')
 })

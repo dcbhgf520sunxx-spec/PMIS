@@ -17,6 +17,20 @@ function asToolResult(value) {
   }
 }
 
+function normalizeToolError(error) {
+  const fallbackMessage = 'MCP工具执行失败'
+  const originalCode = error?.code
+  const isContractError = typeof originalCode === 'string' && /^MCP_[A-Z0-9_]+$/.test(originalCode)
+  return {
+    code: isContractError ? originalCode : 'MCP_TOOL_ERROR',
+    message: isContractError ? error.message || fallbackMessage : fallbackMessage,
+    ...(!isContractError && originalCode !== undefined
+      ? { originalCode: String(originalCode) }
+      : {}),
+    ...(error?.fieldErrors ? { fieldErrors: error.fieldErrors } : {}),
+  }
+}
+
 function createMcpServer({
   context,
   dispatch,
@@ -37,15 +51,11 @@ function createMcpServer({
     try {
       return asToolResult(await dispatch(request.params.name, request.params.arguments || {}, context))
     } catch (error) {
-      const message = error.message || 'MCP工具执行失败'
+      const normalizedError = normalizeToolError(error)
       return {
-        content: [{ type: 'text', text: message }],
+        content: [{ type: 'text', text: normalizedError.message }],
         structuredContent: {
-          error: {
-            code: error.code || 'MCP_TOOL_ERROR',
-            message,
-            ...(error.fieldErrors ? { fieldErrors: error.fieldErrors } : {}),
-          },
+          error: normalizedError,
         },
         isError: true,
       }
@@ -63,4 +73,4 @@ function createMcpServer({
   return server
 }
 
-module.exports = { asToolResult, createMcpServer }
+module.exports = { asToolResult, createMcpServer, normalizeToolError }
