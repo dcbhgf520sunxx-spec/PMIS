@@ -1,8 +1,9 @@
 const QUERY_TOOLS = [
+  ['global_search', null],
   ['product_search', '/products'], ['product_get', '/products'], ['product_history', '/products'],
   ['project_search', '/projects'], ['project_get', '/projects'], ['project_history', '/projects'],
-  ['stage_plan_get', '/projects'], ['stage_plan_history', '/projects'],
-  ['contract_get', '/projects'], ['payment_search', '/projects'],
+  ['stage_plan_search', '/projects'], ['stage_plan_get', '/projects'], ['stage_plan_history', '/projects'],
+  ['contract_search', '/projects'], ['contract_get', '/projects'], ['payment_search', '/projects'],
   ['requirement_search', '/requirements'], ['requirement_get', '/requirements'], ['requirement_history', '/requirements'],
   ['task_search', '/tasks'], ['task_get', '/tasks'], ['task_history', '/tasks'],
   ['bug_search', '/bugs'], ['bug_get', '/bugs'], ['bug_history', '/bugs'],
@@ -42,8 +43,12 @@ function fields(names, overrides = {}) {
 }
 
 const querySchemas = {
+  global_search: fields(['keyword', 'page_size']),
   product_search: fields(['name', 'owner_ids', 'status', 'sort_field', 'sort_order', 'page', 'page_size']),
   project_search: fields(['name', 'product_id', 'owner_id', 'member_ids', 'status', 'is_overdue', 'expected_end_date_from', 'expected_end_date_to', 'view', 'filter_owner_id', 'sort_field', 'sort_order', 'page', 'page_size']),
+  stage_plan_search: fields(['keyword', 'project_id', 'owner_id', 'status', 'is_overdue', 'sort_field', 'sort_order', 'page', 'page_size']),
+  contract_search: fields(['keyword', 'project_id', 'supplier_id', 'signed_date_from', 'signed_date_to', 'sort_field', 'sort_order', 'page', 'page_size']),
+  payment_search: fields(['keyword', 'project_id', 'stage_id', 'handler_id', 'payment_month_from', 'payment_month_to', 'sort_field', 'sort_order', 'page', 'page_size']),
   requirement_search: fields(['title', 'product_id', 'project_id', 'owner_id', 'requirement_type', 'priority', 'status', 'is_overdue', 'submitter_name', 'submit_date_from', 'submit_date_to', 'expected_end_date_from', 'expected_end_date_to', 'view', 'filter_owner_id', 'sort_field', 'sort_order', 'page', 'page_size']),
   task_search: fields(['name', 'source_type', 'project_id', 'requirement_id', 'task_type', 'priority', 'status', 'is_overdue', 'owner_id', 'expected_end_date_from', 'expected_end_date_to', 'view', 'filter_owner_id', 'sort_field', 'sort_order', 'page', 'page_size']),
   bug_search: fields(['title', 'source_type', 'project_id', 'requirement_id', 'bug_type_id', 'severity', 'status', 'assignee_id', 'creator_id', 'created_at_from', 'created_at_to', 'view', 'filter_assignee_id', 'sort_field', 'sort_order', 'page', 'page_size']),
@@ -112,14 +117,6 @@ function queryInputSchema(name) {
   if (projectIdTools.has(name)) {
     return { type: 'object', properties: { project_id: idField }, required: ['project_id'], additionalProperties: false }
   }
-  if (name === 'payment_search') {
-    return {
-      type: 'object',
-      properties: { project_id: idField, stage_id: idField },
-      required: ['project_id', 'stage_id'],
-      additionalProperties: false,
-    }
-  }
   return {
     type: 'object',
     properties: querySchemas[name] || {},
@@ -152,12 +149,19 @@ function titleFromName(name) {
   return name.split('_').map((part) => part[0].toUpperCase() + part.slice(1)).join(' ')
 }
 
+const queryDescriptions = {
+  global_search: '全局搜索当前员工有权限的全部PMIS业务模块；可不传任何参数，默认返回各模块前20条有效数据',
+  stage_plan_search: '全局搜索所有项目的阶段主计划事项；可不传任何参数',
+  contract_search: '全局搜索所有项目合同；可不传任何参数',
+  payment_search: '全局搜索所有项目付款记录；可不传任何参数',
+}
+
 function baseDefinition([name, menuPath], endpointType) {
   return {
     name,
     title: titleFromName(name),
     description: endpointType === 'query'
-      ? `查询PMIS业务数据：${name}`
+      ? queryDescriptions[name] || `查询PMIS业务数据：${name}；搜索工具可不传任何参数`
       : `预览或执行PMIS业务操作：${name}`,
     inputSchema: endpointType === 'query' ? queryInputSchema(name) : actionInputSchema(name),
     annotations: endpointType === 'query'

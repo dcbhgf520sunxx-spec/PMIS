@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Key } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
 import { App } from 'antd';
-import { ActionBar, AdminButton, AdminInput, AdminRangePicker, AdminSelect, AdminTextAction, CompactFilterBar, createDetailNeighborContext, createListFilterItems, DeleteConfirmAction, DetailLinkCell, ExpandToggleButton, OperationColumnActions, PermissionButton, saveDetailNeighborContext, TemplateListPage, useCommittedFilters, useTemplateServerListData, ViewTabs , listRouteCodecs, useListViewState, usePageReturnNavigation } from '../../../components/admin';
+import { ActionBar, AdminButton, AdminInput, AdminRangePicker, AdminSelect, AdminTextAction, CompactFilterBar, createDetailNeighborContext, createListFilterItems, DeleteConfirmAction, DetailLinkCell, ExpandToggleButton, OperationColumnActions, PermissionButton, resolveListViewFilter, saveDetailNeighborContext, TemplateListPage, useCommittedFilters, useTemplateServerListData, ViewTabs , listRouteCodecs, useListViewState, usePageReturnNavigation } from '../../../components/admin';
 import { deleteTask, getTaskList, getTaskProjectOptions, getTaskRequirementOptions, updateTaskStatus } from '../../../api/taskApi';
 import { getUserOptions } from '../../../api/userApi';
 import { getArchiveOptionsByTypeName } from '../../../api/archiveApi';
@@ -45,8 +45,8 @@ export function TaskListPage() {
     queryKey: ['tasks', filters.appliedFilters, filters.revision, view],
     request: async ({ current, pageSize, sortField, sortOrder }) => {
       const expectedRange = filters.appliedFilters.expectedEndTimeRange || [];
-      const ownerId = view === 'all' ? filters.appliedFilters.ownerId : undefined;
-      const result = await getTaskList({ view, name: filters.appliedFilters.name || undefined, source_type: filters.appliedFilters.sourceType, project_id: filters.appliedFilters.projectId, requirement_id: filters.appliedFilters.requirementId, task_type: filters.appliedFilters.taskType, priority: filters.appliedFilters.priority, status: filters.appliedFilters.status, is_overdue: filters.appliedFilters.isOverdue, owner_id: ownerId, filter_owner_id: ownerId, expected_end_date_from: date(expectedRange[0]), expected_end_date_to: date(expectedRange[1]), sort_field: sortField, sort_order: sortOrder, page: current, pageSize });
+      const owner = resolveListViewFilter(view, filters.appliedFilters.ownerId);
+      const result = await getTaskList({ view, name: filters.appliedFilters.name || undefined, source_type: filters.appliedFilters.sourceType, project_id: filters.appliedFilters.projectId, requirement_id: filters.appliedFilters.requirementId, task_type: filters.appliedFilters.taskType, priority: filters.appliedFilters.priority, status: filters.appliedFilters.status, is_overdue: filters.appliedFilters.isOverdue, owner_id: owner.scopeValue, filter_owner_id: owner.filterValue, expected_end_date_from: date(expectedRange[0]), expected_end_date_to: date(expectedRange[1]), sort_field: sortField, sort_order: sortOrder, page: current, pageSize });
       return { list: result.list, total: result.total, meta: { viewCounts: result.viewCounts } };
     },
     urlSync: true
@@ -73,7 +73,7 @@ export function TaskListPage() {
 
   const buildQuery = () => {
     const expectedRange = filters.appliedFilters.expectedEndTimeRange || [];
-    const ownerId = view === 'all' ? filters.appliedFilters.ownerId : undefined;
+    const owner = resolveListViewFilter(view, filters.appliedFilters.ownerId);
     return {
       view,
       name: filters.appliedFilters.name || undefined,
@@ -84,8 +84,8 @@ export function TaskListPage() {
       priority: filters.appliedFilters.priority,
       status: filters.appliedFilters.status,
       is_overdue: filters.appliedFilters.isOverdue,
-      owner_id: ownerId,
-      filter_owner_id: ownerId,
+      owner_id: owner.scopeValue,
+      filter_owner_id: owner.filterValue,
       expected_end_date_from: date(expectedRange[0]),
       expected_end_date_to: date(expectedRange[1]),
       sort_field: list.sortState.field,

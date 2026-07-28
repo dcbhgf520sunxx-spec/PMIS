@@ -32,6 +32,13 @@ export function createListFilterItems<T extends ListFilterItemLike>(items: T[]) 
   return visibleListFilterItems(items);
 }
 
+export function resolveListViewFilter<T>(view: string, value: T, filterView = 'all') {
+  return {
+    filterValue: value,
+    scopeValue: view === filterView ? value : undefined
+  };
+}
+
 export const listSorters = {
   text: <T>(getter: SortGetter<T>): ListSorter<T> => (
     (a, b) => normalizeText(getter(a)).localeCompare(normalizeText(getter(b)))

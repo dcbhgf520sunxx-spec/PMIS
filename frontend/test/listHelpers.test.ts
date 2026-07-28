@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createListFilterItems, createListSorters, listSorters, visibleListFilterItems } from '../src/components/admin/listHelpers.ts';
+import * as listHelpers from '../src/components/admin/listHelpers.ts';
+
+const {
+  createListFilterItems,
+  createListSorters,
+  listSorters,
+  visibleListFilterItems
+} = listHelpers;
 
 type Row = {
   name?: string;
@@ -26,6 +33,26 @@ test('createListFilterItems applies hidden filtering for filter declarations', (
   ]);
 
   assert.deepEqual(items.map((item) => item.key), ['keyword']);
+});
+
+test('resolveListViewFilter keeps the submitted filter while mine view removes only the current-list scope', () => {
+  const resolveListViewFilter = (
+    listHelpers as typeof listHelpers & {
+      resolveListViewFilter?: <T>(view: string, value: T) => {
+        filterValue: T;
+        scopeValue: T | undefined;
+      };
+    }
+  ).resolveListViewFilter;
+
+  assert.deepEqual(resolveListViewFilter?.('all', '002059'), {
+    filterValue: '002059',
+    scopeValue: '002059'
+  });
+  assert.deepEqual(resolveListViewFilter?.('mine', '002059'), {
+    filterValue: '002059',
+    scopeValue: undefined
+  });
 });
 
 test('createListSorters builds text, number, date and custom sorters', () => {
