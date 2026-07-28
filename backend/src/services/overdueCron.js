@@ -7,12 +7,12 @@ async function refreshOverdueStatus() {
   const workOrderResult = await db.prepare(
     `UPDATE pms_work_order
      SET is_overdue = CASE
-       WHEN expected_resolve_date::date < ?::date AND status NOT IN (2, 3) THEN 1
+       WHEN expected_resolve_date::date < ?::date AND status <> 2 THEN 1
        ELSE 0
      END
      WHERE is_deleted = 0
        AND is_overdue <> CASE
-         WHEN expected_resolve_date::date < ?::date AND status NOT IN (2, 3) THEN 1
+         WHEN expected_resolve_date::date < ?::date AND status <> 2 THEN 1
          ELSE 0
        END`
   ).run(today, today)
@@ -36,7 +36,7 @@ async function refreshOverdueStatus() {
 /**
  * 每天凌晨 0:30 执行
  * 每天刷新运维工单和任务的 is_overdue 字段。
- * 规则：预计完成时间 < 当天且未进入已解决/已完成/已关闭终态时，is_overdue = 1，否则 = 0。
+ * 规则：运维工单已解决、任务已完成或已暂停时不逾期；其他状态按预计完成时间判断。
  */
 function start() {
   cron.schedule('30 0 * * *', async () => {

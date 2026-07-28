@@ -6,17 +6,17 @@ try {
   rules = require('../src/services/workOrderStatusRules')
 } catch {}
 
-test('工单新增被激活状态且保持原有状态流转', () => {
+test('工单取消已关闭并允许待处理直接解决', () => {
   assert.equal(typeof rules.allowedWorkOrderStatuses, 'function')
-  assert.deepEqual(rules.allowedWorkOrderStatuses(0), [1, 4])
+  assert.deepEqual(rules.allowedWorkOrderStatuses(0), [1, 2, 4])
   assert.deepEqual(rules.allowedWorkOrderStatuses(1), [2, 4])
-  assert.deepEqual(rules.allowedWorkOrderStatuses(2), [3, 4, 5])
-  assert.deepEqual(rules.allowedWorkOrderStatuses(3), [4, 5])
-  assert.deepEqual(rules.allowedWorkOrderStatuses(4), [0, 1, 2, 3])
+  assert.deepEqual(rules.allowedWorkOrderStatuses(2), [4, 5])
+  assert.deepEqual(rules.allowedWorkOrderStatuses(3), [])
+  assert.deepEqual(rules.allowedWorkOrderStatuses(4), [0, 1, 2])
   assert.deepEqual(rules.allowedWorkOrderStatuses(5), [2])
 })
 
-test('进入暂停保留已有结果字段并记录暂停时间，恢复后清空暂停时间', () => {
+test('进入暂停保留已有结果和历史关闭时间，恢复后只清理现行处理字段', () => {
   assert.equal(typeof rules.resolveWorkOrderResultFields, 'function')
   const old = { resolve_date: '2026-07-16', close_date: '2026-07-17', result_desc: '旧结果' }
   assert.deepEqual(rules.resolveWorkOrderResultFields(4, { suspend_date: '2026-07-18' }, old), {
@@ -29,42 +29,29 @@ test('进入暂停保留已有结果字段并记录暂停时间，恢复后清�
   for (const status of [0, 1]) {
     assert.deepEqual(rules.resolveWorkOrderResultFields(status, {}, old), {
       resolveDate: null,
-      closeDate: null,
+      closeDate: '2026-07-17',
       resultDesc: null,
       suspendDate: null
     })
   }
 })
 
-test('暂停后直接关闭必须重新提供修复时间、关闭时间和处置结果', () => {
-  assert.equal(typeof rules.resolveWorkOrderResultFields, 'function')
-  const values = rules.resolveWorkOrderResultFields(3, {
+test('解决工单保留历史关闭时间并要求新的修复信息', () => {
+  const values = rules.resolveWorkOrderResultFields(2, {
+    resolve_date: '2026-07-20',
+    result_desc: '重新处理完成'
+  }, {
     resolve_date: '2026-07-18',
     close_date: '2026-07-19',
-    result_desc: '重新处理完成'
-  }, {})
+    result_desc: '原处理结果'
+  })
   assert.deepEqual(values, {
-    resolveDate: '2026-07-18',
+    resolveDate: '2026-07-20',
     closeDate: '2026-07-19',
     resultDesc: '重新处理完成',
     suspendDate: null
   })
-  assert.equal(rules.validateWorkOrderResultFields(3, values), '')
-  assert.match(rules.validateWorkOrderResultFields(3, { closeDate: '2026-07-19' }), /实际修复时间和处置结果/)
-})
-
-test('已解决工单正常关闭时复用已有修复时间和处置结果', () => {
-  const values = rules.resolveWorkOrderResultFields(3, { close_date: '2026-07-19' }, {
-    resolve_date: '2026-07-18',
-    result_desc: '处理完成'
-  })
-  assert.deepEqual(values, {
-    resolveDate: '2026-07-18',
-    closeDate: '2026-07-19',
-    resultDesc: '处理完成',
-    suspendDate: null
-  })
-  assert.equal(rules.validateWorkOrderResultFields(3, values), '')
+  assert.equal(rules.validateWorkOrderResultFields(2, values), '')
 })
 
 test('激活工单只必填激活原因并沿用原预计完成时间', () => {
@@ -85,7 +72,7 @@ test('激活工单只必填激活原因并沿用原预计完成时间', () => {
   }, old)
   assert.deepEqual(values, {
     resolveDate: '2026-07-20',
-    closeDate: null,
+    closeDate: '2026-07-21',
     resultDesc: '上次处置结果',
     suspendDate: null,
     activationReason: '问题再次出现'

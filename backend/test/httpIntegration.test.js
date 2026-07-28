@@ -189,20 +189,20 @@ test('真实 HTTP、PostgreSQL 和核心业务流程', { skip: !enabled }, async
         ordinal: 2
       })
 
-      const skipToResolved = await request(`/api/work-orders/${workOrderId}/status`, {
+      const directResolved = await request(`/api/work-orders/${neighborIds[1]}/status`, {
         method: 'PUT', body: { status: 2, resolve_date: '2026-07-16', result_desc: '处理完成' }
       })
-      assert.equal(skipToResolved.response.status, 400)
+      assert.equal(directResolved.response.status, 200)
 
       const processing = await request(`/api/work-orders/${workOrderId}/status`, {
         method: 'PUT', body: { status: 1 }
       })
       assert.equal(processing.response.status, 200)
 
-      const skipToClosed = await request(`/api/work-orders/${workOrderId}/status`, {
+      const rejectedClosed = await request(`/api/work-orders/${workOrderId}/status`, {
         method: 'PUT', body: { status: 3, close_date: '2026-07-16' }
       })
-      assert.equal(skipToClosed.response.status, 400)
+      assert.equal(rejectedClosed.response.status, 400)
 
       const missingResolvedFields = await request(`/api/work-orders/${workOrderId}/status`, {
         method: 'PUT', body: { status: 2 }
@@ -214,15 +214,10 @@ test('真实 HTTP、PostgreSQL 和核心业务流程', { skip: !enabled }, async
       })
       assert.equal(resolved.response.status, 200)
 
-      const missingCloseDate = await request(`/api/work-orders/${workOrderId}/status`, {
-        method: 'PUT', body: { status: 3 }
-      })
-      assert.equal(missingCloseDate.response.status, 400)
-
-      const closed = await request(`/api/work-orders/${workOrderId}/status`, {
+      const rejectedClosedAfterResolved = await request(`/api/work-orders/${workOrderId}/status`, {
         method: 'PUT', body: { status: 3, close_date: '2026-07-17' }
       })
-      assert.equal(closed.response.status, 200)
+      assert.equal(rejectedClosedAfterResolved.response.status, 400)
 
       const missingSuspendDate = await request(`/api/work-orders/${workOrderId}/status`, {
         method: 'PUT', body: { status: 4 }
@@ -238,7 +233,7 @@ test('真实 HTTP、PostgreSQL 和核心业务流程', { skip: !enabled }, async
       assert.equal(pausedDetail.body.data.status, 4)
       assert.equal(String(pausedDetail.body.data.suspend_date).slice(0, 10), '2026-07-18')
       assert.equal(String(pausedDetail.body.data.resolve_date).slice(0, 10), '2026-07-16')
-      assert.equal(String(pausedDetail.body.data.close_date).slice(0, 10), '2026-07-17')
+      assert.equal(pausedDetail.body.data.close_date, null)
       assert.match(pausedDetail.body.data.result_desc, /已解决/)
 
       const resumed = await request(`/api/work-orders/${workOrderId}/status`, {

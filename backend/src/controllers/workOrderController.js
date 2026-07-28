@@ -20,7 +20,7 @@ const workOrderFormSchema = {
   problem_desc: { required: true, label: '问题描述' },
   follower_id: { required: true, type: 'number', label: '跟进人' },
   urgency: { required: true, type: 'enum', values: [0, 1, 2], label: '紧急程度' },
-  status: { type: 'enum', values: [0, 1, 2, 3, 4, 5], label: '状态' },
+  status: { type: 'enum', values: [0, 1, 2, 4, 5], label: '状态' },
   expected_resolve_date: { required: true, label: '预计完成时间' },
   submitter_name: { required: true, label: '提出人' },
   submitter_dept: { required: true, label: '提出组织' },
@@ -28,7 +28,7 @@ const workOrderFormSchema = {
 }
 
 const workOrderStatusSchema = {
-  status: { required: true, type: 'enum', values: [0, 1, 2, 3, 4, 5], label: '状态' }
+  status: { required: true, type: 'enum', values: [0, 1, 2, 4, 5], label: '状态' }
 }
 
 const workOrderBatchAssignSchema = {
@@ -234,7 +234,7 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     if (!requireValidBody(res, req.body, workOrderFormSchema)) return
-    const { product_id, problem_type, problem_desc, result_desc, follower_id, urgency, status, expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time } = req.body
+    const { product_id, problem_type, problem_desc, result_desc, follower_id, urgency, status, expected_resolve_date, resolve_date, submitter_name, submitter_dept, submit_time } = req.body
     const operatorId = req.user.id
     const safeProblemDesc = sanitizeRichText(problem_desc)
     const safeResultDesc = result_desc === undefined ? undefined : sanitizeRichText(result_desc)
@@ -260,9 +260,9 @@ exports.update = async (req, res) => {
     }
 
     const changes = []
-    const trackedFields = ['problem_desc', 'product_id', 'problem_type', 'urgency', 'status', 'is_overdue', 'follower_id', 'submitter_name', 'submitter_dept', 'submit_time', 'expected_resolve_date', 'resolve_date', 'close_date', 'result_desc']
+    const trackedFields = ['problem_desc', 'product_id', 'problem_type', 'urgency', 'status', 'is_overdue', 'follower_id', 'submitter_name', 'submitter_dept', 'submit_time', 'expected_resolve_date', 'resolve_date', 'result_desc']
     // Date fields that may come as YYYY-MM-DD from frontend but stored as YYYY-MM-DD 00:00:00 in DB
-    const dateFields = new Set(['expected_resolve_date', 'resolve_date', 'close_date', 'submit_time'])
+    const dateFields = new Set(['expected_resolve_date', 'resolve_date', 'submit_time'])
     for (const key of trackedFields) {
       if (req.body[key] === undefined) continue
       let oldVal = old[key]
@@ -286,7 +286,7 @@ exports.update = async (req, res) => {
 
     const fieldMap = {
       product_id, problem_type, problem_desc: safeProblemDesc, result_desc: safeResultDesc, follower_id, urgency,
-      expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time,
+      expected_resolve_date, resolve_date, submitter_name, submitter_dept, submit_time,
     }
 
     for (const [key, val] of Object.entries(fieldMap)) {
@@ -324,7 +324,7 @@ exports.update = async (req, res) => {
 exports.toggleStatus = async (req, res) => {
   try {
     if (!requireValidBody(res, req.body, workOrderStatusSchema)) return
-    const { status, resolve_date, close_date, suspend_date, result_desc, activation_reason } = req.body
+    const { status, resolve_date, suspend_date, result_desc, activation_reason } = req.body
     const safeResultDesc = result_desc === undefined ? undefined : sanitizeRichText(result_desc)
     const operatorId = req.user.id
     const old = await db.prepare('SELECT status, is_overdue, expected_resolve_date, resolve_date, close_date, suspend_date, result_desc, activation_reason FROM pms_work_order WHERE id = ? AND is_deleted = 0').get(req.params.id)
@@ -335,7 +335,6 @@ exports.toggleStatus = async (req, res) => {
     }
     const resultFields = resolveWorkOrderResultFields(status, {
       resolve_date,
-      close_date,
       suspend_date,
       result_desc: safeResultDesc,
       activation_reason

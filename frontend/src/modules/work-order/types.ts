@@ -1,4 +1,4 @@
-export type WorkOrderStatus = 0 | 1 | 2 | 3 | 4 | 5;
+export type WorkOrderStatus = 0 | 1 | 2 | 4 | 5;
 export type WorkOrderUrgency = 0 | 1 | 2;
 export type WorkOrderProblemType = string;
 

@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS pms_work_order (
   activation_reason TEXT,
   follower_id BIGINT NOT NULL REFERENCES pms_user(id),
   urgency SMALLINT NOT NULL DEFAULT 1,
-  status SMALLINT NOT NULL DEFAULT 0,
+  status SMALLINT NOT NULL DEFAULT 0, -- 0 待处理、1 处理中、2 已解决、4 已暂停、5 被激活
   is_overdue SMALLINT NOT NULL DEFAULT 0,
   expected_resolve_date TIMESTAMPTZ,
   resolve_date TIMESTAMPTZ,
