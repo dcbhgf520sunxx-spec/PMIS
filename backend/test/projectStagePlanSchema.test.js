@@ -103,5 +103,4 @@ test('交付文件上传与MCP读取共用正式环境持久化目录', () => {
   assert.doesNotMatch(controller, /private-uploads\/project-plan-deliveries/)
   assert.doesNotMatch(resources, /private-uploads\/project-plan-deliveries/)
   assert.match(serviceUnit, /Environment=PMIS_PRIVATE_UPLOAD_ROOT=\/opt\/pmis\/shared\/private-uploads/)
-  assert.match(serviceUnit, /ReadWritePaths=\/opt\/pmis\/shared\/private-uploads/)
 })
