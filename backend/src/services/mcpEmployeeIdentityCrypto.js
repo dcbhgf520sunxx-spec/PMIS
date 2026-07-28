@@ -1,6 +1,7 @@
 const crypto = require('node:crypto')
 
-const VERSION = 'v1'
+const AES_VERSION = 'v1'
+const RSA_VERSION = 'v2'
 const KEY_CONTEXT = 'pmis-mcp-employee:v1:'
 const MAX_AGE_MS = 5 * 60 * 1000
 const MAX_FUTURE_SKEW_MS = 60 * 1000
@@ -45,12 +46,24 @@ function encryptEmployeeIdentity(employeeNo, token, { now = Date.now() } = {}) {
   ])
 
   return [
-    VERSION,
+    AES_VERSION,
     issuedAt,
     iv.toString('base64url'),
     ciphertext.toString('base64url'),
     cipher.getAuthTag().toString('base64url'),
   ].join('.')
+}
+
+function assertIssuedAt(issuedAt, currentTime, maxAgeMs) {
+  if (!Number.isInteger(issuedAt) || !/^\d{13}$/.test(String(issuedAt))) {
+    throw new McpEmployeeIdentityError('员工号密文时间无效')
+  }
+  if (issuedAt > currentTime + MAX_FUTURE_SKEW_MS) {
+    throw new McpEmployeeIdentityError('员工号密文时间无效')
+  }
+  if (currentTime - issuedAt > maxAgeMs) {
+    throw new McpEmployeeIdentityError('员工号密文已过期')
+  }
 }
 
 function decodePart(value) {
@@ -60,23 +73,15 @@ function decodePart(value) {
   return Buffer.from(value, 'base64url')
 }
 
-function decryptEmployeeIdentity(encrypted, token, {
-  now = Date.now(),
-  maxAgeMs = MAX_AGE_MS,
-} = {}) {
+function decryptAesEmployeeIdentity(encrypted, token, { now, maxAgeMs }) {
   const parts = String(encrypted || '').split('.')
-  if (parts.length !== 5 || parts[0] !== VERSION || !/^\d{13}$/.test(parts[1])) {
+  if (parts.length !== 5 || parts[0] !== AES_VERSION || !/^\d{13}$/.test(parts[1])) {
     throw new McpEmployeeIdentityError('员工号密文格式无效')
   }
 
   const issuedAt = Number(parts[1])
   const currentTime = Math.trunc(Number(now))
-  if (issuedAt > currentTime + MAX_FUTURE_SKEW_MS) {
-    throw new McpEmployeeIdentityError('员工号密文时间无效')
-  }
-  if (currentTime - issuedAt > maxAgeMs) {
-    throw new McpEmployeeIdentityError('员工号密文已过期')
-  }
+  assertIssuedAt(issuedAt, currentTime, maxAgeMs)
 
   try {
     const normalizedToken = String(token || '').trim()
@@ -100,6 +105,50 @@ function decryptEmployeeIdentity(encrypted, token, {
     if (error instanceof McpEmployeeIdentityError) throw error
     throw new McpEmployeeIdentityError('员工号密文校验失败')
   }
+}
+
+function decryptRsaEmployeeIdentity(encrypted, {
+  now,
+  maxAgeMs,
+  rsaPrivateKeyBase64,
+}) {
+  const parts = String(encrypted || '').split('.')
+  if (parts.length !== 2 || parts[0] !== RSA_VERSION) {
+    throw new McpEmployeeIdentityError('员工号密文格式无效')
+  }
+
+  try {
+    const privateKeyBase64 = String(rsaPrivateKeyBase64 || '').trim()
+    if (!privateKeyBase64) throw new Error('missing key material')
+
+    const decrypted = crypto.privateDecrypt({
+      key: Buffer.from(privateKeyBase64, 'base64').toString('utf8'),
+      padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+      oaepHash: 'sha256',
+    }, decodePart(parts[1]))
+    const payload = JSON.parse(decrypted.toString('utf8'))
+
+    assertIssuedAt(Number(payload.issuedAt), Math.trunc(Number(now)), maxAgeMs)
+    return assertEmployeeNo(payload.employeeNo)
+  } catch (error) {
+    if (error instanceof McpEmployeeIdentityError) throw error
+    throw new McpEmployeeIdentityError('员工号密文校验失败')
+  }
+}
+
+function decryptEmployeeIdentity(encrypted, token, {
+  now = Date.now(),
+  maxAgeMs = MAX_AGE_MS,
+  rsaPrivateKeyBase64 = process.env.MCP_EMPLOYEE_RSA_PRIVATE_KEY_BASE64,
+} = {}) {
+  if (String(encrypted || '').startsWith(`${RSA_VERSION}.`)) {
+    return decryptRsaEmployeeIdentity(encrypted, {
+      now,
+      maxAgeMs,
+      rsaPrivateKeyBase64,
+    })
+  }
+  return decryptAesEmployeeIdentity(encrypted, token, { now, maxAgeMs })
 }
 
 module.exports = {

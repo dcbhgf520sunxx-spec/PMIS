@@ -13,19 +13,42 @@
 
 ```http
 Authorization: Bearer <智能体 Query 或 Action 凭据>
-X-PMIS-Employee-No: v1.<时间戳>.<随机IV>.<员工号密文>.<认证标签>
+X-PMIS-Employee-No: v2.<RSA-OAEP-SHA256密文>
 ```
 
-智能体凭据只识别调用平台，员工号密文用于识别本次对话的实际操作人。平台必须在每次请求时从当前登录用户取得工号并动态生成该请求头，不能保存、透传或接受用户自行填写的明文工号。PMIS 只接受 5 分钟内生成的 AES-256-GCM 密文，密钥由对应 Bearer 凭据派生；密文被篡改、过期或换用其他凭据时均会拒绝。
+智能体凭据只识别调用平台，员工号密文用于识别本次对话的实际操作人。平台必须在每次请求时从当前登录用户取得工号并动态生成该请求头，不能保存、透传或接受用户自行填写的明文工号。新接入平台使用 RSA-OAEP-SHA256：平台只保存 PMIS 公钥，PMIS 正式环境独占私钥；密文内同时包含员工号和毫秒时间戳，超过 5 分钟、被篡改或无法解密时均会拒绝。既有 `v1` AES-256-GCM 密文继续兼容。
 
-NexusAgent 配置 PMIS MCP 时，请求头填写：
+中南数字员工运营平台配置 PMIS MCP 时，请求头填写：
 
 ```text
 Authorization = Bearer <Query 或 Action Key>
-X-PMIS-Employee-No = {{PMIS_ENCRYPTED_EMPLOYEE_NO}}
+X-PMIS-Employee-No = <代码块动态返回值>
 ```
 
-`{{PMIS_ENCRYPTED_EMPLOYEE_NO}}` 只是平台动态注入标记，不包含工号。NexusAgent 在实际调用前用当前登录用户的 `username`（公司 HR 同步规则中即员工工号）替换为短时密文。其他 MCP 服务不会处理该标记。
+`X-PMIS-Employee-No` 类型必须选择“代码块”，代码如下；`PMIS RSA 公钥`由正式环境部署时生成，可以安全放入代码块：
+
+```javascript
+const publicKey = `-----BEGIN PUBLIC KEY-----
+<PMIS RSA 公钥正文>
+-----END PUBLIC KEY-----`;
+const payload = JSON.stringify({
+  employeeNo: String(user.employeeNo),
+  issuedAt: Number(time.timestampMs)
+});
+const encrypted = crypto.rsaEncrypt(
+  payload,
+  publicKey,
+  "OAEP_SHA256",
+  "base64"
+);
+
+return "v2." + encrypted
+  .replace(/\+/g, "-")
+  .replace(/\//g, "_")
+  .replace(/=+$/g, "");
+```
+
+该代码只读取当前登录用户的 `user.employeeNo`，不读取模型参数，也不保存员工号。`Origin` 和 `Authorization` 仍使用固定字符串配置。平台代码块函数和运行变量以[开发文档](http://183.129.242.90:3100/docs/mcp-integration)为准。
 
 ## 环境配置
 
@@ -34,9 +57,11 @@ MCP_ALLOWED_ORIGINS=http://pmis.company.internal
 MCP_QUERY_RATE_LIMIT=120
 MCP_ACTION_RATE_LIMIT=30
 MCP_FILE_INLINE_LIMIT=5242880
+MCP_EMPLOYEE_RSA_PRIVATE_KEY_BASE64=<PKCS8 私钥 PEM 的 Base64>
 ```
 
 `MCP_ALLOWED_ORIGINS` 用英文逗号分隔多个可信浏览器来源。服务端 MCP 客户端通常不发送 `Origin`。限流值为单个智能体凭据每分钟允许的请求数；附件读取和上传默认最大 5MB。
+`MCP_EMPLOYEE_RSA_PRIVATE_KEY_BASE64` 只能保存在正式服务器环境文件中，权限必须为 `600`；私钥不得进入 Git、智能体平台或聊天。RSA 公钥可以提供给调用平台。
 
 ## 创建和管理智能体凭据
 
