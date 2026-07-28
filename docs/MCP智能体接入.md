@@ -102,7 +102,7 @@ Action 工具采用两步确认：
 
 新增记录、批量新增、登记付款和上传文件必须传 `idempotency_key`。同一智能体、员工、工具和幂等键只能创建一次确认流程；网络重试不得换成另一组业务参数继续执行。删除、状态变更、批量操作、排序、计划调整、付款和文件上传删除均按高风险操作展示。
 
-任务操作中，`task_create`、`task_create_subtask` 和 `task_update` 都必须显式传入 `priority` 与 `expected_end_date`，不得由智能体省略或使用服务端默认值。编辑任务或子任务前应先查询详情，并在完整参数中保留当前优先级和预计完成时间，除非用户明确要求修改。
+任务操作中，`task_create` 和 `task_create_subtask` 必须显式传入 `priority` 与 `expected_end_date`，不得由智能体省略或使用服务端默认值。`task_update` 继续支持稀疏编辑：未传字段由服务端保留当前值，只有用户明确要求修改时才传入新的优先级或预计完成时间。
 
 操作失败时，除中文说明外还会在 `structuredContent.error` 返回稳定错误结构：
 

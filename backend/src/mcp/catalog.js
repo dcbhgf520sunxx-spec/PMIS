@@ -97,7 +97,7 @@ const actionRequired = {
   requirement_change_status: ['id', 'status'], requirement_delete: ['id'],
   task_create: ['name', 'source_type', 'task_type', 'owner_ids', 'priority', 'expected_end_date', 'idempotency_key'],
   task_create_subtask: ['parent_id', 'name', 'task_type', 'owner_ids', 'priority', 'expected_end_date', 'idempotency_key'],
-  task_update: ['id', 'name', 'source_type', 'task_type', 'owner_ids', 'priority', 'expected_end_date'], task_assign: ['ids', 'owner_ids'],
+  task_update: ['id', 'name', 'source_type', 'task_type', 'owner_ids'], task_assign: ['ids', 'owner_ids'],
   task_change_status: ['id', 'status'], task_delete: ['id'],
   bug_create: ['title', 'source_type', 'bug_type_id', 'severity', 'assignee_id', 'idempotency_key'],
   bug_update: ['id', 'title', 'source_type', 'bug_type_id', 'severity', 'assignee_id'],

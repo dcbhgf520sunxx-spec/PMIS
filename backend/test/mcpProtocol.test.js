@@ -407,7 +407,7 @@ test('action schemas require complete create inputs and retry-safe idempotency k
   }
 })
 
-test('task action schemas require priority and expected completion time for create, subtask and update', () => {
+test('task create schemas require priority and expected completion time while update keeps sparse editing', () => {
   const { getToolDefinition } = require('../src/mcp/catalog')
   const cases = [
     ['task_create', {
@@ -417,9 +417,6 @@ test('task action schemas require priority and expected completion time for crea
     ['task_create_subtask', {
       parent_id: 1, name: '子任务', task_type: 2, owner_ids: [8],
       idempotency_key: 'task-subtask-1',
-    }],
-    ['task_update', {
-      id: 2, name: '任务', source_type: 1, project_id: 1, task_type: 2, owner_ids: [8],
     }],
   ]
 
@@ -436,6 +433,16 @@ test('task action schemas require priority and expected completion time for crea
       expected_end_date: '2026-08-31',
     }), name)
   }
+
+  const updateDefinition = getToolDefinition('task_update', 'action')
+  assert.doesNotThrow(() => validateToolArguments(updateDefinition, {
+    id: 2,
+    name: '任务',
+    source_type: 1,
+    project_id: 1,
+    task_type: 2,
+    owner_ids: [8],
+  }))
 })
 
 test('action argument validation rejects malformed types, nested values and execute confirmations', () => {
