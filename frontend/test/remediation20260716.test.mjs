@@ -10,14 +10,14 @@ test('富文本清洗会继续处理未知父标签提升出来的子节点', ()
   assert.doesNotMatch(richText, /replaceWith\([^\n]+\);\s*return;/);
 });
 
-test('工单状态支持暂停恢复及已解决、已关闭工单重新激活', () => {
-  const rules = read('../src/modules/work-order/pages/workOrderList.constants.ts');
-  assert.match(rules, /0:\s*\[1,\s*4\]/);
+test('工单状态支持待处理直接解决、暂停恢复及已解决工单重新激活', () => {
+  const rules = read('../src/modules/work-order/workOrderStatusRules.ts');
+  assert.match(rules, /0:\s*\[1,\s*2,\s*4\]/);
   assert.match(rules, /1:\s*\[2,\s*4\]/);
-  assert.match(rules, /2:\s*\[3,\s*4,\s*5\]/);
-  assert.match(rules, /3:\s*\[4,\s*5\]/);
-  assert.match(rules, /4:\s*\[0,\s*1,\s*2,\s*3\]/);
+  assert.match(rules, /2:\s*\[4,\s*5\]/);
+  assert.match(rules, /4:\s*\[0,\s*1,\s*2\]/);
   assert.match(rules, /5:\s*\[2\]/);
+  assert.doesNotMatch(rules, /3:\s*\[/);
 });
 
 test('用户角色聚合列接入真实服务端排序', () => {

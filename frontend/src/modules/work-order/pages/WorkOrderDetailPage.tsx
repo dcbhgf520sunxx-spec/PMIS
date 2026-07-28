@@ -123,7 +123,7 @@ export function WorkOrderDetailPage() {
         items: [
           { label: '状态', value: renderWorkOrderStatus(detail.status) },
           { label: '紧急程度', value: renderUrgency(detail.urgency) },
-          { label: '逾期', value: [2, 3].includes(detail.status) ? '-' : renderOverdue(detail.isOverdue, detail.expectedResolveDate) }
+          { label: '逾期', value: detail.status === 2 ? '-' : renderOverdue(detail.isOverdue, detail.expectedResolveDate) }
         ]
       }}
       statusAction={(
@@ -176,7 +176,6 @@ export function WorkOrderDetailPage() {
                 { label: '跟进人', value: detail.followerName || '-' },
                 { label: '预计完成时间', value: detail.expectedResolveDate },
                 { label: '实际修复时间', value: detail.resolveDate || '-' },
-                { label: '关闭时间', value: detail.closeDate || '-' },
                 { label: '暂停时间', value: detail.suspendDate || '-' },
                 { label: '处置结果', value: detail.resultDesc || '-', wide: true, longText: true },
                 ...(detail.activationReason

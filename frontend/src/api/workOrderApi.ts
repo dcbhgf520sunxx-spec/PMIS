@@ -73,7 +73,6 @@ export type WorkOrderFormPayload = {
 export type WorkOrderStatusPayload = {
   status: WorkOrderStatus;
   resolveDate?: string | null;
-  closeDate?: string | null;
   suspendDate?: string | null;
   resultDesc?: string | null;
   activationReason?: string | null;
@@ -197,7 +196,6 @@ export async function updateWorkOrderStatus(id: string, payload: WorkOrderStatus
     : {
       status: payload.status,
       resolve_date: payload.resolveDate,
-      close_date: payload.closeDate,
       suspend_date: payload.suspendDate,
       result_desc: payload.resultDesc,
       activation_reason: payload.activationReason

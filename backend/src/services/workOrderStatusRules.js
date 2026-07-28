@@ -1,9 +1,8 @@
 const WORK_ORDER_STATUS_TRANSITIONS = {
-  0: [1, 4],
+  0: [1, 2, 4],
   1: [2, 4],
-  2: [3, 4, 5],
-  3: [4, 5],
-  4: [0, 1, 2, 3],
+  2: [4, 5],
+  4: [0, 1, 2],
   5: [2]
 }
 
@@ -16,7 +15,7 @@ function resolveWorkOrderResultFields(status, body = {}, old = {}) {
   if (target === 5) {
     return {
       resolveDate: old.resolve_date || null,
-      closeDate: null,
+      closeDate: old.close_date || null,
       resultDesc: old.result_desc || null,
       suspendDate: null,
       activationReason: String(body.activation_reason || '').trim()
@@ -33,20 +32,17 @@ function resolveWorkOrderResultFields(status, body = {}, old = {}) {
   if (target === 2) {
     return {
       resolveDate: body.resolve_date || null,
-      closeDate: null,
+      closeDate: old.close_date || null,
       resultDesc: body.result_desc ? String(body.result_desc).trim() : null,
       suspendDate: null
     }
   }
-  if (target === 3) {
-    return {
-      resolveDate: body.resolve_date || old.resolve_date || null,
-      closeDate: body.close_date || null,
-      resultDesc: body.result_desc ? String(body.result_desc).trim() : (old.result_desc || null),
-      suspendDate: null
-    }
+  return {
+    resolveDate: null,
+    closeDate: old.close_date || null,
+    resultDesc: null,
+    suspendDate: null
   }
-  return { resolveDate: null, closeDate: null, resultDesc: null, suspendDate: null }
 }
 
 function validateWorkOrderResultFields(status, values) {
@@ -56,10 +52,6 @@ function validateWorkOrderResultFields(status, values) {
   if (target === 2 && (!values.resolveDate || !values.resultDesc)) {
     return '标记为已解决时必须填写实际修复时间和处置结果'
   }
-  if (target === 3 && (!values.resolveDate || !values.resultDesc)) {
-    return '关闭工单时必须填写实际修复时间和处置结果'
-  }
-  if (target === 3 && !values.closeDate) return '关闭工单时必须填写关闭时间'
   if (target === 4 && !values.suspendDate) return '暂停工单时必须填写暂停时间'
   return ''
 }
