@@ -1,11 +1,10 @@
 const fs = require('node:fs/promises')
-const path = require('node:path')
 const db = require('../db')
-const { resolveAttachmentPath } = require('../services/projectContractAttachmentService')
+const { PROJECT_PLAN_DELIVERY_DIR, resolveAttachmentPath } = require('../services/projectContractAttachmentService')
 const { loadOssAttachment } = require('../services/projectContractOssService')
 
 const INLINE_LIMIT = Number(process.env.MCP_FILE_INLINE_LIMIT || 5 * 1024 * 1024)
-const DELIVERY_ROOT = path.join(__dirname, '../../private-uploads/project-plan-deliveries')
+const DELIVERY_ROOT = PROJECT_PLAN_DELIVERY_DIR
 
 function parsePmisResourceUri(uri) {
   let match = /^pmis:\/\/projects\/(\d+)\/contract\/attachments\/(\d+)$/.exec(uri)

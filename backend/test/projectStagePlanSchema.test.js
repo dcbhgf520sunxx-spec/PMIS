@@ -92,3 +92,16 @@ test('交付文件不做版本管理并只开放上传下载删除', () => {
   assert.match(controller, /removeAttachmentFile\(file\.storage_key,\s*DELIVERY_ROOT\)/)
   assert.doesNotMatch(controller, /exports\.replaceFile|exports\.voidFile|MAX\(version_no\)|replaces_file_id/)
 })
+
+test('交付文件上传与MCP读取共用正式环境持久化目录', () => {
+  const controller = read('src/controllers/projectStagePlanController.js')
+  const resources = read('src/mcp/fileResources.js')
+  const serviceUnit = fs.readFileSync(path.join(root, '../deploy/pmis-backend.service'), 'utf8')
+
+  assert.match(controller, /PROJECT_PLAN_DELIVERY_DIR/)
+  assert.match(resources, /PROJECT_PLAN_DELIVERY_DIR/)
+  assert.doesNotMatch(controller, /private-uploads\/project-plan-deliveries/)
+  assert.doesNotMatch(resources, /private-uploads\/project-plan-deliveries/)
+  assert.match(serviceUnit, /Environment=PMIS_PRIVATE_UPLOAD_ROOT=\/opt\/pmis\/shared\/private-uploads/)
+  assert.match(serviceUnit, /ReadWritePaths=\/opt\/pmis\/shared\/private-uploads/)
+})

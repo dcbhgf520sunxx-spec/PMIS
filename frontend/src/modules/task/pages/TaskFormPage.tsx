@@ -55,8 +55,7 @@ export function TaskFormPage({ mode }: { mode: Mode }) {
           parentTaskName: row.name,
           sourceType: row.sourceType,
           projectId: row.projectId || undefined,
-          requirementId: row.requirementId || undefined,
-          priority: 1
+          requirementId: row.requirementId || undefined
         } : {
           name: row.name,
           description: row.description,
@@ -105,7 +104,7 @@ export function TaskFormPage({ mode }: { mode: Mode }) {
     notFound={notFound}
     onRetry={() => setRevision((value) => value + 1)}
     onCancel={returnToSource}
-    fieldNameMap={{ source_type: 'sourceType', project_id: 'projectId', requirement_id: 'requirementId', owner_ids: 'ownerIds', task_type: 'taskType' }}
+    fieldNameMap={{ source_type: 'sourceType', project_id: 'projectId', requirement_id: 'requirementId', owner_ids: 'ownerIds', task_type: 'taskType', expected_end_date: 'expectedEndTime' }}
     onSubmit={async (values) => {
       if (mode === 'edit' && params.id) await updateTask(params.id, values);
       else if (subtaskMode && params.id) await createSubtask(params.id, values);
@@ -125,14 +124,14 @@ export function TaskFormPage({ mode }: { mode: Mode }) {
           ? <AdminProFormSelect name="requirementId" label="关联需求" options={requirements} rules={[{ required: true, message: '请选择关联需求' }]} fieldProps={{ disabled: associationLocked }} />
           : <AdminProFormSelect name="projectId" label="关联项目" options={projects} rules={[{ required: true, message: '请选择关联项目' }]} fieldProps={{ disabled: associationLocked }} />}
         <AdminProFormSelect name="taskType" label="任务类型" options={types} rules={[{ required: true, message: '请选择任务类型' }]} />
-        <AdminProFormSelect name="priority" label="优先级" options={[{ label: '低', value: 0 }, { label: '中', value: 1 }, { label: '高', value: 2 }]} />
+        <AdminProFormSelect name="priority" label="优先级" options={[{ label: '低', value: 0 }, { label: '中', value: 1 }, { label: '高', value: 2 }]} rules={[{ required: true, message: '请选择优先级' }]} />
       </div>
     </TemplateFormSection>
     <TemplateFormSection title="处理信息">
       <div className="admin-template-form-page__grid">
         <AdminProFormSelect name="ownerIds" label="负责人" mode="multiple" options={users} rules={[{ required: true, message: '请选择负责人' }]} />
         <AdminProFormDatePicker name="startTime" label="启动时间" />
-        <AdminProFormDatePicker name="expectedEndTime" label="预计完成时间" />
+        <AdminProFormDatePicker name="expectedEndTime" label="预计完成时间" rules={[{ required: true, message: '请选择预计完成时间' }]} />
       </div>
     </TemplateFormSection>
   </TemplateFormPage>;

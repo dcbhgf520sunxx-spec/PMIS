@@ -10,6 +10,7 @@ Group=pmis
 WorkingDirectory=/opt/pmis/current/backend
 Environment=NODE_ENV=production
 Environment=LD_LIBRARY_PATH=/opt/rh/devtoolset-11/root/usr/lib64
+Environment=PMIS_PRIVATE_UPLOAD_ROOT=/opt/pmis/shared/private-uploads
 EnvironmentFile=/opt/pmis/shared/backend.env
 ExecStart=/opt/node-v22.23.1/bin/node /opt/pmis/current/backend/src/server.js
 Restart=always
@@ -18,6 +19,7 @@ TimeoutStopSec=15
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
+ReadWritePaths=/opt/pmis/shared/private-uploads
 
 [Install]
 WantedBy=multi-user.target

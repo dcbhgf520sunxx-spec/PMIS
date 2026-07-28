@@ -1,6 +1,5 @@
 const db = require('../db')
 const fs = require('node:fs')
-const path = require('node:path')
 const { fail, failField, ok } = require('../utils/response')
 const {
   PLAN_ITEM_STATUS,
@@ -11,6 +10,7 @@ const {
 } = require('../services/projectStagePlanRules')
 const {
   normalizeOriginalName,
+  PROJECT_PLAN_DELIVERY_DIR,
   removeAttachmentFile,
   resolveAttachmentPath,
   saveAttachmentFile,
@@ -21,7 +21,7 @@ const {
   resolveMovedPlanRow,
 } = require('../services/projectStagePlanHistory')
 
-const DELIVERY_ROOT = path.join(__dirname, '../../private-uploads/project-plan-deliveries')
+const DELIVERY_ROOT = PROJECT_PLAN_DELIVERY_DIR
 
 async function findProject(projectId) {
   return db.prepare('SELECT id,name FROM pms_project WHERE id=? AND is_deleted=0').get(projectId)
