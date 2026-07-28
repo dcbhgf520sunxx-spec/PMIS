@@ -9,7 +9,14 @@ const { filterToolsForContext } = require('../src/mcp/catalog')
 const { createMcpRateLimit, validateMcpOrigin } = require('../src/routes/mcp')
 const { validateToolArguments, validateToolPermission } = require('../src/mcp/dispatcher')
 const { actions } = require('../src/mcp/actionTools')
-const { buildProjectSearchInput } = require('../src/mcp/queryTools')
+const {
+  buildGlobalSearchPlan,
+  buildProjectSearchInput,
+  dispatchQueryTool,
+  searchContracts,
+  searchPayments,
+  searchStagePlans,
+} = require('../src/mcp/queryTools')
 
 test('MCP server initializes and exposes only endpoint and menu-permitted tools', async (t) => {
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
@@ -96,6 +103,128 @@ test('tool schemas reject unknown fields and require business identifiers', () =
   assert.throws(() => validateToolArguments(definition, {}), /缺少参数/)
   assert.throws(() => validateToolArguments(definition, { id: 1, sql: 'SELECT 1' }), /不支持的参数/)
   assert.equal(filterToolsForContext(context).find((tool) => tool.name === 'project_get').inputSchema.additionalProperties, false)
+})
+
+test('global business search tools can be called without filters', () => {
+  const catalog = require('../src/mcp/catalog')
+  const context = { endpointType: 'query', allowedMenuPaths: new Set(['/projects']) }
+  const names = filterToolsForContext(context).map((tool) => tool.name)
+
+  assert.equal(names.includes('global_search'), true)
+  assert.equal(names.includes('stage_plan_search'), true)
+  assert.equal(names.includes('contract_search'), true)
+  for (const name of ['global_search', 'stage_plan_search', 'contract_search', 'payment_search']) {
+    const definition = catalog.getToolDefinition(name, 'query')
+    assert.doesNotThrow(() => validateToolArguments(definition, {}))
+    assert.equal(definition.inputSchema.additionalProperties, false)
+  }
+})
+
+test('global search builds one zero-filter search per permitted business domain', () => {
+  assert.equal(typeof buildGlobalSearchPlan, 'function')
+  const context = {
+    allowedMenuPaths: new Set(['/products', '/projects', '/tasks']),
+    user: { id: 8 },
+  }
+  assert.deepEqual(buildGlobalSearchPlan({}, context), [
+    { name: 'product_search', args: { page_size: 20 } },
+    { name: 'project_search', args: { page_size: 20 } },
+    { name: 'stage_plan_search', args: { page_size: 20 } },
+    { name: 'contract_search', args: { page_size: 20 } },
+    { name: 'payment_search', args: { page_size: 20 } },
+    { name: 'task_search', args: { page_size: 20 } },
+  ])
+})
+
+test('global search translates one keyword into each module search field', () => {
+  const context = {
+    allowedMenuPaths: new Set(['/products', '/requirements', '/bugs', '/work-orders']),
+    user: { id: 8 },
+  }
+  assert.deepEqual(buildGlobalSearchPlan({ keyword: '交付', page_size: 5 }, context), [
+    { name: 'product_search', args: { name: '交付', page_size: 5 } },
+    { name: 'requirement_search', args: { title: '交付', page_size: 5 } },
+    { name: 'bug_search', args: { title: '交付', page_size: 5 } },
+    { name: 'work_order_search', args: { problem_desc: '交付', page_size: 5 } },
+  ])
+})
+
+test('project subdomains expose dedicated global search implementations', () => {
+  assert.equal(typeof searchStagePlans, 'function')
+  assert.equal(typeof searchContracts, 'function')
+  assert.equal(typeof searchPayments, 'function')
+})
+
+test('project subdomain searches return paginated records with empty arguments', async () => {
+  const rowsByMarker = {
+    'pms_project_plan_item': [{ id: 11, project_name: '交付项目', item_name: '上线' }],
+    'pms_project_payment_record': [{ id: 13, project_name: '交付项目', payment_amount: '100.00' }],
+    'pms_project_contract c': [{ id: 12, project_name: '交付项目', contract_name: '实施合同' }],
+  }
+  const database = {
+    prepare(sql) {
+      const marker = sql.includes('SELECT i.id') || sql.includes('total FROM pms_project_plan_item')
+        ? 'pms_project_plan_item'
+        : sql.includes('SELECT c.id') || sql.includes('total FROM pms_project_contract c')
+          ? 'pms_project_contract c'
+          : 'pms_project_payment_record'
+      return {
+        async get() { return { total: marker ? rowsByMarker[marker].length : 0 } },
+        async all() { return marker ? rowsByMarker[marker] : [] },
+      }
+    },
+  }
+
+  assert.deepEqual(await searchStagePlans({}, database), {
+    items: rowsByMarker.pms_project_plan_item,
+    total: 1,
+    page: 1,
+    pageSize: 20,
+  })
+  assert.deepEqual(await searchContracts({}, database), {
+    items: rowsByMarker['pms_project_contract c'],
+    total: 1,
+    page: 1,
+    pageSize: 20,
+  })
+  assert.deepEqual(await searchPayments({}, database), {
+    items: rowsByMarker.pms_project_payment_record,
+    total: 1,
+    page: 1,
+    pageSize: 20,
+  })
+})
+
+test('stage plan search uses the real stage and item text columns', async () => {
+  const database = {
+    prepare(sql) {
+      if (sql.includes('i.description')) throw new Error('column i.description does not exist')
+      return {
+        async get() { return { total: 0 } },
+        async all() { return [] },
+      }
+    },
+  }
+
+  await assert.doesNotReject(() => searchStagePlans({ keyword: '交付' }, database))
+})
+
+test('global search dispatches every permitted zero-filter search and groups the results', async () => {
+  const context = {
+    allowedMenuPaths: new Set(['/products', '/tasks']),
+    user: { id: 8 },
+  }
+  const result = await dispatchQueryTool('global_search', {}, context, {
+    runTool: async (name, args) => ({ name, pageSize: args.page_size }),
+  })
+
+  assert.deepEqual(result, {
+    keyword: null,
+    results: {
+      product_search: { name: 'product_search', pageSize: 20 },
+      task_search: { name: 'task_search', pageSize: 20 },
+    },
+  })
 })
 
 test('business analysis requires permission for the requested business domain', () => {
