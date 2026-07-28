@@ -186,3 +186,59 @@ test('delivery file target snapshot uses the real size_bytes column', async () =
     current: { project_id: 2, item_id: 9, size_bytes: 1024 },
   })
 })
+
+test('batch target snapshots reject invalid numeric identifiers before querying', async () => {
+  let queried = false
+  const database = {
+    prepare() {
+      queried = true
+      return { all: async () => [] }
+    },
+  }
+
+  await assert.rejects(
+    loadActionTargetSnapshot('task_assign', { ids: ['abc'] }, database),
+    /任务标识不合法/
+  )
+  assert.equal(queried, false)
+})
+
+test('action execute consumes the ticket and preserves the business error when failure marking also fails', async () => {
+  let consumed = false
+  let failureMarked = false
+  const businessError = new Error('任务状态不允许修改')
+
+  await assert.rejects(
+    dispatchActionTool('task_update', {
+      id: 9,
+      name: '任务',
+      source_type: 1,
+      project_id: 2,
+      task_type: 3,
+      owner_ids: [8],
+      mode: 'execute',
+      confirmation_id: '00000000-0000-4000-8000-000000000001',
+    }, {
+      client: { id: 3 },
+      user: { id: 8, employeeNo: 'JS001', realName: '张三' },
+    }, {
+      actions: {
+        task_update: [
+          async () => { throw businessError },
+          () => ({ body: {} }),
+        ],
+      },
+      ticketService: {
+        consumeTicket: async () => { consumed = true },
+        markTicketFailed: async () => {
+          failureMarked = true
+          throw new Error('票据状态更新失败')
+        },
+      },
+    }),
+    (error) => error === businessError
+  )
+
+  assert.equal(consumed, true)
+  assert.equal(failureMarked, true)
+})

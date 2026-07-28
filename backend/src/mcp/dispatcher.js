@@ -82,7 +82,7 @@ function validateToolArguments(definition, args) {
   if (definition._meta?.endpointType === 'action') {
     const mode = args.mode || 'preview'
     if (mode === 'execute' && !args.confirmation_id) throw new Error('缺少操作确认号')
-    if (['task_create', 'task_update', 'bug_create', 'bug_update'].includes(definition.name)) {
+    if (definition._meta.requiresSourceTarget) {
       const sourceType = Number(args.source_type)
       if (sourceType === 1 && !args.project_id) throw new Error('缺少参数：project_id')
       if (sourceType === 2 && !args.requirement_id) throw new Error('缺少参数：requirement_id')

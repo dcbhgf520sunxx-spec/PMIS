@@ -117,6 +117,9 @@ async function loadMainTargetSnapshot(name, args, database) {
   const targetIds = name === `${type}_assign` ? args.ids : null
   if (Array.isArray(targetIds)) {
     const ids = [...new Set(targetIds.map(Number))]
+    if (ids.some((value) => !Number.isInteger(value) || value <= 0)) {
+      throw new Error(`${label}标识不合法`)
+    }
     const rows = ids.length
       ? await database.prepare(`SELECT id, ${spec.nameColumn} name, ${spec.currentFields.join(', ')}
         FROM ${spec.table} WHERE id IN (${ids.map(() => '?').join(',')}) AND is_deleted = 0`).all(...ids)
@@ -372,7 +375,7 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
     const [handler, buildInput] = definition
     return unwrapEnvelope(await invokeController(handler, context, buildInput(args)))
   } catch (error) {
-    await actionTicketService.markTicketFailed(args.confirmation_id)
+    await actionTicketService.markTicketFailed(args.confirmation_id).catch(() => {})
     throw error
   }
 }

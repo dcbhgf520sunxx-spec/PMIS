@@ -26,6 +26,7 @@ const ACTION_TOOLS = [
   ['contract_attachment_upload', '/projects'], ['contract_attachment_delete', '/projects'],
   ['stage_delivery_upload', '/projects'], ['stage_delivery_delete', '/projects'],
 ]
+const SOURCE_TARGET_ACTIONS = new Set(['task_create', 'task_update', 'bug_create', 'bug_update'])
 
 const stringField = { type: 'string' }
 const nullableStringField = { type: ['string', 'null'] }
@@ -164,7 +165,7 @@ function actionInputSchema(name) {
         owner_id: idField,
         collaborator_ids: idArrayField,
         original_due_date: stringField,
-        requires_delivery_file: scalarField,
+        requires_delivery_file: numberField,
         remark: stringField,
       },
       required: ['name', 'owner_id', 'original_due_date'],
@@ -213,10 +214,9 @@ function actionInputSchema(name) {
   for (const key of ['status', 'requirement_type', 'priority', 'source_type', 'severity', 'urgency', 'requires_delivery_file']) {
     if (key in properties) properties[key] = numberField
   }
-  for (const key of ['id', 'parent_id', 'project_id', 'stage_id', 'item_id', 'payment_id', 'attachment_id', 'file_id', 'owner_id', 'product_id', 'supplier_id', 'handler_id', 'assignee_id', 'follower_id', 'task_type', 'bug_type_id', 'resolution_id']) {
+  for (const key of ['id', 'parent_id', 'project_id', 'stage_id', 'item_id', 'payment_id', 'attachment_id', 'file_id', 'owner_id', 'product_id', 'supplier_id', 'handler_id', 'assignee_id', 'follower_id', 'task_type', 'bug_type_id', 'resolution_id', 'moved_id']) {
     if (key in properties) properties[key] = idField
   }
-  if ('moved_id' in properties) properties.moved_id = idField
   for (const key of ['contract_amount', 'payment_amount']) if (key in properties) properties[key] = numberField
   return { type: 'object', properties, required: actionRequired[name], additionalProperties: false }
 }
@@ -290,7 +290,11 @@ function baseDefinition([name, menuPath], endpointType) {
     annotations: endpointType === 'query'
       ? { readOnlyHint: true, destructiveHint: false, idempotentHint: true }
       : { readOnlyHint: false, destructiveHint: name.endsWith('_delete'), idempotentHint: false },
-    _meta: { endpointType, menuPath },
+    _meta: {
+      endpointType,
+      menuPath,
+      requiresSourceTarget: endpointType === 'action' && SOURCE_TARGET_ACTIONS.has(name),
+    },
   }
 }
 
