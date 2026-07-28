@@ -35,6 +35,7 @@ const arrayIdField = { type: ['integer', 'string'] }
 const numberField = { type: ['number', 'string', 'null'] }
 const scalarField = { type: ['string', 'number', 'integer', 'boolean', 'null'] }
 const idArrayField = { type: 'array', items: arrayIdField, minItems: 1, maxItems: 500 }
+const optionalIdArrayField = { type: 'array', items: arrayIdField, minItems: 0, maxItems: 500 }
 const controlProperties = {
   mode: { type: 'string', enum: ['preview', 'execute'] },
   confirmation_id: { type: 'string', format: 'uuid' },
@@ -76,10 +77,10 @@ const actionFieldNames = {
   product: ['id', 'name', 'description', 'owner_id', 'status'],
   project: ['id', 'name', 'description', 'product_id', 'owner_id', 'member_ids', 'start_date', 'expected_end_date', 'progress_text', 'risk_text', 'status', 'actual_end_date', 'suspend_date'],
   requirement: ['id', 'title', 'description', 'requirement_type', 'product_id', 'project_id', 'owner_id', 'priority', 'status', 'submitter_name', 'submitter_dept', 'submit_date', 'start_date', 'expected_end_date', 'actual_end_date', 'completion_status', 'pause_date'],
-  task: ['id', 'parent_id', 'name', 'description', 'source_type', 'project_id', 'requirement_id', 'task_type', 'priority', 'owner_ids', 'status', 'start_date', 'expected_end_date', 'actual_end_date', 'pause_date', 'completion_status', 'ids'],
-  bug: ['id', 'title', 'description', 'source_type', 'project_id', 'requirement_id', 'bug_type_id', 'severity', 'assignee_id', 'status', 'resolution_id', 'resolve_date', 'close_date', 'pause_date', 'ids'],
+  task: ['id', 'parent_id', 'name', 'description', 'source_type', 'project_id', 'requirement_id', 'task_type', 'priority', 'owner_ids', 'status', 'start_date', 'expected_end_date', 'actual_end_date', 'suspend_date', 'ids'],
+  bug: ['id', 'title', 'description', 'source_type', 'project_id', 'requirement_id', 'bug_type_id', 'severity', 'assignee_id', 'status', 'resolution_id', 'resolved_date', 'closed_date', 'activation_reason', 'ids'],
   work_order: ['id', 'product_id', 'problem_type', 'problem_desc', 'result_desc', 'follower_id', 'urgency', 'status', 'expected_resolve_date', 'resolve_date', 'close_date', 'suspend_date', 'activation_reason', 'submitter_name', 'submitter_dept', 'submit_time', 'ids'],
-  stage: ['project_id', 'stage_id', 'item_id', 'name', 'description', 'ids', 'moved_id', 'owner_id', 'collaborator_ids', 'original_due_date', 'requires_delivery_file', 'remark', 'items', 'status', 'pause_reason', 'actual_end_date', 'new_due_date', 'reason', 'files'],
+  stage: ['project_id', 'stage_id', 'item_id', 'name', 'description', 'ids', 'moved_id', 'owner_id', 'collaborator_ids', 'original_due_date', 'requires_delivery_file', 'remark', 'items', 'status', 'pause_reason', 'actual_end_date', 'new_due_date', 'reason'],
   contract: ['project_id', 'contract_code', 'contract_name', 'supplier_id', 'supplier_name', 'signed_date', 'contract_amount', 'remark', 'stages'],
   payment: ['project_id', 'stage_id', 'payment_id', 'payment_amount', 'payment_month', 'handler_id', 'remark'],
   file: ['project_id', 'item_id', 'attachment_id', 'file_id', 'file_name', 'mime_type', 'content_base64'],
@@ -125,6 +126,44 @@ const actionRequired = {
   stage_delivery_delete: ['project_id', 'item_id', 'file_id'],
 }
 
+const statusActionSchemas = {
+  product_change_status: {
+    type: 'integer',
+    enum: [0, 1],
+    description: '目标状态：0 停用，1 启用',
+  },
+  project_change_status: {
+    type: 'integer',
+    enum: [0, 1, 2, 3],
+    description: '目标状态：0 未开始，1 进行中，2 已完成，3 已暂停；完成需 actual_end_date，暂停需 suspend_date',
+  },
+  requirement_change_status: {
+    type: 'integer',
+    enum: [0, 1, 2, 3, 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 33, 34, 35],
+    description: '目标状态由需求路径和当前状态决定；33/34 需 actual_end_date、completion_status，35 需 pause_date',
+  },
+  task_change_status: {
+    type: 'integer',
+    enum: [0, 1, 2, 3],
+    description: '目标状态：0 待处理，1 处理中，2 已完成，3 已暂停；完成需 actual_end_date，暂停需 suspend_date',
+  },
+  bug_change_status: {
+    type: 'integer',
+    enum: [0, 1, 2, 3],
+    description: '目标状态：0 新建，1 已修复，2 已关闭，3 被激活；修复需 resolved_date、resolution_id，关闭需 closed_date，激活需 activation_reason',
+  },
+  work_order_change_status: {
+    type: 'integer',
+    enum: [0, 1, 2, 4, 5],
+    description: '目标状态：0 待处理，1 处理中，2 已解决，4 已暂停，5 已激活；解决需 resolve_date、result_desc，暂停需 suspend_date，激活需 activation_reason',
+  },
+  stage_item_change_status: {
+    type: 'integer',
+    enum: [0, 1, 2, 3],
+    description: '目标状态：0 未开始，1 进行中，2 已完成，3 已暂停；完成需 actual_end_date，暂停需 pause_reason；要求交付文件时须先调用 stage_delivery_upload',
+  },
+}
+
 function actionGroup(name) {
   if (name.startsWith('stage_delivery_') || name.startsWith('contract_attachment_')) return 'file'
   return Object.keys(actionFieldNames).find((prefix) => name.startsWith(`${prefix}_`))
@@ -151,9 +190,8 @@ function actionInputSchema(name) {
     ...controlProperties,
     ...fields(actionFieldNames[group] || []),
   }
-  if ('member_ids' in properties || 'owner_ids' in properties || 'collaborator_ids' in properties || 'ids' in properties) {
-    for (const key of ['member_ids', 'owner_ids', 'collaborator_ids', 'ids']) if (key in properties) properties[key] = idArrayField
-  }
+  for (const key of ['owner_ids', 'ids']) if (key in properties) properties[key] = idArrayField
+  for (const key of ['member_ids', 'collaborator_ids']) if (key in properties) properties[key] = optionalIdArrayField
   if ('items' in properties) properties.items = {
     type: 'array',
     minItems: 1,
@@ -163,7 +201,7 @@ function actionInputSchema(name) {
       properties: {
         name: stringField,
         owner_id: idField,
-        collaborator_ids: idArrayField,
+        collaborator_ids: optionalIdArrayField,
         original_due_date: stringField,
         requires_delivery_file: numberField,
         remark: stringField,
@@ -187,25 +225,12 @@ function actionInputSchema(name) {
       additionalProperties: false,
     },
   }
-  if ('files' in properties) properties.files = {
-    type: 'array',
-    maxItems: 20,
-    items: {
-      type: 'object',
-      properties: {
-        file_name: stringField,
-        mime_type: stringField,
-        content_base64: { type: 'string', maxLength: 12 * 1024 * 1024 },
-      },
-      required: ['file_name', 'content_base64'],
-      additionalProperties: false,
-    },
-  }
   if ('content_base64' in properties) properties.content_base64 = { type: 'string', maxLength: 12 * 1024 * 1024 }
   for (const key of [
     'name', 'description', 'title', 'start_date', 'expected_end_date', 'actual_end_date', 'suspend_date',
     'progress_text', 'risk_text', 'submitter_name', 'submitter_dept', 'submit_date', 'pause_date',
     'completion_status', 'problem_desc', 'result_desc', 'expected_resolve_date', 'resolve_date', 'close_date',
+    'resolved_date', 'closed_date',
     'activation_reason', 'submit_time', 'original_due_date', 'remark', 'pause_reason', 'new_due_date', 'reason',
     'contract_code', 'contract_name', 'supplier_name', 'signed_date', 'payment_month', 'file_name', 'mime_type',
   ]) {
@@ -218,6 +243,7 @@ function actionInputSchema(name) {
     if (key in properties) properties[key] = idField
   }
   for (const key of ['contract_amount', 'payment_amount']) if (key in properties) properties[key] = numberField
+  if (statusActionSchemas[name]) properties.status = statusActionSchemas[name]
   return { type: 'object', properties, required: actionRequired[name], additionalProperties: false }
 }
 

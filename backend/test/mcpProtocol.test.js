@@ -529,6 +529,32 @@ test('action tool discovery uses Chinese operation titles and explains two-step 
   assert.match(definition.description, /execute/)
 })
 
+test('status action schemas expose the exact conditional business fields', () => {
+  const { getToolDefinition } = require('../src/mcp/catalog')
+  const taskProperties = getToolDefinition('task_change_status', 'action').inputSchema.properties
+  const bugProperties = getToolDefinition('bug_change_status', 'action').inputSchema.properties
+  const stageProperties = getToolDefinition('stage_item_change_status', 'action').inputSchema.properties
+
+  assert.ok(taskProperties.suspend_date)
+  assert.equal(taskProperties.pause_date, undefined)
+  assert.ok(bugProperties.resolved_date)
+  assert.ok(bugProperties.closed_date)
+  assert.ok(bugProperties.activation_reason)
+  assert.equal(bugProperties.resolve_date, undefined)
+  assert.equal(bugProperties.close_date, undefined)
+  assert.deepEqual(taskProperties.status.enum, [0, 1, 2, 3])
+  assert.deepEqual(bugProperties.status.enum, [0, 1, 2, 3])
+  assert.equal(stageProperties.files, undefined)
+  assert.match(stageProperties.status.description, /stage_delivery_upload/)
+})
+
+test('edit schemas allow clearing optional relationship arrays but keep owners non-empty', () => {
+  const { getToolDefinition } = require('../src/mcp/catalog')
+  assert.equal(getToolDefinition('project_update', 'action').inputSchema.properties.member_ids.minItems, 0)
+  assert.equal(getToolDefinition('stage_item_update', 'action').inputSchema.properties.collaborator_ids.minItems, 0)
+  assert.equal(getToolDefinition('task_update', 'action').inputSchema.properties.owner_ids.minItems, 1)
+})
+
 test('MCP rate limit isolates clients and rejects requests above the configured window', () => {
   let current = 1000
   const middleware = createMcpRateLimit('action', { limit: 1, windowMs: 100, now: () => current })
