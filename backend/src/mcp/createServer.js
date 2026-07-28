@@ -37,8 +37,16 @@ function createMcpServer({
     try {
       return asToolResult(await dispatch(request.params.name, request.params.arguments || {}, context))
     } catch (error) {
+      const message = error.message || 'MCP工具执行失败'
       return {
-        content: [{ type: 'text', text: error.message || 'MCP工具执行失败' }],
+        content: [{ type: 'text', text: message }],
+        structuredContent: {
+          error: {
+            code: error.code || 'MCP_TOOL_ERROR',
+            message,
+            ...(error.fieldErrors ? { fieldErrors: error.fieldErrors } : {}),
+          },
+        },
         isError: true,
       }
     }

@@ -21,6 +21,51 @@ function resultCount(result) {
   return null
 }
 
+function matchesJsonType(type, value) {
+  if (type === 'null') return value === null
+  if (type === 'array') return Array.isArray(value)
+  if (type === 'object') return value !== null && typeof value === 'object' && !Array.isArray(value)
+  if (type === 'integer') return Number.isInteger(value)
+  if (type === 'number') return typeof value === 'number' && Number.isFinite(value)
+  return typeof value === type
+}
+
+function validateSchemaValue(schema, value, path) {
+  const types = Array.isArray(schema?.type) ? schema.type : schema?.type ? [schema.type] : []
+  if (types.length && !types.some((type) => matchesJsonType(type, value))) {
+    throw new Error(`${path}参数类型不合法`)
+  }
+  if (schema?.format === 'uuid' && typeof value === 'string'
+    && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) {
+    throw new Error(`${path}格式不合法`)
+  }
+  if (schema?.maxLength && typeof value === 'string' && value.length > schema.maxLength) {
+    throw new Error(`${path}参数过长`)
+  }
+  if (schema?.minItems && Array.isArray(value) && value.length < schema.minItems) {
+    throw new Error(`${path}参数数量不足`)
+  }
+  if (schema?.maxItems && Array.isArray(value) && value.length > schema.maxItems) {
+    throw new Error(`${path}参数数量过多`)
+  }
+  if (Array.isArray(value) && schema?.items) {
+    value.forEach((item, index) => validateSchemaValue(schema.items, item, `${path}[${index}]`))
+  }
+  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+    const properties = schema?.properties || {}
+    const required = schema?.required || []
+    const missing = required.filter((key) => value[key] === undefined || value[key] === null || value[key] === '')
+    if (missing.length) throw new Error(`缺少参数：${missing.map((key) => `${path}.${key}`).join('、')}`)
+    for (const [key, childValue] of Object.entries(value)) {
+      const childSchema = properties[key] || (schema?.additionalProperties && schema.additionalProperties !== true
+        ? schema.additionalProperties
+        : null)
+      if (childSchema) validateSchemaValue(childSchema, childValue, `${path}.${key}`)
+      else if (schema?.additionalProperties === false) throw new Error(`不支持的参数：${path}.${key}`)
+    }
+  }
+}
+
 function validateToolArguments(definition, args) {
   if (!args || typeof args !== 'object' || Array.isArray(args)) throw new Error('工具参数必须是对象')
   const schema = definition.inputSchema || {}
@@ -32,8 +77,16 @@ function validateToolArguments(definition, args) {
   for (const [key, value] of Object.entries(args)) {
     const property = schema.properties?.[key]
     if (property?.enum && !property.enum.includes(value)) throw new Error(`${key}参数值不合法`)
-    if (property?.maxLength && typeof value === 'string' && value.length > property.maxLength) throw new Error(`${key}参数过长`)
-    if (property?.maxItems && Array.isArray(value) && value.length > property.maxItems) throw new Error(`${key}参数数量过多`)
+    if (property) validateSchemaValue(property, value, key)
+  }
+  if (definition._meta?.endpointType === 'action') {
+    const mode = args.mode || 'preview'
+    if (mode === 'execute' && !args.confirmation_id) throw new Error('缺少操作确认号')
+    if (['task_create', 'task_update', 'bug_create', 'bug_update'].includes(definition.name)) {
+      const sourceType = Number(args.source_type)
+      if (sourceType === 1 && !args.project_id) throw new Error('缺少参数：project_id')
+      if (sourceType === 2 && !args.requirement_id) throw new Error('缺少参数：requirement_id')
+    }
   }
 }
 

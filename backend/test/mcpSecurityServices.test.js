@@ -159,3 +159,56 @@ test('action ticket rejects changed user, tool, arguments, expiry and replay', a
     /已使用/
   )
 })
+
+test('action ticket returns a stable business error when an idempotency key is reused', async () => {
+  const duplicateError = Object.assign(new Error('duplicate key value violates unique constraint'), { code: '23505' })
+  const service = createMcpActionTicketService({
+    db: {
+      prepare: () => ({
+        run: async () => { throw duplicateError },
+      }),
+    },
+    now: () => new Date('2026-07-28T00:00:00.000Z'),
+    randomUUID: () => '00000000-0000-4000-8000-000000000001',
+  })
+
+  await assert.rejects(
+    service.createTicket(
+      { client: { id: 3 }, user: { id: 8, employeeNo: 'JS001' } },
+      'task_create',
+      { name: '任务', idempotency_key: 'task-20260728-1' },
+      { tool: 'task_create' },
+    ),
+    /幂等键已使用/
+  )
+})
+
+test('action ticket failures expose stable machine-readable confirmation codes', async () => {
+  const context = { client: { id: 3 }, user: { id: 8, employeeNo: 'JS001' } }
+  const args = { id: 9 }
+  const service = createMcpActionTicketService({
+    db: {
+      transaction: async (fn) => fn({
+        prepare: () => ({
+          get: async () => ({
+            id: 'ticket-1',
+            client_id: 3,
+            user_id: 8,
+            employee_no: 'JS001',
+            tool_name: 'task_delete',
+            arguments_hash: hashActionArguments(args),
+            status: 'pending',
+            expires_at: '2026-07-28T00:00:30.000Z',
+          }),
+          run: async () => ({ changes: 1 }),
+        }),
+      }),
+    },
+    now: () => new Date('2026-07-28T00:01:00.000Z'),
+  })
+
+  await assert.rejects(
+    service.consumeTicket(context, 'task_delete', args, 'ticket-1'),
+    (error) => error.code === 'MCP_CONFIRMATION_EXPIRED' && /已过期/.test(error.message)
+  )
+})
