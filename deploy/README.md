@@ -148,9 +148,16 @@ sudo systemctl enable --now postgresql-16 pmis-backend
 应用使用不可变发布目录和 `current` 软链接：
 
 ```bash
-sudo mkdir -p /opt/pmis/releases /opt/pmis/shared/uploads
+sudo mkdir -p \
+  /opt/pmis/releases \
+  /opt/pmis/shared/uploads \
+  /opt/pmis/shared/private-uploads/project-contracts \
+  /opt/pmis/shared/private-uploads/project-plan-deliveries
+sudo chown -R pmis:pmis /opt/pmis/shared/uploads /opt/pmis/shared/private-uploads
 sudo ln -sfn /opt/pmis/releases/<release> /opt/pmis/current
 ```
+
+私有附件和阶段计划交付文件固定写入 `/opt/pmis/shared/private-uploads`，不依赖当前发布目录内的软链接。每次发布前都要确认 `pmis` 用户可以创建、读取和删除该目录中的文件。
 
 查看状态：
 

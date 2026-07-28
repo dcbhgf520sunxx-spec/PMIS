@@ -365,6 +365,7 @@ test('action schemas require complete create inputs and retry-safe idempotency k
     }, ['idempotency_key']],
     ['task_create', {
       name: '任务', source_type: 1, project_id: 1, task_type: 2, owner_ids: [8],
+      priority: 1, expected_end_date: '2026-08-31',
     }, ['idempotency_key']],
     ['bug_create', {
       title: 'BUG', source_type: 1, project_id: 1, bug_type_id: 2, severity: 2, assignee_id: 8,
@@ -402,6 +403,37 @@ test('action schemas require complete create inputs and retry-safe idempotency k
     assert.doesNotThrow(() => validateToolArguments(definition, {
       ...args,
       idempotency_key: `${name}-20260728-1`,
+    }), name)
+  }
+})
+
+test('task action schemas require priority and expected completion time for create, subtask and update', () => {
+  const { getToolDefinition } = require('../src/mcp/catalog')
+  const cases = [
+    ['task_create', {
+      name: '任务', source_type: 1, project_id: 1, task_type: 2, owner_ids: [8],
+      idempotency_key: 'task-create-1',
+    }],
+    ['task_create_subtask', {
+      parent_id: 1, name: '子任务', task_type: 2, owner_ids: [8],
+      idempotency_key: 'task-subtask-1',
+    }],
+    ['task_update', {
+      id: 2, name: '任务', source_type: 1, project_id: 1, task_type: 2, owner_ids: [8],
+    }],
+  ]
+
+  for (const [name, args] of cases) {
+    const definition = getToolDefinition(name, 'action')
+    assert.throws(
+      () => validateToolArguments(definition, args),
+      /缺少参数：priority、expected_end_date/,
+      name
+    )
+    assert.doesNotThrow(() => validateToolArguments(definition, {
+      ...args,
+      priority: 1,
+      expected_end_date: '2026-08-31',
     }), name)
   }
 })
@@ -464,6 +496,8 @@ test('action argument validation rejects malformed types, nested values and exec
       project_id: 1,
       task_type: 2,
       owner_ids: [],
+      priority: 1,
+      expected_end_date: '2026-08-31',
       idempotency_key: 'task-1',
     }),
     /owner_ids参数数量不足/

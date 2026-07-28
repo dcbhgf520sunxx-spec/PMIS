@@ -1,6 +1,8 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
+const { spawnSync } = require('node:child_process')
 const fs = require('node:fs')
+const os = require('node:os')
 const path = require('node:path')
 
 const servicePath = path.join(__dirname, '../src/services/projectContractAttachmentService.js')
@@ -30,7 +32,6 @@ test('项目合同附件只接受白名单类型且单文件不超过20MB', () =
 })
 
 test('项目合同附件保存到私有目录并能安全清理', async (t) => {
-  const os = require('node:os')
   const fsp = require('node:fs/promises')
   const { saveAttachmentFile, removeAttachmentFile } = require(servicePath)
   assert.equal(typeof saveAttachmentFile, 'function')
@@ -45,4 +46,38 @@ test('项目合同附件保存到私有目录并能安全清理', async (t) => {
   await removeAttachmentFile(saved.storageName, rootDir)
   await assert.rejects(fsp.access(saved.filePath))
   await assert.rejects(removeAttachmentFile('../outside.pdf', rootDir), /文件路径不合法/)
+})
+
+test('生产环境合同附件和交付文件统一写入显式共享根目录', async (t) => {
+  const fsp = require('node:fs/promises')
+  const sharedRoot = await fsp.mkdtemp(path.join(os.tmpdir(), 'pmis-private-uploads-'))
+  t.after(() => fsp.rm(sharedRoot, { recursive: true, force: true }))
+  const script = `
+    const fs = require('node:fs/promises')
+    const service = require(${JSON.stringify(servicePath)})
+    const buffer = Buffer.from('%PDF-1.7 contract')
+    service.saveAttachmentFile({
+      originalname: '合同.pdf',
+      mimetype: 'application/pdf',
+      size: buffer.length,
+      buffer
+    }).then((saved) => {
+      process.stdout.write(JSON.stringify({
+        privateAttachmentDir: service.PRIVATE_ATTACHMENT_DIR,
+        projectPlanDeliveryDir: service.PROJECT_PLAN_DELIVERY_DIR,
+        savedFilePath: saved.filePath
+      }))
+    })
+  `
+  const result = spawnSync(process.execPath, ['-e', script], {
+    encoding: 'utf8',
+    env: { ...process.env, PMIS_PRIVATE_UPLOAD_ROOT: sharedRoot },
+  })
+
+  assert.equal(result.status, 0, result.stderr)
+  const output = JSON.parse(result.stdout)
+  assert.equal(output.privateAttachmentDir, path.join(sharedRoot, 'project-contracts'))
+  assert.equal(output.projectPlanDeliveryDir, path.join(sharedRoot, 'project-plan-deliveries'))
+  assert.equal(path.dirname(output.savedFilePath), path.join(sharedRoot, 'project-contracts'))
+  assert.deepEqual(await fsp.readFile(output.savedFilePath), Buffer.from('%PDF-1.7 contract'))
 })

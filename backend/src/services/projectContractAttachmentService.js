@@ -3,7 +3,9 @@ const fs = require('node:fs/promises')
 const path = require('node:path')
 
 const MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024
-const PRIVATE_ATTACHMENT_DIR = path.join(__dirname, '../../private-uploads/project-contracts')
+const PRIVATE_UPLOAD_ROOT = path.resolve(process.env.PMIS_PRIVATE_UPLOAD_ROOT || path.join(__dirname, '../../private-uploads'))
+const PRIVATE_ATTACHMENT_DIR = path.join(PRIVATE_UPLOAD_ROOT, 'project-contracts')
+const PROJECT_PLAN_DELIVERY_DIR = path.join(PRIVATE_UPLOAD_ROOT, 'project-plan-deliveries')
 
 const typeRules = new Map([
   ['.jpg', { mimes: ['image/jpeg'], signature: (buffer) => buffer.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff])) }],
@@ -78,6 +80,7 @@ async function removeAttachmentFile(storageName, rootDir = PRIVATE_ATTACHMENT_DI
 module.exports = {
   MAX_ATTACHMENT_SIZE,
   PRIVATE_ATTACHMENT_DIR,
+  PROJECT_PLAN_DELIVERY_DIR,
   normalizeOriginalName,
   removeAttachmentFile,
   resolveAttachmentPath,

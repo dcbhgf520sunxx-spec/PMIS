@@ -45,7 +45,7 @@ export type TaskFormValues = {
   taskType: string;
   priority: TaskPriority;
   startTime?: string;
-  expectedEndTime?: string;
+  expectedEndTime: string;
 };
 
 export type TaskStatusUpdateResult = {
