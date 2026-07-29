@@ -253,7 +253,11 @@ function decryptSignedEmployeeIdentity(encrypted, {
     if (!/^[A-Za-z0-9_.:-]{1,64}$/.test(String(payload.nonce || ''))) {
       throw new McpEmployeeIdentityError('员工身份凭证一次性编号无效')
     }
-    if (consumeNonce && consumeNonce(payload.nonce, payload.expiresAt) === false) {
+    if (consumeNonce && consumeNonce(payload.nonce, payload.expiresAt, {
+      employeeNo: payload.employeeNo,
+      clientId: payload.clientId,
+      endpointType: payload.endpointType,
+    }) === false) {
       throw new McpEmployeeIdentityError('员工身份凭证已经使用')
     }
     return payload.employeeNo

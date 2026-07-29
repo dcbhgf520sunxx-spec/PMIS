@@ -1,9 +1,11 @@
 const assert = require('node:assert/strict')
+const crypto = require('node:crypto')
 const test = require('node:test')
 
 const { createMcpAuth, parseBearerToken } = require('../src/middleware/mcpAuth')
 const { redactAuditInput } = require('../src/services/mcpAuditService')
 const {
+  createEmployeeIdentityAssertion,
   encryptEmployeeIdentity,
 } = require('../src/services/mcpEmployeeIdentityCrypto')
 const {
@@ -38,6 +40,78 @@ test('MCP identity accepts only a short-lived encrypted employee header', async 
   assert.equal(principal.user.employeeNo, 'JS001')
   assert.equal(principal.allowedMenuPaths.has('/projects'), true)
   assert.equal(parseBearerToken('Basic abc'), null)
+})
+
+test('MCP identity assertion supports one protocol flow but rejects an exact request replay', async (t) => {
+  const token = 'agent-token'
+  const signingSecret = 'identity-signing-secret-with-at-least-32-bytes'
+  const rsaKeys = crypto.generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+    privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+  })
+  const previousPrivateKey = process.env.MCP_EMPLOYEE_RSA_PRIVATE_KEY_BASE64
+  const previousSigningSecret = process.env.MCP_EMPLOYEE_ASSERTION_SECRET
+  process.env.MCP_EMPLOYEE_RSA_PRIVATE_KEY_BASE64 = Buffer.from(rsaKeys.privateKey).toString('base64')
+  process.env.MCP_EMPLOYEE_ASSERTION_SECRET = signingSecret
+  t.after(() => {
+    if (previousPrivateKey === undefined) delete process.env.MCP_EMPLOYEE_RSA_PRIVATE_KEY_BASE64
+    else process.env.MCP_EMPLOYEE_RSA_PRIVATE_KEY_BASE64 = previousPrivateKey
+    if (previousSigningSecret === undefined) delete process.env.MCP_EMPLOYEE_ASSERTION_SECRET
+    else process.env.MCP_EMPLOYEE_ASSERTION_SECRET = previousSigningSecret
+  })
+
+  const assertion = createEmployeeIdentityAssertion('JS001', {
+    clientId: 7,
+    endpointType: 'query',
+    nonce: `protocol-flow-${crypto.randomUUID()}`,
+    signingSecret,
+    rsaPublicKey: rsaKeys.publicKey,
+  })
+  const auth = createMcpAuth({
+    credentialService: { authenticateClient: async () => ({ id: 7, endpoint_type: 'query' }) },
+    db: {
+      prepare: () => ({
+        get: async () => ({ id: 8, employee_no: 'JS001', real_name: '张三', status: 1, is_deleted: 0 }),
+      }),
+    },
+    permissionService: { getAllowedMenuPaths: async () => new Set(['/projects']) },
+  })
+  const request = (body) => ({
+    headers: {
+      authorization: `Bearer ${token}`,
+      'x-pmis-employee-no': assertion,
+    },
+    body,
+    ip: '127.0.0.1',
+  })
+
+  await auth.resolvePrincipal(request({ jsonrpc: '2.0', id: 1, method: 'initialize' }), 'query')
+  await auth.resolvePrincipal(request({ jsonrpc: '2.0', id: 2, method: 'tools/list' }), 'query')
+  await assert.rejects(
+    auth.resolvePrincipal(request({ jsonrpc: '2.0', id: 2, method: 'tools/list' }), 'query'),
+    /员工身份凭证已经使用/,
+  )
+  await assert.rejects(
+    auth.resolvePrincipal(request({ jsonrpc: '2.0', id: 3, method: 'tools/list' }), 'query'),
+    /员工身份凭证已经使用/,
+  )
+  await assert.rejects(
+    auth.resolvePrincipal(request({ method: 'tools/list', id: 4, jsonrpc: '2.0' }), 'query'),
+    /员工身份凭证已经使用/,
+  )
+
+  await auth.resolvePrincipal(request([
+    { jsonrpc: '2.0', id: 5, method: 'resources/list', params: { cursor: 'next' } },
+    { jsonrpc: '2.0', method: 'notifications/initialized' },
+  ]), 'query')
+  await assert.rejects(
+    auth.resolvePrincipal(request([
+      { method: 'resources/list', params: { cursor: 'next' }, id: 6, jsonrpc: '2.0' },
+      { method: 'notifications/initialized', jsonrpc: '2.0' },
+    ]), 'query'),
+    /员工身份凭证已经使用/,
+  )
 })
 
 test('MCP identity rejects plaintext, tampered, expired or token-mismatched employee headers', async () => {
