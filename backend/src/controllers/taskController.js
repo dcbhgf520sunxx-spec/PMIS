@@ -74,7 +74,11 @@ exports.list = async (req, res) => {
     if (query.view === 'mine') query.owner_id = req.user.id
     const clause = where(query)
     const { sort, direction } = getTaskSortConfig(query.sort_field, query.sort_order)
-    const rows = await db.prepare(`WITH matched AS(SELECT t.id,COALESCE(t.parent_task_id,t.id)root_id,${sort} sort_value${taskJoins}${clause.sql}),task_groups AS(SELECT root_id,MIN(sort_value)group_sort FROM matched GROUP BY root_id),paged_groups AS(SELECT root_id,group_sort FROM task_groups ORDER BY group_sort ${direction} NULLS LAST,root_id ${direction} LIMIT ? OFFSET ?)SELECT(SELECT COUNT(*) FROM task_groups)::INTEGER total,${fields}${taskJoins} JOIN paged_groups pg ON pg.root_id=COALESCE(t.parent_task_id,t.id) WHERE t.is_deleted=0 AND(t.id IN (SELECT id FROM matched) OR t.id=pg.root_id) ORDER BY pg.group_sort ${direction} NULLS LAST,pg.root_id ${direction},CASE WHEN t.parent_task_id IS NULL THEN 0 ELSE 1 END,${sort} ${direction},t.id ${direction}`).all(...clause.params, pageSize, offset)
+    const rows = query.mcp_flat === '1'
+      ? await db.prepare(`SELECT COUNT(*) OVER()::INTEGER total,${fields}${taskJoins}${clause.sql}
+        ORDER BY ${sort} ${direction} NULLS LAST,t.id ${direction} LIMIT ? OFFSET ?`)
+        .all(...clause.params, pageSize, offset)
+      : await db.prepare(`WITH matched AS(SELECT t.id,COALESCE(t.parent_task_id,t.id)root_id,${sort} sort_value${taskJoins}${clause.sql}),task_groups AS(SELECT root_id,MIN(sort_value)group_sort FROM matched GROUP BY root_id),paged_groups AS(SELECT root_id,group_sort FROM task_groups ORDER BY group_sort ${direction} NULLS LAST,root_id ${direction} LIMIT ? OFFSET ?)SELECT(SELECT COUNT(*) FROM task_groups)::INTEGER total,${fields}${taskJoins} JOIN paged_groups pg ON pg.root_id=COALESCE(t.parent_task_id,t.id) WHERE t.is_deleted=0 AND(t.id IN (SELECT id FROM matched) OR t.id=pg.root_id) ORDER BY pg.group_sort ${direction} NULLS LAST,pg.root_id ${direction},CASE WHEN t.parent_task_id IS NULL THEN 0 ELSE 1 END,${sort} ${direction},t.id ${direction}`).all(...clause.params, pageSize, offset)
     const common = { ...req.query, view: undefined, owner_id: req.query.filter_owner_id }
     ok(res, { list: rows, total: Number(rows[0]?.total || 0), page, pageSize, viewCounts: { all: await count(common), mine: await count({ ...common, owner_id: req.user.id }) } })
   } catch (error) {

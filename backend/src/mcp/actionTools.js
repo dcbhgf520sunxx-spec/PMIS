@@ -15,6 +15,8 @@ const { allowedTaskStatuses, validateTaskStatusChange, canCompleteParent, canLea
 const { allowedBugStatuses, validateBugStatusChange } = require('../services/bugRules')
 const { allowedWorkOrderStatuses, resolveWorkOrderResultFields, validateWorkOrderResultFields } = require('../services/workOrderStatusRules')
 const { allowedPlanItemStatuses, validatePlanItemStatusChange } = require('../services/projectStagePlanRules')
+const { normalizePaymentMonth, validateContractStages, validatePaymentAmount } = require('../services/projectContractRules')
+const { validateAttachmentFile } = require('../services/projectContractAttachmentService')
 const { invokeController } = require('./controllerAdapter')
 const { unwrapEnvelope } = require('./queryTools')
 
@@ -66,6 +68,21 @@ const TARGET_LABELS = {
   contract_attachment: '合同附件',
   stage_delivery: '交付文件',
 }
+const STATUS_LABELS = {
+  product: { 0: '停用', 1: '启用' },
+  project: { 0: '未开始', 1: '进行中', 2: '已完成', 3: '已暂停' },
+  requirement: {
+    0: '上会评估', 1: '需求上会', 2: '上会通过', 3: '过会未通过',
+    10: '提报评估', 11: '需求审批', 12: '审批通过', 13: '审批未通过',
+    20: '需求验证', 21: '预研通过', 22: '预研不通过',
+    30: '需求整理', 31: '实施中', 32: '试运行', 33: '已完成',
+    34: '已完成未使用', 35: '暂停',
+  },
+  task: { 0: '待处理', 1: '处理中', 2: '已完成', 3: '已暂停' },
+  bug: { 0: '新建', 1: '已修复', 2: '已关闭', 3: '被激活' },
+  work_order: { 0: '待处理', 1: '处理中', 2: '已解决', 4: '已暂停', 5: '被激活' },
+  stage_item: { 0: '未开始', 1: '进行中', 2: '已完成', 3: '已暂停' },
+}
 
 function cleanBody(args) {
   const body = { ...args }
@@ -83,7 +100,7 @@ function buildPreviewChanges(args) {
 }
 
 function id(args, key = 'id') {
-  if (args[key] === undefined || args[key] === '') throw new Error(`缺少参数 ${key}`)
+  if (args[key] === undefined || args[key] === '') throw businessValidationError(key, `缺少参数：${key}`)
   return args[key]
 }
 
@@ -101,21 +118,24 @@ function businessValidationError(field, message) {
 function preserveOmittedFields(args, row, fields) {
   const merged = { ...args }
   for (const field of fields) {
-    if (merged[field] === undefined) merged[field] = row[field] ?? null
+    if (merged[field] === undefined && Object.prototype.hasOwnProperty.call(row, field)) {
+      merged[field] = row[field] ?? null
+    }
   }
   return merged
 }
 
 const UPDATE_SPECS = {
   product_update: {
-    sql: 'SELECT description FROM pms_product WHERE id = ? AND is_deleted = 0',
+    sql: 'SELECT name, description, owner_id FROM pms_product WHERE id = ? AND is_deleted = 0',
     params: (args) => [args.id],
-    fields: ['description'],
+    fields: ['name', 'description', 'owner_id'],
   },
   project_update: {
-    sql: 'SELECT description, start_date, progress_text, risk_text FROM pms_project WHERE id = ? AND is_deleted = 0',
+    sql: `SELECT name, description, product_id, owner_id, start_date, expected_end_date, progress_text, risk_text
+      FROM pms_project WHERE id = ? AND is_deleted = 0`,
     params: (args) => [args.id],
-    fields: ['description', 'start_date', 'progress_text', 'risk_text'],
+    fields: ['name', 'description', 'product_id', 'owner_id', 'start_date', 'expected_end_date', 'progress_text', 'risk_text'],
     relationship: {
       field: 'member_ids',
       sql: 'SELECT user_id id FROM pms_project_member WHERE project_id = ? ORDER BY user_id',
@@ -123,16 +143,18 @@ const UPDATE_SPECS = {
     },
   },
   requirement_update: {
-    sql: `SELECT description, project_id, priority, submitter_dept, start_date, expected_end_date
+    sql: `SELECT title, description, requirement_type, product_id, project_id, owner_id, priority,
+      submitter_name, submitter_dept, submit_date, start_date, expected_end_date
       FROM pms_requirement WHERE id = ? AND is_deleted = 0`,
     params: (args) => [args.id],
-    fields: ['description', 'project_id', 'priority', 'submitter_dept', 'start_date', 'expected_end_date'],
+    fields: ['title', 'description', 'requirement_type', 'product_id', 'project_id', 'owner_id', 'priority',
+      'submitter_name', 'submitter_dept', 'submit_date', 'start_date', 'expected_end_date'],
   },
   task_update: {
-    sql: `SELECT description, project_id, requirement_id, priority, start_date, expected_end_date
+    sql: `SELECT name, description, source_type, project_id, requirement_id, task_type, priority, start_date, expected_end_date
       FROM pms_task WHERE id = ? AND is_deleted = 0`,
     params: (args) => [args.id],
-    fields: ['description', 'project_id', 'requirement_id', 'priority', 'start_date', 'expected_end_date'],
+    fields: ['name', 'description', 'source_type', 'project_id', 'requirement_id', 'task_type', 'priority', 'start_date', 'expected_end_date'],
     relationship: {
       field: 'owner_ids',
       sql: 'SELECT user_id id FROM pms_task_owner WHERE task_id = ? ORDER BY sort_order, user_id',
@@ -140,22 +162,31 @@ const UPDATE_SPECS = {
     },
   },
   bug_update: {
-    sql: 'SELECT description, project_id, requirement_id FROM pms_bug WHERE id = ? AND is_deleted = 0',
+    sql: `SELECT title, description, source_type, project_id, requirement_id, bug_type_id, severity, assignee_id
+      FROM pms_bug WHERE id = ? AND is_deleted = 0`,
     params: (args) => [args.id],
-    fields: ['description', 'project_id', 'requirement_id'],
+    fields: ['title', 'description', 'source_type', 'project_id', 'requirement_id', 'bug_type_id', 'severity', 'assignee_id'],
+  },
+  work_order_update: {
+    sql: `SELECT product_id, problem_type, problem_desc, result_desc, follower_id, urgency,
+      expected_resolve_date, resolve_date, submitter_name, submitter_dept, submit_time
+      FROM pms_work_order WHERE id = ? AND is_deleted = 0`,
+    params: (args) => [args.id],
+    fields: ['product_id', 'problem_type', 'problem_desc', 'result_desc', 'follower_id', 'urgency',
+      'expected_resolve_date', 'resolve_date', 'submitter_name', 'submitter_dept', 'submit_time'],
   },
   stage_update: {
-    sql: `SELECT s.description FROM pms_project_plan_stage s
+    sql: `SELECT s.name, s.description FROM pms_project_plan_stage s
       WHERE s.id = ? AND s.project_id = ? AND s.is_deleted = 0`,
     params: (args) => [args.stage_id, args.project_id],
-    fields: ['description'],
+    fields: ['name', 'description'],
   },
   stage_item_update: {
-    sql: `SELECT i.requires_delivery_file, i.remark FROM pms_project_plan_item i
+    sql: `SELECT i.stage_id, i.name, i.owner_id, i.requires_delivery_file, i.remark FROM pms_project_plan_item i
       JOIN pms_project_plan_stage s ON s.id = i.stage_id AND s.is_deleted = 0
       WHERE i.id = ? AND s.project_id = ? AND i.is_deleted = 0`,
     params: (args) => [args.item_id, args.project_id],
-    fields: ['requires_delivery_file', 'remark'],
+    fields: ['stage_id', 'name', 'owner_id', 'requires_delivery_file', 'remark'],
     relationship: {
       field: 'collaborator_ids',
       sql: 'SELECT user_id id FROM pms_project_plan_item_collaborator WHERE plan_item_id = ? ORDER BY sort_order, user_id',
@@ -163,17 +194,30 @@ const UPDATE_SPECS = {
     },
   },
   contract_update: {
-    sql: 'SELECT remark FROM pms_project_contract WHERE project_id = ? AND is_deleted = 0',
+    sql: `SELECT id, contract_code, contract_name, supplier_id, signed_date, contract_amount, remark
+      FROM pms_project_contract WHERE project_id = ? AND is_deleted = 0`,
     params: (args) => [args.project_id],
-    fields: ['remark'],
+    fields: ['contract_code', 'contract_name', 'supplier_id', 'signed_date', 'contract_amount', 'remark'],
+    relationship: {
+      field: 'stages',
+      when: (_args, row) => row.id !== undefined && row.id !== null,
+      sql: `SELECT id, stage_name, planned_amount FROM pms_project_payment_stage
+        WHERE contract_id = ? AND is_deleted = 0 ORDER BY sort_order, id`,
+      params: (_args, row) => [row.id],
+      map: (item) => ({
+        id: Number(item.id),
+        stage_name: item.stage_name,
+        planned_amount: Number(item.planned_amount),
+      }),
+    },
   },
   payment_update: {
-    sql: `SELECT r.remark FROM pms_project_payment_record r
+    sql: `SELECT r.payment_amount, r.payment_month, r.handler_id, r.remark FROM pms_project_payment_record r
       JOIN pms_project_payment_stage s ON s.id = r.stage_id AND s.is_deleted = 0
       JOIN pms_project_contract c ON c.id = s.contract_id AND c.is_deleted = 0
       WHERE r.id = ? AND c.project_id = ? AND r.is_deleted = 0`,
     params: (args) => [args.payment_id, args.project_id],
-    fields: ['remark'],
+    fields: ['payment_amount', 'payment_month', 'handler_id', 'remark'],
   },
 }
 
@@ -183,9 +227,10 @@ async function mergeActionUpdateArguments(name, args, database = db) {
   const row = await database.prepare(spec.sql).get(...spec.params(args))
   if (!row) return { ...args }
   const merged = preserveOmittedFields(args, row, spec.fields)
-  if (spec.relationship && merged[spec.relationship.field] === undefined) {
-    const rows = await database.prepare(spec.relationship.sql).all(...spec.relationship.params(args))
-    merged[spec.relationship.field] = rows.map((item) => Number(item.id))
+  if (spec.relationship && merged[spec.relationship.field] === undefined
+    && (!spec.relationship.when || spec.relationship.when(args, row))) {
+    const rows = await database.prepare(spec.relationship.sql).all(...spec.relationship.params(args, row))
+    merged[spec.relationship.field] = rows.map(spec.relationship.map || ((item) => Number(item.id)))
   }
   return merged
 }
@@ -196,8 +241,13 @@ async function statusRow(database, sql, params, field, missingMessage) {
   return row
 }
 
-function rejectTransition(label) {
-  throw businessValidationError('status', `当前${label}状态不允许变更为目标状态`)
+function rejectTransition(domain, current, allowed) {
+  const mapping = STATUS_LABELS[domain]
+  const currentText = `${mapping[current] || '未知'}(${current})`
+  const allowedText = allowed.length
+    ? allowed.map((value) => `${mapping[value] || '未知'}(${value})`).join('、')
+    : '无'
+  throw businessValidationError('status', `当前状态：${currentText}；允许变更为：${allowedText}`)
 }
 
 async function validateStatusAction(name, args, database = db) {
@@ -212,7 +262,8 @@ async function validateStatusAction(name, args, database = db) {
 
   if (name === 'project_change_status') {
     const row = await statusRow(database, 'SELECT status FROM pms_project WHERE id = ? AND is_deleted = 0', [args.id], 'id', '项目不存在')
-    if (!allowedProjectStatuses(row.status).includes(target)) rejectTransition('项目')
+    const allowed = allowedProjectStatuses(row.status)
+    if (!allowed.includes(target)) rejectTransition('project', row.status, allowed)
     const message = validateProjectStatusChange(target, args)
     if (message) throw businessValidationError(target === 2 ? 'actual_end_date' : 'suspend_date', message)
     return
@@ -220,7 +271,8 @@ async function validateStatusAction(name, args, database = db) {
 
   if (name === 'requirement_change_status') {
     const row = await statusRow(database, 'SELECT status, requirement_type FROM pms_requirement WHERE id = ? AND is_deleted = 0', [args.id], 'id', '需求不存在')
-    if (!allowedRequirementStatuses(row.requirement_type, row.status).includes(target)) rejectTransition('需求')
+    const allowed = allowedRequirementStatuses(row.requirement_type, row.status)
+    if (!allowed.includes(target)) rejectTransition('requirement', row.status, allowed)
     const message = validateRequirementStatusChange(target, args)
     if (message) {
       const field = !args.actual_end_date && [33, 34].includes(target)
@@ -243,7 +295,8 @@ async function validateStatusAction(name, args, database = db) {
       ) END previous_status
       FROM pms_task t LEFT JOIN pms_task parent ON parent.id = t.parent_task_id
       WHERE t.id = ? AND t.is_deleted = 0`, [args.id], 'id', '任务不存在')
-    if (!allowedTaskStatuses(row.status, row.previous_status).includes(target)) rejectTransition('任务')
+    const allowed = allowedTaskStatuses(row.status, row.previous_status)
+    if (!allowed.includes(target)) rejectTransition('task', row.status, allowed)
     if (!row.parent_task_id && target === 2) {
       const children = await database.prepare(`SELECT COUNT(*)::INTEGER total,
         COUNT(*) FILTER (WHERE status = 2)::INTEGER completed
@@ -262,7 +315,8 @@ async function validateStatusAction(name, args, database = db) {
 
   if (name === 'bug_change_status') {
     const row = await statusRow(database, 'SELECT status FROM pms_bug WHERE id = ? AND is_deleted = 0', [args.id], 'id', 'BUG不存在')
-    if (!allowedBugStatuses(row.status).includes(target)) rejectTransition('BUG')
+    const allowed = allowedBugStatuses(row.status)
+    if (!allowed.includes(target)) rejectTransition('bug', row.status, allowed)
     const message = validateBugStatusChange(target, args)
     if (message) {
       const field = target === 1
@@ -283,7 +337,8 @@ async function validateStatusAction(name, args, database = db) {
   if (name === 'work_order_change_status') {
     const row = await statusRow(database, `SELECT status, resolve_date, close_date, result_desc, suspend_date, activation_reason
       FROM pms_work_order WHERE id = ? AND is_deleted = 0`, [args.id], 'id', '工单不存在')
-    if (!allowedWorkOrderStatuses(row.status).includes(target)) rejectTransition('工单')
+    const allowed = allowedWorkOrderStatuses(row.status)
+    if (!allowed.includes(target)) rejectTransition('work_order', row.status, allowed)
     const values = resolveWorkOrderResultFields(target, args, row)
     const message = validateWorkOrderResultFields(target, values)
     if (message) {
@@ -303,7 +358,8 @@ async function validateStatusAction(name, args, database = db) {
       JOIN pms_project_plan_stage s ON s.id = i.stage_id AND s.is_deleted = 0
       WHERE i.id = ? AND s.project_id = ? AND i.is_deleted = 0`,
     [args.item_id, args.project_id], 'item_id', '关键事项不存在')
-    if (!allowedPlanItemStatuses(row.status, row.previous_status).includes(target)) rejectTransition('关键事项')
+    const allowed = allowedPlanItemStatuses(row.status, row.previous_status)
+    if (!allowed.includes(target)) rejectTransition('stage_item', row.status, allowed)
     const message = validatePlanItemStatusChange(target, args, Number(row.requires_delivery_file) === 1, row.active_file_count)
     if (message) {
       const field = target === 2
@@ -322,7 +378,7 @@ async function loadOneTarget(database, {
   currentFields = [],
 }) {
   const row = await database.prepare(sql).get(...params)
-  if (!row) throw new Error(missingMessage)
+  if (!row) throw businessValidationError(type === 'stage_item' ? 'item_id' : 'id', missingMessage)
   return {
     type,
     id: row.id,
@@ -347,13 +403,13 @@ async function loadMainTargetSnapshot(name, args, database) {
   if (Array.isArray(targetIds)) {
     const ids = [...new Set(targetIds.map(Number))]
     if (ids.some((value) => !Number.isInteger(value) || value <= 0)) {
-      throw new Error(`${label}标识不合法`)
+      throw businessValidationError('ids', `${label}标识不合法：必须全部是正整数`)
     }
     const rows = ids.length
       ? await database.prepare(`SELECT id, ${spec.nameColumn} name, ${spec.currentFields.join(', ')}
         FROM ${spec.table} WHERE id IN (${ids.map(() => '?').join(',')}) AND is_deleted = 0`).all(...ids)
       : []
-    if (rows.length !== ids.length) throw new Error(`部分${label}不存在或已删除`)
+    if (rows.length !== ids.length) throw businessValidationError('ids', `部分${label}不存在或已删除`)
     return {
       type,
       ids,
@@ -376,11 +432,75 @@ async function loadMainTargetSnapshot(name, args, database) {
   })
 }
 
+function buildReorderTarget(type, parent, rows, args) {
+  const currentIds = rows.map((row) => Number(row.id))
+  const proposedIds = (args.ids || []).map(Number)
+  const uniqueIds = new Set(proposedIds)
+  const sameMembers = proposedIds.length === currentIds.length
+    && uniqueIds.size === proposedIds.length
+    && currentIds.every((value) => uniqueIds.has(value))
+  if (!sameMembers) {
+    throw businessValidationError('ids', '排序列表必须包含当前全部记录标识，且不能遗漏、重复或混入其他记录')
+  }
+  const movedId = Number(args.moved_id)
+  if (!uniqueIds.has(movedId)) {
+    throw businessValidationError('moved_id', '被移动记录必须包含在排序列表中')
+  }
+  const byId = new Map(rows.map((row) => [Number(row.id), {
+    id: Number(row.id),
+    name: row.name,
+    sortOrder: Number(row.sort_order),
+  }]))
+  return {
+    type,
+    id: parent.id,
+    name: parent.name,
+    current: { order: currentIds.map((value) => byId.get(value)) },
+    proposed: {
+      movedId,
+      order: proposedIds.map((value, index) => ({
+        ...byId.get(value),
+        sortOrder: index + 1,
+      })),
+    },
+  }
+}
+
+async function loadReorderTargetSnapshot(name, args, database) {
+  if (name === 'stage_reorder') {
+    const project = await database.prepare(
+      'SELECT id, name FROM pms_project WHERE id = ? AND is_deleted = 0'
+    ).get(args.project_id)
+    if (!project) throw businessValidationError('project_id', '项目不存在')
+    const rows = await database.prepare(`SELECT s.id, s.name, s.sort_order
+      FROM pms_project_plan_stage s
+      WHERE s.project_id = ? AND s.is_deleted = 0
+      ORDER BY s.sort_order ASC, s.id ASC`).all(args.project_id)
+    return buildReorderTarget('stage_order', project, rows, args)
+  }
+  if (name === 'stage_item_reorder') {
+    const stage = await database.prepare(`SELECT s.id, s.name
+      FROM pms_project_plan_stage s
+      JOIN pms_project p ON p.id = s.project_id AND p.is_deleted = 0
+      WHERE s.id = ? AND s.project_id = ? AND s.is_deleted = 0`)
+      .get(args.stage_id, args.project_id)
+    if (!stage) throw businessValidationError('stage_id', '阶段不存在')
+    const rows = await database.prepare(`SELECT i.id, i.name, i.sort_order
+      FROM pms_project_plan_item i
+      WHERE i.stage_id = ? AND i.is_deleted = 0
+      ORDER BY i.sort_order ASC, i.id ASC`).all(args.stage_id)
+    return buildReorderTarget('stage_item_order', stage, rows, args)
+  }
+  return null
+}
+
 async function loadActionTargetSnapshot(name, args, database = db) {
   const main = await loadMainTargetSnapshot(name, args, database)
   if (main) return main
+  const reorder = await loadReorderTargetSnapshot(name, args, database)
+  if (reorder) return reorder
 
-  if (name === 'stage_create' || name === 'stage_reorder') {
+  if (name === 'stage_create') {
     return loadOneTarget(database, {
       sql: 'SELECT id, name, status FROM pms_project WHERE id = ? AND is_deleted = 0',
       params: [args.project_id],
@@ -401,7 +521,7 @@ async function loadActionTargetSnapshot(name, args, database = db) {
       currentFields: ['project_id', 'sort_order'],
     })
   }
-  if (name === 'stage_item_create' || name === 'stage_item_batch_create' || name === 'stage_item_reorder') {
+  if (name === 'stage_item_create' || name === 'stage_item_batch_create') {
     return loadOneTarget(database, {
       sql: `SELECT s.id, s.name, s.sort_order, s.project_id
         FROM pms_project_plan_stage s
@@ -509,7 +629,9 @@ async function loadActionTargetSnapshot(name, args, database = db) {
       currentFields: ['project_id', 'item_id', 'size_bytes'],
     })
   }
-  throw new Error('操作目标类型不受支持')
+  const error = new Error('操作目标类型不受支持')
+  error.code = 'MCP_TOOL_NOT_SUPPORTED'
+  throw error
 }
 
 const actions = {
@@ -565,14 +687,260 @@ const actions = {
 }
 
 function buildFile(args) {
-  if (!args.file_name || !args.content_base64) throw new Error('缺少文件名或文件内容')
+  if (!args.file_name) throw businessValidationError('file_name', '缺少文件名')
+  if (!args.content_base64) throw businessValidationError('content_base64', '缺少文件内容')
   if (!/^[A-Za-z0-9+/]+={0,2}$/.test(args.content_base64) || args.content_base64.length % 4 !== 0) {
-    throw new Error('文件内容不是有效的Base64')
+    throw businessValidationError('content_base64', '文件内容不是有效的Base64')
   }
   const buffer = Buffer.from(args.content_base64, 'base64')
-  if (!buffer.length) throw new Error('文件内容为空')
-  if (buffer.length > FILE_LIMIT) throw new Error(`文件过大（上限${FILE_LIMIT}字节）`)
+  if (!buffer.length) throw businessValidationError('content_base64', '文件内容为空')
+  if (buffer.length > FILE_LIMIT) throw businessValidationError('content_base64', `文件过大（上限${FILE_LIMIT}字节）`)
   return { originalname: args.file_name, mimetype: args.mime_type || 'application/octet-stream', size: buffer.length, buffer }
+}
+
+async function validateRelatedUsers(args, database) {
+  const scalarFields = ['owner_id', 'assignee_id', 'follower_id', 'handler_id']
+  const arrayFields = ['owner_ids', 'member_ids', 'collaborator_ids']
+  for (const field of scalarFields) {
+    if (args[field] === undefined || args[field] === null || args[field] === '') continue
+    const row = await database.prepare(
+      'SELECT COUNT(*)::INTEGER count FROM pms_user WHERE id = ? AND status = 1 AND is_deleted = 0'
+    ).get(Number(args[field]))
+    if (Number(row?.count) !== 1) {
+      throw businessValidationError(field, `${FIELD_USER_LABELS[field]}不存在或已停用`)
+    }
+  }
+  for (const field of arrayFields) {
+    if (!Array.isArray(args[field])) continue
+    const ids = [...new Set(args[field].map(Number))]
+    if (!ids.length) continue
+    const row = await database.prepare(`SELECT COUNT(*)::INTEGER count FROM pms_user
+      WHERE id IN (${ids.map(() => '?').join(',')}) AND status = 1 AND is_deleted = 0`).get(...ids)
+    if (Number(row?.count) !== ids.length) {
+      throw businessValidationError(field, `${FIELD_USER_LABELS[field]}中存在无效或停用用户`)
+    }
+  }
+}
+
+const FIELD_USER_LABELS = {
+  owner_id: '负责人',
+  assignee_id: '处理人',
+  follower_id: '跟进人',
+  handler_id: '经办人',
+  owner_ids: '负责人',
+  member_ids: '项目成员',
+  collaborator_ids: '协作人',
+}
+
+const DUPLICATE_SPECS = {
+  product_create: ['pms_product', 'name', 'name', '产品名称已存在'],
+  product_update: ['pms_product', 'name', 'name', '产品名称已存在', 'id'],
+  project_create: ['pms_project', 'name', 'name', '项目名称已存在'],
+  project_update: ['pms_project', 'name', 'name', '项目名称已存在', 'id'],
+  requirement_create: ['pms_requirement', 'title', 'title', '需求标题已存在'],
+  requirement_update: ['pms_requirement', 'title', 'title', '需求标题已存在', 'id'],
+  task_create: ['pms_task', 'name', 'name', '任务名称已存在'],
+  task_create_subtask: ['pms_task', 'name', 'name', '任务名称已存在'],
+  task_update: ['pms_task', 'name', 'name', '任务名称已存在', 'id'],
+  bug_create: ['pms_bug', 'title', 'title', 'Bug标题已存在'],
+  bug_update: ['pms_bug', 'title', 'title', 'Bug标题已存在', 'id'],
+}
+
+async function validateDuplicate(name, args, database) {
+  const spec = DUPLICATE_SPECS[name]
+  if (!spec) return
+  const [table, column, field, message, excludeField] = spec
+  if (!String(args[field] || '').trim()) return
+  const params = [String(args[field]).trim()]
+  let sql = `SELECT id FROM ${table} WHERE ${column} = ? AND is_deleted = 0`
+  if (excludeField && args[excludeField]) {
+    sql += ' AND id <> ?'
+    params.push(Number(args[excludeField]))
+  }
+  if (await database.prepare(sql).get(...params)) throw businessValidationError(field, message)
+}
+
+async function validateDeleteBlockers(name, args, database) {
+  if (name === 'product_delete') {
+    const counts = await database.prepare(`SELECT
+      (SELECT COUNT(*) FROM pms_project WHERE product_id = ? AND is_deleted = 0)::INTEGER project_count,
+      (SELECT COUNT(*) FROM pms_work_order WHERE product_id = ? AND is_deleted = 0)::INTEGER work_order_count`)
+      .get(args.id, args.id)
+    if (Number(counts?.project_count) || Number(counts?.work_order_count)) {
+      throw businessValidationError('id', '该产品已被项目或运维工单引用，无法删除')
+    }
+  }
+  if (name === 'project_delete') {
+    const counts = await database.prepare(`SELECT
+      (SELECT COUNT(*) FROM pms_task WHERE project_id = ? AND is_deleted = 0)::INTEGER task_count,
+      (SELECT COUNT(*) FROM pms_bug WHERE project_id = ? AND is_deleted = 0)::INTEGER bug_count,
+      (SELECT COUNT(*) FROM pms_project_contract WHERE project_id = ? AND is_deleted = 0)::INTEGER contract_count`)
+      .get(args.id, args.id, args.id)
+    if (Number(counts?.task_count) || Number(counts?.bug_count) || Number(counts?.contract_count)) {
+      throw businessValidationError('id', '该项目仍有关联任务、BUG或合同，无法删除')
+    }
+  }
+  if (name === 'requirement_delete') {
+    const counts = await database.prepare(`SELECT
+      (SELECT COUNT(*) FROM pms_task WHERE requirement_id = ? AND is_deleted = 0)::INTEGER task_count,
+      (SELECT COUNT(*) FROM pms_bug WHERE requirement_id = ? AND is_deleted = 0)::INTEGER bug_count`)
+      .get(args.id, args.id)
+    if (Number(counts?.task_count) || Number(counts?.bug_count)) {
+      throw businessValidationError('id', '该需求仍有关联任务或BUG，无法删除')
+    }
+  }
+  if (name === 'task_delete') {
+    const row = await database.prepare(
+      'SELECT COUNT(*)::INTEGER count FROM pms_task WHERE parent_task_id = ? AND is_deleted = 0'
+    ).get(args.id)
+    if (Number(row?.count)) throw businessValidationError('id', `该主任务下还有 ${row.count} 个子任务，不能删除`)
+  }
+  if (name === 'stage_delete') {
+    const row = await database.prepare(
+      'SELECT COUNT(*)::INTEGER count FROM pms_project_plan_item WHERE stage_id = ? AND is_deleted = 0'
+    ).get(args.stage_id)
+    if (Number(row?.count)) throw businessValidationError('stage_id', '阶段下存在关键事项，不能删除')
+  }
+}
+
+async function validateContractUpdatePayments(args, database) {
+  const rows = await database.prepare(`SELECT c.id contract_id, s.id, s.stage_name,
+    COALESCE(SUM(r.payment_amount) FILTER (WHERE r.is_deleted = 0), 0) paid_amount
+    FROM pms_project_contract c
+    LEFT JOIN pms_project_payment_stage s ON s.contract_id = c.id AND s.is_deleted = 0
+    LEFT JOIN pms_project_payment_record r ON r.stage_id = s.id
+    WHERE c.project_id = ? AND c.is_deleted = 0
+    GROUP BY c.id, s.id, s.stage_name`).all(args.project_id)
+  if (!rows.length) throw businessValidationError('project_id', '项目合同不存在')
+  const existing = new Map(rows.filter((row) => row.id !== null).map((row) => [String(row.id), row]))
+  const requestedIds = new Set()
+  for (const item of args.stages || []) {
+    if (item.id === undefined || item.id === null) continue
+    const current = existing.get(String(item.id))
+    if (!current) throw businessValidationError('stages', '付款阶段不属于当前合同')
+    requestedIds.add(String(item.id))
+    if (Number(item.planned_amount) < Number(current.paid_amount)) {
+      throw businessValidationError('stages', `付款阶段“${current.stage_name}”的计划金额不能小于已付金额`)
+    }
+  }
+  for (const current of existing.values()) {
+    if (!requestedIds.has(String(current.id)) && Number(current.paid_amount) > 0) {
+      throw businessValidationError('stages', `已有付款记录的阶段“${current.stage_name}”不能删除`)
+    }
+  }
+}
+
+async function validateFileActionLimits(name, args, database) {
+  if (name === 'contract_attachment_upload') {
+    const row = await database.prepare(`SELECT COUNT(a.id)::INTEGER count
+      FROM pms_project_contract c
+      LEFT JOIN pms_project_contract_attachment a
+        ON a.contract_id = c.id AND a.is_deleted = 0
+      WHERE c.project_id = ? AND c.is_deleted = 0`).get(args.project_id)
+    if (Number(row?.count) >= 10) {
+      throw businessValidationError('file_name', '一份合同最多上传10个附件')
+    }
+  }
+  if (name === 'stage_delivery_delete') {
+    const row = await database.prepare(`SELECT i.status, i.requires_delivery_file,
+      (SELECT COUNT(*) FROM pms_project_plan_delivery_file f
+        WHERE f.plan_item_id = i.id AND f.is_current = 1 AND f.is_void = 0)::INTEGER active_file_count
+      FROM pms_project_plan_item i
+      JOIN pms_project_plan_stage s ON s.id = i.stage_id AND s.is_deleted = 0
+      WHERE i.id = ? AND s.project_id = ? AND i.is_deleted = 0`).get(args.item_id, args.project_id)
+    if (Number(row?.status) === 2 && Number(row?.requires_delivery_file) === 1
+      && Number(row?.active_file_count) <= 1) {
+      throw businessValidationError('file_id', '已完成且要求交付文件的事项必须至少保留一个有效文件')
+    }
+  }
+}
+
+async function validateActionBusinessRules(name, args, database = db) {
+  if (name.endsWith('_upload')) {
+    try {
+      validateAttachmentFile(buildFile(args))
+    } catch (error) {
+      if (error.code === 'MCP_BUSINESS_VALIDATION') throw error
+      throw businessValidationError(
+        /文件名/.test(error.message) ? 'file_name' : 'content_base64',
+        error.message
+      )
+    }
+  }
+  if (name === 'contract_create' || name === 'contract_update') {
+    const stageError = validateContractStages(args.contract_amount, args.stages)
+    if (stageError) {
+      throw businessValidationError(
+        stageError.startsWith('合同金额') ? 'contract_amount' : 'stages',
+        stageError
+      )
+    }
+    if (name === 'contract_update') await validateContractUpdatePayments(args, database)
+  }
+  await validateRelatedUsers(args, database)
+  if (args.product_id !== undefined && ['project_create', 'project_update', 'requirement_create', 'requirement_update', 'work_order_create', 'work_order_update'].includes(name)) {
+    const product = await database.prepare(
+      'SELECT id FROM pms_product WHERE id = ? AND status = 1 AND is_deleted = 0'
+    ).get(Number(args.product_id))
+    if (!product) throw businessValidationError('product_id', '所属产品不存在或已停用')
+  }
+  if (['task_create', 'task_update', 'bug_create', 'bug_update'].includes(name)) {
+    if (Number(args.source_type) === 1) {
+      const project = await database.prepare(
+        'SELECT id FROM pms_project WHERE id = ? AND is_deleted = 0'
+      ).get(Number(args.project_id))
+      if (!project) throw businessValidationError('project_id', '关联项目不存在或已删除')
+    }
+    if (Number(args.source_type) === 2) {
+      const requirement = await database.prepare(
+        'SELECT id FROM pms_requirement WHERE id = ? AND is_deleted = 0'
+      ).get(Number(args.requirement_id))
+      if (!requirement) throw businessValidationError('requirement_id', '关联需求不存在或已删除')
+    }
+  }
+  const archiveReferences = [
+    ['task_type', '任务类型'],
+    ['bug_type_id', 'Bug类型'],
+    ['problem_type', '问题类型'],
+    ['supplier_id', '供应商'],
+  ]
+  for (const [field, typeName] of archiveReferences) {
+    if (args[field] === undefined) continue
+    const archive = await database.prepare(`SELECT a.id FROM pms_archive a
+      JOIN pms_archive_type t ON t.id = a.archive_type_id
+      WHERE a.id = ? AND a.status = 1 AND a.is_deleted = 0
+        AND t.name = ? AND t.status = 1 AND t.is_deleted = 0`).get(Number(args[field]), typeName)
+    if (!archive) throw businessValidationError(field, `${typeName}不存在或已停用`)
+  }
+  if (name.startsWith('payment_') && args.payment_month !== undefined
+    && !normalizePaymentMonth(args.payment_month)) {
+    throw businessValidationError('payment_month', '付款月份无效，必须使用YYYY-MM且不能晚于当前月份')
+  }
+  if (['payment_create', 'payment_update'].includes(name) && args.payment_amount !== undefined) {
+    const payment = await database.prepare(`SELECT s.planned_amount,
+      COALESCE(SUM(r.payment_amount) FILTER (WHERE r.is_deleted = 0 AND (?::BIGINT IS NULL OR r.id <> ?)), 0) paid_amount
+      FROM pms_project_payment_stage s
+      LEFT JOIN pms_project_payment_record r ON r.stage_id = s.id
+      WHERE s.id = COALESCE(
+        ?::BIGINT,
+        (SELECT stage_id FROM pms_project_payment_record
+          WHERE id = ? AND is_deleted = 0)
+      ) AND s.is_deleted = 0
+      GROUP BY s.id`).get(
+      args.payment_id || null,
+      args.payment_id || null,
+      args.stage_id || null,
+      args.payment_id || null
+    )
+    if (payment) {
+      const unpaid = Number(payment.planned_amount) - Number(payment.paid_amount)
+      const amountError = validatePaymentAmount(args.payment_amount, unpaid)
+      if (amountError) throw businessValidationError('payment_amount', amountError)
+    }
+  }
+  await validateDuplicate(name, args, database)
+  await validateDeleteBlockers(name, args, database)
+  await validateFileActionLimits(name, args, database)
 }
 
 async function dispatchActionTool(name, args, context, dependencies = {}) {
@@ -581,15 +949,25 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
   const loadTarget = dependencies.loadTarget || loadActionTargetSnapshot
   const database = dependencies.database || db
   const mergeArguments = dependencies.mergeArguments || mergeActionUpdateArguments
+  const validateBusinessRules = dependencies.validateBusinessRules || validateActionBusinessRules
   const definition = actionDefinitions[name]
-  if (!definition) throw new Error('操作工具不存在或无权限')
+  if (!definition) {
+    const error = new Error('操作工具不存在或当前账号无权限')
+    error.code = 'MCP_TOOL_NOT_FOUND'
+    throw error
+  }
   const mode = args.mode || 'preview'
-  if (!['preview', 'execute'].includes(mode)) throw new Error('mode必须是preview或execute')
+  if (!['preview', 'execute'].includes(mode)) throw businessValidationError('mode', 'mode必须是preview或execute')
   const preparedArgs = await mergeArguments(name, args, database)
   await validateStatusAction(name, preparedArgs, database)
+  await validateBusinessRules(name, preparedArgs, database)
   const riskLevel = highRiskPattern.test(name) ? 'high' : 'medium'
+  const riskReason = riskLevel === 'high'
+    ? '该操作会删除、变更状态、调整顺序、处理金额、批量处理或变更文件'
+    : '该操作会新增或修改PMIS业务数据'
+  const target = await loadTarget(name, preparedArgs, database)
+  const affectedTargets = [target]
   if (mode === 'preview') {
-    const target = await loadTarget(name, preparedArgs, database)
     const preview = {
       tool: name,
       riskLevel,
@@ -597,12 +975,30 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
       target,
       changes: buildPreviewChanges(args),
     }
-    return actionTicketService.createTicket(context, name, preparedArgs, preview, riskLevel)
+    const ticket = await actionTicketService.createTicket(context, name, preparedArgs, preview, riskLevel)
+    return {
+      ...ticket,
+      riskLevel,
+      riskReason,
+      requiresConfirmation: true,
+      executed: false,
+      affectedTargets,
+      resultStatus: 'preview',
+    }
   }
   await actionTicketService.consumeTicket(context, name, preparedArgs, args.confirmation_id)
   try {
     const [handler, buildInput] = definition
-    return unwrapEnvelope(await invokeController(handler, context, buildInput(preparedArgs)))
+    const data = unwrapEnvelope(await invokeController(handler, context, buildInput(preparedArgs)))
+    return {
+      riskLevel,
+      riskReason,
+      requiresConfirmation: false,
+      executed: true,
+      affectedTargets,
+      resultStatus: 'success',
+      data,
+    }
   } catch (error) {
     await actionTicketService.markTicketFailed(args.confirmation_id).catch(() => {})
     throw error
@@ -614,5 +1010,6 @@ module.exports = {
   dispatchActionTool,
   loadActionTargetSnapshot,
   mergeActionUpdateArguments,
+  validateActionBusinessRules,
   validateStatusAction,
 }

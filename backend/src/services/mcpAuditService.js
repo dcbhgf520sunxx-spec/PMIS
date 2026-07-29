@@ -1,6 +1,6 @@
 const db = require('../db')
 
-const SECRET_KEYS = /(^|_)(authorization|token|secret|password|credential|cookie)($|_)/i
+const SECRET_KEYS = /(^|_)(authorization|token|secret|password|credential|cookie|confirmation|idempotency)($|_)/i
 const FILE_KEYS = /(content_base64|file_buffer|file_content)/i
 
 function redactAuditInput(value, key = '') {
