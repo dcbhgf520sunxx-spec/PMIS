@@ -21,8 +21,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { heartbeatAccessSession, logoutAccessSession } from '../../api/accessLogApi';
 import { getMessages, markAllMessagesRead, markMessageRead, type MessageRecord } from '../../api/messageApi';
-import { AdminFloatingAssistant, AdminMessageCenter } from '../../components/admin';
+import { AdminMessageCenter } from '../../components/admin';
 import { AccountDrawers } from '../../modules/account/components/AccountDrawers';
+import { NexusAgentAssistant } from '../../modules/assistant/components/NexusAgentAssistant';
 import { designCategoryNavItems, isDesignCategory } from '../../modules/design-system/categories';
 import { useAuthStore } from '../../stores/authStore';
 import type { MenuItem as UserMenuItem } from '../../types/menu';
@@ -288,7 +289,6 @@ export function AdminLayout() {
   const assistantStorageKey = user
     ? `admin_floating_assistant_position_${user.id || user.employee_no}`
     : 'admin_floating_assistant_position_guest';
-
   const selectedKey = location.pathname.startsWith('/system/design-system')
     ? `/system/design-system?category=${selectedDesignCategory}`
     : findSelectedMenuKey(visibleMenuItems, location.pathname) || '/home';
@@ -511,7 +511,7 @@ export function AdminLayout() {
           <Outlet />
         </Content>
       </Layout>
-      <AdminFloatingAssistant storageKey={assistantStorageKey} />
+      <NexusAgentAssistant storageKey={assistantStorageKey} />
       <AccountDrawers active={accountDrawer} onClose={() => setAccountDrawer(null)} />
     </Layout>
   );

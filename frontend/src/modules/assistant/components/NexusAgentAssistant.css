@@ -1,0 +1,159 @@
+.nexus-agent-assistant-panel {
+  --nexus-agent-assistant-width: 560px;
+  position: fixed;
+  z-index: 1000;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  width: var(--nexus-agent-assistant-width);
+  min-width: 0;
+  flex-direction: column;
+  visibility: hidden;
+  border-left: 1px solid var(--app-border);
+  background: var(--app-surface);
+  box-shadow: -12px 0 32px rgba(30, 82, 142, 0.16);
+  pointer-events: none;
+  transform: translateX(100%);
+  transition: transform 0.2s ease, visibility 0s linear 0.2s, width 0.2s ease;
+}
+
+.nexus-agent-assistant-panel.is-open {
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(0);
+  transition: transform 0.2s ease, width 0.2s ease;
+}
+
+.nexus-agent-assistant-panel.is-resizing,
+.nexus-agent-assistant-panel.is-resizing * {
+  cursor: col-resize !important;
+  user-select: none;
+}
+
+.nexus-agent-assistant-panel.is-resizing {
+  transition: none;
+}
+
+.nexus-agent-assistant-panel.is-fullscreen {
+  width: 100vw;
+  border-left: 0;
+}
+
+.nexus-agent-assistant-panel__resize {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  left: -6px;
+  width: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.nexus-agent-assistant-panel__resize::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: var(--app-border);
+  content: '';
+  transform: translateX(-50%);
+}
+
+.nexus-agent-assistant-panel__resize span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 48px;
+  border-radius: 999px;
+  background: rgba(124, 164, 222, 0.76);
+  transform: translate(-50%, -50%);
+  transition: background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.nexus-agent-assistant-panel__resize:hover span,
+.nexus-agent-assistant-panel__resize:focus-visible span,
+.nexus-agent-assistant-panel.is-resizing .nexus-agent-assistant-panel__resize span {
+  background: var(--app-primary);
+  box-shadow: 0 0 0 3px rgba(31, 111, 255, 0.12);
+}
+
+.nexus-agent-assistant-panel__resize:focus-visible {
+  outline: 0;
+}
+
+.nexus-agent-assistant-panel.is-fullscreen .nexus-agent-assistant-panel__resize {
+  display: none;
+}
+
+.nexus-agent-assistant-panel__header {
+  display: flex;
+  height: 56px;
+  min-height: 56px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface);
+}
+
+.nexus-agent-assistant-panel__header strong {
+  color: var(--app-text);
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.nexus-agent-assistant-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nexus-agent-assistant-panel__body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  background: #fff;
+}
+
+.nexus-agent-assistant-panel__frame {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  background: #fff;
+}
+
+.nexus-agent-assistant-panel__state {
+  display: flex;
+  width: 100%;
+  min-height: 360px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+}
+
+.nexus-agent-assistant-panel__loading-content {
+  display: block;
+  width: 120px;
+  height: 48px;
+}
+
+@media (max-width: 760px) {
+  .nexus-agent-assistant-panel {
+    width: 100vw;
+    border-left: 0;
+  }
+
+  .nexus-agent-assistant-panel__resize {
+    display: none;
+  }
+}
