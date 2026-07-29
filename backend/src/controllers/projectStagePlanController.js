@@ -17,6 +17,7 @@ const {
 } = require('../services/projectContractAttachmentService')
 const {
   appendLegacyAdjustmentReasons,
+  buildPlanItemStatusHistoryChanges,
   buildProjectStagePlanHistory,
   resolveMovedPlanRow,
 } = require('../services/projectStagePlanHistory')
@@ -384,26 +385,72 @@ exports.reorderItems = async (req, res) => {
 }
 
 exports.changeStatus = async (req, res) => {
+  const savedFiles = []
   try {
     const item = await findItem(req.params.projectId, req.params.itemId)
     if (!item) return fail(res, 404, 404, '关键事项不存在')
     const target = Number(req.body.status)
     if (!allowedPlanItemStatuses(item.status, item.previous_status).includes(target)) return fail(res, 400, 400, '不允许执行该状态流转')
+    const uploadedFiles = Array.isArray(req.files) ? req.files : []
+    if (uploadedFiles.length && target !== PLAN_ITEM_STATUS.COMPLETED) {
+      return fail(res, 400, 400, '交付文件只能随“完成”状态一起提交')
+    }
     const count = await db.prepare('SELECT COUNT(*) count FROM pms_project_plan_delivery_file WHERE plan_item_id=? AND is_current=1 AND is_void=0').get(item.id)
-    const error = validatePlanItemStatusChange(target, req.body, Number(item.requires_delivery_file) === 1, count.count)
+    const error = validatePlanItemStatusChange(
+      target,
+      req.body,
+      Number(item.requires_delivery_file) === 1,
+      Number(count.count) + uploadedFiles.length
+    )
     if (error) return fail(res, 400, 400, error)
     const previousStatus = target === PLAN_ITEM_STATUS.PAUSED ? item.status : null
     const pauseReason = target === PLAN_ITEM_STATUS.PAUSED ? String(req.body.pause_reason || '').trim() : null
     const actualEndDate = target === PLAN_ITEM_STATUS.COMPLETED ? req.body.actual_end_date : null
-    await db.prepare('UPDATE pms_project_plan_item SET status=?,previous_status=?,actual_end_date=?,pause_reason=?,updater_id=?,updated_at=NOW()WHERE id=?')
-      .run(target, previousStatus, actualEndDate, pauseReason, req.user.id, item.id)
-    await db.writeLogs(req.user.id, '状态变更', '项目阶段主计划', item.id, [
-      { field: 'status', oldVal: item.status, newVal: target },
-      { field: 'actual_end_date', oldVal: item.actual_end_date, newVal: actualEndDate },
-      { field: 'pause_reason', oldVal: item.pause_reason, newVal: pauseReason },
-    ], req.ip, item.name)
+    for (const file of uploadedFiles) {
+      file.originalname = normalizeOriginalName(file.originalname)
+      const saved = await saveAttachmentFile(file, DELIVERY_ROOT)
+      savedFiles.push({ file, saved })
+    }
+    await db.transaction(async (tx) => {
+      await tx.prepare('UPDATE pms_project_plan_item SET status=?,previous_status=?,actual_end_date=?,pause_reason=?,updater_id=?,updated_at=NOW()WHERE id=?')
+        .run(target, previousStatus, actualEndDate, pauseReason, req.user.id, item.id)
+      for (const entry of savedFiles) {
+        await tx.prepare(`INSERT INTO pms_project_plan_delivery_file
+          (plan_item_id,original_name,storage_key,mime_type,size_bytes,uploader_id)
+          VALUES(?,?,?,?,?,?)`).run(
+          item.id,
+          entry.file.originalname,
+          entry.saved.storageName,
+          entry.file.mimetype,
+          entry.file.buffer.length,
+          req.user.id
+        )
+      }
+      await tx.writeLogs(
+        req.user.id,
+        '状态变更',
+        '项目阶段主计划',
+        item.id,
+        buildPlanItemStatusHistoryChanges(
+          item,
+          target,
+          actualEndDate,
+          pauseReason,
+          savedFiles.map((entry) => entry.file.originalname)
+        ),
+        req.ip,
+        item.name
+      )
+    })
+    savedFiles.length = 0
     ok(res, null)
   } catch (error) {
+    await Promise.all(savedFiles.map(({ saved }) => (
+      removeAttachmentFile(saved.storageName, DELIVERY_ROOT).catch((cleanupError) => {
+        if (cleanupError.code !== 'ENOENT') console.error(cleanupError)
+      })
+    )))
+    if (error.statusCode === 400) return fail(res, 400, 400, error.message)
     console.error(error)
     fail(res, 500, 500, '状态变更失败')
   }
@@ -488,7 +535,7 @@ exports.uploadFile = async (req, res) => {
     const result = await db.prepare(`INSERT INTO pms_project_plan_delivery_file
       (plan_item_id,original_name,storage_key,mime_type,size_bytes,uploader_id)
       VALUES(?,?,?,?,?,?)`).run(item.id, req.file.originalname, saved.storageName, req.file.mimetype, req.file.buffer.length, req.user.id)
-    await db.writeLog(req.user.id, '上传交付文件', '项目阶段主计划', item.id, null, null, req.file.originalname, req.ip, item.name)
+    await db.writeLog(req.user.id, '上传交付文件', '项目阶段主计划', item.id, 'delivery_files', null, req.file.originalname, req.ip, item.name)
     ok(res, (await listFiles(item.id)).find((file) => Number(file.id) === Number(result.lastInsertRowid)))
   } catch (error) {
     if (saved) await removeAttachmentFile(saved.storageName, DELIVERY_ROOT).catch(console.error)
@@ -512,7 +559,7 @@ exports.deleteFile = async (req, res) => {
     await removeAttachmentFile(file.storage_key, DELIVERY_ROOT).catch((error) => {
       if (error.code !== 'ENOENT') console.error(error)
     })
-    await db.writeLog(req.user.id, '删除交付文件', '项目阶段主计划', item.id, null, file.original_name, null, req.ip, item.name)
+    await db.writeLog(req.user.id, '删除交付文件', '项目阶段主计划', item.id, 'delivery_files', file.original_name, null, req.ip, item.name)
     ok(res, null)
   } catch (error) {
     console.error(error)

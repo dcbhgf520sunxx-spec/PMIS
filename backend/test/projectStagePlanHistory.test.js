@@ -3,6 +3,7 @@ const test = require('node:test')
 
 const {
   appendLegacyAdjustmentReasons,
+  buildPlanItemStatusHistoryChanges,
   buildProjectStagePlanHistory,
   resolveMovedPlanRow,
 } = require('../src/services/projectStagePlanHistory')
@@ -50,6 +51,46 @@ test('调整计划展示完成时间和调整原因，状态变更展示中文�
   assert.deepEqual(rows[1].changes, [
     { field_name: '状态', old_value: '进行中', new_value: '已暂停' },
     { field_name: '暂停原因', old_value: '', new_value: '等待客户确认' },
+  ])
+})
+
+test('完成状态随附交付文件时归入同一条状态变更明细', () => {
+  const rows = buildProjectStagePlanHistory([
+    { id: 3, operation_id: 'status-with-files', action: '状态变更', target_name: '试运行报告', field_name: 'status', old_value: '1', new_value: '2', created_at: '2026-07-29 16:45:12', operator: '孙鑫鑫' },
+    { id: 2, operation_id: 'status-with-files', action: '状态变更', target_name: '试运行报告', field_name: 'actual_end_date', old_value: null, new_value: '2026-07-29', created_at: '2026-07-29 16:45:12', operator: '孙鑫鑫' },
+    { id: 1, operation_id: 'status-with-files', action: '状态变更', target_name: '试运行报告', field_name: 'delivery_files', old_value: null, new_value: '试运行报告.pdf、验收清单.xlsx', created_at: '2026-07-29 16:45:12', operator: '孙鑫鑫' },
+  ])
+
+  assert.equal(rows.length, 1)
+  assert.equal(rows[0].action, '状态变更 · 试运行报告')
+  assert.deepEqual(rows[0].changes, [
+    { field_name: '状态', old_value: '进行中', new_value: '已完成' },
+    { field_name: '实际完成时间', old_value: '', new_value: '2026-07-29' },
+    { field_name: '交付文件', old_value: '', new_value: '试运行报告.pdf、验收清单.xlsx' },
+  ])
+})
+
+test('完成后单独补传交付文件保留独立记录且文件名位于明细', () => {
+  const rows = buildProjectStagePlanHistory([
+    { id: 1, action: '上传交付文件', target_name: '试运行报告', field_name: 'delivery_files', old_value: null, new_value: '补充说明.pdf', created_at: '2026-07-29 17:00:00', operator: '孙鑫鑫' },
+  ])
+
+  assert.equal(rows[0].action, '上传交付文件 · 试运行报告')
+  assert.deepEqual(rows[0].changes, [
+    { field_name: '交付文件', old_value: '', new_value: '补充说明.pdf' },
+  ])
+})
+
+test('状态变更日志包含随状态提交的交付文件名', () => {
+  assert.deepEqual(buildPlanItemStatusHistoryChanges({
+    status: 1,
+    actual_end_date: null,
+    pause_reason: null,
+  }, 2, '2026-07-29', null, ['试运行报告.pdf', '验收清单.xlsx']), [
+    { field: 'status', oldVal: 1, newVal: 2 },
+    { field: 'actual_end_date', oldVal: null, newVal: '2026-07-29' },
+    { field: 'pause_reason', oldVal: null, newVal: null },
+    { field: 'delivery_files', oldVal: null, newVal: '试运行报告.pdf、验收清单.xlsx' },
   ])
 })
 

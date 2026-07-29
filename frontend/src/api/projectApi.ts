@@ -168,7 +168,21 @@ export const createProjectPlanItem=(projectId:string,values:ProjectPlanItemForm)
 export const createProjectPlanItems=(projectId:string,stageId:string,values:ProjectPlanItemForm[])=>unwrap<{ids:number[]}>(request.post(`/projects/${projectId}/stage-plan/items/batch`,{stage_id:Number(stageId),items:values.map(itemPayload)}),objectContract(['ids'],{ids:arrayContract((value):value is number=>Number.isSafeInteger(value))}));
 export const updateProjectPlanItem=(projectId:string,itemId:string,values:ProjectPlanItemForm)=>unwrap<null>(request.put(`/projects/${projectId}/stage-plan/items/${itemId}`,itemPayload(values)));
 export const reorderProjectPlanItems=(projectId:string,stageId:string,ids:string[],movedId:string)=>unwrap<null>(request.put(`/projects/${projectId}/stage-plan/stages/${stageId}/items/reorder`,{ids:ids.map(Number),moved_id:Number(movedId)}));
-export const changeProjectPlanItemStatus=(projectId:string,itemId:string,status:ProjectPlanItemStatus,extra:Record<string,unknown>={})=>unwrap<null>(request.put(`/projects/${projectId}/stage-plan/items/${itemId}/status`,{status,...extra}));
+export function changeProjectPlanItemStatus(
+  projectId:string,
+  itemId:string,
+  status:ProjectPlanItemStatus,
+  extra:Record<string,unknown>&{completionFiles?:File[]}={}
+){
+  const files=extra.completionFiles||[];
+  if(!files.length)return unwrap<null>(request.put(`/projects/${projectId}/stage-plan/items/${itemId}/status`,{status,...extra}));
+  const data=new FormData();
+  data.append('status',String(status));
+  if(extra.actual_end_date)data.append('actual_end_date',String(extra.actual_end_date));
+  if(extra.pause_reason)data.append('pause_reason',String(extra.pause_reason));
+  files.forEach((file)=>data.append('files',file));
+  return unwrap<null>(request.put(`/projects/${projectId}/stage-plan/items/${itemId}/status`,data));
+}
 export const adjustProjectPlanItem=(projectId:string,itemId:string,newDueDate:string,reason:string)=>unwrap<null>(request.post(`/projects/${projectId}/stage-plan/items/${itemId}/adjustments`,{new_due_date:dayjs(newDueDate).format('YYYY-MM-DD'),reason}));
 export async function getProjectPlanAdjustments(projectId:string,itemId:string):Promise<ProjectPlanAdjustment[]>{
   const rows=await unwrap<any[]>(request.get(`/projects/${projectId}/stage-plan/items/${itemId}/adjustments`),arrayContract(objectContract(['id','old_due_date','new_due_date','reason','created_at'])));

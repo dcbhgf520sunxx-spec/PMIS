@@ -10,6 +10,7 @@ const FIELD_ORDER = [
   'status',
   'actual_end_date',
   'pause_reason',
+  'delivery_files',
   'current_due_date',
   'adjustment_reason',
   'sort_order',
@@ -26,6 +27,7 @@ const FIELD_LABELS = {
   status: '状态',
   actual_end_date: '实际完成时间',
   pause_reason: '暂停原因',
+  delivery_files: '交付文件',
   current_due_date: '计划完成时间',
   adjustment_reason: '调整原因',
   sort_order: '所在位置',
@@ -63,6 +65,18 @@ function buildProjectStagePlanHistory(logs, { stageLookup = new Map(), userLooku
         },
       }),
   }))
+}
+
+function buildPlanItemStatusHistoryChanges(item, target, actualEndDate, pauseReason, fileNames = []) {
+  const changes = [
+    { field: 'status', oldVal: item.status, newVal: target },
+    { field: 'actual_end_date', oldVal: item.actual_end_date, newVal: actualEndDate },
+    { field: 'pause_reason', oldVal: item.pause_reason, newVal: pauseReason },
+  ]
+  if (fileNames.length) {
+    changes.push({ field: 'delivery_files', oldVal: null, newVal: fileNames.join('、') })
+  }
+  return changes
 }
 
 function resolveMovedPlanRow(rows, orderedIds, movedId) {
@@ -110,6 +124,7 @@ function appendLegacyAdjustmentReasons(logs, adjustments) {
 
 module.exports = {
   appendLegacyAdjustmentReasons,
+  buildPlanItemStatusHistoryChanges,
   buildProjectStagePlanHistory,
   resolveMovedPlanRow,
 }
