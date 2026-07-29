@@ -31,26 +31,33 @@ test('SSO request accepts a bare Base64 SPKI public key and encrypts the current
     platformUrl: process.env.SSO_PLATFORM_URL,
     clientId: process.env.SSO_CLIENT_ID,
     publicKey: process.env.SSO_PUBLIC_KEY_PEM,
-    fetch: global.fetch
+    fetch: global.fetch,
+    publicEncrypt: crypto.publicEncrypt
   }
-  const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 })
+  const barePublicKey = Buffer.from('test-public-key').toString('base64')
   process.env.SSO_PLATFORM_URL = 'http://nexus.example.test'
   process.env.SSO_CLIENT_ID = 'test_client'
-  process.env.SSO_PUBLIC_KEY_PEM = publicKey.export({ type: 'spki', format: 'der' }).toString('base64')
+  process.env.SSO_PUBLIC_KEY_PEM = barePublicKey
+
+  crypto.publicEncrypt = (options, plaintext) => {
+    assert.equal(
+      options.key,
+      `-----BEGIN PUBLIC KEY-----\n${barePublicKey}\n-----END PUBLIC KEY-----`
+    )
+    assert.equal(options.padding, crypto.constants.RSA_PKCS1_PADDING)
+    const payload = JSON.parse(plaintext.toString('utf8'))
+    assert.equal(payload.username, 'PMIS-001')
+    assert.equal(typeof payload.timestamp, 'number')
+    return Buffer.from('encrypted-test-payload')
+  }
 
   global.fetch = async (_url, options) => {
     const requestBody = JSON.parse(options.body)
-    const decrypted = crypto.privateDecrypt(
-      {
-        key: privateKey,
-        padding: crypto.constants.RSA_PKCS1_PADDING
-      },
-      Buffer.from(requestBody.encryptedData, 'base64')
-    )
-    const payload = JSON.parse(decrypted.toString('utf8'))
     assert.equal(requestBody.clientId, 'test_client')
-    assert.equal(payload.username, 'PMIS-001')
-    assert.equal(typeof payload.timestamp, 'number')
+    assert.equal(
+      requestBody.encryptedData,
+      Buffer.from('encrypted-test-payload').toString('base64')
+    )
     return {
       ok: true,
       json: async () => ({ code: 0, data: { ticket: 'sso_tk_test' } })
@@ -62,6 +69,7 @@ test('SSO request accepts a bare Base64 SPKI public key and encrypts the current
     assert.equal(await requestTicket('PMIS-001'), 'sso_tk_test')
   } finally {
     global.fetch = previous.fetch
+    crypto.publicEncrypt = previous.publicEncrypt
     if (previous.platformUrl === undefined) delete process.env.SSO_PLATFORM_URL
     else process.env.SSO_PLATFORM_URL = previous.platformUrl
     if (previous.clientId === undefined) delete process.env.SSO_CLIENT_ID
