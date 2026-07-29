@@ -17,8 +17,10 @@ function asToolResult(value) {
   }
 }
 
-function normalizeToolError(error) {
-  const fallbackMessage = 'MCP工具执行失败'
+function normalizeToolError(error, requestId) {
+  const fallbackMessage = requestId
+    ? 'MCP工具执行失败，请使用请求编号查询服务端审计日志'
+    : 'MCP工具执行失败'
   const originalCode = error?.code
   const isContractError = typeof originalCode === 'string' && /^MCP_[A-Z0-9_]+$/.test(originalCode)
   return {
@@ -28,7 +30,16 @@ function normalizeToolError(error) {
       ? { originalCode: String(originalCode) }
       : {}),
     ...(error?.fieldErrors ? { fieldErrors: error.fieldErrors } : {}),
+    ...(requestId ? { requestId } : {}),
   }
+}
+
+function errorText(error) {
+  const fields = error.fieldErrors
+    ? `；字段：${Object.entries(error.fieldErrors).map(([field, message]) => `${field}=${message}`).join('，')}`
+    : ''
+  const request = error.requestId ? `；请求编号：${error.requestId}` : ''
+  return `[${error.code}] ${error.message}${fields}${request}`
 }
 
 function createMcpServer({
@@ -51,9 +62,9 @@ function createMcpServer({
     try {
       return asToolResult(await dispatch(request.params.name, request.params.arguments || {}, context))
     } catch (error) {
-      const normalizedError = normalizeToolError(error)
+      const normalizedError = normalizeToolError(error, context.auditRequestId)
       return {
-        content: [{ type: 'text', text: normalizedError.message }],
+        content: [{ type: 'text', text: errorText(normalizedError) }],
         structuredContent: {
           error: normalizedError,
         },

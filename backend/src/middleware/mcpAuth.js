@@ -13,6 +13,17 @@ class McpAuthError extends Error {
   }
 }
 
+const usedIdentityNonces = new Map()
+
+function consumeIdentityNonce(nonce, expiresAt, now = Date.now()) {
+  for (const [key, expiry] of usedIdentityNonces) {
+    if (expiry <= now) usedIdentityNonces.delete(key)
+  }
+  if (usedIdentityNonces.has(nonce)) return false
+  usedIdentityNonces.set(nonce, Number(expiresAt))
+  return true
+}
+
 function parseBearerToken(header) {
   const value = String(header || '')
   return value.startsWith('Bearer ') ? value.slice(7).trim() || null : null
@@ -37,7 +48,11 @@ function createMcpAuth({
     if (!encryptedEmployeeNo) throw new McpAuthError('缺少平台自动传入的员工号密文', 400)
     let employeeNo
     try {
-      employeeNo = decryptEmployeeIdentity(encryptedEmployeeNo, token)
+      employeeNo = decryptEmployeeIdentity(encryptedEmployeeNo, token, {
+        clientId: client.id,
+        endpointType,
+        consumeNonce: consumeIdentityNonce,
+      })
     } catch (error) {
       throw new McpAuthError(error.message, 400)
     }

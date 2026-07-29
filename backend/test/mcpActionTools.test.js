@@ -31,6 +31,7 @@ test('action preview loads the current target without invoking a business write'
       ],
     },
     mergeArguments: async (_name, value) => value,
+    validateBusinessRules: async () => {},
     loadTarget: async () => ({
       type: 'task',
       id: 9,
@@ -55,6 +56,49 @@ test('action preview loads the current target without invoking a business write'
   })
 })
 
+test('task sparse preview merges current fields before ticket creation', async () => {
+  let ticketArgs
+  const currentTask = {
+    name: '原任务',
+    description: '原说明',
+    source_type: 1,
+    project_id: 2,
+    requirement_id: null,
+    task_type: 3,
+    priority: 1,
+    start_date: '2026-07-24',
+    expected_end_date: '2026-07-31',
+  }
+  const database = {
+    prepare(sql) {
+      if (sql.includes('FROM pms_task_owner')) return { async all() { return [{ id: 8 }] } }
+      return { async get() { return currentTask } }
+    },
+  }
+  await dispatchActionTool('task_update', { id: 59, priority: 2, mode: 'preview' }, {
+    client: { id: 3 },
+    user: { id: 8, employeeNo: '005829', realName: '孙鑫鑫' },
+  }, {
+    actions: { task_update: [async () => {}, () => ({ body: {} })] },
+    database,
+    validateBusinessRules: async () => {},
+    loadTarget: async () => ({ type: 'task', id: 59, name: '原任务', current: { status: 0 } }),
+    ticketService: {
+      async createTicket(_context, _name, args) {
+        ticketArgs = args
+        return { confirmationId: 'ticket-1' }
+      },
+    },
+  })
+  assert.deepEqual(ticketArgs, {
+    id: 59,
+    mode: 'preview',
+    ...currentTask,
+    priority: 2,
+    owner_ids: [8],
+  })
+})
+
 test('action preview rejects a missing target before creating a confirmation ticket', async () => {
   let ticketCreated = false
   await assert.rejects(
@@ -62,6 +106,7 @@ test('action preview rejects a missing target before creating a confirmation tic
       client: { id: 3 },
       user: { id: 8, employeeNo: 'JS001', realName: '张三' },
     }, {
+      validateBusinessRules: async () => {},
       loadTarget: async () => { throw new Error('任务不存在') },
       ticketService: {
         createTicket: async () => { ticketCreated = true },
@@ -141,6 +186,7 @@ test('file action preview keeps file metadata but redacts the file body and cont
     client: { id: 3 },
     user: { id: 8, employeeNo: 'JS001', realName: '张三' },
   }, {
+    validateBusinessRules: async () => {},
     loadTarget: async () => ({ type: 'contract', id: 2, name: '建设合同', current: {} }),
     ticketService: {
       createTicket: async (_context, _name, _args, value) => {
@@ -239,6 +285,8 @@ test('action execute consumes the ticket and preserves the business error when f
         },
       },
       mergeArguments: async (_name, value) => value,
+      validateBusinessRules: async () => {},
+      loadTarget: async () => ({ type: 'task', id: 9, name: '任务' }),
     }),
     (error) => error === businessError
   )
@@ -344,10 +392,6 @@ test('edit arguments preserve omitted relationship arrays but respect explicit c
     await mergeActionUpdateArguments('project_update', { id: 2 }, database),
     {
       id: 2,
-      description: null,
-      start_date: null,
-      progress_text: null,
-      risk_text: null,
       member_ids: [3, 8],
     }
   )
@@ -355,12 +399,6 @@ test('edit arguments preserve omitted relationship arrays but respect explicit c
     await mergeActionUpdateArguments('task_update', { id: 4 }, database),
     {
       id: 4,
-      description: null,
-      project_id: null,
-      requirement_id: null,
-      priority: null,
-      start_date: null,
-      expected_end_date: null,
       owner_ids: [5, 9],
     }
   )
@@ -416,7 +454,7 @@ test('status preview rejects illegal task transitions before creating a ticket',
       },
     }),
     (error) => error.code === 'MCP_BUSINESS_VALIDATION'
-      && error.fieldErrors.status === '当前任务状态不允许变更为目标状态'
+      && error.fieldErrors.status === '当前状态：待处理(0)；允许变更为：处理中(1)、已暂停(3)'
   )
   assert.equal(ticketCreated, false)
 })

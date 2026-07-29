@@ -42,9 +42,9 @@ test('MCP server initializes and exposes only endpoint and menu-permitted tools'
   const names = result.tools.map((tool) => tool.name)
 
   assert.equal(names.includes('project_search'), true)
-  assert.equal(names.includes('project_get'), true)
+  assert.equal(names.includes('business_get'), true)
   assert.equal(names.includes('task_search'), false)
-  assert.equal(names.includes('project_create'), false)
+  assert.equal(names.includes('project_manage'), false)
 })
 
 test('MCP tool failures expose a machine-readable error code and field errors', async (t) => {
@@ -127,14 +127,50 @@ test('MCP tool failures hide raw infrastructure errors behind a stable contract 
   assert.doesNotMatch(result.content[0].text, /secret_name/)
 })
 
+test('MCP errors return a request id and readable diagnostic text', async (t) => {
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
+  const context = {
+    endpointType: 'action',
+    allowedMenuPaths: new Set(['/tasks']),
+    user: { id: 8, employeeNo: 'JS001' },
+    client: { id: 3 },
+    auditRequestId: 'mcp-request-20260728-1',
+  }
+  const server = createMcpServer({
+    context,
+    dispatch: async () => {
+      const error = new Error('优先级必须是：0=低，1=中，2=高')
+      error.code = 'MCP_ARGUMENT_INVALID'
+      error.fieldErrors = { priority: error.message }
+      throw error
+    },
+  })
+  const client = new Client({ name: 'test-client', version: '1.0.0' })
+  t.after(async () => {
+    await client.close()
+    await server.close()
+  })
+
+  await server.connect(serverTransport)
+  await client.connect(clientTransport)
+  const result = await client.callTool({
+    name: 'task_manage',
+    arguments: { operation: 'update', id: 59, priority: 9, mode: 'preview' },
+  })
+  assert.equal(result.structuredContent.error.requestId, context.auditRequestId)
+  assert.match(result.content[0].text, /MCP_ARGUMENT_INVALID/)
+  assert.match(result.content[0].text, /priority=/)
+  assert.match(result.content[0].text, /mcp-request-20260728-1/)
+})
+
 test('tool filtering separates Query and Action credentials even with the same menu permissions', () => {
   const allowedMenuPaths = new Set(['/products', '/projects', '/tasks'])
   const queryNames = filterToolsForContext({ endpointType: 'query', allowedMenuPaths }).map((tool) => tool.name)
   const actionNames = filterToolsForContext({ endpointType: 'action', allowedMenuPaths }).map((tool) => tool.name)
 
   assert.equal(queryNames.includes('task_search'), true)
-  assert.equal(queryNames.includes('task_create'), false)
-  assert.equal(actionNames.includes('task_create'), true)
+  assert.equal(queryNames.includes('task_manage'), false)
+  assert.equal(actionNames.includes('task_manage'), true)
   assert.equal(actionNames.includes('task_search'), false)
 })
 
@@ -178,11 +214,14 @@ test('Origin validation rejects untrusted browser origins and allows non-browser
 
 test('tool schemas reject unknown fields and require business identifiers', () => {
   const context = { endpointType: 'query', allowedMenuPaths: new Set(['/projects']) }
-  const definition = require('../src/mcp/catalog').getToolDefinition('project_get', 'query')
-  assert.doesNotThrow(() => validateToolArguments(definition, { id: 1 }))
+  const definition = require('../src/mcp/catalog').getToolDefinition('business_get', 'query')
+  assert.doesNotThrow(() => validateToolArguments(definition, { domain: 'project', target_id: 1 }))
   assert.throws(() => validateToolArguments(definition, {}), /缺少参数/)
-  assert.throws(() => validateToolArguments(definition, { id: 1, sql: 'SELECT 1' }), /不支持的参数/)
-  assert.equal(filterToolsForContext(context).find((tool) => tool.name === 'project_get').inputSchema.additionalProperties, false)
+  assert.throws(
+    () => validateToolArguments(definition, { domain: 'project', target_id: 1, sql: 'SELECT 1' }),
+    /不支持的参数/
+  )
+  assert.equal(filterToolsForContext(context).find((tool) => tool.name === 'business_get').inputSchema.additionalProperties, false)
 })
 
 test('global business search tools can be called without filters', () => {
@@ -544,7 +583,7 @@ test('action argument validation rejects malformed types, nested values and exec
       },
       { source_type: 1 }
     ),
-    /缺少参数：project_id/
+    /关联类型为项目时，必须提供关联项目/
   )
   assert.throws(
     () => validateToolArguments(getToolDefinition('stage_item_batch_create', 'action'), {
