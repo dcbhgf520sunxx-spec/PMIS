@@ -96,6 +96,22 @@ test('MCP identity assertion supports one protocol flow but rejects an exact req
     auth.resolvePrincipal(request({ jsonrpc: '2.0', id: 3, method: 'tools/list' }), 'query'),
     /员工身份凭证已经使用/,
   )
+  await assert.rejects(
+    auth.resolvePrincipal(request({ method: 'tools/list', id: 4, jsonrpc: '2.0' }), 'query'),
+    /员工身份凭证已经使用/,
+  )
+
+  await auth.resolvePrincipal(request([
+    { jsonrpc: '2.0', id: 5, method: 'resources/list', params: { cursor: 'next' } },
+    { jsonrpc: '2.0', method: 'notifications/initialized' },
+  ]), 'query')
+  await assert.rejects(
+    auth.resolvePrincipal(request([
+      { method: 'resources/list', params: { cursor: 'next' }, id: 6, jsonrpc: '2.0' },
+      { method: 'notifications/initialized', jsonrpc: '2.0' },
+    ]), 'query'),
+    /员工身份凭证已经使用/,
+  )
 })
 
 test('MCP identity rejects plaintext, tampered, expired or token-mismatched employee headers', async () => {

@@ -15,13 +15,31 @@ class McpAuthError extends Error {
 
 const usedIdentityNonces = new Map()
 
+function canonicalizeJson(value) {
+  if (Array.isArray(value)) return value.map(canonicalizeJson)
+  if (!value || typeof value !== 'object') return value
+  return Object.fromEntries(
+    Object.keys(value).sort().map((key) => [key, canonicalizeJson(value[key])]),
+  )
+}
+
+function canonicalizeProtocolMessage(message) {
+  if (!message || typeof message !== 'object' || Array.isArray(message)) {
+    return canonicalizeJson(message)
+  }
+  const withoutRequestId = { ...message }
+  delete withoutRequestId.id
+  return canonicalizeJson(withoutRequestId)
+}
+
 function protocolRequestFingerprint(req) {
-  const protocolBody = { ...(req.body || {}) }
-  delete protocolBody.id
+  const body = Array.isArray(req.body)
+    ? req.body.map(canonicalizeProtocolMessage)
+    : canonicalizeProtocolMessage(req.body || {})
   return crypto.createHash('sha256').update(JSON.stringify({
     method: req.method || 'POST',
     path: req.originalUrl || req.url || '',
-    body: protocolBody,
+    body,
   })).digest('base64url')
 }
 
