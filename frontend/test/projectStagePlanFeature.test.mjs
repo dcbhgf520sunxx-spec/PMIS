@@ -25,12 +25,17 @@ test('任务页面和接口不再接入关键事项关联', () => {
   }
 });
 
-test('需要交付文件的事项在完成状态弹窗内直接上传', () => {
+test('需要交付文件的事项在完成状态弹窗内选择并随状态一次提交', () => {
   const action = read('src/modules/project/components/ProjectPlanStatusChangeAction.tsx');
+  const page = read('src/modules/project/pages/ProjectStagePlanPage.tsx');
+  const api = read('src/api/projectApi.ts');
   assert.match(action, /target===2&&item\.requiresDeliveryFile&&item\.fileCount===0/);
   assert.match(action, /<AdminAttachmentUpload/);
-  assert.match(action, /uploadProjectPlanFile\(projectId,item\.id,file\)/);
   assert.match(action, /multiple/);
+  assert.doesNotMatch(action, /uploadProjectPlanFile\(projectId,item\.id,file\)/);
+  assert.doesNotMatch(action, /deleteProjectPlanFile\(projectId,item\.id,attachment\.id\)/);
+  assert.match(page, /completionFiles:\(values\.completionFiles[\s\S]*rawFile/);
+  assert.match(api, /data\.append\('files',file\)/);
 });
 
 test('关键事项只保留四状态并在暂停时填写原因', () => {

@@ -45,6 +45,9 @@ const currentUserContract = objectContract<CurrentUserResult>(['id', 'employee_n
 const avatarUploadContract = objectContract<{ avatar_url: string }>(['avatar_url']);
 const avatarResetContract = objectContract<{ avatar_url: string | null }>(['avatar_url']);
 const preferenceContract = objectContract<UserPreference>(['default_route', 'default_page_size', 'appearance_mode']);
+const ssoTicketContract = objectContract<{ ticket: string }>(['ticket'], {
+  ticket: (value): value is string => typeof value === 'string' && value.trim().length > 0
+});
 
 export function getCurrentUser() {
   return unwrap<CurrentUserResult>(request.get('/auth/me'), currentUserContract);
@@ -76,6 +79,10 @@ export function changeCurrentPassword(params: { oldPassword: string; newPassword
     old_password: params.oldPassword,
     new_password: params.newPassword
   }));
+}
+
+export function getNexusSsoTicket() {
+  return unwrap<{ ticket: string }>(request.post('/auth/sso/ticket'), ssoTicketContract);
 }
 
 export function getUserPreference() {

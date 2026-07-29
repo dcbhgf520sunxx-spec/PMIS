@@ -1,7 +1,5 @@
-import { useState } from 'react';
 import { Tooltip } from 'antd';
-import { AdminAttachmentUpload, AdminDatePicker, AdminFormItem, AdminTextArea, StatusChangeAction, StatusTag, type AdminAttachment, type StatusChangeActionProps } from '../../../components/admin';
-import { deleteProjectPlanFile, downloadProjectPlanFile, loadProjectPlanFilePreview, uploadProjectPlanFile } from '../../../api/projectApi';
+import { AdminAttachmentUpload, AdminDatePicker, AdminFormItem, AdminTextArea, StatusChangeAction, StatusTag, type StatusChangeActionProps } from '../../../components/admin';
 import type { ProjectPlanItem, ProjectPlanItemStatus } from '../types';
 
 const labels:Record<ProjectPlanItemStatus,string>={0:'未开始',1:'进行中',2:'已完成',3:'暂停'};
@@ -17,9 +15,8 @@ export function renderProjectPlanItemStatus(status:ProjectPlanItemStatus,pauseRe
   return status===3&&pauseReason?<Tooltip title={pauseReason}><span>{tag}</span></Tooltip>:tag;
 }
 
-type Props=Omit<StatusChangeActionProps<ProjectPlanItemStatus>,'current'|'currentValue'|'options'|'renderExtra'>&{projectId:string;item:ProjectPlanItem};
-export function ProjectPlanStatusChangeAction({projectId,item,...props}:Props){
-  const [completionFiles,setCompletionFiles]=useState<AdminAttachment[]>([]);
+type Props=Omit<StatusChangeActionProps<ProjectPlanItemStatus>,'current'|'currentValue'|'options'|'renderExtra'>&{item:ProjectPlanItem};
+export function ProjectPlanStatusChangeAction({item,...props}:Props){
   const allowed=options[item.status].filter((option)=>item.status!==3||option.value===item.previousStatus);
   return <StatusChangeAction<ProjectPlanItemStatus>
     {...props}
@@ -29,13 +26,10 @@ export function ProjectPlanStatusChangeAction({projectId,item,...props}:Props){
     renderExtra={(target)=><>
       {target===2?<AdminFormItem name="actualEndDate" label="实际完成时间" rules={[{required:true,message:'请选择实际完成时间'}]}><AdminDatePicker /></AdminFormItem>:null}
       {target===3?<AdminFormItem name="pauseReason" label="暂停原因" rules={[{required:true,whitespace:true,message:'请填写暂停原因'},{max:200,message:'暂停原因不能超过200个字符'}]}><AdminTextArea rows={3} maxLength={200} showCount placeholder="请输入暂停原因"/></AdminFormItem>:null}
-      {target===2&&item.requiresDeliveryFile&&item.fileCount===0?<AdminFormItem label="关键交付文件" required>
-        <AdminAttachmentUpload value={completionFiles} onChange={setCompletionFiles}
+      {target===2&&item.requiresDeliveryFile&&item.fileCount===0?<AdminFormItem name="completionFiles" label="关键交付文件" rules={[{required:true,message:'请上传关键交付文件'}]}>
+        <AdminAttachmentUpload
           multiple
-          onUpload={async(file)=>{const saved=await uploadProjectPlanFile(projectId,item.id,file);return {id:saved.id,name:saved.name,size:saved.size,contentType:saved.contentType};}}
-          onRemove={async(attachment)=>{await deleteProjectPlanFile(projectId,item.id,attachment.id);}}
-          onLoadPreview={(attachment)=>loadProjectPlanFilePreview(projectId,item.id,attachment.id)}
-          onDownload={(attachment)=>downloadProjectPlanFile(projectId,item.id,attachment.id,attachment.name)}
+          onUpload={async(file)=>({id:`pending-${file.uid}`,name:file.name,size:file.size,contentType:file.type})}
           hint={item.deliveryRequirement||'请上传关键交付文件后再确认完成'}/>
       </AdminFormItem>:null}
     </>}

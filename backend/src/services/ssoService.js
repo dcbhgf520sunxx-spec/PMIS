@@ -6,6 +6,13 @@ function requireSsoConfig(name) {
   return value
 }
 
+function normalizePublicKey(value) {
+  const normalized = value.replace(/\\n/g, '\n').trim()
+  if (normalized.includes('-----BEGIN PUBLIC KEY-----')) return normalized
+  const base64 = normalized.replace(/\s/g, '')
+  return `-----BEGIN PUBLIC KEY-----\n${base64.match(/.{1,64}/g)?.join('\n') || ''}\n-----END PUBLIC KEY-----`
+}
+
 /**
  * RSA/ECB/PKCS1Padding 加密
  * 使用 Node.js 原生 crypto 模块，完全兼容 Java 的 RSA/ECB/PKCS1Padding
@@ -31,7 +38,7 @@ function rsaEncrypt(plaintext, publicKeyPem) {
 async function requestTicket(employeeNo) {
   const platformUrl = requireSsoConfig('SSO_PLATFORM_URL')
   const clientId = requireSsoConfig('SSO_CLIENT_ID')
-  const publicKeyPem = requireSsoConfig('SSO_PUBLIC_KEY_PEM').replace(/\\n/g, '\n')
+  const publicKeyPem = normalizePublicKey(requireSsoConfig('SSO_PUBLIC_KEY_PEM'))
   const payload = JSON.stringify({
     username: employeeNo,
     timestamp: Date.now()
@@ -53,7 +60,11 @@ async function requestTicket(employeeNo) {
   if (!res.ok || (body.code !== 0 && body.success !== true)) {
     throw new Error(body.message || `获取 ticket 失败: ${res.status}`)
   }
-  return typeof body.data === 'string' ? body.data : (body.data?.ticket || body.ticket)
+  const ticket = typeof body.data === 'string' ? body.data : (body.data?.ticket || body.ticket)
+  if (typeof ticket !== 'string' || !ticket.trim()) {
+    throw new Error('Nexus 未返回有效 ticket')
+  }
+  return ticket.trim()
 }
 
 module.exports = { requestTicket }
