@@ -15,12 +15,37 @@ class McpAuthError extends Error {
 
 const usedIdentityNonces = new Map()
 
-function consumeIdentityNonce(nonce, expiresAt, now = Date.now()) {
-  for (const [key, expiry] of usedIdentityNonces) {
-    if (expiry <= now) usedIdentityNonces.delete(key)
+function protocolRequestFingerprint(req) {
+  const protocolBody = { ...(req.body || {}) }
+  delete protocolBody.id
+  return crypto.createHash('sha256').update(JSON.stringify({
+    method: req.method || 'POST',
+    path: req.originalUrl || req.url || '',
+    body: protocolBody,
+  })).digest('base64url')
+}
+
+function consumeIdentityNonce(nonce, expiresAt, {
+  employeeNo,
+  clientId,
+  endpointType,
+  requestFingerprint,
+}, now = Date.now()) {
+  for (const [key, entry] of usedIdentityNonces) {
+    if (entry.expiresAt <= now) usedIdentityNonces.delete(key)
   }
-  if (usedIdentityNonces.has(nonce)) return false
-  usedIdentityNonces.set(nonce, Number(expiresAt))
+  const key = [employeeNo, clientId, endpointType, nonce].join(':')
+  const entry = usedIdentityNonces.get(key)
+  if (entry?.requestFingerprints.has(requestFingerprint)) return false
+  if (entry) {
+    entry.requestFingerprints.add(requestFingerprint)
+    entry.expiresAt = Math.max(entry.expiresAt, Number(expiresAt))
+    return true
+  }
+  usedIdentityNonces.set(key, {
+    expiresAt: Number(expiresAt),
+    requestFingerprints: new Set([requestFingerprint]),
+  })
   return true
 }
 
@@ -51,7 +76,10 @@ function createMcpAuth({
       employeeNo = decryptEmployeeIdentity(encryptedEmployeeNo, token, {
         clientId: client.id,
         endpointType,
-        consumeNonce: consumeIdentityNonce,
+        consumeNonce: (nonce, expiresAt, identity) => consumeIdentityNonce(nonce, expiresAt, {
+          ...identity,
+          requestFingerprint: protocolRequestFingerprint(req),
+        }),
       })
     } catch (error) {
       throw new McpAuthError(error.message, 400)
