@@ -177,7 +177,7 @@ function createEmployeeIdentityAssertion(employeeNo, {
   }
   if (!Number.isSafeInteger(payload.clientId) || payload.clientId <= 0
     || !['query', 'action'].includes(payload.endpointType)
-    || !/^[A-Za-z0-9_.:-]{1,100}$/.test(payload.nonce)) {
+    || !/^[A-Za-z0-9_.:-]{1,64}$/.test(payload.nonce)) {
     throw new McpEmployeeIdentityError('员工身份凭证参数无效')
   }
   payload.signature = assertionSignature(payload, signingSecret)
@@ -190,11 +190,16 @@ function createEmployeeIdentityAssertion(employeeNo, {
     n: payload.nonce,
     s: payload.signature,
   }
-  const encrypted = crypto.publicEncrypt({
-    key: rsaPublicKey,
-    padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-    oaepHash: 'sha256',
-  }, Buffer.from(JSON.stringify(compactPayload), 'utf8'))
+  let encrypted
+  try {
+    encrypted = crypto.publicEncrypt({
+      key: rsaPublicKey,
+      padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+      oaepHash: 'sha256',
+    }, Buffer.from(JSON.stringify(compactPayload), 'utf8'))
+  } catch {
+    throw new McpEmployeeIdentityError('员工身份凭证生成失败')
+  }
   return `${ASSERTION_VERSION}.${encrypted.toString('base64url')}`
 }
 
@@ -230,6 +235,11 @@ function decryptSignedEmployeeIdentity(encrypted, {
     }
     const currentTime = Math.trunc(Number(now))
     assertEmployeeNo(payload.employeeNo)
+    const expected = Buffer.from(assertionSignature(payload, signingSecret), 'utf8')
+    const actual = Buffer.from(String(payload.signature || ''), 'utf8')
+    if (expected.length !== actual.length || !crypto.timingSafeEqual(expected, actual)) {
+      throw new McpEmployeeIdentityError('员工身份凭证签名校验失败')
+    }
     if (Number(payload.clientId) !== Number(clientId)
       || payload.endpointType !== endpointType) {
       throw new McpEmployeeIdentityError('员工身份凭证使用范围不匹配')
@@ -240,13 +250,8 @@ function decryptSignedEmployeeIdentity(encrypted, {
       || payload.expiresAt - payload.issuedAt > MAX_AGE_MS) {
       throw new McpEmployeeIdentityError('员工身份凭证已过期或时间无效')
     }
-    if (!/^[A-Za-z0-9_.:-]{1,100}$/.test(String(payload.nonce || ''))) {
+    if (!/^[A-Za-z0-9_.:-]{1,64}$/.test(String(payload.nonce || ''))) {
       throw new McpEmployeeIdentityError('员工身份凭证一次性编号无效')
-    }
-    const expected = Buffer.from(assertionSignature(payload, signingSecret), 'utf8')
-    const actual = Buffer.from(String(payload.signature || ''), 'utf8')
-    if (expected.length !== actual.length || !crypto.timingSafeEqual(expected, actual)) {
-      throw new McpEmployeeIdentityError('员工身份凭证签名校验失败')
     }
     if (consumeNonce && consumeNonce(payload.nonce, payload.expiresAt) === false) {
       throw new McpEmployeeIdentityError('员工身份凭证已经使用')

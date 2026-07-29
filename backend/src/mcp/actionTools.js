@@ -905,7 +905,7 @@ async function validateActionBusinessRules(name, args, database = db) {
     ['supplier_id', '供应商'],
   ]
   for (const [field, typeName] of archiveReferences) {
-    if (args[field] === undefined) continue
+    if (args[field] === undefined || args[field] === null || args[field] === '') continue
     const archive = await database.prepare(`SELECT a.id FROM pms_archive a
       JOIN pms_archive_type t ON t.id = a.archive_type_id
       WHERE a.id = ? AND a.status = 1 AND a.is_deleted = 0

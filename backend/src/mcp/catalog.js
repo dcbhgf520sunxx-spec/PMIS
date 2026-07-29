@@ -532,7 +532,7 @@ function actionInputSchema(name) {
     properties.ids = described({ ...idArrayField }, '排序后的完整有序列表；必须且只能包含当前全部记录标识，不能遗漏、重复或混入其他记录')
   }
   for (const key of ['contract_amount', 'payment_amount']) {
-    if (key in properties) properties[key] = described({ type: ['number', 'string', 'null'], exclusiveMinimum: 0 }, FIELD_DESCRIPTIONS[key])
+    if (key in properties) properties[key] = described({ type: 'number', exclusiveMinimum: 0 }, FIELD_DESCRIPTIONS[key])
   }
   if (statusActionSchemas[name]) properties.status = statusActionSchemas[name]
   const schema = { type: 'object', properties, required: actionRequired[name], additionalProperties: false }
@@ -772,10 +772,23 @@ function queryOutputSchema(name) {
         domain: { type: 'string', description: '业务领域' },
         metric: { type: 'string', description: '统计指标' },
         scope: { type: 'object', additionalProperties: true, description: '实际统计口径' },
-        results: { type: 'array', items: resultItemSchema('business_analyze'), description: '统计结果' },
+        definition: { type: 'string', description: '统计口径说明' },
+        results: {
+          type: 'array',
+          description: '统计结果；普通统计只有 value，状态分布同时返回 status',
+          items: {
+            type: 'object',
+            properties: {
+              status: { type: ['integer', 'null'], description: '状态代码；仅状态分布返回' },
+              value: { type: 'number', description: '统计值；金额单位为元' },
+            },
+            required: ['value'],
+            additionalProperties: false,
+          },
+        },
       },
-      required: ['domain', 'metric', 'results'],
-      additionalProperties: true,
+      required: ['domain', 'metric', 'scope', 'definition', 'results'],
+      additionalProperties: false,
     }
   }
   return {
@@ -819,7 +832,22 @@ function actionOutputSchema() {
       expiresAt: { type: 'string', description: '确认号失效时间' },
       affectedTargets: {
         type: 'array',
-        items: resultItemSchema('action_target'),
+        items: {
+          type: 'object',
+          properties: {
+            type: { type: 'string', description: '业务对象类型' },
+            id: { type: ['integer', 'string', 'null'], description: '业务对象标识' },
+            ids: {
+              type: 'array',
+              items: { type: ['integer', 'string'] },
+              description: '批量操作涉及的业务对象标识',
+            },
+            name: { type: ['string', 'null'], description: '业务对象名称' },
+            current: { type: 'object', additionalProperties: true, description: '操作前业务快照' },
+          },
+          required: ['type'],
+          additionalProperties: true,
+        },
         description: '预计或实际影响的业务对象',
       },
       resultStatus: {
@@ -1118,6 +1146,10 @@ function filterToolsForContext(context) {
   }).map((tool) => scopeGenericQueryDomains(tool, context.allowedMenuPaths))
     .map((tool) => scopeBusinessOptions(tool, context.allowedMenuPaths))
     .map((tool) => scopeBusinessAnalysis(tool, context.allowedMenuPaths))
+    .filter((tool) => !['business_get', 'business_history', 'business_options', 'business_analyze'].includes(tool.name)
+      || Object.values(tool.inputSchema.properties)
+        .filter((property) => Array.isArray(property.enum))
+        .every((property) => property.enum.length > 0))
     .map(({ _meta, ...tool }) => tool)
 }
 

@@ -9,7 +9,7 @@ const {
 const { buildAuditSummary, resultCount, validateToolArguments } = require('../src/mcp/dispatcher')
 const { dispatchActionTool } = require('../src/mcp/actionTools')
 const { validateActionBusinessRules } = require('../src/mcp/actionTools')
-const { buildTaskSearchInput } = require('../src/mcp/queryTools')
+const { buildTaskSearchInput, dispatchQueryTool } = require('../src/mcp/queryTools')
 const { redactAuditInput } = require('../src/services/mcpAuditService')
 
 test('date validation rejects impossible calendar dates and invalid date order', () => {
@@ -96,10 +96,39 @@ test('audit redaction removes confirmation and idempotency credentials', () => {
   })
 })
 
+test('audit redaction also removes camelCase credentials', () => {
+  assert.deepEqual(redactAuditInput({
+    accessToken: 'token-secret',
+    clientSecret: 'client-secret',
+    confirmationId: 'ticket-secret',
+    safeName: '项目A',
+  }), {
+    accessToken: '[REDACTED]',
+    clientSecret: '[REDACTED]',
+    confirmationId: '[REDACTED]',
+    safeName: '项目A',
+  })
+})
+
 test('MCP task search requests flat record pagination', () => {
   assert.deepEqual(buildTaskSearchInput({ page: 2, page_size: 10 }), {
     query: { page: 2, pageSize: 10, mcp_flat: '1' },
   })
+})
+
+test('direct project child searches return the unified pagination contract', async () => {
+  const database = {
+    prepare(sql) {
+      if (/COUNT\(\*\)/.test(sql)) return { get: async () => ({ total: 21 }) }
+      return { all: async () => [{ id: 1, status: 0 }] }
+    },
+  }
+  for (const name of ['stage_plan_search', 'contract_search', 'payment_search']) {
+    const result = await dispatchQueryTool(name, { page: 2, page_size: 10 }, {}, { database })
+    assert.equal(result.items.length, 1, name)
+    assert.equal(result.totalPages, 3, name)
+    assert.equal(result.hasNextPage, true, name)
+  }
 })
 
 test('preview rejects invalid related users before issuing a confirmation', async () => {

@@ -186,7 +186,7 @@ function validateSchemaValue(schema, value, path) {
   if (schema?.maximum !== undefined && typeof value === 'number' && value > schema.maximum) {
     throw argumentError(path, `${fieldLabel(schema, path)}不能大于${schema.maximum}`)
   }
-  if (schema?.exclusiveMinimum !== undefined && Number(value) <= schema.exclusiveMinimum) {
+  if (schema?.exclusiveMinimum !== undefined && typeof value === 'number' && value <= schema.exclusiveMinimum) {
     throw argumentError(path, `${fieldLabel(schema, path)}必须大于${schema.exclusiveMinimum}`)
   }
   if (Array.isArray(value) && schema?.items) {
@@ -332,7 +332,7 @@ async function dispatchMcpTool(name, args, context) {
       errorMessage: error.message,
       durationMs: Date.now() - startedAt,
       ip: context.ip,
-    })
+    }).catch(() => {})
     throw error
   }
   const audit = buildAuditSummary(commandName, commandArgs, result)

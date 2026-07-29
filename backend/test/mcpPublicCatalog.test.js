@@ -158,6 +158,21 @@ test('business option types are reduced to the current employee menu permissions
   )
 })
 
+test('permission scoping removes generic tools when no permitted domain remains', () => {
+  const tools = filterToolsForContext({
+    endpointType: 'query',
+    allowedMenuPaths: new Set(['/unknown-menu']),
+  })
+
+  assert.equal(tools.some((tool) => tool.name === 'business_get'), false)
+  assert.equal(tools.some((tool) => tool.name === 'business_history'), false)
+  assert.equal(tools.some((tool) => tool.name === 'business_analyze'), false)
+  assert.deepEqual(
+    tools.find((tool) => tool.name === 'business_options').inputSchema.properties.option_type.enum,
+    ['user']
+  )
+})
+
 test('personal view metadata only exposes views implemented by each module', () => {
   assert.deepEqual(getToolDefinition('project_search', 'query').inputSchema.properties.view.enum, ['mine', 'joined'])
   for (const name of ['requirement_search', 'task_search', 'bug_search']) {

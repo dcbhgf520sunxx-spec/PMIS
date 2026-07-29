@@ -125,3 +125,39 @@ test('signed identity assertion rejects replayed nonce', () => {
   assert.equal(decryptEmployeeIdentity(assertion, 'query-token', options), '005829')
   assert.throws(() => decryptEmployeeIdentity(assertion, 'query-token', options), /已经使用/)
 })
+
+test('signed identity assertion rejects an oversized nonce before RSA encryption', () => {
+  assert.throws(() => createEmployeeIdentityAssertion('005829', {
+    clientId: 7,
+    endpointType: 'query',
+    nonce: 'a'.repeat(65),
+    signingSecret: 'identity-signing-secret',
+    rsaPublicKey: rsaKeys.publicKey,
+  }), /参数无效/)
+})
+
+test('signed identity assertion rejects an expired assertion and a missing signing secret', () => {
+  const assertion = createEmployeeIdentityAssertion('005829', {
+    clientId: 7,
+    endpointType: 'query',
+    now: 1_722_000_000_000,
+    nonce: 'nonce-expired',
+    signingSecret: 'identity-signing-secret',
+    rsaPublicKey: rsaKeys.publicKey,
+  })
+
+  assert.throws(() => decryptEmployeeIdentity(assertion, 'query-token', {
+    now: 1_722_000_300_001,
+    clientId: 7,
+    endpointType: 'query',
+    signingSecret: 'identity-signing-secret',
+    rsaPrivateKeyBase64: Buffer.from(rsaKeys.privateKey).toString('base64'),
+  }), /已过期/)
+  assert.throws(() => decryptEmployeeIdentity(assertion, 'query-token', {
+    now: 1_722_000_030_000,
+    clientId: 7,
+    endpointType: 'query',
+    signingSecret: '',
+    rsaPrivateKeyBase64: Buffer.from(rsaKeys.privateKey).toString('base64'),
+  }), /签名密钥未配置/)
+})

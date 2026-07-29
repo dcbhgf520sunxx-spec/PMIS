@@ -496,9 +496,9 @@ async function dispatchQueryTool(name, args, context, dependencies = {}) {
       results: Object.fromEntries(entries),
     }
   }
-  if (name === 'stage_plan_search') return decorateQueryResult(name, await searchStagePlans(args, dependencies.database))
-  if (name === 'contract_search') return decorateQueryResult(name, await searchContracts(args, dependencies.database))
-  if (name === 'payment_search') return decorateQueryResult(name, await searchPayments(args, dependencies.database))
+  if (name === 'stage_plan_search') return decorateQueryResult(name, normalizeSearchResult(await searchStagePlans(args, dependencies.database)))
+  if (name === 'contract_search') return decorateQueryResult(name, normalizeSearchResult(await searchContracts(args, dependencies.database)))
+  if (name === 'payment_search') return decorateQueryResult(name, normalizeSearchResult(await searchPayments(args, dependencies.database)))
   if (name === 'business_options') return searchBusinessOptions(args, dependencies.database)
   const definition = handlers[name]
   if (!definition) throw new Error('查询工具不存在或无权限')

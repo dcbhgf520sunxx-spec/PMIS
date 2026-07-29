@@ -4,7 +4,8 @@ const SECRET_KEYS = /(^|_)(authorization|token|secret|password|credential|cookie
 const FILE_KEYS = /(content_base64|file_buffer|file_content)/i
 
 function redactAuditInput(value, key = '') {
-  if (SECRET_KEYS.test(key)) return '[REDACTED]'
+  const normalizedKey = String(key).replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+  if (SECRET_KEYS.test(normalizedKey)) return '[REDACTED]'
   if (FILE_KEYS.test(key)) return '[FILE_CONTENT]'
   if (Array.isArray(value)) return value.slice(0, 100).map((item) => redactAuditInput(item))
   if (value && typeof value === 'object') {
