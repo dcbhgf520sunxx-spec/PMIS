@@ -88,15 +88,15 @@ return "v3." + encrypted
 
 ```dotenv
 MCP_ALLOWED_ORIGINS=http://pmis.company.internal
-MCP_QUERY_RATE_LIMIT=120
-MCP_ACTION_RATE_LIMIT=30
+MCP_QUERY_RATE_LIMIT=240
+MCP_ACTION_RATE_LIMIT=60
 MCP_FILE_INLINE_LIMIT=5242880
 MCP_EMPLOYEE_RSA_PRIVATE_KEY_BASE64=<PKCS8 私钥 PEM 的 Base64>
 MCP_EMPLOYEE_ASSERTION_SECRET=<至少32字节随机密钥>
 MCP_EMPLOYEE_LEGACY_IDENTITY_ENABLED=true
 ```
 
-`MCP_ALLOWED_ORIGINS` 用英文逗号分隔多个可信浏览器来源。服务端 MCP 客户端通常不发送 `Origin`。限流值为单个智能体凭据每分钟允许的请求数；附件读取和上传默认最大 5MB。
+`MCP_ALLOWED_ORIGINS` 用英文逗号分隔多个可信浏览器来源。服务端 MCP 客户端通常不发送 `Origin`。限流只统计实际 `tools/call`，初始化和工具列表不计数；额度按“智能体凭据 + 当前员工”分别统计，默认 Query 每分钟 240 次、Action 每分钟 60 次。超限响应包含 `Retry-After`、剩余等待秒数和请求编号，并写入 MCP 审计日志。附件读取和上传默认最大 5MB。
 `MCP_EMPLOYEE_RSA_PRIVATE_KEY_BASE64` 和 `MCP_EMPLOYEE_ASSERTION_SECRET` 只能保存在正式服务器环境文件中，权限必须为 `600`；私钥和 HMAC Secret 不得进入 Git 或聊天。RSA 公钥可以提供给调用平台，HMAC Secret 只能放在平台受保护环境变量中。
 
 ## 创建和管理智能体凭据
@@ -194,7 +194,7 @@ Query MCP 用来查找目标、读取当前值和确认可选业务数据；Acti
 4. 缺少必填字段、目标不唯一、状态含义不清或业务值无法确定时，先查询；仍不能确定时只向用户询问缺少的信息。
 5. 不得自行编造记录 ID、人员 ID、档案 ID、状态码、日期、金额或文件内容。
 6. 调用 Action 工具必须先选择正确的业务域工具和 operation；不得把其他 operation 的字段混入本次请求。
-7. 新增时，当前 operation 的 Schema 中 required 标记字段必须补齐；非必填字段只在用户已提供或明确需要时传入，不要逐项强迫用户补充。
+7. 新增时，当前 operation 的 Schema 中 required 标记字段必须补齐；必填字段齐全后、preview 前，必须一次性列出当前单据仍可补充且有业务意义的非必填字段，并询问用户是否补充。用户明确“不补充”“按当前信息创建”或同义表达后立即继续，不得逐项追问，也不得把非必填字段变成必填。
 8. 编辑时只传目标标识和用户明确要求修改的字段，不得为了凑齐参数重复发送未修改字段。
 9. 固定枚举必须使用工具 Schema 给出的代码与中文含义；查询结果存在 *_label 时，先用中文标签核对，禁止自行猜测数字映射。
 10. 状态变更前先查询详情，只能从 allowed_statuses 中选择目标状态，并按 change_status 分支 Schema 补齐该目标状态要求的日期、原因、处理结果、解决方案或交付文件；allowed_statuses 为空时不得发起状态变更。
@@ -214,6 +214,7 @@ Query MCP 用来查找目标、读取当前值和确认可选业务数据；Acti
 1. 新增、批量新增、付款和上传操作必须生成唯一 idempotency_key；同一用户意图的网络重试沿用同一个键。
 2. 删除、状态变更、批量操作、排序、计划调整、付款和文件操作属于高风险，确认时必须明确说明影响。
 3. 不得自动重试 execute。出现确认号、权限、业务校验或幂等错误时，停止执行并把原始中文错误告诉用户。
+4. 出现 `MCP_RATE_LIMITED` 时，本次请求尚未进入业务执行。必须停止并发调用，按照返回的 `retryAfterSeconds` 等待后再重试完全相同的请求；不得缩短等待时间、修改参数或把限流误报成业务失败。execute 仅在收到明确的 `MCP_RATE_LIMITED` 时允许按原确认内容重试。
 
 五、结果反馈
 1. preview 成功不代表业务已经修改，必须明确说明“尚未执行”。

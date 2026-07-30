@@ -7,6 +7,9 @@ import { checkBugTitle, createBug, getBug, getBugProjectOptions, getBugRequireme
 import { getUserOptions } from '../../../api/userApi';
 import { getArchiveOptionsByTypeName } from '../../../api/archiveApi';
 import type { BugFormValues } from '../types';
+import { createRichTextImageUploader } from '../../../api/richTextImageApi';
+
+const uploadRichTextImage = createRichTextImageUploader('/bugs');
 
 type Mode = 'create' | 'edit' | 'copy';
 type Option = { label: string; value: string };
@@ -54,7 +57,7 @@ export function BugFormPage({ mode }: { mode: Mode }) {
   >
     <TemplateFormSection title="基本信息"><div className="admin-template-form-page__grid">
       <AdminProFormText name="title" label="Bug标题" rules={titleRules} fieldProps={{ maxLength: 200 }} formItemProps={{ className: 'admin-template-form-page__field is-full' }} />
-      <AdminProFormRichDescription name="description" label="Bug描述" className="admin-template-form-page__field is-full" />
+      <AdminProFormRichDescription name="description" label="Bug描述" className="admin-template-form-page__field is-full" onUploadImage={uploadRichTextImage} />
       <AdminProFormSelect name="sourceType" label="关联类型" options={[{ label: '项目', value: 1 }, { label: '需求', value: 2 }]} rules={[{ required: true, message: '请选择关联类型' }]} />
       {sourceType === 2 ? <AdminProFormSelect name="requirementId" label="关联需求" options={requirements} rules={[{ required: true, message: '请选择关联需求' }]} /> : <AdminProFormSelect name="projectId" label="关联项目" options={projects} rules={[{ required: true, message: '请选择关联项目' }]} />}
       <AdminProFormSelect name="bugTypeId" label="Bug类型" options={bugTypes} rules={[{ required: true, message: '请选择Bug类型' }]} />

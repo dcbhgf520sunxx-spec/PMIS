@@ -15,6 +15,7 @@ const { allowedTaskStatuses } = require('../services/taskRules')
 const { allowedBugStatuses } = require('../services/bugRules')
 const { allowedWorkOrderStatuses } = require('../services/workOrderStatusRules')
 const { allowedPlanItemStatuses } = require('../services/projectStagePlanRules')
+const { normalizeMcpQueryContent } = require('./contentPolicy')
 
 const GLOBAL_SEARCH_TOOLS = [
   ['/products', 'product_search'],
@@ -489,22 +490,25 @@ async function dispatchQueryTool(name, args, context, dependencies = {}) {
     const runTool = dependencies.runTool || ((toolName, toolArgs) => dispatchQueryTool(toolName, toolArgs, context, dependencies))
     const entries = await Promise.all(buildGlobalSearchPlan(args, context).map(async ({ name: toolName, args: toolArgs }) => [
       toolName,
-      await runTool(toolName, toolArgs),
+      normalizeMcpQueryContent(await runTool(toolName, toolArgs), { summary: true }),
     ]))
     return {
       keyword: String(args.keyword || '').trim() || null,
       results: Object.fromEntries(entries),
     }
   }
-  if (name === 'stage_plan_search') return decorateQueryResult(name, normalizeSearchResult(await searchStagePlans(args, dependencies.database)))
-  if (name === 'contract_search') return decorateQueryResult(name, normalizeSearchResult(await searchContracts(args, dependencies.database)))
-  if (name === 'payment_search') return decorateQueryResult(name, normalizeSearchResult(await searchPayments(args, dependencies.database)))
+  if (name === 'stage_plan_search') return normalizeMcpQueryContent(decorateQueryResult(name, normalizeSearchResult(await searchStagePlans(args, dependencies.database))), { summary: true })
+  if (name === 'contract_search') return normalizeMcpQueryContent(decorateQueryResult(name, normalizeSearchResult(await searchContracts(args, dependencies.database))), { summary: true })
+  if (name === 'payment_search') return normalizeMcpQueryContent(decorateQueryResult(name, normalizeSearchResult(await searchPayments(args, dependencies.database))), { summary: true })
   if (name === 'business_options') return searchBusinessOptions(args, dependencies.database)
   const definition = handlers[name]
   if (!definition) throw new Error('查询工具不存在或无权限')
   const [handler, buildInput] = definition
   const value = unwrapEnvelope(await invokeController(handler, context, buildInput(args, context)))
-  return decorateQueryResult(name, name.endsWith('_search') ? normalizeSearchResult(value) : value)
+  return normalizeMcpQueryContent(
+    decorateQueryResult(name, name.endsWith('_search') ? normalizeSearchResult(value) : value),
+    { summary: name.endsWith('_search') || name.endsWith('_history') }
+  )
 }
 
 module.exports = {

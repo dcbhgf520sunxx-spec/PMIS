@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const test = require('node:test')
 
-const { parsePmisResourceUri, toMcpBlobResource } = require('../src/mcp/fileResources')
+const { parsePmisResourceUri, toMcpUrlResource } = require('../src/mcp/fileResources')
 
 test('parses only governed PMIS contract and stage delivery resource URIs', () => {
   assert.deepEqual(
@@ -15,19 +15,19 @@ test('parses only governed PMIS contract and stage delivery resource URIs', () =
   assert.throws(() => parsePmisResourceUri('file:///etc/passwd'), /资源地址/)
 })
 
-test('returns MIME-preserving base64 content and rejects oversized inline files', () => {
-  const resource = toMcpBlobResource({
+test('returns governed file metadata and URL without embedding file bytes', () => {
+  const resource = toMcpUrlResource({
     uri: 'pmis://projects/1/contract/attachments/2',
     mimeType: 'application/pdf',
-    buffer: Buffer.from('%PDF-1.7'),
-  }, 20)
+    fileName: '合同.pdf',
+    fileSize: 1024,
+    fileUrl: 'https://oss.example.com/pmis/contract.pdf',
+  })
   assert.equal(resource.mimeType, 'application/pdf')
-  assert.equal(Buffer.from(resource.blob, 'base64').toString(), '%PDF-1.7')
-  assert.equal(Object.hasOwn(resource, 'path'), false)
-
-  assert.throws(() => toMcpBlobResource({
-    uri: 'pmis://projects/1/contract/attachments/2',
-    mimeType: 'application/pdf',
-    buffer: Buffer.alloc(21),
-  }, 20), /过大/)
+  assert.deepEqual(JSON.parse(resource.text), {
+    file_name: '合同.pdf',
+    file_size: 1024,
+    file_url: 'https://oss.example.com/pmis/contract.pdf',
+  })
+  assert.equal(Object.hasOwn(resource, 'blob'), false)
 })

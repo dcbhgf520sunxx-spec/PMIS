@@ -1,5 +1,6 @@
 const db = require('../db')
 const fs = require('node:fs')
+const { Readable } = require('node:stream')
 const { fail, failField, ok } = require('../utils/response')
 const {
   PLAN_ITEM_STATUS,
@@ -13,8 +14,11 @@ const {
   PROJECT_PLAN_DELIVERY_DIR,
   removeAttachmentFile,
   resolveAttachmentPath,
-  saveAttachmentFile,
 } = require('../services/projectContractAttachmentService')
+const {
+  loadOssAttachment,
+  uploadAttachmentToOss,
+} = require('../services/projectContractOssService')
 const {
   appendLegacyAdjustmentReasons,
   buildPlanItemStatusHistoryChanges,
@@ -408,7 +412,7 @@ exports.changeStatus = async (req, res) => {
     const actualEndDate = target === PLAN_ITEM_STATUS.COMPLETED ? req.body.actual_end_date : null
     for (const file of uploadedFiles) {
       file.originalname = normalizeOriginalName(file.originalname)
-      const saved = await saveAttachmentFile(file, DELIVERY_ROOT)
+      const saved = await uploadAttachmentToOss(file)
       savedFiles.push({ file, saved })
     }
     await db.transaction(async (tx) => {
@@ -416,11 +420,12 @@ exports.changeStatus = async (req, res) => {
         .run(target, previousStatus, actualEndDate, pauseReason, req.user.id, item.id)
       for (const entry of savedFiles) {
         await tx.prepare(`INSERT INTO pms_project_plan_delivery_file
-          (plan_item_id,original_name,storage_key,mime_type,size_bytes,uploader_id)
-          VALUES(?,?,?,?,?,?)`).run(
+          (plan_item_id,original_name,storage_key,oss_response,mime_type,size_bytes,uploader_id)
+          VALUES(?,?,?,?,?,?,?)`).run(
           item.id,
           entry.file.originalname,
           entry.saved.storageName,
+          JSON.stringify(entry.saved.ossResponse),
           entry.file.mimetype,
           entry.file.buffer.length,
           req.user.id
@@ -442,14 +447,8 @@ exports.changeStatus = async (req, res) => {
         item.name
       )
     })
-    savedFiles.length = 0
     ok(res, null)
   } catch (error) {
-    await Promise.all(savedFiles.map(({ saved }) => (
-      removeAttachmentFile(saved.storageName, DELIVERY_ROOT).catch((cleanupError) => {
-        if (cleanupError.code !== 'ENOENT') console.error(cleanupError)
-      })
-    )))
     if (error.statusCode === 400) return fail(res, 400, 400, error.message)
     console.error(error)
     fail(res, 500, 500, '状态变更失败')
@@ -525,20 +524,26 @@ exports.listFiles = async (req, res) => {
 }
 
 exports.uploadFile = async (req, res) => {
-  let saved
   try {
     const item = await findItem(req.params.projectId, req.params.itemId)
     if (!item) return fail(res, 404, 404, '关键事项不存在')
     if (!req.file) return fail(res, 400, 400, '请选择要上传的交付文件')
     req.file.originalname = normalizeOriginalName(req.file.originalname)
-    saved = await saveAttachmentFile(req.file, DELIVERY_ROOT)
+    const saved = await uploadAttachmentToOss(req.file)
     const result = await db.prepare(`INSERT INTO pms_project_plan_delivery_file
-      (plan_item_id,original_name,storage_key,mime_type,size_bytes,uploader_id)
-      VALUES(?,?,?,?,?,?)`).run(item.id, req.file.originalname, saved.storageName, req.file.mimetype, req.file.buffer.length, req.user.id)
+      (plan_item_id,original_name,storage_key,oss_response,mime_type,size_bytes,uploader_id)
+      VALUES(?,?,?,?,?,?,?)`).run(
+      item.id,
+      req.file.originalname,
+      saved.storageName,
+      JSON.stringify(saved.ossResponse),
+      req.file.mimetype,
+      req.file.buffer.length,
+      req.user.id
+    )
     await db.writeLog(req.user.id, '上传交付文件', '项目阶段主计划', item.id, 'delivery_files', null, req.file.originalname, req.ip, item.name)
     ok(res, (await listFiles(item.id)).find((file) => Number(file.id) === Number(result.lastInsertRowid)))
   } catch (error) {
-    if (saved) await removeAttachmentFile(saved.storageName, DELIVERY_ROOT).catch(console.error)
     if (error.statusCode === 400) return fail(res, 400, 400, error.message)
     console.error(error)
     fail(res, 500, 500, '上传交付文件失败')
@@ -556,9 +561,11 @@ exports.deleteFile = async (req, res) => {
       return fail(res, 400, 400, '已完成且要求交付文件的事项必须至少保留一个有效文件')
     }
     await db.prepare('UPDATE pms_project_plan_delivery_file SET is_void=1 WHERE id=?').run(file.id)
-    await removeAttachmentFile(file.storage_key, DELIVERY_ROOT).catch((error) => {
-      if (error.code !== 'ENOENT') console.error(error)
-    })
+    if (!file.oss_response) {
+      await removeAttachmentFile(file.storage_key, DELIVERY_ROOT).catch((error) => {
+        if (error.code !== 'ENOENT') console.error(error)
+      })
+    }
     await db.writeLog(req.user.id, '删除交付文件', '项目阶段主计划', item.id, 'delivery_files', file.original_name, null, req.ip, item.name)
     ok(res, null)
   } catch (error) {
@@ -573,10 +580,15 @@ exports.downloadFile = async (req, res) => {
     if (!item) return fail(res, 404, 404, '关键事项不存在')
     const file = await db.prepare('SELECT * FROM pms_project_plan_delivery_file WHERE id=? AND plan_item_id=? AND is_current=1 AND is_void=0').get(req.params.fileId, item.id)
     if (!file) return fail(res, 404, 404, '交付文件不存在')
-    const filePath = resolveAttachmentPath(file.storage_key, DELIVERY_ROOT)
-    await fs.promises.access(filePath)
     res.setHeader('Content-Type', file.mime_type)
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(file.original_name)}`)
+    if (file.oss_response) {
+      const response = await loadOssAttachment(file.oss_response)
+      Readable.fromWeb(response.body).pipe(res)
+      return
+    }
+    const filePath = resolveAttachmentPath(file.storage_key, DELIVERY_ROOT)
+    await fs.promises.access(filePath)
     fs.createReadStream(filePath).pipe(res)
   } catch (error) {
     if (error.code === 'ENOENT') return fail(res, 404, 404, '交付文件不存在')

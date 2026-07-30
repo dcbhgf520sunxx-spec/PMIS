@@ -27,6 +27,7 @@ const requirementRoutes = require('./routes/requirement')
 const taskRoutes = require('./routes/task')
 const bugRoutes = require('./routes/bug')
 const mcpRoutes = require('./routes/mcp')
+const ossFileController = require('./controllers/ossFileController')
 
 const app = express()
 const { allowedOrigin } = validateRuntimeConfig()
@@ -50,6 +51,7 @@ app.get('/api/health', async (req, res) => {
     fail(res, 503, 503, 'unhealthy', { status: 'error', db: 'disconnected' })
   }
 })
+app.get('/api/files/oss', ossFileController.read)
 
 // 所有登录用户共用的下拉选项和个人消息接口，不对应独立菜单权限。
 app.get('/api/user-options', verifyToken, userController.options)

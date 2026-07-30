@@ -201,6 +201,7 @@ CREATE TABLE IF NOT EXISTS pms_project_plan_delivery_file (
   plan_item_id BIGINT NOT NULL REFERENCES pms_project_plan_item(id) ON DELETE RESTRICT,
   original_name VARCHAR(255) NOT NULL,
   storage_key VARCHAR(255) NOT NULL,
+  oss_response JSONB,
   mime_type VARCHAR(150) NOT NULL,
   size_bytes BIGINT NOT NULL CHECK (size_bytes > 0 AND size_bytes <= 20971520),
   version_no INTEGER NOT NULL DEFAULT 1 CHECK (version_no > 0),

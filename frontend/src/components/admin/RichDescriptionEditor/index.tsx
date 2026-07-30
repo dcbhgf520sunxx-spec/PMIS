@@ -11,13 +11,15 @@ type RichDescriptionEditorProps = {
   onChange?: (value: string) => void;
   placeholder?: string;
   tip?: string;
+  onUploadImage?: (file: File) => Promise<string>;
 };
 
 export function RichDescriptionEditor({
   value = '',
   onChange,
+  onUploadImage,
   placeholder = '请输入描述，可粘贴图片',
-  tip = '支持基础格式和粘贴图片，图片建议小于 5MB。'
+  tip = '支持基础格式和粘贴图片，图片上传后保存到OSS，且不能超过 5MB。'
 }: RichDescriptionEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const lastValueRef = useRef('');
@@ -124,7 +126,7 @@ export function RichDescriptionEditor({
     document.addEventListener('mouseup', cleanup);
   };
 
-  const handlePaste: React.ClipboardEventHandler<HTMLDivElement> = (event) => {
+  const handlePaste: React.ClipboardEventHandler<HTMLDivElement> = async (event) => {
     const files = Array.from(event.clipboardData.files || []);
     const image = files.find((file) => file.type.startsWith('image/'));
     if (!image) {
@@ -137,10 +139,25 @@ export function RichDescriptionEditor({
       message.warning('图片不能超过 5MB');
       return;
     }
-
-    const reader = new FileReader();
-    reader.onload = () => insertImage(String(reader.result || ''));
-    reader.readAsDataURL(image);
+    if (!onUploadImage) {
+      message.warning('当前场景未配置图片上传');
+      return;
+    }
+    const selection = window.getSelection();
+    const range = selection?.rangeCount ? selection.getRangeAt(0).cloneRange() : null;
+    const hide = message.loading('图片上传中…', 0);
+    try {
+      const url = await onUploadImage(image);
+      if (range && editorRef.current?.contains(range.commonAncestorContainer)) {
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      }
+      insertImage(url);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '图片上传失败');
+    } finally {
+      hide();
+    }
   };
 
   const isEmpty = !editorRef.current?.innerText?.trim() && !sanitizeRichText(value);
@@ -195,18 +212,20 @@ export function RichDescriptionEditor({
 type AdminProFormRichDescriptionProps = ComponentProps<typeof ProForm.Item> & {
   placeholder?: string;
   tip?: string;
+  onUploadImage?: (file: File) => Promise<string>;
 };
 
 export function AdminProFormRichDescription({
   className,
   placeholder,
   tip,
+  onUploadImage,
   children,
   ...props
 }: AdminProFormRichDescriptionProps) {
   return (
     <ProForm.Item {...props} className={className}>
-      {children ?? <RichDescriptionEditor placeholder={placeholder} tip={tip} />}
+      {children ?? <RichDescriptionEditor placeholder={placeholder} tip={tip} onUploadImage={onUploadImage} />}
     </ProForm.Item>
   );
 }

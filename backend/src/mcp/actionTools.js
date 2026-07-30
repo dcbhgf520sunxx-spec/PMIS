@@ -17,6 +17,7 @@ const { allowedWorkOrderStatuses, resolveWorkOrderResultFields, validateWorkOrde
 const { allowedPlanItemStatuses, validatePlanItemStatusChange } = require('../services/projectStagePlanRules')
 const { normalizePaymentMonth, validateContractStages, validatePaymentAmount } = require('../services/projectContractRules')
 const { validateAttachmentFile } = require('../services/projectContractAttachmentService')
+const { OSS_FILE_ORIGIN } = require('../services/projectContractOssService')
 const { invokeController } = require('./controllerAdapter')
 const { unwrapEnvelope } = require('./queryTools')
 
@@ -88,7 +89,7 @@ function cleanBody(args) {
   const body = { ...args }
   for (const key of [
     'mode', 'confirmation_id', 'idempotency_key', 'id',
-    'attachment_id', 'file_id', 'file_name', 'mime_type', 'content_base64', 'files',
+    'attachment_id', 'file_id', 'file_name', 'mime_type', 'file_url', 'files',
   ]) delete body[key]
   return body
 }
@@ -680,22 +681,85 @@ const actions = {
   payment_create: [contract.createPayment, (a) => ({ params: { id: id(a, 'project_id'), stageId: id(a, 'stage_id') }, body: cleanBody(a) })],
   payment_update: [contract.updatePayment, (a) => ({ params: { id: id(a, 'project_id'), paymentId: id(a, 'payment_id') }, body: cleanBody(a) })],
   payment_delete: [contract.deletePayment, (a) => ({ params: { id: id(a, 'project_id'), paymentId: id(a, 'payment_id') } })],
-  contract_attachment_upload: [contract.uploadAttachment, (a) => ({ params: { id: id(a, 'project_id') }, file: buildFile(a) })],
+  contract_attachment_upload: [contract.uploadAttachment, async (a) => ({ params: { id: id(a, 'project_id') }, file: await buildFileFromUrl(a) })],
   contract_attachment_delete: [contract.deleteAttachment, (a) => ({ params: { id: id(a, 'project_id'), attachmentId: id(a, 'attachment_id') } })],
-  stage_delivery_upload: [stage.uploadFile, (a) => ({ params: { projectId: id(a, 'project_id'), itemId: id(a, 'item_id') }, file: buildFile(a) })],
+  stage_delivery_upload: [stage.uploadFile, async (a) => ({ params: { projectId: id(a, 'project_id'), itemId: id(a, 'item_id') }, file: await buildFileFromUrl(a) })],
   stage_delivery_delete: [stage.deleteFile, (a) => ({ params: { projectId: id(a, 'project_id'), itemId: id(a, 'item_id'), fileId: id(a, 'file_id') } })],
 }
 
-function buildFile(args) {
-  if (!args.file_name) throw businessValidationError('file_name', '缺少文件名')
-  if (!args.content_base64) throw businessValidationError('content_base64', '缺少文件内容')
-  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(args.content_base64) || args.content_base64.length % 4 !== 0) {
-    throw businessValidationError('content_base64', '文件内容不是有效的Base64')
+function configuredFileOrigins() {
+  return [
+    OSS_FILE_ORIGIN,
+    process.env.PUBLIC_APP_ORIGIN,
+    process.env.ALLOWED_ORIGIN,
+    ...String(process.env.MCP_FILE_URL_ALLOWED_ORIGINS || '').split(','),
+  ]
+    .filter(Boolean)
+    .map((value) => value.trim())
+    .map((value) => new URL(value).origin)
+}
+
+async function readLimitedBody(response, limit) {
+  const reader = response.body?.getReader()
+  if (!reader) throw businessValidationError('file_url', '文件URL未返回可读取内容')
+  const chunks = []
+  let size = 0
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    size += value.byteLength
+    if (size > limit) {
+      await reader.cancel()
+      throw businessValidationError('file_url', `文件过大（上限${limit}字节）`)
+    }
+    chunks.push(Buffer.from(value))
   }
-  const buffer = Buffer.from(args.content_base64, 'base64')
-  if (!buffer.length) throw businessValidationError('content_base64', '文件内容为空')
-  if (buffer.length > FILE_LIMIT) throw businessValidationError('content_base64', `文件过大（上限${FILE_LIMIT}字节）`)
-  return { originalname: args.file_name, mimetype: args.mime_type || 'application/octet-stream', size: buffer.length, buffer }
+  return Buffer.concat(chunks)
+}
+
+async function buildFileFromUrl(args, {
+  allowedOrigins = configuredFileOrigins(),
+  fetchImpl = fetch,
+  limit = FILE_LIMIT,
+} = {}) {
+  if (!args.file_name) throw businessValidationError('file_name', '缺少文件名')
+  if (!args.file_url) throw businessValidationError('file_url', '缺少文件URL')
+  let url
+  try {
+    url = new URL(args.file_url)
+  } catch {
+    throw businessValidationError('file_url', '文件URL格式不正确')
+  }
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
+    throw businessValidationError('file_url', '文件URL必须是无账号信息的HTTP或HTTPS地址')
+  }
+  const origins = allowedOrigins.map((value) => new URL(value).origin)
+  if (!origins.includes(url.origin)) {
+    throw businessValidationError('file_url', '文件URL不在允许的OSS地址范围内')
+  }
+  let response
+  try {
+    response = await fetchImpl(url, {
+      signal: AbortSignal.timeout(10_000),
+      redirect: 'manual',
+    })
+  } catch {
+    throw businessValidationError('file_url', '读取文件URL失败')
+  }
+  if (response.status >= 300 && response.status < 400) {
+    throw businessValidationError('file_url', '文件URL不允许重定向')
+  }
+  if (!response.ok) throw businessValidationError('file_url', `读取文件URL失败（HTTP ${response.status}）`)
+  const declaredSize = Number(response.headers.get('content-length') || 0)
+  if (declaredSize > limit) throw businessValidationError('file_url', `文件过大（上限${limit}字节）`)
+  const buffer = await readLimitedBody(response, limit)
+  if (!buffer.length) throw businessValidationError('file_url', '文件内容为空')
+  return {
+    originalname: args.file_name,
+    mimetype: args.mime_type || response.headers.get('content-type')?.split(';')[0] || 'application/octet-stream',
+    size: buffer.length,
+    buffer,
+  }
 }
 
 async function validateRelatedUsers(args, database) {
@@ -856,13 +920,14 @@ async function validateFileActionLimits(name, args, database) {
 }
 
 async function validateActionBusinessRules(name, args, database = db) {
+  await validateFileActionLimits(name, args, database)
   if (name.endsWith('_upload')) {
     try {
-      validateAttachmentFile(buildFile(args))
+      validateAttachmentFile(await buildFileFromUrl(args))
     } catch (error) {
       if (error.code === 'MCP_BUSINESS_VALIDATION') throw error
       throw businessValidationError(
-        /文件名/.test(error.message) ? 'file_name' : 'content_base64',
+        /文件名/.test(error.message) ? 'file_name' : 'file_url',
         error.message
       )
     }
@@ -940,7 +1005,6 @@ async function validateActionBusinessRules(name, args, database = db) {
   }
   await validateDuplicate(name, args, database)
   await validateDeleteBlockers(name, args, database)
-  await validateFileActionLimits(name, args, database)
 }
 
 async function dispatchActionTool(name, args, context, dependencies = {}) {
@@ -989,7 +1053,7 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
   await actionTicketService.consumeTicket(context, name, preparedArgs, args.confirmation_id)
   try {
     const [handler, buildInput] = definition
-    const data = unwrapEnvelope(await invokeController(handler, context, buildInput(preparedArgs)))
+    const data = unwrapEnvelope(await invokeController(handler, context, await buildInput(preparedArgs)))
     return {
       riskLevel,
       riskReason,
@@ -1007,6 +1071,7 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
 
 module.exports = {
   actions,
+  buildFileFromUrl,
   dispatchActionTool,
   loadActionTargetSnapshot,
   mergeActionUpdateArguments,

@@ -7,6 +7,7 @@ const {
   validatePasswordChangePayload,
   validateNewPassword,
   toAvatarResponse,
+  uploadAvatarToOss,
   validateAvatarPayload
 } = require('../src/services/accountService')
 
@@ -93,6 +94,31 @@ test('rejects a payload whose MIME type does not match the file signature', () =
 
 test('normalizes reset avatar response to empty avatar url', () => {
   assert.deepEqual(toAvatarResponse(null), { avatar_url: null })
+})
+
+test('头像上传统一写入OSS并返回URL', async () => {
+  const content = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a]).toString('base64')
+  const result = await uploadAvatarToOss({
+    fileName: 'me.png',
+    mimeType: 'image/png',
+    contentBase64: content,
+  }, {
+    fetchImpl: async () => new Response(JSON.stringify({
+      code: 100,
+      data: [{
+        id: 'avatar-1',
+        fileName: 'me.png',
+        filePath: 'pmis/avatars/me.png',
+        fileUrl: 'http://oss.znjs.com:9000/pmis/avatars/me.png',
+      }],
+    }), { status: 200, headers: { 'content-type': 'application/json' } }),
+    accessUrlOptions: {
+      publicOrigin: 'https://pmis.example.com',
+      secret: 'test-signing-secret',
+    },
+  })
+  assert.equal(new URL(result.avatar_url).origin, 'https://pmis.example.com')
+  assert.equal(new URL(result.avatar_url).pathname, '/api/files/oss')
 })
 
 test('requires password when changing phone', () => {

@@ -1,12 +1,12 @@
 const db = require('../db')
 
 const SECRET_KEYS = /(^|_)(authorization|token|secret|password|credential|cookie|confirmation|idempotency)($|_)/i
-const FILE_KEYS = /(content_base64|file_buffer|file_content)/i
+const FILE_KEYS = /(content_base64|file_buffer|file_content|file_url)/i
 
 function redactAuditInput(value, key = '') {
   const normalizedKey = String(key).replace(/([a-z0-9])([A-Z])/g, '$1_$2')
   if (SECRET_KEYS.test(normalizedKey)) return '[REDACTED]'
-  if (FILE_KEYS.test(key)) return '[FILE_CONTENT]'
+  if (FILE_KEYS.test(key)) return /url/i.test(key) ? '[FILE_URL]' : '[FILE_CONTENT]'
   if (Array.isArray(value)) return value.slice(0, 100).map((item) => redactAuditInput(item))
   if (value && typeof value === 'object') {
     return Object.fromEntries(Object.entries(value).map(([childKey, childValue]) => [
