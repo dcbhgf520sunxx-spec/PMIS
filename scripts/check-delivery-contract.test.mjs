@@ -162,6 +162,7 @@ test('allows explicit public and login-only shared APIs', () => {
     "const messageRoutes = require('./routes/messages')",
     "app.use('/api/auth', authRoutes)",
     "app.get('/api/health', healthController)",
+    "app.get('/api/files/oss', ossFileController.read)",
     "app.get('/api/user-options', verifyToken, userController.options)",
     "app.get('/api/role-options', verifyToken, roleController.options)",
     "app.get('/api/archive-options/by-type-name', verifyToken, archiveController.getByTypeName)",

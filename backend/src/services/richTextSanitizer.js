@@ -14,7 +14,7 @@ function sanitizeRichText(value = '') {
       span: ['style']
     },
     allowedSchemes: ['http', 'https'],
-    allowedSchemesByTag: { img: ['http', 'https', 'data'] },
+    allowedSchemesByTag: { img: ['http', 'https'] },
     allowProtocolRelative: false,
     allowedStyles: {
       span: {
@@ -41,7 +41,6 @@ function sanitizeRichText(value = '') {
       }
     },
     exclusiveFilter: (frame) => frame.tag === 'img'
-      && !/^data:image\//i.test(frame.attribs.src || '')
       && !/^https?:\/\//i.test(frame.attribs.src || '')
   })
 }

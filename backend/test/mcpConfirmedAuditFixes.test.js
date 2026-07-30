@@ -165,13 +165,13 @@ test('preview rejects invalid related users before issuing a confirmation', asyn
   )
 })
 
-test('file upload preview validates Base64 before issuing a confirmation', async () => {
+test('file upload preview validates OSS URL before issuing a confirmation', async () => {
   await assert.rejects(
     () => dispatchActionTool('stage_delivery_upload', {
       project_id: 10,
       item_id: 20,
       file_name: '交付.pdf',
-      content_base64: 'not-base64',
+      file_url: 'http://127.0.0.1/private.pdf',
       idempotency_key: 'invalid-file',
       mode: 'preview',
     }, {
@@ -187,7 +187,7 @@ test('file upload preview validates Base64 before issuing a confirmation', async
       },
     }),
     (error) => error.code === 'MCP_BUSINESS_VALIDATION'
-      && Boolean(error.fieldErrors.content_base64)
+      && Boolean(error.fieldErrors.file_url)
   )
 })
 
@@ -439,7 +439,7 @@ test('contract attachment preview rejects the eleventh active attachment', async
       project_id: 3,
       file_name: '补充协议.pdf',
       mime_type: 'application/pdf',
-      content_base64: 'JVBERi0x',
+      file_url: 'https://oss.example.com/pmis/contracts/a.pdf',
     }, database),
     (error) => error.code === 'MCP_BUSINESS_VALIDATION'
       && Boolean(error.fieldErrors.file_name)

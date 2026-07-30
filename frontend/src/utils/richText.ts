@@ -71,7 +71,7 @@ export function sanitizeRichText(html = '') {
 
     if (tag === 'IMG') {
       const src = element.getAttribute('src') || '';
-      if (!/^data:image\//i.test(src) && !/^https?:\/\//i.test(src)) {
+      if (!/^https?:\/\//i.test(src)) {
         element.remove();
         return;
       }

@@ -7,6 +7,9 @@ import { checkTaskName, createSubtask, createTask, getTask, getTaskProjectOption
 import { getUserOptions } from '../../../api/userApi';
 import { getArchiveOptionsByTypeName } from '../../../api/archiveApi';
 import type { TaskFormValues, TaskRecord } from '../types';
+import { createRichTextImageUploader } from '../../../api/richTextImageApi';
+
+const uploadRichTextImage = createRichTextImageUploader('/tasks');
 
 type Mode = 'create' | 'create-subtask' | 'edit' | 'copy';
 type Option = { label: string; value: string };
@@ -117,7 +120,7 @@ export function TaskFormPage({ mode }: { mode: Mode }) {
     <TemplateFormSection title="基本信息">
       <div className="admin-template-form-page__grid">
         <AdminProFormText name="name" label="任务名称" rules={nameRules} fieldProps={{ maxLength: 200 }} formItemProps={{ className: 'admin-template-form-page__field is-full' }} />
-        <AdminProFormRichDescription name="description" label="任务描述" className="admin-template-form-page__field is-full" />
+        <AdminProFormRichDescription name="description" label="任务描述" className="admin-template-form-page__field is-full" onUploadImage={uploadRichTextImage} />
         {subtaskMode || sourceTask?.parentTaskId ? <AdminProFormText name="parentTaskName" label="所属主任务" disabled={subtaskMode || Boolean(sourceTask?.parentTaskId)} /> : null}
         <AdminProFormSelect name="sourceType" label="关联类型" options={[{ label: '项目', value: 1 }, { label: '需求', value: 2 }]} rules={[{ required: true, message: '请选择关联类型' }]} fieldProps={{ disabled: associationLocked }} />
         {sourceType === 2

@@ -36,8 +36,12 @@ function resolveOssFile(value) {
   return file
 }
 
-async function uploadAttachmentToOss(file, { fetchImpl = fetch, uploadUrl = OSS_UPLOAD_URL } = {}) {
-  validateAttachmentFile(file)
+async function uploadFileToOss(file, {
+  fetchImpl = fetch,
+  uploadUrl = OSS_UPLOAD_URL,
+  validateFile = validateAttachmentFile,
+} = {}) {
+  validateFile(file)
   const form = new FormData()
   form.append('file', new Blob([file.buffer], { type: file.mimetype }), file.originalname)
   form.append('bucketName', OSS_BUCKET_NAME)
@@ -67,6 +71,10 @@ async function uploadAttachmentToOss(file, { fetchImpl = fetch, uploadUrl = OSS_
   }
 }
 
+async function uploadAttachmentToOss(file, options = {}) {
+  return uploadFileToOss(file, options)
+}
+
 async function loadOssAttachment(ossResponse, { fetchImpl = fetch } = {}) {
   const file = resolveOssFile(ossResponse)
   let response
@@ -86,4 +94,5 @@ module.exports = {
   loadOssAttachment,
   resolveOssFile,
   uploadAttachmentToOss,
+  uploadFileToOss,
 }

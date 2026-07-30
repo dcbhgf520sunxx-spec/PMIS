@@ -346,6 +346,36 @@ test('global search dispatches every permitted zero-filter search and groups the
   })
 })
 
+test('global search returns compact summaries and never forwards inline image bodies', async () => {
+  const context = {
+    allowedMenuPaths: new Set(['/work-orders']),
+    user: { id: 8 },
+  }
+  const result = await dispatchQueryTool('global_search', {}, context, {
+    runTool: async () => ({
+      items: [{
+        id: 7,
+        problem_desc: '<p>网络故障</p><img src="data:image/png;base64,AAAA">',
+      }],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+    }),
+  })
+
+  assert.equal(result.results.work_order_search.items[0].problem_desc, '网络故障 〔图片〕')
+  assert.doesNotMatch(JSON.stringify(result), /data:image|base64/i)
+})
+
+test('successful MCP tool responses keep full data only once', async () => {
+  const value = { items: [{ id: 1, name: '任务A' }], total: 1 }
+  const result = require('../src/mcp/createServer').asToolResult(value)
+
+  assert.deepEqual(result.structuredContent, value)
+  assert.match(result.content[0].text, /结构化结果/)
+  assert.doesNotMatch(result.content[0].text, /任务A/)
+})
+
 test('business analysis requires permission for the requested business domain', () => {
   const definition = require('../src/mcp/catalog').getToolDefinition('business_analyze', 'query')
   const context = { endpointType: 'query', allowedMenuPaths: new Set(['/work-orders']) }
@@ -400,7 +430,7 @@ test('action schemas require complete create inputs and retry-safe idempotency k
     ['project_create', { name: '项目', product_id: 1, owner_id: 8, expected_end_date: '2026-08-31' }, ['idempotency_key']],
     ['requirement_create', {
       title: '需求', requirement_type: 1, product_id: 1, owner_id: 8,
-      submitter_name: '张三', submit_date: '2026-07-28',
+      priority: 1, submitter_name: '张三', submit_date: '2026-07-28',
     }, ['idempotency_key']],
     ['task_create', {
       name: '任务', source_type: 1, project_id: 1, task_type: 2, owner_ids: [8],
@@ -428,7 +458,7 @@ test('action schemas require complete create inputs and retry-safe idempotency k
       payment_month: '2026-07', handler_id: 8,
     }, ['idempotency_key']],
     ['contract_attachment_upload', {
-      project_id: 1, file_name: '合同.pdf', content_base64: 'YQ==',
+      project_id: 1, file_name: '合同.pdf', file_url: 'https://oss.example.com/pmis/contracts/a.pdf',
     }, ['idempotency_key']],
   ]
 
@@ -635,26 +665,85 @@ test('edit schemas allow clearing optional relationship arrays but keep owners n
   assert.equal(getToolDefinition('task_update', 'action').inputSchema.properties.owner_ids.minItems, 1)
 })
 
-test('MCP rate limit isolates clients and rejects requests above the configured window', () => {
+test('MCP rate limit counts tool calls per client and employee and exposes retry details', async () => {
   let current = 1000
-  const middleware = createMcpRateLimit('action', { limit: 1, windowMs: 100, now: () => current })
+  const audits = []
+  const middleware = createMcpRateLimit('action', {
+    limit: 1,
+    windowMs: 100,
+    now: () => current,
+    recordLimit: async (entry) => audits.push(entry),
+  })
   const response = () => ({
     statusCode: 200,
+    headers: {},
+    set(name, value) { this.headers[name] = String(value); return this },
     status(code) { this.statusCode = code; return this },
     json(body) { this.body = body; return this },
   })
+  const request = (employeeNo = '005829', method = 'tools/call') => ({
+    mcpContext: {
+      auditRequestId: `request-${employeeNo}`,
+      client: { id: 1 },
+      user: { id: 8, employeeNo },
+      endpointType: 'action',
+      ip: '127.0.0.1',
+    },
+    body: { jsonrpc: '2.0', id: 1, method },
+  })
+  const protocol = response()
+  await middleware(request('005829', 'tools/list'), protocol, () => { protocol.next = true })
   const first = response()
-  middleware({ mcpContext: { client: { id: 1 } }, body: {} }, first, () => { first.next = true })
+  await middleware(request(), first, () => { first.next = true })
   const second = response()
-  middleware({ mcpContext: { client: { id: 1 } }, body: {} }, second, () => { second.next = true })
+  await middleware(request(), second, () => { second.next = true })
   const other = response()
-  middleware({ mcpContext: { client: { id: 2 } }, body: {} }, other, () => { other.next = true })
+  await middleware(request('004825'), other, () => { other.next = true })
   current += 101
   const reset = response()
-  middleware({ mcpContext: { client: { id: 1 } }, body: {} }, reset, () => { reset.next = true })
+  await middleware(request(), reset, () => { reset.next = true })
 
+  assert.equal(protocol.next, true)
   assert.equal(first.next, true)
   assert.equal(second.statusCode, 429)
+  assert.equal(second.headers['Retry-After'], '1')
+  assert.equal(second.body.error.code, -32029)
+  assert.equal(second.body.error.data.retryAfterSeconds, 1)
+  assert.equal(second.body.error.data.limit, 1)
+  assert.equal(second.body.error.data.requestId, 'request-005829')
   assert.equal(other.next, true)
   assert.equal(reset.next, true)
+  assert.equal(audits.length, 1)
+  assert.equal(audits[0].resultStatus, 'rate_limited')
+  assert.equal(audits[0].employeeNo, '005829')
+})
+
+test('MCP rate limit counts every tools/call inside a protocol batch', async () => {
+  const middleware = createMcpRateLimit('query', {
+    limit: 1,
+    windowMs: 60_000,
+    now: () => 1000,
+    recordLimit: async () => {},
+  })
+  const req = {
+    mcpContext: {
+      auditRequestId: 'batch-request',
+      client: { id: 1 },
+      user: { id: 8, employeeNo: '005829' },
+      endpointType: 'query',
+    },
+    body: [
+      { jsonrpc: '2.0', id: 1, method: 'tools/call' },
+      { jsonrpc: '2.0', id: 2, method: 'tools/call' },
+    ],
+  }
+  const res = {
+    headers: {},
+    set(name, value) { this.headers[name] = String(value); return this },
+    status(code) { this.statusCode = code; return this },
+    json(body) { this.body = body; return this },
+  }
+  await middleware(req, res, () => { res.next = true })
+  assert.equal(res.statusCode, 429)
+  assert.equal(res.body.error.data.limit, 1)
 })

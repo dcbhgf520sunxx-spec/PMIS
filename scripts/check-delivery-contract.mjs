@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const PUBLIC_API_PATHS = new Set(['/api/auth', '/api/health']);
+const PUBLIC_API_PATHS = new Set(['/api/auth', '/api/health', '/api/files/oss']);
 const AUTHENTICATED_ONLY_API_PATHS = new Set([
   '/api/user-options',
   '/api/role-options',

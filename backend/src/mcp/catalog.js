@@ -28,6 +28,7 @@ const ACTION_TOOLS = [
   ['stage_delivery_upload', '/projects'], ['stage_delivery_delete', '/projects'],
 ]
 const SOURCE_TARGET_ACTIONS = new Set(['task_create', 'task_update', 'bug_create', 'bug_update'])
+const UPDATE_ACTIONS = new Set(ACTION_TOOLS.map(([name]) => name).filter((name) => name.endsWith('_update')))
 
 const ENUMS = {
   binary: { values: [0, 1], text: '0=否，1=是' },
@@ -67,7 +68,7 @@ const optionalIdArrayField = described({ type: 'array', items: arrayIdField, min
 const controlProperties = {
   mode: described({ type: 'string', enum: ['preview', 'execute'] }, '操作模式：preview=仅预览，execute=确认后执行；默认 preview'),
   confirmation_id: described({ type: 'string', format: 'uuid' }, '预览返回的一次性确认号；execute 时必填'),
-  idempotency_key: described({ type: 'string', maxLength: 100 }, '新增、上传或批量操作的幂等键；相同业务请求必须保持一致'),
+  idempotency_key: described({ type: 'string', minLength: 1, maxLength: 100 }, '由智能体自动生成的新增、上传或批量操作幂等键，不要询问用户；同一次 preview 和 execute 必须保持一致'),
 }
 
 const FIELD_DESCRIPTIONS = {
@@ -122,7 +123,7 @@ const FIELD_DESCRIPTIONS = {
   signed_date: '合同签订日期，格式 YYYY-MM-DD',
   submit_date: '提出日期，格式 YYYY-MM-DD',
   submit_time: '提出时间，格式 YYYY-MM-DD 或 ISO 8601 日期时间',
-  payment_month: '付款月份，格式 YYYY-MM',
+  payment_month: '付款月份，格式 YYYY-MM，不能晚于当前月份',
   contract_amount: '合同金额，必须大于 0',
   payment_amount: '付款金额，必须大于 0',
   ids: '待批量处理的业务记录标识列表',
@@ -132,6 +133,7 @@ const FIELD_DESCRIPTIONS = {
   activation_reason: '激活原因；恢复激活时必填',
   pause_reason: '暂停原因；关键事项暂停时必填',
   reason: '调整原因',
+  file_url: '已上传到受信任 OSS 的文件URL；PMIS只通过URL读取文件，不接受Base64文件内容',
   id: '业务记录标识；先用对应查询工具定位，不要猜测',
 }
 
@@ -248,9 +250,9 @@ const actionFields = {
   payment_create: ['project_id', 'stage_id', 'payment_amount', 'payment_month', 'handler_id', 'remark'],
   payment_update: ['project_id', 'payment_id', 'payment_amount', 'payment_month', 'handler_id', 'remark'],
   payment_delete: ['project_id', 'payment_id'],
-  contract_attachment_upload: ['project_id', 'file_name', 'mime_type', 'content_base64'],
+  contract_attachment_upload: ['project_id', 'file_name', 'mime_type', 'file_url'],
   contract_attachment_delete: ['project_id', 'attachment_id'],
-  stage_delivery_upload: ['project_id', 'item_id', 'file_name', 'mime_type', 'content_base64'],
+  stage_delivery_upload: ['project_id', 'item_id', 'file_name', 'mime_type', 'file_url'],
   stage_delivery_delete: ['project_id', 'item_id', 'file_id'],
 }
 
@@ -260,7 +262,7 @@ const actionRequired = {
   project_create: ['name', 'product_id', 'owner_id', 'expected_end_date', 'idempotency_key'],
   project_update: ['id'],
   project_change_status: ['id', 'status'], project_delete: ['id'],
-  requirement_create: ['title', 'requirement_type', 'product_id', 'owner_id', 'submitter_name', 'submit_date', 'idempotency_key'],
+  requirement_create: ['title', 'requirement_type', 'product_id', 'owner_id', 'priority', 'submitter_name', 'submit_date', 'idempotency_key'],
   requirement_update: ['id'],
   requirement_change_status: ['id', 'status'], requirement_delete: ['id'],
   task_create: ['name', 'source_type', 'task_type', 'owner_ids', 'priority', 'expected_end_date', 'idempotency_key'],
@@ -288,9 +290,9 @@ const actionRequired = {
   payment_create: ['project_id', 'stage_id', 'payment_amount', 'payment_month', 'handler_id', 'idempotency_key'],
   payment_update: ['project_id', 'payment_id'],
   payment_delete: ['project_id', 'payment_id'],
-  contract_attachment_upload: ['project_id', 'file_name', 'content_base64', 'idempotency_key'],
+  contract_attachment_upload: ['project_id', 'file_name', 'file_url', 'idempotency_key'],
   contract_attachment_delete: ['project_id', 'attachment_id'],
-  stage_delivery_upload: ['project_id', 'item_id', 'file_name', 'content_base64', 'idempotency_key'],
+  stage_delivery_upload: ['project_id', 'item_id', 'file_name', 'file_url', 'idempotency_key'],
   stage_delivery_delete: ['project_id', 'item_id', 'file_id'],
 }
 
@@ -460,21 +462,21 @@ function actionInputSchema(name) {
       properties: {
         id: withDescription('id', idField),
         stage_name: described({ type: 'string' }, '付款阶段名称'),
-        planned_amount: described({ type: 'number', exclusiveMinimum: 0 }, '计划付款金额，必须大于 0'),
+        planned_amount: described({ type: 'number', exclusiveMinimum: 0, multipleOf: 0.01 }, '计划付款金额，必须大于 0且最多两位小数'),
       },
       required: ['stage_name', 'planned_amount'],
       additionalProperties: false,
     },
   }
   properties.stages?.items?.properties && (properties.stages.items.properties.stage_name.maxLength = 100)
-  if ('content_base64' in properties) properties.content_base64 = described({ type: 'string', maxLength: 12 * 1024 * 1024 }, 'Base64编码的文件内容；大小受服务端限制')
+  if ('file_url' in properties) properties.file_url = described({ type: 'string', format: 'uri', maxLength: 2000 }, FIELD_DESCRIPTIONS.file_url)
   for (const key of [
     'name', 'description', 'title', 'start_date', 'expected_end_date', 'actual_end_date', 'suspend_date',
     'progress_text', 'risk_text', 'submitter_name', 'submitter_dept', 'submit_date', 'pause_date',
     'completion_status', 'problem_desc', 'result_desc', 'expected_resolve_date', 'resolve_date', 'close_date',
     'resolved_date', 'closed_date',
     'activation_reason', 'submit_time', 'original_due_date', 'remark', 'pause_reason', 'new_due_date', 'reason',
-    'contract_code', 'contract_name', 'supplier_name', 'signed_date', 'payment_month', 'file_name', 'mime_type',
+    'contract_code', 'contract_name', 'supplier_name', 'signed_date', 'payment_month', 'file_name', 'mime_type', 'file_url',
   ]) {
     if (key in properties) {
       const dateLike = ['start_date', 'expected_end_date', 'actual_end_date', 'suspend_date', 'submit_date', 'pause_date',
@@ -494,6 +496,7 @@ function actionInputSchema(name) {
     submitter_dept: 100,
     activation_reason: 100,
     pause_reason: 200,
+    reason: 100,
     contract_code: 100,
     contract_name: 200,
     supplier_name: 100,
@@ -522,7 +525,7 @@ function actionInputSchema(name) {
   if ('requires_delivery_file' in properties) {
     properties.requires_delivery_file = described({ type: 'integer', enum: [0, 1] }, '是否要求交付文件：0=不要求，1=要求')
   }
-  for (const key of ['id', 'parent_id', 'project_id', 'stage_id', 'item_id', 'payment_id', 'attachment_id', 'file_id', 'owner_id', 'product_id', 'supplier_id', 'handler_id', 'assignee_id', 'follower_id', 'task_type', 'bug_type_id', 'resolution_id', 'moved_id']) {
+  for (const key of ['id', 'parent_id', 'project_id', 'requirement_id', 'stage_id', 'item_id', 'payment_id', 'attachment_id', 'file_id', 'owner_id', 'product_id', 'supplier_id', 'handler_id', 'assignee_id', 'follower_id', 'problem_type', 'task_type', 'bug_type_id', 'resolution_id', 'moved_id']) {
     if (key in properties) properties[key] = withDescription(key, idField)
   }
   if (name === 'payment_create' && properties.stage_id) {
@@ -532,7 +535,7 @@ function actionInputSchema(name) {
     properties.ids = described({ ...idArrayField }, '排序后的完整有序列表；必须且只能包含当前全部记录标识，不能遗漏、重复或混入其他记录')
   }
   for (const key of ['contract_amount', 'payment_amount']) {
-    if (key in properties) properties[key] = described({ type: 'number', exclusiveMinimum: 0 }, FIELD_DESCRIPTIONS[key])
+    if (key in properties) properties[key] = described({ type: 'number', exclusiveMinimum: 0, multipleOf: 0.01 }, `${FIELD_DESCRIPTIONS[key]}且最多两位小数`)
   }
   if (statusActionSchemas[name]) properties.status = statusActionSchemas[name]
   const schema = { type: 'object', properties, required: actionRequired[name], additionalProperties: false }
@@ -564,6 +567,31 @@ function actionInputSchema(name) {
         then: { required },
       })),
     ]
+  }
+  makeRequiredFieldsStrict(schema)
+  return schema
+}
+
+function makeRequiredFieldsStrict(schema) {
+  const required = new Set(schema.required || [])
+  for (const rule of schema.allOf || []) {
+    for (const field of rule.then?.required || []) required.add(field)
+  }
+  for (const field of required) {
+    const property = schema.properties?.[field]
+    if (!property) continue
+    const type = Array.isArray(property.type)
+      ? property.type.filter((item) => item !== 'null')
+      : property.type
+    schema.properties[field] = {
+      ...property,
+      type: Array.isArray(type) && type.length === 1 ? type[0] : type,
+      ...(type === 'string' || Array.isArray(type) && type.includes('string') ? { minLength: 1 } : {}),
+    }
+  }
+  if (schema.items?.type === 'object') makeRequiredFieldsStrict(schema.items)
+  for (const property of Object.values(schema.properties || {})) {
+    if (property?.items?.type === 'object') makeRequiredFieldsStrict(property.items)
   }
   return schema
 }
@@ -625,6 +653,7 @@ const queryDescriptions = {
   contract_search: '全局搜索所有项目合同；可不传任何参数',
   payment_search: '全局搜索所有项目付款记录；可不传任何参数',
   business_options: '查询新增、编辑和状态操作所需的有效业务选项；返回可用标识和名称，不返回账号、工号、联系方式或凭据',
+  business_analyze: '统计PMIS业务数据；domain 和 metric 必填，二者必须使用当前业务领域支持的组合；可按日期和状态进一步筛选',
 }
 
 const queryTitles = {
@@ -863,13 +892,17 @@ function actionOutputSchema() {
 }
 
 function baseDefinition([name, menuPath], endpointType) {
+  const inputSchema = endpointType === 'query' ? queryInputSchema(name) : actionInputSchema(name)
+  const editableFields = endpointType === 'action' && UPDATE_ACTIONS.has(name)
+    ? (actionFields[name] || []).filter((field) => !(actionRequired[name] || []).includes(field))
+    : []
   return {
     name,
     title: endpointType === 'action' ? actionTitle(name) : queryTitles[name] || titleFromName(name),
     description: endpointType === 'query'
       ? queryDescriptions[name] || `查询PMIS业务数据：${name}；搜索工具可不传任何参数`
       : `${actionTitle(name)}。必须先使用 preview 获取当前目标、风险和一次性确认号；仅在用户确认后，才使用完全相同的业务参数和确认号执行 execute。`,
-    inputSchema: endpointType === 'query' ? queryInputSchema(name) : actionInputSchema(name),
+    inputSchema,
     outputSchema: endpointType === 'query' ? queryOutputSchema(name) : actionOutputSchema(),
     annotations: endpointType === 'query'
       ? { readOnlyHint: true, destructiveHint: false, idempotentHint: true }
@@ -878,6 +911,8 @@ function baseDefinition([name, menuPath], endpointType) {
       endpointType,
       menuPath,
       requiresSourceTarget: endpointType === 'action' && SOURCE_TARGET_ACTIONS.has(name),
+      requiresChanges: editableFields.length > 0,
+      editableFields,
     },
   }
 }
@@ -987,19 +1022,47 @@ function genericQueryDefinition(name, title, domains, description) {
 function publicActionDefinition([name, title, operations]) {
   const entries = Object.entries(operations)
   const definitions = entries.map(([, command]) => commandDefinition(command, 'action'))
+  const requiredByField = new Map()
+  for (const [operation, command] of entries) {
+    const definition = commandDefinition(command, 'action')
+    for (const field of definition.inputSchema.required || []) {
+      if (!requiredByField.has(field)) requiredByField.set(field, [])
+      requiredByField.get(field).push(operation)
+    }
+  }
+  const contractLabel = (field) => String(FIELD_DESCRIPTIONS[field] || field).split(/[：；，,]/)[0].trim()
+  const operationSummary = entries.map(([operation, command], index) => {
+    const definition = definitions[index]
+    const required = (definition.inputSchema.required || [])
+      .map(contractLabel)
+    const conditional = (definition.inputSchema.allOf || []).map((rule) => {
+      const condition = Object.entries(rule.if?.properties || {})
+        .find(([, property]) => property.const !== undefined)
+      if (!condition || !rule.then?.required?.length) return ''
+      return `${condition[0]}=${condition[1].const}时还需：${rule.then.required.map(contractLabel).join('、')}`
+    }).filter(Boolean)
+    const changeRequirement = definition._meta.requiresChanges ? '；至少提供一个要修改的字段' : ''
+    return `${operation}=${actionTitle(command)}；必填：${required.join('、') || '无'}${conditional.length ? `；${conditional.join('；')}` : ''}${changeRequirement}`
+  }).join('。')
   const properties = {
     operation: described({ type: 'string', enum: entries.map(([operation]) => operation) },
-      `业务操作：${entries.map(([operation]) => operation).join('、')}`),
+      `业务操作及中文含义：${entries.map(([operation, command]) => `${operation}=${actionTitle(command)}`).join('、')}`),
   }
   for (const definition of definitions) {
     for (const [field, schema] of Object.entries(definition.inputSchema.properties || {})) {
-      if (!properties[field]) properties[field] = schema
+      if (!properties[field]) {
+        const requiredOperations = requiredByField.get(field) || []
+        properties[field] = {
+          ...schema,
+          description: `${schema.description}${requiredOperations.length ? `；${requiredOperations.join('、')} 操作必填` : '；当前工具各操作均为非必填补充项'}`,
+        }
+      }
     }
   }
   return {
     name,
     title,
-    description: `${title}。通过 operation 选择具体操作；所有操作必须先 preview，用户确认后再 execute。`,
+    description: `${title}。通过 operation 选择具体操作。${operationSummary}。调用前必须一次性向用户说明可补充的非必填字段；不要逐项追问。所有操作必须先 preview，用户确认后再使用完全相同的业务参数和 confirmation_id 执行 execute。状态变更前必须先查询详情，只能从 allowed_statuses 中选择目标状态。`,
     inputSchema: {
       type: 'object',
       properties,

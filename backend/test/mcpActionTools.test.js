@@ -173,13 +173,13 @@ test('batch and other high-impact actions are labeled high risk in preview', asy
   assert.equal(preview.riskLevel, 'high')
 })
 
-test('file action preview keeps file metadata but redacts the file body and control fields', async () => {
+test('file action preview keeps file metadata but redacts the OSS URL and control fields', async () => {
   let preview
   await dispatchActionTool('contract_attachment_upload', {
     project_id: 1,
     file_name: '合同.pdf',
     mime_type: 'application/pdf',
-    content_base64: 'JVBERi0x',
+    file_url: 'https://oss.example.com/pmis/contracts/a.pdf',
     idempotency_key: 'contract-file-1',
     mode: 'preview',
   }, {
@@ -200,7 +200,7 @@ test('file action preview keeps file metadata but redacts the file body and cont
     project_id: 1,
     file_name: '合同.pdf',
     mime_type: 'application/pdf',
-    content_base64: '[FILE_CONTENT]',
+    file_url: '[FILE_URL]',
   })
 })
 

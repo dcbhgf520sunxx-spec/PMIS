@@ -2,6 +2,8 @@ const fs = require('fs/promises')
 const path = require('path')
 const bcrypt = require('bcryptjs')
 const db = require('../db')
+const { uploadFileToOss } = require('./projectContractOssService')
+const { createOssAccessUrl } = require('./ossFileUrlService')
 
 const AVATAR_MAX_MB = 5
 const AVATAR_MAX_BYTES = AVATAR_MAX_MB * 1024 * 1024
@@ -154,18 +156,38 @@ async function changePhone(userId, payload = {}) {
 
 async function saveAvatar(userId, payload = {}) {
   const { extension, buffer } = validateAvatarPayload(payload)
-  const uploadDir = path.join(__dirname, '../../uploads/avatars')
-  await fs.mkdir(uploadDir, { recursive: true })
-
-  const fileName = `${userId}-${Date.now()}${extension}`
-  const filePath = path.join(uploadDir, fileName)
-  await fs.writeFile(filePath, buffer)
-
+  const uploaded = await uploadAvatarToOss({
+    ...payload,
+    fileName: payload.fileName || `${userId}-${Date.now()}${extension}`,
+    contentBase64: buffer.toString('base64'),
+  })
   const previous = await db.prepare('SELECT avatar_url FROM pms_user WHERE id = ?').get(userId)
-  const avatarUrl = `/uploads/avatars/${fileName}`
+  const avatarUrl = uploaded.avatar_url
   await db.prepare('UPDATE pms_user SET avatar_url = ?, updater_id = ?, updated_at = NOW() WHERE id = ?').run(avatarUrl, userId, userId)
   await removeManagedAvatar(previous?.avatar_url)
   return toAvatarResponse(avatarUrl)
+}
+
+async function uploadAvatarToOss(payload = {}, options = {}) {
+  const { accessUrlOptions, ...uploadOptions } = options
+  const { extension, buffer } = validateAvatarPayload(payload)
+  const fileName = String(payload.fileName || `avatar${extension}`)
+  const saved = await uploadFileToOss({
+    originalname: fileName,
+    mimetype: payload.mimeType,
+    size: buffer.length,
+    buffer,
+  }, {
+    ...uploadOptions,
+    validateFile: () => {},
+  })
+  return toAvatarResponse(createOssAccessUrl({
+    filePath: saved.file.filePath,
+    fileName,
+  }, {
+    ...accessUrlOptions,
+    expiresInSeconds: 0,
+  }))
 }
 
 async function resetAvatar(userId) {
@@ -215,6 +237,7 @@ module.exports = {
   updateProfile,
   changePhone,
   saveAvatar,
+  uploadAvatarToOss,
   resetAvatar,
   getPreference,
   savePreference

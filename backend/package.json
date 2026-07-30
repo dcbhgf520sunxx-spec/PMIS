@@ -10,6 +10,7 @@
     "audit:operation-history": "node scripts/audit-operation-history.js",
     "test": "node --test",
     "db:migrate": "node scripts/migrate.js",
+    "files:migrate-oss": "node scripts/migrate-files-to-oss.js",
     "mcp:client": "node scripts/mcp-client.js"
   },
   "keywords": [],

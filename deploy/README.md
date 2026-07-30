@@ -55,6 +55,10 @@ DB_PASSWORD=你的密码
 DB_NAME=pmis
 JWT_SECRET=请替换为随机密钥
 ALLOWED_ORIGIN=https://你的域名或IP
+PUBLIC_APP_ORIGIN=https://你的域名或IP
+FILE_URL_SIGNING_SECRET=独立的32字节以上随机密钥
+CONTRACT_ATTACHMENT_OSS_UPLOAD_URL=http://OSS上传服务/oss/file/upload
+CONTRACT_ATTACHMENT_OSS_FILE_ORIGIN=http://OSS文件服务
 
 # 企业微信工作台单点登录
 WECOM_CORP_ID=企业ID
@@ -104,6 +108,16 @@ cd backend
 npm run db:migrate -- --check
 npm run db:migrate -- --apply --user-approved
 ```
+
+本次文件统一迁移在结构迁移完成后执行。先只读检查，再执行迁移：
+
+```bash
+cd backend
+npm run files:migrate-oss
+npm run files:migrate-oss -- --apply --user-approved
+```
+
+该脚本迁移历史合同附件、阶段交付文件、头像，以及需求、任务、BUG、工单和操作历史中的富文本内嵌图片。每条记录只有在 OSS 上传成功后才更新数据库；失败时保留原记录。首次上线验证完成前不要删除 `/opt/pmis/shared/uploads` 和 `/opt/pmis/shared/private-uploads` 中的历史文件。
 
 ## 4. 安装依赖
 
@@ -157,7 +171,7 @@ sudo chown -R pmis:pmis /opt/pmis/shared/uploads /opt/pmis/shared/private-upload
 sudo ln -sfn /opt/pmis/releases/<release> /opt/pmis/current
 ```
 
-私有附件和阶段计划交付文件固定写入 `/opt/pmis/shared/private-uploads`，不依赖当前发布目录内的软链接。每次发布前都要确认 `pmis` 用户可以创建、读取和删除该目录中的文件。
+新上传的合同附件、阶段计划交付文件、头像和富文本图片统一写入 OSS。`/opt/pmis/shared/uploads` 与 `/opt/pmis/shared/private-uploads` 仅用于历史迁移兼容；历史迁移和业务抽查通过前必须保留。
 
 查看状态：
 

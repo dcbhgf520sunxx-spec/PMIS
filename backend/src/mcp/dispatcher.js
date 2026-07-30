@@ -139,7 +139,7 @@ function missingArgumentsError(schema, fields, prefix = '') {
 }
 
 function fieldLabel(schema, path) {
-  const description = String(schema?.description || '').split(/[：；]/)[0].trim()
+  const description = String(schema?.description || '').split(/[：；，,]/)[0].trim()
   return description && description.length <= 20 ? description : path
 }
 
@@ -153,6 +153,9 @@ function validateSchemaValue(schema, value, path) {
     throw argumentError(path, mapping
       ? `${fieldLabel(schema, path)}必须是：${mapping}`
       : `${fieldLabel(schema, path)}可选值为：${schema.enum.join('、')}`)
+  }
+  if (schema?.const !== undefined && value !== schema.const) {
+    throw argumentError(path, `${fieldLabel(schema, path)}必须为${schema.const}`)
   }
   if (schema?.format === 'uuid' && typeof value === 'string'
     && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) {
@@ -174,6 +177,9 @@ function validateSchemaValue(schema, value, path) {
   if (schema?.maxLength && typeof value === 'string' && value.length > schema.maxLength) {
     throw argumentError(path, `${fieldLabel(schema, path)}长度不能超过${schema.maxLength}个字符`)
   }
+  if (schema?.minLength && typeof value === 'string' && value.length < schema.minLength) {
+    throw argumentError(path, `${fieldLabel(schema, path)}不能为空`)
+  }
   if (schema?.minItems && Array.isArray(value) && value.length < schema.minItems) {
     throw argumentError(path, `${path}参数数量不足（${fieldLabel(schema, path)}至少需要${schema.minItems}项）`)
   }
@@ -188,6 +194,12 @@ function validateSchemaValue(schema, value, path) {
   }
   if (schema?.exclusiveMinimum !== undefined && typeof value === 'number' && value <= schema.exclusiveMinimum) {
     throw argumentError(path, `${fieldLabel(schema, path)}必须大于${schema.exclusiveMinimum}`)
+  }
+  if (schema?.multipleOf !== undefined && typeof value === 'number') {
+    const quotient = value / schema.multipleOf
+    if (Math.abs(quotient - Math.round(quotient)) > 1e-8) {
+      throw argumentError(path, `${fieldLabel(schema, path)}最多保留两位小数`)
+    }
   }
   if (Array.isArray(value) && schema?.items) {
     value.forEach((item, index) => validateSchemaValue(schema.items, item, `${path}[${index}]`))
@@ -207,9 +219,33 @@ function validateSchemaValue(schema, value, path) {
   }
 }
 
+function conditionMatches(condition, args) {
+  if (!condition) return false
+  if ((condition.required || []).some((field) => args[field] === undefined || args[field] === null || args[field] === '')) {
+    return false
+  }
+  return Object.entries(condition.properties || {}).every(([field, schema]) => {
+    if (schema.const !== undefined) return args[field] === schema.const
+    if (schema.enum) return schema.enum.includes(args[field])
+    return true
+  })
+}
+
+function selectedInputSchema(schema, args) {
+  const branch = (schema.oneOf || []).find((candidate) => Object.entries(candidate.properties || {})
+    .some(([field, property]) => property.const !== undefined && args[field] === property.const))
+  if (!branch) return schema
+  return {
+    ...schema,
+    ...branch,
+    properties: { ...(schema.properties || {}), ...(branch.properties || {}) },
+    oneOf: undefined,
+  }
+}
+
 function validateToolArguments(definition, args) {
   if (!args || typeof args !== 'object' || Array.isArray(args)) throw argumentError(null, '工具参数必须是对象')
-  const schema = definition.inputSchema || {}
+  const schema = selectedInputSchema(definition.inputSchema || {}, args)
   const allowed = new Set(Object.keys(schema.properties || {}))
   const unknown = Object.keys(args).filter((key) => !allowed.has(key))
   if (unknown.length) {
@@ -220,6 +256,16 @@ function validateToolArguments(definition, args) {
   }
   const missing = (schema.required || []).filter((key) => args[key] === undefined || args[key] === null || args[key] === '')
   if (missing.length) throw missingArgumentsError(schema, missing)
+  for (const rule of schema.allOf || []) {
+    if (!conditionMatches(rule.if, args)) continue
+    const conditionalMissing = (rule.then?.required || [])
+      .filter((key) => args[key] === undefined || args[key] === null || args[key] === '')
+    if (definition._meta?.requiresSourceTarget
+      && conditionalMissing.every((field) => ['project_id', 'requirement_id'].includes(field))) {
+      continue
+    }
+    if (conditionalMissing.length) throw missingArgumentsError(schema, conditionalMissing)
+  }
   const fieldErrors = {}
   const validationMessages = []
   for (const [key, value] of Object.entries(args)) {
@@ -260,6 +306,10 @@ function validateToolArguments(definition, args) {
       const sourceType = Number(args.source_type)
       if (sourceType === 1 && !args.project_id) throw argumentError('project_id', '关联类型为项目时，必须提供关联项目')
       if (sourceType === 2 && !args.requirement_id) throw argumentError('requirement_id', '关联类型为需求时，必须提供关联需求')
+    }
+    if (definition._meta.requiresChanges
+      && !definition._meta.editableFields.some((field) => args[field] !== undefined)) {
+      throw argumentError('changes', '编辑操作至少需要提供一个要修改的字段')
     }
   }
 }

@@ -21,6 +21,9 @@ import { useAuthStore } from '../../../stores/authStore';
 import type { WorkOrderRecord } from '../types';
 import { urgencyOptions } from '../helpers';
 import { buildWorkOrderCreateInitialValues } from './workOrderFormDefaults';
+import { createRichTextImageUploader } from '../../../api/richTextImageApi';
+
+const uploadRichTextImage = createRichTextImageUploader('/work-orders');
 
 type WorkOrderFormValues = Record<string, unknown> & {
   problemDesc: string;
@@ -142,6 +145,7 @@ export function WorkOrderFormPage({ mode }: { mode: 'create' | 'edit' | 'copy' }
                   name="problemDesc"
                   label="问题描述"
                   placeholder="请输入问题描述，可粘贴图片"
+                  onUploadImage={uploadRichTextImage}
                   rules={[
                     {
                       validator: async (_rule: RuleObject, value?: string) => {
