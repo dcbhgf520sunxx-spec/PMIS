@@ -3,6 +3,7 @@ const test = require('node:test')
 
 const {
   createOssAccessUrl,
+  normalizeFilePath,
   verifyOssAccessRequest,
 } = require('../src/services/ossFileUrlService')
 
@@ -28,6 +29,10 @@ test('生成同源签名URL并校验文件路径和有效期', () => {
     filePath: 'pmis/rich-text/a.png',
     fileName: '截图.png',
   })
+})
+
+test('兼容 OSS 返回的不带 bucket 前缀文件路径', () => {
+  assert.equal(normalizeFilePath('20260730/image.png'), 'pmis/20260730/image.png')
 })
 
 test('签名URL拒绝路径篡改和过期访问', () => {

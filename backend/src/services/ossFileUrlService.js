@@ -7,8 +7,9 @@ function fileUrlError(message) {
 }
 
 function normalizeFilePath(value) {
-  const filePath = String(value || '').replace(/^\/+/, '')
-  if (!filePath.startsWith('pmis/') || filePath.includes('..') || filePath.includes('\\')) {
+  const rawPath = String(value || '').replace(/^\/+/, '')
+  const filePath = rawPath.startsWith('pmis/') ? rawPath : `pmis/${rawPath}`
+  if (!rawPath || filePath.includes('..') || filePath.includes('\\')) {
     throw fileUrlError('OSS文件路径不合法')
   }
   return filePath
