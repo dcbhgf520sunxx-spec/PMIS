@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict')
+const http = require('node:http')
 const test = require('node:test')
 
 const enabled = process.env.RUN_DB_INTEGRATION === '1'
@@ -11,6 +12,36 @@ async function readJson(response) {
 
 test('真实 HTTP、PostgreSQL 和核心业务流程', { skip: !enabled }, async (t) => {
   assert.equal(process.env.INTEGRATION_DB_ISOLATED, '1', '真实集成测试只能连接明确标记的隔离数据库')
+
+  const ossServer = http.createServer((req, res) => {
+    if (req.method === 'POST' && req.url === '/oss/file/upload') {
+      req.resume()
+      req.once('end', () => {
+        const origin = `http://127.0.0.1:${ossServer.address().port}`
+        res.setHeader('content-type', 'application/json')
+        res.end(JSON.stringify({
+          code: 100,
+          msg: 'success',
+          data: [{
+            id: 'avatar-integration-file',
+            fileName: 'allowed.png',
+            filePath: 'pmis/avatars/allowed.png',
+            fileUrl: `${origin}/pmis/avatars/allowed.png`,
+          }],
+        }))
+      })
+      return
+    }
+    res.statusCode = 404
+    res.end()
+  })
+  await new Promise((resolve, reject) => {
+    ossServer.listen(0, '127.0.0.1', resolve)
+    ossServer.once('error', reject)
+  })
+  const ossOrigin = `http://127.0.0.1:${ossServer.address().port}`
+  process.env.CONTRACT_ATTACHMENT_OSS_UPLOAD_URL = `${ossOrigin}/oss/file/upload`
+  process.env.CONTRACT_ATTACHMENT_OSS_FILE_ORIGIN = ossOrigin
 
   const app = require('../src/app')
   const db = require('../src/db')
@@ -262,7 +293,7 @@ test('真实 HTTP、PostgreSQL 和核心业务流程', { skip: !enabled }, async
         body: { fileName: 'allowed.png', mimeType: 'image/png', contentBase64: allowedBuffer.toString('base64') }
       })
       assert.equal(uploaded.response.status, 200)
-      assert.match(uploaded.body.data.avatar_url, /^\/uploads\/avatars\//)
+      assert.equal(new URL(uploaded.body.data.avatar_url).pathname, '/api/files/oss')
 
       const reset = await request('/api/auth/me/avatar', { method: 'DELETE' })
       assert.equal(reset.response.status, 200)
@@ -281,6 +312,7 @@ test('真实 HTTP、PostgreSQL 和核心业务流程', { skip: !enabled }, async
       'UPDATE pms_user SET phone = ?, password = ?, first_login = 1, avatar_url = NULL, updated_at = NOW() WHERE id = 1'
     ).run('13800000000', DEFAULT_ADMIN_HASH)
     await new Promise((resolve) => server.close(resolve))
+    await new Promise((resolve) => ossServer.close(resolve))
     await db.pool.end()
   }
 })
