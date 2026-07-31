@@ -56,7 +56,8 @@ test('阶段汇总把进度逾期和最后计划时间拆到对应位置', () =>
   assert.deepEqual(summary, {
     progressText: '已完成 1/3',
     overdueText: '已逾期 2 项',
-    dueDate: '2026-08-09'
+    dueDate: '2026-08-09',
+    actualEndDate: ''
   });
 });
 
@@ -65,12 +66,39 @@ test('阶段没有逾期时不生成逾期提示', () => {
     completedCount: 0,
     itemCount: 2,
     maxDueDate: '2026-08-09',
+    actualEndDate: null,
     overdueCount: 0
   });
 
   assert.deepEqual(summary, {
     progressText: '已完成 0/2',
     overdueText: undefined,
-    dueDate: '2026-08-09'
+    dueDate: '2026-08-09',
+    actualEndDate: ''
   });
+});
+
+test('阶段没有关键事项时两个汇总日期均为空', () => {
+  const summary = projectPlanRowSort.getProjectPlanStagePresentation?.({
+    completedCount: 0,
+    itemCount: 0,
+    maxDueDate: null,
+    actualEndDate: null,
+    overdueCount: 0
+  });
+
+  assert.equal(summary.dueDate, '');
+  assert.equal(summary.actualEndDate, '');
+});
+
+test('阶段全部关键事项完成后展示最后实际完成时间', () => {
+  const summary = projectPlanRowSort.getProjectPlanStagePresentation?.({
+    completedCount: 3,
+    itemCount: 3,
+    maxDueDate: '2026-08-09',
+    actualEndDate: '2026-08-12',
+    overdueCount: 0
+  });
+
+  assert.equal(summary.actualEndDate, '2026-08-12');
 });

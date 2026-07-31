@@ -12,6 +12,15 @@ test('关键事项不再展示或限制关联任务', () => {
   assert.doesNotMatch(page, /关联主任务|q_planItemId|taskCount|已关联主任务/);
 });
 
+test('套用模板按钮始终展示，已有阶段时只提示且不打开模板抽屉', () => {
+  const page = read('src/modules/project/pages/ProjectStagePlanPage.tsx');
+
+  assert.match(page, /<PermissionButton permission="project" onClick=\{\(\)=>void openTemplate\(\)\}>套用模板<\/PermissionButton>/);
+  assert.doesNotMatch(page, /visibleStages\.length===0\?<PermissionButton[\s\S]*套用模板/);
+  assert.match(page, /if\(visibleStages\.length>0\)\{[\s\S]*message\.info\('当前已有阶段主计划，不能重复套用模板'\);[\s\S]*return;/);
+  assert.match(page, /return;[\s\S]*setTemplateOpen\(true\)/);
+});
+
 test('任务页面和接口不再接入关键事项关联', () => {
   for (const file of [
     'src/api/taskApi.ts',

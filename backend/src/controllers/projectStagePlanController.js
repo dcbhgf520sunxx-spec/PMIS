@@ -25,6 +25,7 @@ const {
   buildProjectStagePlanHistory,
   resolveMovedPlanRow,
 } = require('../services/projectStagePlanHistory')
+const { buildTemplateApplication } = require('../services/projectPlanTemplateRules')
 
 const DELIVERY_ROOT = PROJECT_PLAN_DELIVERY_DIR
 
@@ -112,6 +113,8 @@ exports.getPlan = async (req, res) => {
       COUNT(i.id)::INTEGER item_count,
       COUNT(i.id) FILTER(WHERE i.status=2)::INTEGER completed_count,
       MIN(i.current_due_date) min_due_date,MAX(i.current_due_date) max_due_date,
+      CASE WHEN COUNT(i.id)>0 AND COUNT(i.id) FILTER(WHERE i.status=2)=COUNT(i.id)
+        THEN MAX(i.actual_end_date) ELSE NULL END actual_end_date,
       COUNT(i.id) FILTER(WHERE i.status IN(0,1) AND i.current_due_date<CURRENT_DATE)::INTEGER overdue_count
       FROM pms_project_plan_stage s
       LEFT JOIN pms_project_plan_item i ON i.stage_id=s.id AND i.is_deleted=0
@@ -139,11 +142,101 @@ exports.getPlan = async (req, res) => {
   }
 }
 
+async function loadTemplate(templateId) {
+  const template = await db.prepare(`SELECT id,code,name,description,sort_order
+    FROM pms_project_plan_template WHERE id=? AND status=1`).get(templateId)
+  if (!template) return null
+  const stages = await db.prepare(`SELECT id,template_id,name,description,sort_order
+    FROM pms_project_plan_template_stage WHERE template_id=? ORDER BY sort_order,id`).all(template.id)
+  const items = await db.prepare(`SELECT i.id,i.template_stage_id,i.name,i.requires_delivery_file,i.delivery_requirement,i.remark,i.sort_order
+    FROM pms_project_plan_template_item i
+    JOIN pms_project_plan_template_stage s ON s.id=i.template_stage_id
+    WHERE s.template_id=? ORDER BY s.sort_order,i.sort_order,i.id`).all(template.id)
+  const itemsByStage = new Map()
+  for (const item of items) {
+    if (!itemsByStage.has(String(item.template_stage_id))) itemsByStage.set(String(item.template_stage_id), [])
+    itemsByStage.get(String(item.template_stage_id)).push(item)
+  }
+  return { ...template, stages: stages.map((stage) => ({ ...stage, items: itemsByStage.get(String(stage.id)) || [] })) }
+}
+
+exports.listTemplates = async (req, res) => {
+  try {
+    const project = await findProject(req.params.projectId)
+    if (!project) return fail(res, 404, 404, '项目不存在')
+    const templates = await db.prepare(`SELECT id,code,name,description,sort_order
+      FROM pms_project_plan_template WHERE status=1 ORDER BY sort_order,id`).all()
+    const rows = []
+    for (const template of templates) rows.push(await loadTemplate(template.id))
+    ok(res, rows)
+  } catch (error) {
+    console.error(error)
+    fail(res, 500, 500, '查询阶段主计划模板失败')
+  }
+}
+
+exports.applyTemplate = async (req, res) => {
+  try {
+    const template = await loadTemplate(req.params.templateId)
+    if (!template) return fail(res, 404, 404, '阶段主计划模板不存在或已停用')
+    let application
+    try {
+      application = buildTemplateApplication(template, req.body.stages)
+    } catch (error) {
+      return fail(res, 400, 400, error.message)
+    }
+    const ownerIds = [...new Set(application.flatMap((stage) => stage.items.map((item) => item.ownerId)))]
+    const ownerCount = ownerIds.length
+      ? await db.prepare(`SELECT COUNT(*)::INTEGER count FROM pms_user
+          WHERE id IN(${ownerIds.map(() => '?').join(',')}) AND status=1 AND is_deleted=0`).get(...ownerIds)
+      : { count: 0 }
+    if (Number(ownerCount.count) !== ownerIds.length) return fail(res, 400, 400, '部分负责人不存在或已停用，请重新选择')
+
+    const result = await db.transaction(async (tx) => {
+      const project = await tx.prepare('SELECT id,name FROM pms_project WHERE id=? AND is_deleted=0 FOR UPDATE').get(req.params.projectId)
+      if (!project) {
+        const error = new Error('项目不存在')
+        error.status = 404
+        throw error
+      }
+      const existing = await tx.prepare('SELECT COUNT(*)::INTEGER count FROM pms_project_plan_stage WHERE project_id=? AND is_deleted=0').get(project.id)
+      if (Number(existing.count) > 0) {
+        const error = new Error('阶段主计划已有内容，不能套用模板')
+        error.status = 400
+        throw error
+      }
+      let itemCount = 0
+      let firstStageId
+      for (const stage of application) {
+        const stageResult = await tx.prepare(`INSERT INTO pms_project_plan_stage
+          (project_id,name,description,sort_order,creator_id,updater_id)
+          VALUES(?,?,?,?,?,?)`).run(project.id, stage.name, stage.description, stage.sortOrder, req.user.id, req.user.id)
+        if (!firstStageId) firstStageId = stageResult.lastInsertRowid
+        for (const item of stage.items) {
+          await tx.prepare(`INSERT INTO pms_project_plan_item
+            (stage_id,name,owner_id,original_due_date,current_due_date,requires_delivery_file,delivery_requirement,remark,sort_order,creator_id,updater_id)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?)`).run(stageResult.lastInsertRowid, item.name, item.ownerId, item.dueDate, item.dueDate,
+            item.requiresDeliveryFile, item.deliveryRequirement, item.remark, item.sortOrder, req.user.id, req.user.id)
+          itemCount += 1
+        }
+      }
+      await tx.writeLog(req.user.id, '套用阶段模板', '项目阶段主计划', firstStageId, 'template_id', null, template.id, req.ip, template.name)
+      return { stage_count: application.length, item_count: itemCount }
+    })
+    ok(res, result)
+  } catch (error) {
+    if (error.status) return fail(res, error.status, error.status, error.message)
+    if (error.code === '23505') return fail(res, 400, 400, '模板内容与当前阶段主计划冲突，请刷新后重试')
+    console.error(error)
+    fail(res, 500, 500, '套用阶段主计划模板失败')
+  }
+}
+
 exports.history = async (req, res) => {
   try {
     const project = await findProject(req.params.projectId)
     if (!project) return fail(res, 404, 404, '项目不存在')
-    const stageActions = ['新增阶段', '编辑阶段', '调整阶段顺序', '删除阶段']
+    const stageActions = ['新增阶段', '编辑阶段', '调整阶段顺序', '删除阶段', '套用阶段模板']
     const actionPlaceholders = stageActions.map(() => '?').join(',')
     const logs = await db.prepare(`SELECT l.id,l.operation_id,l.action,l.target_name,l.field_name,l.old_value,l.new_value,l.created_at,
       COALESCE(u.real_name,'-') operator

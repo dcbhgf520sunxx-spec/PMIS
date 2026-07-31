@@ -109,8 +109,31 @@ export type ProjectPlanStage = {
   completedCount: number;
   minDueDate: string;
   maxDueDate: string;
+  actualEndDate: string;
   overdueCount: number;
   items: ProjectPlanItem[];
+};
+export type ProjectPlanTemplateItem = {
+  id: string;
+  name: string;
+  requiresDeliveryFile: boolean;
+  deliveryRequirement: string;
+  sortOrder: number;
+};
+export type ProjectPlanTemplateStage = {
+  id: string;
+  name: string;
+  description: string;
+  sortOrder: number;
+  items: ProjectPlanTemplateItem[];
+};
+export type ProjectPlanTemplate = {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  sortOrder: number;
+  stages: ProjectPlanTemplateStage[];
 };
 export type ProjectStagePlan = {
   project: { id: string; name: string };

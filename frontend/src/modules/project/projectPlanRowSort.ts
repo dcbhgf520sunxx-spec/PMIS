@@ -18,6 +18,7 @@ type ProjectPlanStageSummary = {
   completedCount: number;
   itemCount: number;
   maxDueDate?: string | null;
+  actualEndDate?: string | null;
   overdueCount?: number;
 };
 
@@ -27,7 +28,10 @@ export function getProjectPlanStagePresentation(stage: ProjectPlanStageSummary) 
     overdueText: stage.overdueCount && stage.overdueCount > 0
       ? `已逾期 ${stage.overdueCount} 项`
       : undefined,
-    dueDate: stage.maxDueDate || '-'
+    dueDate: stage.maxDueDate || '',
+    actualEndDate: stage.itemCount > 0 && stage.completedCount === stage.itemCount
+      ? (stage.actualEndDate || '')
+      : ''
   };
 }
 

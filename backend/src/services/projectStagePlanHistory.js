@@ -34,7 +34,7 @@ const FIELD_LABELS = {
   description: '阶段描述',
 }
 
-const HIDE_DETAILS_ACTIONS = new Set(['新增阶段', '删除阶段', '新增关键事项', '删除关键事项'])
+const HIDE_DETAILS_ACTIONS = new Set(['新增阶段', '删除阶段', '新增关键事项', '删除关键事项', '套用阶段模板'])
 const DATE_FIELDS = new Set(['actual_end_date', 'current_due_date'])
 const STATUS_LOOKUP = new Map([['0', '未开始'], ['1', '进行中'], ['2', '已完成'], ['3', '已暂停']])
 

@@ -217,6 +217,181 @@
   font-weight: 500;
 }
 
+.project-plan-template-loading {
+  padding: 48px 0;
+  color: #64748b;
+  text-align: center;
+}
+
+.project-plan-template-body {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.project-plan-template-drawer-root .ant-drawer-body {
+  padding: 16px 20px 12px;
+}
+
+.project-plan-template-steps.ant-steps {
+  column-gap: 72px;
+}
+
+.project-plan-template-steps.ant-steps-horizontal .ant-steps-item:not(:last-child),
+.project-plan-template-steps.ant-steps-horizontal .ant-steps-item:last-child {
+  flex: 0 0 430px;
+}
+
+.project-plan-template-steps .ant-steps-item-title,
+.project-plan-template-steps .ant-steps-item-description {
+  max-width: none;
+  white-space: nowrap !important;
+}
+
+.project-plan-template-steps .ant-steps-item-content {
+  width: auto;
+  min-width: max-content;
+}
+
+.project-plan-template-preview,
+.project-plan-template-config {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.project-plan-template-preview > header,
+.project-plan-template-config > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #f7f9fc;
+}
+
+.project-plan-template-preview > header span,
+.project-plan-template-config > header span,
+.project-plan-template-preview > p {
+  color: #64748b;
+}
+
+.project-plan-template-config > header > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.project-plan-template-preview > p {
+  margin: 10px 14px 2px;
+}
+
+.project-plan-template-preview__stage {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 16px;
+  padding: 8px 14px;
+  border-top: 1px solid #edf2f7;
+}
+
+.project-plan-template-preview__stage span {
+  color: #475569;
+  line-height: 22px;
+}
+
+.project-plan-template-stage-body {
+  display: grid;
+  gap: 10px;
+  padding: 10px 12px 12px;
+}
+
+.project-plan-template-items {
+  display: grid;
+  gap: 8px;
+}
+
+.project-plan-template-item {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.project-plan-template-item > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 7px 10px;
+  border-bottom: 1px solid #edf2f7;
+  background: #f7f9fc;
+}
+
+.project-plan-template-item > header > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.project-plan-template-item-name-field {
+  padding: 8px 10px 0;
+}
+
+.project-plan-template-item-fields {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.15fr) minmax(220px, 1fr) minmax(150px, 0.65fr);
+  gap: 0 12px;
+  padding: 8px 10px 0;
+}
+
+.project-plan-template-body .ant-form-item {
+  margin-bottom: 8px;
+}
+
+.project-plan-template-body .ant-form-item-label {
+  padding-bottom: 3px;
+}
+
+.project-plan-template-body .ant-form-item-label > label {
+  height: auto;
+}
+
+.project-plan-template-item-fields > .is-switch .ant-form-item-control-input {
+  min-height: 32px;
+}
+
+.project-plan-template-empty {
+  border: 1px dashed #d8e3f0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.project-plan-template-empty.is-error {
+  border-color: #ff4d4f;
+}
+
+@media (max-width: 900px) {
+  .project-plan-template-item-fields,
+  .project-plan-template-preview__stage {
+    grid-template-columns: 1fr;
+  }
+
+  .project-plan-template-steps.ant-steps {
+    column-gap: 16px;
+  }
+
+  .project-plan-template-steps.ant-steps-horizontal .ant-steps-item:not(:last-child),
+  .project-plan-template-steps.ant-steps-horizontal .ant-steps-item:last-child {
+    flex: 1 1 0;
+  }
+
+  .project-plan-template-steps .ant-steps-item-description {
+    white-space: normal !important;
+  }
+}
+
 .project-plan-fields {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
