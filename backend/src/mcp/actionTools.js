@@ -1055,12 +1055,19 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
     const [handler, buildInput] = definition
     const data = unwrapEnvelope(await invokeController(handler, context, await buildInput(preparedArgs)))
     return {
+      success: true,
+      outcome: 'executed',
+      message: '操作已成功执行',
+      tool: name,
       riskLevel,
       riskReason,
       requiresConfirmation: false,
       executed: true,
+      target,
       affectedTargets,
+      changes: buildPreviewChanges(args),
       resultStatus: 'success',
+      businessResult: data,
       data,
     }
   } catch (error) {

@@ -295,6 +295,76 @@ test('action execute consumes the ticket and preserves the business error when f
   assert.equal(failureMarked, true)
 })
 
+test('action execute returns an unambiguous success envelope even when the business result contains a false flag', async () => {
+  const target = {
+    type: 'task',
+    id: 80,
+    name: '智能体对接到桌宠的功能',
+    current: { status: 1 },
+  }
+  const result = await dispatchActionTool('task_change_status', {
+    id: 80,
+    status: 2,
+    actual_end_date: '2026-07-31',
+    mode: 'execute',
+    confirmation_id: '00000000-0000-4000-8000-000000000001',
+  }, {
+    client: { id: 3 },
+    user: { id: 8, employeeNo: '005829', realName: '孙鑫鑫' },
+  }, {
+    actions: {
+      task_change_status: [
+        async (_req, res) => res.json({
+          code: 0,
+          data: {
+            task: { id: 80, status: 2 },
+            allSubtasksCompleted: false,
+          },
+        }),
+        (value) => ({ body: value }),
+      ],
+    },
+    ticketService: {
+      consumeTicket: async () => {},
+      markTicketFailed: async () => {},
+    },
+    database: {
+      prepare(sql) {
+        return {
+          async get() {
+            if (sql.includes('COUNT(*)::INTEGER total')) {
+              return { total: 0, completed: 0 }
+            }
+            return {
+              id: 80,
+              status: 1,
+              parent_task_id: null,
+              parent_status: null,
+            }
+          },
+        }
+      },
+    },
+    mergeArguments: async (_name, value) => value,
+    validateBusinessRules: async () => {},
+    loadTarget: async () => target,
+  })
+
+  assert.equal(result.success, true)
+  assert.equal(result.executed, true)
+  assert.equal(result.resultStatus, 'success')
+  assert.equal(result.outcome, 'executed')
+  assert.equal(result.message, '操作已成功执行')
+  assert.equal(result.tool, 'task_change_status')
+  assert.deepEqual(result.target, target)
+  assert.deepEqual(result.changes, {
+    id: 80,
+    status: 2,
+    actual_end_date: '2026-07-31',
+  })
+  assert.equal(result.businessResult.allSubtasksCompleted, false)
+})
+
 test('edit arguments preserve omitted optional scalar fields from the current record', async () => {
   const rows = {
     pms_product: { description: '产品说明' },

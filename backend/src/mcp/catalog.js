@@ -849,6 +849,14 @@ function actionOutputSchema() {
     type: 'object',
     description: 'preview 返回目标、变更、风险和确认号；execute 返回实际执行结果',
     properties: {
+      success: { type: 'boolean', description: 'execute 是否已成功完成本次业务操作' },
+      outcome: {
+        type: 'string',
+        enum: ['executed'],
+        description: 'execute 成功时固定为 executed，不能根据业务附带结果反向判断',
+      },
+      message: { type: 'string', description: '本次操作执行结果的明确中文说明' },
+      tool: { type: 'string', description: '实际执行的内部业务操作名称' },
       riskLevel: {
         type: 'string',
         enum: ['low', 'medium', 'high'],
@@ -883,6 +891,11 @@ function actionOutputSchema() {
         type: 'string',
         enum: ['preview', 'success', 'partial_success', 'failed'],
         description: '操作阶段或执行结果',
+      },
+      target: { type: 'object', additionalProperties: true, description: '本次操作的主要业务目标' },
+      changes: { type: 'object', additionalProperties: true, description: '本次实际提交的业务变更' },
+      businessResult: {
+        description: '操作完成后的业务附带结果；其中的布尔字段不代表本次操作成功或失败',
       },
       preview: { type: 'object', additionalProperties: true, description: '待执行操作的可读预览' },
       data: { description: '无对象结果在结构化响应中的包装字段' },

@@ -82,7 +82,7 @@ return "v3." + encrypted
   .replace(/=+$/g, "");
 ```
 
-该代码只读取当前登录用户和本次请求上下文，不读取模型参数，也不保存员工号。`Origin` 和 `Authorization` 仍使用原固定字符串配置。`PMIS_MCP_IDENTITY_HMAC_SECRET` 必须放在平台环境变量中，不能直接写进代码块。平台代码块函数和运行变量以[开发文档](http://183.129.242.90:3100/docs/mcp-integration)为准。
+该代码只读取当前登录用户和本次请求上下文，不读取模型参数，也不保存员工号。`Origin` 和 `Authorization` 仍使用原固定字符串配置。`PMIS_MCP_IDENTITY_HMAC_SECRET` 必须放在平台环境变量中，不能直接写进代码块。平台代码块函数和运行变量以[开发文档](https://ai.znjs.com:3100/docs/mcp-integration)为准。
 
 ## 环境配置
 
@@ -208,7 +208,7 @@ Query MCP 用来查找目标、读取当前值和确认可选业务数据；Acti
 4. execute 必须使用与 preview 完全相同的 operation 和业务参数，并附上原 confirmation_id；不得静默增加、删除或修改参数。
 5. 用户修改了任何业务内容、确认号过期、员工变化、目标变化或工具变化时，必须重新 preview 并再次取得用户确认。
 6. 不得把“帮我看看”“试一下”“检查一下”“如果可以就处理”等模糊表达当作执行确认。
-7. 只有返回 `resultStatus="success"` 且 `executed=true` 才表示操作已真正完成；`resultStatus="preview"` 永远只表示待确认。
+7. 只有返回 `success=true`、`outcome="executed"`、`resultStatus="success"` 且 `executed=true` 才表示操作已真正完成；`message` 会明确提示“操作已成功执行”。`businessResult` 是操作完成后的业务附带结果，其中的布尔字段不得反向解释成本次操作失败；`resultStatus="preview"` 永远只表示待确认。
 
 四、幂等与高风险
 1. 新增、批量新增、付款和上传操作必须生成唯一 idempotency_key；同一用户意图的网络重试沿用同一个键。
@@ -218,7 +218,7 @@ Query MCP 用来查找目标、读取当前值和确认可选业务数据；Acti
 
 五、结果反馈
 1. preview 成功不代表业务已经修改，必须明确说明“尚未执行”。
-2. execute 返回 `resultStatus="success"` 且 `executed=true` 后，说明实际完成的操作、目标和返回结果。
+2. execute 返回 `success=true`、`outcome="executed"`、`resultStatus="success"` 且 `executed=true` 后，说明实际完成的操作、目标和变更内容；不要把 `businessResult` 中“子项是否全部完成”等附带字段解释成本次执行结果。
 3. execute 失败时不得宣称已完成；完整保留错误码、中文错误、字段错误和请求编号，说明需要补充或重新确认的内容。不得只改写成“工具执行失败”。
 4. 文件正文、Authorization、MCP Key、RSA 私钥和员工号密文不得显示在回复中。
 

@@ -55,6 +55,10 @@ test('action output contract declares risk and confirmation lifecycle fields', (
   const output = getToolDefinition('task_flow', 'action').outputSchema
 
   for (const field of [
+    'success',
+    'outcome',
+    'message',
+    'tool',
     'riskLevel',
     'riskReason',
     'requiresConfirmation',
@@ -63,6 +67,9 @@ test('action output contract declares risk and confirmation lifecycle fields', (
     'expiresAt',
     'affectedTargets',
     'resultStatus',
+    'target',
+    'changes',
+    'businessResult',
   ]) {
     assert.ok(output.properties[field], `操作输出缺少 ${field}`)
   }
