@@ -20,6 +20,15 @@ test('阶段主计划历史使用动作和对象名称作为标题并隐藏新�
   ])
 })
 
+test('套用阶段模板只保留事件标题，不返回无意义字段明细', () => {
+  const rows = buildProjectStagePlanHistory([
+    { id: 1, action: '套用阶段模板', target_name: 'AI 项目标准模板', field_name: 'template_id', old_value: null, new_value: '1', created_at: '2026-07-31 08:34:34', operator: '孙鑫鑫' },
+  ])
+
+  assert.equal(rows[0].action, '套用阶段模板 · AI 项目标准模板')
+  assert.deepEqual(rows[0].changes, [])
+})
+
 test('阶段主计划历史只展示真实变化并转译状态人员和阶段', () => {
   const rows = buildProjectStagePlanHistory([
     { id: 4, operation_id: 'edit-1', action: '编辑关键事项', target_name: '启动会', field_name: 'stage_id', old_value: '1', new_value: '2', created_at: '2026-07-26 10:00:00', operator: '孙鑫鑫' },

@@ -147,7 +147,7 @@ export async function deleteProjectPayment(projectId: string, paymentId: string)
 }
 
 type PlanItemRow={id:number;stage_id:number;name:string;owner_id:number;owner_name:string;collaborators:Array<{id:number;name:string}>;status:number;previous_status?:number;pause_reason?:string;original_due_date:string;current_due_date:string;actual_end_date?:string;requires_delivery_file:number;delivery_requirement?:string;remark?:string;sort_order:number;adjustment_count:number;file_count:number;progress_hint?:string};
-type PlanStageRow={id:number;project_id:number;name:string;description?:string;sort_order:number;item_count:number;completed_count:number;min_due_date?:string;max_due_date?:string;overdue_count:number;items:PlanItemRow[]};
+type PlanStageRow={id:number;project_id:number;name:string;description?:string;sort_order:number;item_count:number;completed_count:number;min_due_date?:string;max_due_date?:string;actual_end_date?:string;overdue_count:number;items:PlanItemRow[]};
 type PlanResponse={project:{id:number;name:string};stages:PlanStageRow[]};
 const planItemContract=objectContract<PlanItemRow>(['id','stage_id','name','owner_id','owner_name','collaborators','status','original_due_date','current_due_date','requires_delivery_file','sort_order','adjustment_count','file_count']);
 const planStageContract=objectContract<PlanStageRow>(['id','project_id','name','sort_order','item_count','completed_count','overdue_count','items'],{items:arrayContract(planItemContract)});
@@ -157,8 +157,50 @@ const itemPayload=(values:ProjectPlanItemForm)=>({stage_id:Number(values.stageId
 
 export async function getProjectStagePlan(projectId:string):Promise<ProjectStagePlan>{
   const result=await unwrap<PlanResponse>(request.get(`/projects/${projectId}/stage-plan`),planContract);
-  return {project:{id:String(result.project.id),name:result.project.name},stages:result.stages.map((stage)=>({id:String(stage.id),projectId:String(stage.project_id),name:stage.name,description:stage.description||'',sortOrder:Number(stage.sort_order),itemCount:Number(stage.item_count),completedCount:Number(stage.completed_count),minDueDate:date(stage.min_due_date),maxDueDate:date(stage.max_due_date),overdueCount:Number(stage.overdue_count),items:stage.items.map(mapPlanItem)}))};
+  return {project:{id:String(result.project.id),name:result.project.name},stages:result.stages.map((stage)=>({id:String(stage.id),projectId:String(stage.project_id),name:stage.name,description:stage.description||'',sortOrder:Number(stage.sort_order),itemCount:Number(stage.item_count),completedCount:Number(stage.completed_count),minDueDate:date(stage.min_due_date),maxDueDate:date(stage.max_due_date),actualEndDate:date(stage.actual_end_date),overdueCount:Number(stage.overdue_count),items:stage.items.map(mapPlanItem)}))};
 }
+type TemplateItemRow={id:number;name:string;requires_delivery_file:number;delivery_requirement?:string;sort_order:number};
+type TemplateStageRow={id:number;name:string;description?:string;sort_order:number;items:TemplateItemRow[]};
+type TemplateRow={id:number;code:string;name:string;description?:string;sort_order:number;stages:TemplateStageRow[]};
+const templateItemContract=objectContract<TemplateItemRow>(['id','name','requires_delivery_file','sort_order']);
+const templateStageContract=objectContract<TemplateStageRow>(['id','name','sort_order','items'],{items:arrayContract(templateItemContract)});
+const templateContract=objectContract<TemplateRow>(['id','code','name','sort_order','stages'],{stages:arrayContract(templateStageContract)});
+export async function getProjectPlanTemplates(projectId:string){
+  const rows=await unwrap<TemplateRow[]>(request.get(`/projects/${projectId}/stage-plan/templates`),arrayContract(templateContract));
+  return rows.map((row)=>({id:String(row.id),code:row.code,name:row.name,description:row.description||'',sortOrder:Number(row.sort_order),stages:row.stages.map((stage)=>({id:String(stage.id),name:stage.name,description:stage.description||'',sortOrder:Number(stage.sort_order),items:stage.items.map((item)=>({id:String(item.id),name:item.name,requiresDeliveryFile:Boolean(Number(item.requires_delivery_file)),deliveryRequirement:item.delivery_requirement||'',sortOrder:Number(item.sort_order)}))}))}));
+}
+export type ProjectPlanTemplateApplicationItem={
+  templateItemId?:string;
+  name?:string;
+  ownerId?:string;
+  dueDate?:string;
+  requiresDeliveryFile?:boolean;
+  deliveryRequirement?:string;
+  remark?:string;
+};
+export type ProjectPlanTemplateApplicationStage={
+  templateStageId?:string;
+  name?:string;
+  description?:string;
+  items:ProjectPlanTemplateApplicationItem[];
+};
+export const applyProjectPlanTemplate=(projectId:string,templateId:string,stages:ProjectPlanTemplateApplicationStage[])=>
+  unwrap<{stage_count:number;item_count:number}>(request.post(`/projects/${projectId}/stage-plan/templates/${templateId}/apply`,{
+    stages:stages.map((stage)=>({
+      template_stage_id:stage.templateStageId?Number(stage.templateStageId):undefined,
+      name:stage.name,
+      description:stage.description,
+      items:stage.items.map((item)=>({
+        template_item_id:item.templateItemId?Number(item.templateItemId):undefined,
+        name:item.name,
+        owner_id:item.ownerId?Number(item.ownerId):undefined,
+        due_date:item.dueDate||undefined,
+        requires_delivery_file:item.requiresDeliveryFile?1:0,
+        delivery_requirement:item.deliveryRequirement||undefined,
+        remark:item.remark||undefined,
+      })),
+    })),
+  }),objectContract(['stage_count','item_count']));
 export async function getProjectStagePlanHistory(projectId:string){return unwrap<ProjectHistoryItem[]>(request.get(`/projects/${projectId}/stage-plan/history`),historyContract)}
 export const createProjectPlanStage=(projectId:string,values:{name:string;description?:string})=>unwrap<{id:number}>(request.post(`/projects/${projectId}/stage-plan/stages`,values),idContract);
 export const updateProjectPlanStage=(projectId:string,stageId:string,values:{name:string;description?:string})=>unwrap<null>(request.put(`/projects/${projectId}/stage-plan/stages/${stageId}`,values));

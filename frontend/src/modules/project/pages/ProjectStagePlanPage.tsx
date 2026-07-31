@@ -6,24 +6,42 @@ import { DeleteOutlined, HolderOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   ActionBar, AdminAttachmentUpload, AdminButton, AdminDatePicker, AdminDrawer, AdminEmptyState, AdminIconAction, AdminInput, AdminModal, AdminSelect,
-  AdminFormItem, AdminSwitch, AdminTextAction, AdminTextArea, DeleteConfirmAction,
+  AdminFormItem, AdminStepNavigation, AdminSwitch, AdminTextAction, AdminTextArea, DeleteConfirmAction,
   ExpandToggleButton, HistoryTimelineSection, OperationColumnActions, PermissionButton, StatusTag, TemplateDetailPage,
   TemplateDetailTableSection, usePageReturnNavigation, type AdminAttachment, type HistoryTimelineItem,
 } from '../../../components/admin';
 import {
-  adjustProjectPlanItem, changeProjectPlanItemStatus, createProjectPlanItems, createProjectPlanStage,
+  adjustProjectPlanItem, applyProjectPlanTemplate, changeProjectPlanItemStatus, createProjectPlanItems, createProjectPlanStage,
   deleteProjectPlanFile, deleteProjectPlanItem, deleteProjectPlanStage, downloadProjectPlanFile, getProjectPlanAdjustments,
-  getProjectPlanFiles, getProjectStagePlan, getProjectStagePlanHistory, loadProjectPlanFilePreview, reorderProjectPlanItems,
+  getProjectPlanFiles, getProjectPlanTemplates, getProjectStagePlan, getProjectStagePlanHistory, loadProjectPlanFilePreview, reorderProjectPlanItems,
   reorderProjectPlanStages, updateProjectPlanItem, updateProjectPlanStage, uploadProjectPlanFile,
 } from '../../../api/projectApi';
 import { getUserOptions } from '../../../api/userApi';
-import type { ProjectPlanAdjustment, ProjectPlanDeliveryFile, ProjectPlanItem, ProjectPlanItemForm, ProjectPlanStage } from '../types';
+import type { ProjectPlanAdjustment, ProjectPlanDeliveryFile, ProjectPlanItem, ProjectPlanItemForm, ProjectPlanStage, ProjectPlanTemplate } from '../types';
 import { ProjectPlanStatusChangeAction, renderProjectPlanItemStatus } from '../components/ProjectPlanStatusChangeAction';
 import { getProjectPlanStagePresentation, resolveProjectPlanRowOrder } from '../projectPlanRowSort';
 import './ProjectStagePlanPage.css';
 
 type TableRow={key:string;kind:'stage'|'item';stage:ProjectPlanStage;item?:ProjectPlanItem};
 type Option={label:string;value:string};
+type TemplateDraftItem={
+  key:string;
+  templateItemId?:string;
+  name:string;
+  ownerId?:string;
+  dueDate?:string;
+  requiresDeliveryFile:boolean;
+  deliveryRequirement:string;
+  remark:string;
+};
+type TemplateDraftStage={
+  key:string;
+  templateStageId?:string;
+  name:string;
+  description:string;
+  items:TemplateDraftItem[];
+};
+const draftKey=(prefix:string)=>`${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
 const emptyItem=(stageId:string):ProjectPlanItemForm=>({stageId,name:'',ownerId:'',collaboratorIds:[],requiresDeliveryFile:false});
 const deliveryAttachment=(file:ProjectPlanDeliveryFile):AdminAttachment=>({id:file.id,name:file.name,size:file.size,contentType:file.contentType,status:'done'});
 const mapHistoryItem=(item:Awaited<ReturnType<typeof getProjectStagePlanHistory>>[number]):HistoryTimelineItem=>({
@@ -75,6 +93,14 @@ export function ProjectStagePlanPage(){
   const [fileModal,setFileModal]=useState<{item:ProjectPlanItem;files:ProjectPlanDeliveryFile[]}>();
   const [draggingRow,setDraggingRow]=useState<TableRow>();
   const [dragOverRow,setDragOverRow]=useState<TableRow>();
+  const [templateOpen,setTemplateOpen]=useState(false);
+  const [templateStep,setTemplateStep]=useState(0);
+  const [templates,setTemplates]=useState<ProjectPlanTemplate[]>([]);
+  const [templateId,setTemplateId]=useState('');
+  const [templateDraft,setTemplateDraft]=useState<TemplateDraftStage[]>([]);
+  const [templateLoading,setTemplateLoading]=useState(false);
+  const [templateSubmitting,setTemplateSubmitting]=useState(false);
+  const [templateAttempted,setTemplateAttempted]=useState(false);
 
   const load=()=>{
     if(!params.id)return;
@@ -85,6 +111,112 @@ export function ProjectStagePlanPage(){
   const refresh=()=>setRevision((value)=>value+1);
 
   const visibleStages=useMemo(()=>plan?.stages||[],[plan]);
+  const selectedTemplate=useMemo(()=>templates.find((item)=>item.id===templateId),[templates,templateId]);
+
+  const initializeTemplate=(template:ProjectPlanTemplate)=>{
+    setTemplateId(template.id);
+    setTemplateDraft(template.stages.map((stage)=>({
+      key:`template-stage-${stage.id}`,
+      templateStageId:stage.id,
+      name:stage.name,
+      description:stage.description,
+      items:stage.items.map((item)=>({
+        key:`template-item-${item.id}`,
+        templateItemId:item.id,
+        name:item.name,
+        requiresDeliveryFile:item.requiresDeliveryFile,
+        deliveryRequirement:item.deliveryRequirement,
+        remark:'',
+      })),
+    })));
+    setTemplateAttempted(false);
+  };
+  const openTemplate=async()=>{
+    if(!params.id)return;
+    if(visibleStages.length>0){
+      message.info('当前已有阶段主计划，不能重复套用模板');
+      return;
+    }
+    setTemplateOpen(true);setTemplateStep(0);setTemplateLoading(true);setTemplateAttempted(false);
+    try{
+      const rows=await getProjectPlanTemplates(params.id);
+      setTemplates(rows);
+      if(rows[0])initializeTemplate(rows[0]);
+    }catch(cause){
+      message.error(cause instanceof Error?cause.message:'模板加载失败');
+    }finally{setTemplateLoading(false);}
+  };
+  const updateTemplateStage=(stageKey:string,patch:Partial<TemplateDraftStage>)=>{
+    setTemplateDraft((current)=>current.map((stage)=>stage.key===stageKey?{...stage,...patch}:stage));
+  };
+  const updateTemplateItem=(stageKey:string,itemKey:string,patch:Partial<TemplateDraftItem>)=>{
+    setTemplateDraft((current)=>current.map((stage)=>stage.key===stageKey?{
+      ...stage,
+      items:stage.items.map((item)=>item.key===itemKey?{...item,...patch}:item),
+    }:stage));
+  };
+  const removeTemplateStage=(stageKey:string)=>{
+    setTemplateDraft((current)=>current.filter((stage)=>stage.key!==stageKey));
+  };
+  const addTemplateStage=()=>{
+    setTemplateDraft((current)=>[...current,{
+      key:draftKey('custom-stage'),
+      name:'',
+      description:'',
+      items:[],
+    }]);
+  };
+  const removeTemplateItem=(stageKey:string,itemKey:string)=>{
+    setTemplateDraft((current)=>current.map((stage)=>stage.key===stageKey?{
+      ...stage,
+      items:stage.items.filter((item)=>item.key!==itemKey),
+    }:stage));
+  };
+  const addTemplateItem=(stageKey:string)=>{
+    setTemplateDraft((current)=>current.map((stage)=>stage.key===stageKey?{
+      ...stage,
+      items:[...stage.items,{
+        key:draftKey('custom-item'),
+        name:'',
+        requiresDeliveryFile:false,
+        deliveryRequirement:'',
+        remark:'',
+      }],
+    }:stage));
+  };
+  const submitTemplate=async()=>{
+    if(!params.id||!selectedTemplate)return;
+    setTemplateAttempted(true);
+    if(!templateDraft.length)return;
+    const incomplete=templateDraft.some((stage)=>(
+      !stage.name.trim()
+      || stage.items.some((item)=>(
+        !item.name.trim()
+        || !item.ownerId
+        || !item.dueDate
+      ))
+    ));
+    if(incomplete)return;
+    setTemplateSubmitting(true);
+    try{
+      const result=await applyProjectPlanTemplate(params.id,selectedTemplate.id,templateDraft.map((stage)=>({
+        templateStageId:stage.templateStageId,
+        name:stage.templateStageId?undefined:stage.name.trim(),
+        description:stage.templateStageId?undefined:stage.description.trim(),
+        items:stage.items.map((item)=>({
+          templateItemId:item.templateItemId,
+          name:item.templateItemId?undefined:item.name.trim(),
+          ownerId:item.ownerId,
+          dueDate:item.dueDate,
+          requiresDeliveryFile:item.requiresDeliveryFile,
+          deliveryRequirement:item.deliveryRequirement.trim(),
+          remark:item.remark.trim(),
+        })),
+      })));
+      message.success(`已生成 ${result.stage_count} 个阶段、${result.item_count} 条关键事项`);
+      setTemplateOpen(false);setTemplateAttempted(false);refresh();
+    }finally{setTemplateSubmitting(false);}
+  };
 
   const rows=useMemo<TableRow[]>(()=>visibleStages.flatMap((stage)=>[
     {key:`stage-${stage.id}`,kind:'stage' as const,stage},
@@ -162,7 +294,7 @@ export function ProjectStagePlanPage(){
     }},
     {title:'状态',dataIndex:'status',width:150,render:(_,row)=>row.kind==='item'?<div className="project-plan-status">{renderProjectPlanItemStatus(row.item!.status,row.item!.pauseReason)}{row.item!.progressHint?<StatusTag status={row.item!.progressHint.startsWith('已逾期')||row.item!.progressHint==='延期完成'?'error':row.item!.progressHint==='按期完成'?'success':'processing'} text={row.item!.progressHint}/>:null}</div>:null},
     {title:'计划完成时间',dataIndex:'due',width:230,render:(_,row)=>row.kind==='stage'?getProjectPlanStagePresentation(row.stage).dueDate:<div className="project-plan-due"><span>{row.item!.currentDueDate}</span>{row.item!.adjustmentCount>0?<small>原计划 {row.item!.originalDueDate} · <AdminTextAction onClick={()=>void openHistory(row.item!)}>已调整 {row.item!.adjustmentCount} 次</AdminTextAction></small>:null}</div>},
-    {title:'实际完成时间',dataIndex:'actual',width:140,render:(_,row)=>row.kind==='item'?row.item!.actualEndDate||'-':null},
+    {title:'实际完成时间',dataIndex:'actual',width:140,render:(_,row)=>row.kind==='stage'?getProjectPlanStagePresentation(row.stage).actualEndDate:row.item!.actualEndDate||'-'},
     {title:'操作',valueType:'option',width:230,fixed:'right',render:(_,row)=>{
       if(row.kind==='stage')return <OperationColumnActions><AdminTextAction onClick={()=>{setCreateDrawer({stage:row.stage,items:[emptyItem(row.stage.id)]});setCreateAttempted(false);setCollapsed((current)=>{const next=new Set(current);next.delete(row.stage.id);return next;});}}>新增关键事项</AdminTextAction><AdminTextAction onClick={()=>{stageForm.setFieldsValue({name:row.stage.name});setStageModal({stage:row.stage});}}>编辑阶段</AdminTextAction><DeleteConfirmAction variant="text" entityName="阶段" targetName={row.stage.name} onConfirm={async()=>{await deleteProjectPlanStage(params.id!,row.stage.id);refresh();}}>删除</DeleteConfirmAction></OperationColumnActions>;
       const item=row.item!;
@@ -175,10 +307,98 @@ export function ProjectStagePlanPage(){
   return <>
     <TemplateDetailPage title="项目详情" loading={loading} error={error} onRetry={refresh} onBack={returnToSource}
       sectionNavigation={{items:[{key:'basic',title:'基本信息'},{key:'contract',title:'合同信息'},{key:'stage-plan',title:'阶段主计划'}],activeKey:'stage-plan',onChange:(key)=>{if(!params.id)return;if(key==='basic')navigate(`/projects/${params.id}${location.search}`);if(key==='contract')navigate(`/projects/${params.id}/contract-detail${location.search}`);}}}
-      actions={<PermissionButton permission="project" type="primary" onClick={()=>{stageForm.setFieldsValue({name:''});setStageModal({});}}>新增阶段</PermissionButton>}>
+      actions={<>
+        <PermissionButton permission="project" onClick={()=>void openTemplate()}>套用模板</PermissionButton>
+        <PermissionButton permission="project" type="primary" onClick={()=>{stageForm.setFieldsValue({name:''});setStageModal({});}}>新增阶段</PermissionButton>
+      </>}>
       <TemplateDetailTableSection<TableRow> title="阶段主计划" sectionKey="stage-plan-table" summary={`共 ${visibleStages.length} 个阶段`} table={{rowKey:'key',columns,dataSource:rows,scroll:{x:1280},onRow:(row)=>({className:[`project-plan-row is-${row.kind}`,draggingRow?.key===row.key?'is-project-plan-dragging':'',dragOverRow?.key===row.key?dropPosition(row):''].filter(Boolean).join(' '),onDragEnter:()=>{if(canDropRow(row))setDragOverRow(row);},onDragOver:(event)=>{if(!canDropRow(row))return;event.preventDefault();event.dataTransfer.dropEffect='move';setDragOverRow(row);},onDragLeave:(event)=>{if(!event.currentTarget.contains(event.relatedTarget as Node|null))setDragOverRow(undefined);},onDrop:(event)=>{if(!canDropRow(row))return;event.preventDefault();void handleDrop(row);}})}}/>
       <HistoryTimelineSection items={history} sectionKey="stage-plan-history"/>
     </TemplateDetailPage>
+    <AdminDrawer
+      title="套用阶段主计划模板"
+      width="min(1280px, 100vw)"
+      rootClassName="project-plan-template-drawer-root"
+      open={templateOpen}
+      destroyOnHidden
+      maskClosable={!templateSubmitting}
+      closable={!templateSubmitting}
+      onClose={()=>{setTemplateOpen(false);setTemplateAttempted(false);}}
+      footer={<ActionBar>
+        <AdminButton disabled={templateSubmitting} onClick={()=>{setTemplateOpen(false);setTemplateAttempted(false);}}>取消</AdminButton>
+        {templateStep===1?<AdminButton disabled={templateSubmitting} onClick={()=>setTemplateStep(0)}>上一步</AdminButton>:null}
+        {templateStep===0?<AdminButton type="primary" disabled={!selectedTemplate||templateLoading} onClick={()=>setTemplateStep(1)}>下一步</AdminButton>
+          :<AdminButton type="primary" loading={templateSubmitting} onClick={()=>void submitTemplate()}>生成主计划</AdminButton>}
+      </ActionBar>}
+    >
+      <AdminStepNavigation
+        className="project-plan-template-steps"
+        current={templateStep}
+        items={[
+          {title:'选择模板',description:'选择适合当前项目的阶段与关键事项框架'},
+          {title:'完善主计划',description:'调整内容并补齐每条关键事项的生成信息'},
+        ]}
+      />
+      {templateLoading?(<div className="project-plan-template-loading">模板加载中...</div>):templateStep===0?(
+        selectedTemplate?(<div className="project-plan-template-body">
+          <AdminFormItem label="阶段主计划模板" required>
+            <AdminSelect value={templateId} options={templates.map((item)=>({label:item.name,value:item.id}))} onChange={(value)=>{const next=templates.find((item)=>item.id===String(value));if(next)initializeTemplate(next);}}/>
+          </AdminFormItem>
+          <section className="project-plan-template-preview">
+            <header><strong>{selectedTemplate.name}</strong><span>{selectedTemplate.stages.length} 个阶段 · {selectedTemplate.stages.reduce((sum,stage)=>sum+stage.items.length,0)} 条关键事项</span></header>
+            {selectedTemplate.description?<p>{selectedTemplate.description}</p>:null}
+            {selectedTemplate.stages.map((stage)=><div key={stage.id} className="project-plan-template-preview__stage">
+              <strong>{stage.name}</strong>
+              <span>{stage.items.map((item)=>`${item.name}${item.requiresDeliveryFile?'（需交付文件）':''}`).join('、')}</span>
+            </div>)}
+          </section>
+        </div>):(<AdminEmptyState description="暂无可用的阶段主计划模板"/>)
+      ):selectedTemplate?(<Form layout="vertical" className="project-plan-template-body">
+        <p className="project-plan-create-tip">模板仅提供初始框架，可按项目实际情况增删阶段和关键事项；生成前请补齐每条关键事项的负责人、计划完成时间和交付文件要求。</p>
+        {!templateDraft.length?<div className={`project-plan-template-empty${templateAttempted?' is-error':''}`}>
+          <AdminEmptyState description="当前没有阶段，请先新增阶段"/>
+        </div>:null}
+        {templateDraft.map((stage,index)=><section className="project-plan-template-config" key={stage.key}>
+          <header>
+            <div><strong>{stage.templateStageId?stage.name:`新增阶段 ${index+1}`}</strong><span>{stage.items.length} 条关键事项</span></div>
+            <DeleteConfirmAction variant="text" entityName="阶段" targetName={stage.name||`新增阶段 ${index+1}`} onConfirm={async()=>removeTemplateStage(stage.key)}>删除阶段</DeleteConfirmAction>
+          </header>
+          <div className="project-plan-template-stage-body">
+            {!stage.templateStageId?<AdminFormItem label="阶段名称" required validateStatus={templateAttempted&&!stage.name.trim()?'error':undefined} help={templateAttempted&&!stage.name.trim()?'请输入阶段名称':undefined}>
+              <AdminInput value={stage.name} maxLength={100} placeholder="请输入阶段名称" onChange={(event)=>updateTemplateStage(stage.key,{name:event.target.value})}/>
+            </AdminFormItem>:null}
+            <div className="project-plan-template-items">
+              {stage.items.map((item,itemIndex)=><div className="project-plan-template-item" key={item.key}>
+                <header>
+                  <div><strong>{item.templateItemId?item.name:`新增关键事项 ${itemIndex+1}`}</strong></div>
+                  <DeleteConfirmAction variant="text" entityName="关键事项" targetName={item.name||`新增关键事项 ${itemIndex+1}`} onConfirm={async()=>removeTemplateItem(stage.key,item.key)}>删除</DeleteConfirmAction>
+                </header>
+                {!item.templateItemId?<div className="project-plan-template-item-name-field">
+                  <AdminFormItem label="关键事项名称" required validateStatus={templateAttempted&&!item.name.trim()?'error':undefined} help={templateAttempted&&!item.name.trim()?'请输入关键事项名称':undefined}>
+                    <AdminInput value={item.name} maxLength={200} placeholder="请输入关键事项名称" onChange={(event)=>updateTemplateItem(stage.key,item.key,{name:event.target.value})}/>
+                  </AdminFormItem>
+                </div>:null}
+                <div className="project-plan-template-item-fields">
+                  <AdminFormItem label="负责人" required validateStatus={templateAttempted&&!item.ownerId?'error':undefined} help={templateAttempted&&!item.ownerId?'请选择负责人':undefined}>
+                    <AdminSelect value={item.ownerId} placeholder="请选择负责人" options={users} onChange={(value)=>updateTemplateItem(stage.key,item.key,{ownerId:value?String(value):undefined})}/>
+                  </AdminFormItem>
+                  <AdminFormItem label="计划完成时间" required validateStatus={templateAttempted&&!item.dueDate?'error':undefined} help={templateAttempted&&!item.dueDate?'请选择计划完成时间':undefined}>
+                    <AdminDatePicker value={item.dueDate?dayjs(item.dueDate):undefined} placeholder="请选择计划完成时间" onChange={(value:any)=>updateTemplateItem(stage.key,item.key,{dueDate:value?.format('YYYY-MM-DD')||undefined})}/>
+                  </AdminFormItem>
+                  <AdminFormItem className="is-switch" label="需交付文件">
+                    <AdminSwitch
+                      checked={item.requiresDeliveryFile}
+                      onChange={(checked)=>updateTemplateItem(stage.key,item.key,{requiresDeliveryFile:checked})}
+                    />
+                  </AdminFormItem>
+                </div>
+              </div>)}
+              <AdminButton block onClick={()=>addTemplateItem(stage.key)}>新增关键事项</AdminButton>
+            </div>
+          </div>
+        </section>)}
+        <AdminButton block onClick={addTemplateStage}>新增阶段</AdminButton>
+      </Form>):null}
+    </AdminDrawer>
     <AdminDrawer
       title={`新增关键事项 · ${createDrawer?.stage.name||''}`}
       width="min(1200px, 100vw)"

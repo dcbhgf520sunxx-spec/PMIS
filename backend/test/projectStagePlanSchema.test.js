@@ -111,3 +111,36 @@ test('交付文件新上传统一进入OSS且历史本地文件保留迁移兼�
   assert.doesNotMatch(controller, /private-uploads\/project-plan-deliveries/)
   assert.doesNotMatch(resources, /private-uploads\/project-plan-deliveries/)
 })
+
+test('阶段主计划模板结构、内置模板与套用接口完整落地', () => {
+  const schema = read('db/init/001_schema.sql')
+  const migrationPath = path.join(root, 'db/migrations/20260730_02_add_project_plan_templates.sql')
+  assert.ok(fs.existsSync(migrationPath), '缺少阶段主计划模板增量迁移')
+  const migration = fs.readFileSync(migrationPath, 'utf8')
+  const routes = read('src/routes/project.js')
+  const controller = read('src/controllers/projectStagePlanController.js')
+
+  for (const source of [schema, migration]) {
+    assert.match(source, /CREATE TABLE IF NOT EXISTS pms_project_plan_template\b/)
+    assert.match(source, /CREATE TABLE IF NOT EXISTS pms_project_plan_template_stage\b/)
+    assert.match(source, /CREATE TABLE IF NOT EXISTS pms_project_plan_template_item\b/)
+    assert.match(source, /uk_project_plan_template_code/)
+    assert.match(source, /AI 项目标准模板/)
+  }
+  assert.match(routes, /get\('\/:projectId\/stage-plan\/templates',\s*planCtrl\.listTemplates\)/)
+  assert.match(routes, /post\('\/:projectId\/stage-plan\/templates\/:templateId\/apply',\s*planCtrl\.applyTemplate\)/)
+  assert.match(controller, /exports\.listTemplates\s*=/)
+  assert.match(controller, /exports\.applyTemplate\s*=/)
+  assert.match(controller, /FOR UPDATE/)
+  assert.match(controller, /阶段主计划已有内容，不能套用模板/)
+  assert.match(controller, /db\.transaction/)
+  assert.match(controller, /firstStageId/)
+  assert.match(controller, /'套用阶段模板'[\s\S]*firstStageId/)
+  assert.match(controller, /stageActions = \[[^\]]*'套用阶段模板'/)
+})
+
+test('阶段汇总时间由关键事项实时计算', () => {
+  const controller = read('src/controllers/projectStagePlanController.js')
+  assert.match(controller, /MAX\(i\.current_due_date\) max_due_date/)
+  assert.match(controller, /COUNT\(i\.id\)>0[\s\S]*COUNT\(i\.id\) FILTER\(WHERE i\.status=2\)=COUNT\(i\.id\)[\s\S]*MAX\(i\.actual_end_date\)[\s\S]*actual_end_date/)
+})
