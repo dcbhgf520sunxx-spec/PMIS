@@ -42,7 +42,7 @@ const MAIN_TARGETS = {
   task: {
     table: 'pms_task',
     nameColumn: 'name',
-    currentFields: ['status', 'source_type', 'project_id', 'requirement_id'],
+    currentFields: ['status', 'source_type', 'project_id', 'requirement_id', 'owner_ids'],
   },
   bug: {
     table: 'pms_bug',
@@ -68,6 +68,7 @@ const TARGET_LABELS = {
   payment: '付款记录',
   contract_attachment: '合同附件',
   stage_delivery: '交付文件',
+  payment_stage: '付款阶段',
 }
 const STATUS_LABELS = {
   product: { 0: '停用', 1: '启用' },
@@ -392,6 +393,19 @@ function mainTargetType(name) {
   return Object.keys(MAIN_TARGETS).find((prefix) => name.startsWith(`${prefix}_`))
 }
 
+function mainTargetCurrentSelect(type, spec) {
+  const columns = spec.currentFields.filter((field) => field !== 'owner_ids')
+  if (type === 'task') {
+    columns.push(`ARRAY(
+      SELECT task_owner.user_id
+      FROM pms_task_owner task_owner
+      WHERE task_owner.task_id = ${spec.table}.id
+      ORDER BY task_owner.sort_order, task_owner.user_id
+    ) owner_ids`)
+  }
+  return columns.join(', ')
+}
+
 async function loadMainTargetSnapshot(name, args, database) {
   const type = mainTargetType(name)
   if (!type) return null
@@ -407,7 +421,7 @@ async function loadMainTargetSnapshot(name, args, database) {
       throw businessValidationError('ids', `${label}标识不合法：必须全部是正整数`)
     }
     const rows = ids.length
-      ? await database.prepare(`SELECT id, ${spec.nameColumn} name, ${spec.currentFields.join(', ')}
+      ? await database.prepare(`SELECT id, ${spec.nameColumn} name, ${mainTargetCurrentSelect(type, spec)}
         FROM ${spec.table} WHERE id IN (${ids.map(() => '?').join(',')}) AND is_deleted = 0`).all(...ids)
       : []
     if (rows.length !== ids.length) throw businessValidationError('ids', `部分${label}不存在或已删除`)
@@ -424,7 +438,7 @@ async function loadMainTargetSnapshot(name, args, database) {
   }
   const targetId = name === 'task_create_subtask' ? args.parent_id : args.id
   return loadOneTarget(database, {
-    sql: `SELECT id, ${spec.nameColumn} name, ${spec.currentFields.join(', ')}
+    sql: `SELECT id, ${spec.nameColumn} name, ${mainTargetCurrentSelect(type, spec)}
       FROM ${spec.table} WHERE id = ? AND is_deleted = 0`,
     params: [targetId],
     type,
@@ -503,36 +517,58 @@ async function loadActionTargetSnapshot(name, args, database = db) {
 
   if (name === 'stage_create') {
     return loadOneTarget(database, {
-      sql: 'SELECT id, name, status FROM pms_project WHERE id = ? AND is_deleted = 0',
+      sql: 'SELECT id, name, status, owner_id FROM pms_project WHERE id = ? AND is_deleted = 0',
       params: [args.project_id],
       type: 'project',
       missingMessage: '项目不存在',
-      currentFields: ['status'],
+      currentFields: ['status', 'owner_id'],
     })
   }
   if (name === 'stage_update' || name === 'stage_delete') {
     return loadOneTarget(database, {
-      sql: `SELECT s.id, s.name, s.sort_order, s.project_id
+      sql: `SELECT s.id, s.name, s.sort_order, s.project_id, p.owner_id
         FROM pms_project_plan_stage s
         JOIN pms_project p ON p.id = s.project_id AND p.is_deleted = 0
         WHERE s.id = ? AND s.project_id = ? AND s.is_deleted = 0`,
       params: [args.stage_id, args.project_id],
       type: 'stage',
       missingMessage: '阶段不存在',
-      currentFields: ['project_id', 'sort_order'],
+      currentFields: ['project_id', 'sort_order', 'owner_id'],
     })
   }
   if (name === 'stage_item_create' || name === 'stage_item_batch_create') {
     return loadOneTarget(database, {
-      sql: `SELECT s.id, s.name, s.sort_order, s.project_id
+      sql: `SELECT s.id, s.name, s.sort_order, s.project_id, p.owner_id
         FROM pms_project_plan_stage s
         JOIN pms_project p ON p.id = s.project_id AND p.is_deleted = 0
         WHERE s.id = ? AND s.project_id = ? AND s.is_deleted = 0`,
       params: [args.stage_id, args.project_id],
       type: 'stage',
       missingMessage: '阶段不存在',
-      currentFields: ['project_id', 'sort_order'],
+      currentFields: ['project_id', 'sort_order', 'owner_id'],
     })
+  }
+  if (name === 'stage_item_reorder') {
+    const ids = [...new Set((Array.isArray(args.ids) ? args.ids : []).map(Number))]
+    const rows = ids.length
+      ? await database.prepare(`SELECT i.id, i.name, i.owner_id, i.status, i.stage_id, s.project_id
+        FROM pms_project_plan_item i
+        JOIN pms_project_plan_stage s ON s.id = i.stage_id AND s.is_deleted = 0
+        JOIN pms_project p ON p.id = s.project_id AND p.is_deleted = 0
+        WHERE i.id IN (${ids.map(() => '?').join(',')}) AND i.stage_id = ? AND s.project_id = ? AND i.is_deleted = 0`)
+        .all(...ids, args.stage_id, args.project_id)
+      : []
+    if (rows.length !== ids.length) throw new Error('部分关键事项不存在或已删除')
+    return {
+      type: 'stage_item',
+      ids,
+      name: `${ids.length}条关键事项`,
+      current: rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        ...currentSnapshot(row, ['owner_id', 'status', 'stage_id', 'project_id']),
+      })),
+    }
   }
   if (name.startsWith('stage_item_')) {
     return loadOneTarget(database, {
@@ -549,77 +585,80 @@ async function loadActionTargetSnapshot(name, args, database = db) {
   }
   if (name === 'contract_create') {
     return loadOneTarget(database, {
-      sql: 'SELECT id, name, status FROM pms_project WHERE id = ? AND is_deleted = 0',
+      sql: 'SELECT id, name, status, owner_id FROM pms_project WHERE id = ? AND is_deleted = 0',
       params: [args.project_id],
       type: 'project',
       missingMessage: '项目不存在',
-      currentFields: ['status'],
+      currentFields: ['status', 'owner_id'],
     })
   }
   if (name === 'contract_update' || name === 'contract_delete' || name === 'contract_attachment_upload') {
     return loadOneTarget(database, {
-      sql: `SELECT c.id, c.contract_name name, c.contract_code, c.contract_amount, c.project_id
+      sql: `SELECT c.id, c.contract_name name, c.contract_code, c.contract_amount, c.project_id, p.owner_id
         FROM pms_project_contract c
         JOIN pms_project p ON p.id = c.project_id AND p.is_deleted = 0
         WHERE c.project_id = ? AND c.is_deleted = 0`,
       params: [args.project_id],
       type: 'contract',
       missingMessage: '项目合同不存在',
-      currentFields: ['project_id', 'contract_code', 'contract_amount'],
+      currentFields: ['project_id', 'contract_code', 'contract_amount', 'owner_id'],
     })
   }
   if (name === 'contract_attachment_delete') {
     return loadOneTarget(database, {
-      sql: `SELECT a.id, a.original_name name, a.file_size, c.project_id
+      sql: `SELECT a.id, a.original_name name, a.file_size, c.project_id, p.owner_id
         FROM pms_project_contract_attachment a
         JOIN pms_project_contract c ON c.id = a.contract_id AND c.is_deleted = 0
+        JOIN pms_project p ON p.id = c.project_id AND p.is_deleted = 0
         WHERE a.id = ? AND c.project_id = ? AND a.is_deleted = 0`,
       params: [args.attachment_id, args.project_id],
       type: 'contract_attachment',
       missingMessage: '合同附件不存在',
-      currentFields: ['project_id', 'file_size'],
+      currentFields: ['project_id', 'file_size', 'owner_id'],
     })
   }
   if (name === 'payment_create') {
     return loadOneTarget(database, {
-      sql: `SELECT s.id, s.stage_name name, s.planned_amount, c.project_id
+      sql: `SELECT s.id, s.stage_name name, s.planned_amount, c.project_id, p.owner_id
         FROM pms_project_payment_stage s
         JOIN pms_project_contract c ON c.id = s.contract_id AND c.is_deleted = 0
+        JOIN pms_project p ON p.id = c.project_id AND p.is_deleted = 0
         WHERE s.id = ? AND c.project_id = ? AND s.is_deleted = 0`,
       params: [args.stage_id, args.project_id],
       type: 'payment_stage',
       missingMessage: '付款阶段不存在',
-      currentFields: ['project_id', 'planned_amount'],
+      currentFields: ['project_id', 'planned_amount', 'owner_id'],
     })
   }
   if (name === 'payment_update' || name === 'payment_delete') {
     return loadOneTarget(database, {
-      sql: `SELECT r.id, s.stage_name name, r.payment_amount, r.payment_month, r.handler_id, c.project_id
+      sql: `SELECT r.id, s.stage_name name, r.payment_amount, r.payment_month, r.handler_id, c.project_id, p.owner_id
         FROM pms_project_payment_record r
         JOIN pms_project_payment_stage s ON s.id = r.stage_id AND s.is_deleted = 0
         JOIN pms_project_contract c ON c.id = s.contract_id AND c.is_deleted = 0
+        JOIN pms_project p ON p.id = c.project_id AND p.is_deleted = 0
         WHERE r.id = ? AND c.project_id = ? AND r.is_deleted = 0`,
       params: [args.payment_id, args.project_id],
       type: 'payment',
       missingMessage: '付款记录不存在',
-      currentFields: ['project_id', 'payment_amount', 'payment_month', 'handler_id'],
+      currentFields: ['project_id', 'payment_amount', 'payment_month', 'handler_id', 'owner_id'],
     })
   }
   if (name === 'stage_delivery_upload') {
     return loadOneTarget(database, {
-      sql: `SELECT i.id, i.name, i.status, s.project_id
+      sql: `SELECT i.id, i.name, i.status, i.owner_id, s.project_id
         FROM pms_project_plan_item i
         JOIN pms_project_plan_stage s ON s.id = i.stage_id AND s.is_deleted = 0
         WHERE i.id = ? AND s.project_id = ? AND i.is_deleted = 0`,
       params: [args.item_id, args.project_id],
       type: 'stage_item',
       missingMessage: '关键事项不存在',
-      currentFields: ['project_id', 'status'],
+      currentFields: ['project_id', 'status', 'owner_id'],
     })
   }
   if (name === 'stage_delivery_delete') {
     return loadOneTarget(database, {
-      sql: `SELECT f.id, f.original_name name, f.size_bytes, s.project_id, f.plan_item_id item_id
+      sql: `SELECT f.id, f.original_name name, f.size_bytes, s.project_id, f.plan_item_id item_id, i.owner_id
         FROM pms_project_plan_delivery_file f
         JOIN pms_project_plan_item i ON i.id = f.plan_item_id AND i.is_deleted = 0
         JOIN pms_project_plan_stage s ON s.id = i.stage_id AND s.is_deleted = 0
@@ -627,12 +666,44 @@ async function loadActionTargetSnapshot(name, args, database = db) {
       params: [args.file_id, args.item_id, args.project_id],
       type: 'stage_delivery',
       missingMessage: '交付文件不存在',
-      currentFields: ['project_id', 'item_id', 'size_bytes'],
+      currentFields: ['project_id', 'item_id', 'size_bytes', 'owner_id'],
     })
   }
   const error = new Error('操作目标类型不受支持')
   error.code = 'MCP_TOOL_NOT_SUPPORTED'
   throw error
+}
+
+function responsibleUserIds(type, current) {
+  if (!current || typeof current !== 'object') return []
+  if (type === 'task') return Array.isArray(current.owner_ids) ? current.owner_ids.map(Number) : []
+  if (type === 'bug') return [Number(current.assignee_id)]
+  if (type === 'work_order') return [Number(current.follower_id)]
+  return [Number(current.owner_id)]
+}
+
+function ownershipError(message) {
+  const error = new Error(message)
+  error.code = 'MCP_ACTION_NOT_RESPONSIBLE'
+  return error
+}
+
+function assertActionTargetOwnership(target, context, mode) {
+  if (target.current === null) return
+  const rows = Array.isArray(target.current)
+    ? target.current
+    : [{ id: target.id, name: target.name, ...target.current }]
+  const userId = Number(context.user.id)
+  const unauthorized = rows.filter((row) => !responsibleUserIds(target.type, row).includes(userId))
+  if (!unauthorized.length) return
+  const label = TARGET_LABELS[target.type] || '业务数据'
+  const details = unauthorized
+    .slice(0, 10)
+    .map((row) => `#${row.id} ${row.name || ''}`.trim())
+    .join('、')
+  const overflow = unauthorized.length > 10 ? `等${unauthorized.length}条` : ''
+  const prefix = mode === 'execute' ? '负责人已发生变化，' : ''
+  throw ownershipError(`${prefix}只能操作本人负责的${label}；无权操作：${details}${overflow}`)
 }
 
 const actions = {
@@ -1031,6 +1102,7 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
     : '该操作会新增或修改PMIS业务数据'
   const target = await loadTarget(name, preparedArgs, database)
   const affectedTargets = [target]
+  assertActionTargetOwnership(target, context, mode)
   if (mode === 'preview') {
     const preview = {
       tool: name,
@@ -1078,6 +1150,7 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
 
 module.exports = {
   actions,
+  assertActionTargetOwnership,
   buildFileFromUrl,
   dispatchActionTool,
   loadActionTargetSnapshot,
