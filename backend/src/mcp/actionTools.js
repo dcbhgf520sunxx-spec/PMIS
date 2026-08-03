@@ -1084,6 +1084,7 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
   const loadTarget = dependencies.loadTarget || loadActionTargetSnapshot
   const database = dependencies.database || db
   const mergeArguments = dependencies.mergeArguments || mergeActionUpdateArguments
+  const validateStatus = dependencies.validateStatus || validateStatusAction
   const validateBusinessRules = dependencies.validateBusinessRules || validateActionBusinessRules
   const definition = actionDefinitions[name]
   if (!definition) {
@@ -1094,7 +1095,7 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
   const mode = args.mode || 'preview'
   if (!['preview', 'execute'].includes(mode)) throw businessValidationError('mode', 'mode必须是preview或execute')
   const preparedArgs = await mergeArguments(name, args, database)
-  await validateStatusAction(name, preparedArgs, database)
+  await validateStatus(name, preparedArgs, database)
   await validateBusinessRules(name, preparedArgs, database)
   const riskLevel = highRiskPattern.test(name) ? 'high' : 'medium'
   const riskReason = riskLevel === 'high'

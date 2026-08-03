@@ -82,7 +82,7 @@ test('task sparse preview merges current fields before ticket creation', async (
     actions: { task_update: [async () => {}, () => ({ body: {} })] },
     database,
     validateBusinessRules: async () => {},
-    loadTarget: async () => ({ type: 'task', id: 59, name: '原任务', current: { status: 0 } }),
+    loadTarget: async () => ({ type: 'task', id: 59, name: '原任务', current: { status: 0, owner_ids: [8] } }),
     ticketService: {
       async createTicket(_context, _name, args) {
         ticketArgs = args
@@ -131,6 +131,9 @@ test('action preview rejects a target that the current employee is not responsib
       client: { id: 3 },
       user: { id: 8, employeeNo: 'JS001', realName: '张三' },
     }, {
+      mergeArguments: async (_name, value) => value,
+      validateStatus: async () => {},
+      validateBusinessRules: async () => {},
       loadTarget: async () => ({
         type: 'project',
         id: 9,
@@ -157,6 +160,9 @@ test('action preview allows a multi-owner task when the current employee is one 
     client: { id: 3 },
     user: { id: 8, employeeNo: 'JS001', realName: '张三' },
   }, {
+    mergeArguments: async (_name, value) => value,
+    validateStatus: async () => {},
+    validateBusinessRules: async () => {},
     loadTarget: async () => ({
       type: 'task',
       id: 9,
@@ -184,6 +190,9 @@ test('batch action rejects the whole preview when any target is not owned by the
       client: { id: 3 },
       user: { id: 8, employeeNo: 'JS001', realName: '张三' },
     }, {
+      mergeArguments: async (_name, value) => value,
+      validateStatus: async () => {},
+      validateBusinessRules: async () => {},
       loadTarget: async () => ({
         type: 'task',
         ids: [9, 10],
@@ -222,6 +231,9 @@ test('execute rechecks ownership and rejects when responsibility changed after p
           () => ({ body: {} }),
         ],
       },
+      mergeArguments: async (_name, value) => value,
+      validateStatus: async () => {},
+      validateBusinessRules: async () => {},
       loadTarget: async () => ({
         type: 'bug',
         id: 9,
@@ -255,6 +267,9 @@ test('standalone create remains available before a responsible employee exists o
     client: { id: 3 },
     user: { id: 8, employeeNo: 'JS001', realName: '张三' },
   }, {
+    mergeArguments: async (_name, value) => value,
+    validateStatus: async () => {},
+    validateBusinessRules: async () => {},
     loadTarget: async () => ({
       type: 'task',
       id: null,
@@ -443,8 +458,9 @@ test('action execute consumes the ticket and preserves the business error when f
         },
       },
       mergeArguments: async (_name, value) => value,
+      validateStatus: async () => {},
       validateBusinessRules: async () => {},
-      loadTarget: async () => ({ type: 'task', id: 9, name: '任务' }),
+      loadTarget: async () => ({ type: 'task', id: 9, name: '任务', current: { owner_ids: [8] } }),
     }),
     (error) => error === businessError
   )
@@ -458,7 +474,7 @@ test('action execute returns an unambiguous success envelope even when the busin
     type: 'task',
     id: 80,
     name: '智能体对接到桌宠的功能',
-    current: { status: 1 },
+    current: { status: 1, owner_ids: [8] },
   }
   const result = await dispatchActionTool('task_change_status', {
     id: 80,
