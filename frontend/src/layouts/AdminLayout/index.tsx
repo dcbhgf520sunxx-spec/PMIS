@@ -30,7 +30,7 @@ import type { MenuItem as UserMenuItem } from '../../types/menu';
 import './index.css';
 
 const { Header, Sider, Content } = Layout;
-const SESSION_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+const SESSION_IDLE_TIMEOUT_MS = 2 * 60 * 60 * 1000;
 const SESSION_IDLE_CHECK_MS = 30 * 1000;
 const SESSION_HEARTBEAT_THROTTLE_MS = 60 * 1000;
 const SESSION_ACTIVITY_EVENTS = ['mousedown', 'keydown', 'scroll', 'touchstart'] as const;
