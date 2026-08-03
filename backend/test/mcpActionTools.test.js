@@ -36,7 +36,7 @@ test('action preview loads the current target without invoking a business write'
       type: 'task',
       id: 9,
       name: '原任务名称',
-      current: { status: 0, owner_ids: [6] },
+      current: { status: 0, owner_ids: [8] },
     }),
     ticketService: {
       createTicket: async (_context, _name, _args, preview) => {
@@ -52,7 +52,7 @@ test('action preview loads the current target without invoking a business write'
     type: 'task',
     id: 9,
     name: '原任务名称',
-    current: { status: 0, owner_ids: [6] },
+    current: { status: 0, owner_ids: [8] },
   })
 })
 
@@ -82,7 +82,7 @@ test('task sparse preview merges current fields before ticket creation', async (
     actions: { task_update: [async () => {}, () => ({ body: {} })] },
     database,
     validateBusinessRules: async () => {},
-    loadTarget: async () => ({ type: 'task', id: 59, name: '原任务', current: { status: 0 } }),
+    loadTarget: async () => ({ type: 'task', id: 59, name: '原任务', current: { status: 0, owner_ids: [8] } }),
     ticketService: {
       async createTicket(_context, _name, args) {
         ticketArgs = args
@@ -117,10 +117,263 @@ test('action preview rejects a missing target before creating a confirmation tic
   assert.equal(ticketCreated, false)
 })
 
+test('action preview rejects a target that the current employee is not responsible for', async () => {
+  let ticketCreated = false
+  await assert.rejects(
+    dispatchActionTool('project_update', {
+      id: 9,
+      name: '项目管理系统',
+      product_id: 2,
+      owner_id: 6,
+      expected_end_date: '2026-08-31',
+      mode: 'preview',
+    }, {
+      client: { id: 3 },
+      user: { id: 8, employeeNo: 'JS001', realName: '张三' },
+    }, {
+      mergeArguments: async (_name, value) => value,
+      validateStatus: async () => {},
+      validateBusinessRules: async () => {},
+      loadTarget: async () => ({
+        type: 'project',
+        id: 9,
+        name: '项目管理系统',
+        current: { owner_id: 6, status: 1 },
+      }),
+      ticketService: {
+        createTicket: async () => { ticketCreated = true },
+      },
+    }),
+    (error) => error.code === 'MCP_ACTION_NOT_RESPONSIBLE'
+      && /只能操作本人负责的项目/.test(error.message)
+  )
+  assert.equal(ticketCreated, false)
+})
+
+test('action preview allows a multi-owner task when the current employee is one of its owners', async () => {
+  let ticketCreated = false
+  await dispatchActionTool('task_change_status', {
+    id: 9,
+    status: 1,
+    mode: 'preview',
+  }, {
+    client: { id: 3 },
+    user: { id: 8, employeeNo: 'JS001', realName: '张三' },
+  }, {
+    mergeArguments: async (_name, value) => value,
+    validateStatus: async () => {},
+    validateBusinessRules: async () => {},
+    loadTarget: async () => ({
+      type: 'task',
+      id: 9,
+      name: '多人任务',
+      current: { owner_ids: [6, 8], status: 0 },
+    }),
+    ticketService: {
+      createTicket: async () => {
+        ticketCreated = true
+        return { confirmationId: 'ticket-owner' }
+      },
+    },
+  })
+  assert.equal(ticketCreated, true)
+})
+
+test('batch action rejects the whole preview when any target is not owned by the current employee', async () => {
+  let ticketCreated = false
+  await assert.rejects(
+    dispatchActionTool('task_assign', {
+      ids: [9, 10],
+      owner_ids: [7],
+      mode: 'preview',
+    }, {
+      client: { id: 3 },
+      user: { id: 8, employeeNo: 'JS001', realName: '张三' },
+    }, {
+      mergeArguments: async (_name, value) => value,
+      validateStatus: async () => {},
+      validateBusinessRules: async () => {},
+      loadTarget: async () => ({
+        type: 'task',
+        ids: [9, 10],
+        name: '2条任务',
+        current: [
+          { id: 9, name: '本人任务', owner_ids: [8], status: 0 },
+          { id: 10, name: '他人任务', owner_ids: [6], status: 0 },
+        ],
+      }),
+      ticketService: {
+        createTicket: async () => { ticketCreated = true },
+      },
+    }),
+    (error) => error.code === 'MCP_ACTION_NOT_RESPONSIBLE'
+      && /#10 他人任务/.test(error.message)
+  )
+  assert.equal(ticketCreated, false)
+})
+
+test('stage reorder allows the project owner', async () => {
+  let ticketCreated = false
+  const database = {
+    prepare(sql) {
+      if (sql.includes('FROM pms_project WHERE')) {
+        return { async get() { return { id: 2, name: '项目管理系统', owner_id: 8 } } }
+      }
+      if (sql.includes('FROM pms_project_plan_stage')) {
+        return { async all() { return [
+          { id: 11, name: '立项', sort_order: 1 },
+          { id: 12, name: '实施', sort_order: 2 },
+        ] } }
+      }
+      throw new Error(`unexpected SQL: ${sql}`)
+    },
+  }
+
+  await dispatchActionTool('stage_reorder', {
+    project_id: 2,
+    ids: [12, 11],
+    moved_id: 12,
+    mode: 'preview',
+  }, {
+    client: { id: 3 },
+    user: { id: 8, employeeNo: 'JS001', realName: '张三' },
+  }, {
+    database,
+    mergeArguments: async (_name, value) => value,
+    validateStatus: async () => {},
+    validateBusinessRules: async () => {},
+    ticketService: {
+      createTicket: async () => {
+        ticketCreated = true
+        return { confirmationId: 'stage-order-ticket' }
+      },
+    },
+  })
+
+  assert.equal(ticketCreated, true)
+})
+
+test('stage item reorder rejects the whole list when one item belongs to another employee', async () => {
+  let ticketCreated = false
+  const database = {
+    prepare(sql) {
+      if (sql.includes('FROM pms_project_plan_stage s')) {
+        return { async get() { return { id: 21, name: '实施阶段' } } }
+      }
+      if (sql.includes('FROM pms_project_plan_item')) {
+        return { async all() { return [
+          { id: 31, name: '本人事项', sort_order: 1, owner_id: 8 },
+          { id: 32, name: '他人事项', sort_order: 2, owner_id: 6 },
+        ] } }
+      }
+      throw new Error(`unexpected SQL: ${sql}`)
+    },
+  }
+
+  await assert.rejects(
+    dispatchActionTool('stage_item_reorder', {
+      project_id: 2,
+      stage_id: 21,
+      ids: [32, 31],
+      moved_id: 32,
+      mode: 'preview',
+    }, {
+      client: { id: 3 },
+      user: { id: 8, employeeNo: 'JS001', realName: '张三' },
+    }, {
+      database,
+      mergeArguments: async (_name, value) => value,
+      validateStatus: async () => {},
+      validateBusinessRules: async () => {},
+      ticketService: {
+        createTicket: async () => { ticketCreated = true },
+      },
+    }),
+    (error) => error.code === 'MCP_ACTION_NOT_RESPONSIBLE'
+      && /#32 他人事项/.test(error.message)
+  )
+  assert.equal(ticketCreated, false)
+})
+
+test('execute rechecks ownership and rejects when responsibility changed after preview', async () => {
+  let ticketConsumed = false
+  let writeCalled = false
+  await assert.rejects(
+    dispatchActionTool('bug_change_status', {
+      id: 9,
+      status: 1,
+      confirmation_id: 'ticket-ownership-changed',
+      mode: 'execute',
+    }, {
+      client: { id: 3 },
+      user: { id: 8, employeeNo: 'JS001', realName: '张三' },
+    }, {
+      actions: {
+        bug_change_status: [
+          async () => { writeCalled = true },
+          () => ({ body: {} }),
+        ],
+      },
+      mergeArguments: async (_name, value) => value,
+      validateStatus: async () => {},
+      validateBusinessRules: async () => {},
+      loadTarget: async () => ({
+        type: 'bug',
+        id: 9,
+        name: '登录失败',
+        current: { assignee_id: 6, status: 0 },
+      }),
+      ticketService: {
+        consumeTicket: async () => { ticketConsumed = true },
+      },
+    }),
+    (error) => error.code === 'MCP_ACTION_NOT_RESPONSIBLE'
+      && /负责人已发生变化/.test(error.message)
+  )
+  assert.equal(ticketConsumed, false)
+  assert.equal(writeCalled, false)
+})
+
+test('standalone create remains available before a responsible employee exists on the target', async () => {
+  let ticketCreated = false
+  await dispatchActionTool('task_create', {
+    name: '新任务',
+    source_type: 1,
+    project_id: 2,
+    task_type: 3,
+    owner_ids: [6],
+    priority: 1,
+    expected_end_date: '2026-08-31',
+    idempotency_key: 'new-task-1',
+    mode: 'preview',
+  }, {
+    client: { id: 3 },
+    user: { id: 8, employeeNo: 'JS001', realName: '张三' },
+  }, {
+    mergeArguments: async (_name, value) => value,
+    validateStatus: async () => {},
+    validateBusinessRules: async () => {},
+    loadTarget: async () => ({
+      type: 'task',
+      id: null,
+      name: '新任务',
+      current: null,
+    }),
+    ticketService: {
+      createTicket: async () => {
+        ticketCreated = true
+        return { confirmationId: 'ticket-create' }
+      },
+    },
+  })
+  assert.equal(ticketCreated, true)
+})
+
 test('target snapshot verifies an existing task and returns only confirmation-safe current fields', async () => {
   const database = {
     prepare(sql) {
       assert.match(sql, /pms_task/)
+      assert.match(sql, /pms_task_owner/)
       return {
         async get(id) {
           assert.equal(id, 9)
@@ -131,6 +384,7 @@ test('target snapshot verifies an existing task and returns only confirmation-sa
             source_type: 1,
             project_id: 2,
             requirement_id: null,
+            owner_ids: [6, 8],
           }
         },
       }
@@ -146,6 +400,7 @@ test('target snapshot verifies an existing task and returns only confirmation-sa
       source_type: 1,
       project_id: 2,
       requirement_id: null,
+      owner_ids: [6, 8],
     },
   })
 })
@@ -161,7 +416,7 @@ test('batch and other high-impact actions are labeled high risk in preview', asy
     client: { id: 3 },
     user: { id: 8, employeeNo: 'JS001', realName: '张三' },
   }, {
-    loadTarget: async () => ({ type: 'stage', id: 2, name: '实施阶段', current: {} }),
+    loadTarget: async () => ({ type: 'stage', id: 2, name: '实施阶段', current: { owner_id: 8 } }),
     ticketService: {
       createTicket: async (_context, _name, _args, value) => {
         preview = value
@@ -187,7 +442,7 @@ test('file action preview keeps file metadata but redacts the OSS URL and contro
     user: { id: 8, employeeNo: 'JS001', realName: '张三' },
   }, {
     validateBusinessRules: async () => {},
-    loadTarget: async () => ({ type: 'contract', id: 2, name: '建设合同', current: {} }),
+    loadTarget: async () => ({ type: 'contract', id: 2, name: '建设合同', current: { owner_id: 8 } }),
     ticketService: {
       createTicket: async (_context, _name, _args, value) => {
         preview = value
@@ -218,6 +473,7 @@ test('delivery file target snapshot uses the real size_bytes column', async () =
             size_bytes: 1024,
             project_id: 2,
             item_id: 9,
+            owner_id: 8,
           }
         },
       }
@@ -232,7 +488,7 @@ test('delivery file target snapshot uses the real size_bytes column', async () =
     type: 'stage_delivery',
     id: 5,
     name: '验收报告.pdf',
-    current: { project_id: 2, item_id: 9, size_bytes: 1024 },
+    current: { project_id: 2, item_id: 9, size_bytes: 1024, owner_id: 8 },
   })
 })
 
@@ -285,8 +541,9 @@ test('action execute consumes the ticket and preserves the business error when f
         },
       },
       mergeArguments: async (_name, value) => value,
+      validateStatus: async () => {},
       validateBusinessRules: async () => {},
-      loadTarget: async () => ({ type: 'task', id: 9, name: '任务' }),
+      loadTarget: async () => ({ type: 'task', id: 9, name: '任务', current: { owner_ids: [8] } }),
     }),
     (error) => error === businessError
   )
@@ -300,7 +557,7 @@ test('action execute returns an unambiguous success envelope even when the busin
     type: 'task',
     id: 80,
     name: '智能体对接到桌宠的功能',
-    current: { status: 1 },
+    current: { status: 1, owner_ids: [8] },
   }
   const result = await dispatchActionTool('task_change_status', {
     id: 80,

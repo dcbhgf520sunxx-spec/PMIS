@@ -203,11 +203,12 @@ test('preview response states that the operation is not executed and requires co
     id: 59,
     mode: 'preview',
   }, {
-    user: { employeeNo: '005829', realName: '孙鑫鑫' },
+    user: { id: 8, employeeNo: '005829', realName: '孙鑫鑫' },
   }, {
     mergeArguments: async (_name, args) => args,
+    validateStatus: async () => {},
     validateBusinessRules: async () => {},
-    loadTarget: async () => ({ type: 'task', id: 59, name: '任务59' }),
+    loadTarget: async () => ({ type: 'task', id: 59, name: '任务59', current: { owner_ids: [8] } }),
     ticketService: {
       createTicket: async (_context, _name, _args, preview) => ({
         confirmationId: 'ticket-59',
@@ -222,7 +223,7 @@ test('preview response states that the operation is not executed and requires co
   assert.equal(result.executed, false)
   assert.equal(result.requiresConfirmation, true)
   assert.equal(result.riskLevel, 'high')
-  assert.deepEqual(result.affectedTargets, [{ type: 'task', id: 59, name: '任务59' }])
+  assert.deepEqual(result.affectedTargets, [{ type: 'task', id: 59, name: '任务59', current: { owner_ids: [8] } }])
 })
 
 test('audit result count uses the normalized items collection', () => {
@@ -362,7 +363,7 @@ test('execute consumes the confirmation ticket exactly once', async () => {
     confirmation_id: 'ticket-59',
     idempotency_key: 'execute-once',
   }, {
-    user: { employeeNo: '005829', realName: '孙鑫鑫' },
+    user: { id: 8, employeeNo: '005829', realName: '孙鑫鑫' },
   }, {
     actions: {
       task_update: [
@@ -371,8 +372,9 @@ test('execute consumes the confirmation ticket exactly once', async () => {
       ],
     },
     mergeArguments: async (_name, args) => args,
+    validateStatus: async () => {},
     validateBusinessRules: async () => {},
-    loadTarget: async () => ({ type: 'task', id: 59, name: '任务59' }),
+    loadTarget: async () => ({ type: 'task', id: 59, name: '任务59', current: { owner_ids: [8] } }),
     ticketService: {
       consumeTicket: async () => { consumeCount += 1 },
       markTicketFailed: async () => {},
