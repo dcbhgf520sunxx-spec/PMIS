@@ -212,6 +212,89 @@ test('batch action rejects the whole preview when any target is not owned by the
   assert.equal(ticketCreated, false)
 })
 
+test('stage reorder allows the project owner', async () => {
+  let ticketCreated = false
+  const database = {
+    prepare(sql) {
+      if (sql.includes('FROM pms_project WHERE')) {
+        return { async get() { return { id: 2, name: '项目管理系统', owner_id: 8 } } }
+      }
+      if (sql.includes('FROM pms_project_plan_stage')) {
+        return { async all() { return [
+          { id: 11, name: '立项', sort_order: 1 },
+          { id: 12, name: '实施', sort_order: 2 },
+        ] } }
+      }
+      throw new Error(`unexpected SQL: ${sql}`)
+    },
+  }
+
+  await dispatchActionTool('stage_reorder', {
+    project_id: 2,
+    ids: [12, 11],
+    moved_id: 12,
+    mode: 'preview',
+  }, {
+    client: { id: 3 },
+    user: { id: 8, employeeNo: 'JS001', realName: '张三' },
+  }, {
+    database,
+    mergeArguments: async (_name, value) => value,
+    validateStatus: async () => {},
+    validateBusinessRules: async () => {},
+    ticketService: {
+      createTicket: async () => {
+        ticketCreated = true
+        return { confirmationId: 'stage-order-ticket' }
+      },
+    },
+  })
+
+  assert.equal(ticketCreated, true)
+})
+
+test('stage item reorder rejects the whole list when one item belongs to another employee', async () => {
+  let ticketCreated = false
+  const database = {
+    prepare(sql) {
+      if (sql.includes('FROM pms_project_plan_stage s')) {
+        return { async get() { return { id: 21, name: '实施阶段' } } }
+      }
+      if (sql.includes('FROM pms_project_plan_item')) {
+        return { async all() { return [
+          { id: 31, name: '本人事项', sort_order: 1, owner_id: 8 },
+          { id: 32, name: '他人事项', sort_order: 2, owner_id: 6 },
+        ] } }
+      }
+      throw new Error(`unexpected SQL: ${sql}`)
+    },
+  }
+
+  await assert.rejects(
+    dispatchActionTool('stage_item_reorder', {
+      project_id: 2,
+      stage_id: 21,
+      ids: [32, 31],
+      moved_id: 32,
+      mode: 'preview',
+    }, {
+      client: { id: 3 },
+      user: { id: 8, employeeNo: 'JS001', realName: '张三' },
+    }, {
+      database,
+      mergeArguments: async (_name, value) => value,
+      validateStatus: async () => {},
+      validateBusinessRules: async () => {},
+      ticketService: {
+        createTicket: async () => { ticketCreated = true },
+      },
+    }),
+    (error) => error.code === 'MCP_ACTION_NOT_RESPONSIBLE'
+      && /#32 他人事项/.test(error.message)
+  )
+  assert.equal(ticketCreated, false)
+})
+
 test('execute rechecks ownership and rejects when responsibility changed after preview', async () => {
   let ticketConsumed = false
   let writeCalled = false

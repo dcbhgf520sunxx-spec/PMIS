@@ -64,6 +64,8 @@ const TARGET_LABELS = {
   work_order: '工单',
   stage: '阶段',
   stage_item: '关键事项',
+  stage_order: '阶段顺序',
+  stage_item_order: '关键事项顺序',
   contract: '项目合同',
   payment: '付款记录',
   contract_attachment: '合同附件',
@@ -465,12 +467,15 @@ function buildReorderTarget(type, parent, rows, args) {
     id: Number(row.id),
     name: row.name,
     sortOrder: Number(row.sort_order),
+    ...(row.owner_id == null ? {} : { owner_id: Number(row.owner_id) }),
   }]))
+  const current = { order: currentIds.map((value) => byId.get(value)) }
+  if (parent.owner_id != null) current.owner_id = Number(parent.owner_id)
   return {
     type,
     id: parent.id,
     name: parent.name,
-    current: { order: currentIds.map((value) => byId.get(value)) },
+    current,
     proposed: {
       movedId,
       order: proposedIds.map((value, index) => ({
@@ -484,7 +489,7 @@ function buildReorderTarget(type, parent, rows, args) {
 async function loadReorderTargetSnapshot(name, args, database) {
   if (name === 'stage_reorder') {
     const project = await database.prepare(
-      'SELECT id, name FROM pms_project WHERE id = ? AND is_deleted = 0'
+      'SELECT id, name, owner_id FROM pms_project WHERE id = ? AND is_deleted = 0'
     ).get(args.project_id)
     if (!project) throw businessValidationError('project_id', '项目不存在')
     const rows = await database.prepare(`SELECT s.id, s.name, s.sort_order
@@ -500,7 +505,7 @@ async function loadReorderTargetSnapshot(name, args, database) {
       WHERE s.id = ? AND s.project_id = ? AND s.is_deleted = 0`)
       .get(args.stage_id, args.project_id)
     if (!stage) throw businessValidationError('stage_id', '阶段不存在')
-    const rows = await database.prepare(`SELECT i.id, i.name, i.sort_order
+    const rows = await database.prepare(`SELECT i.id, i.name, i.sort_order, i.owner_id
       FROM pms_project_plan_item i
       WHERE i.stage_id = ? AND i.is_deleted = 0
       ORDER BY i.sort_order ASC, i.id ASC`).all(args.stage_id)
@@ -547,28 +552,6 @@ async function loadActionTargetSnapshot(name, args, database = db) {
       missingMessage: '阶段不存在',
       currentFields: ['project_id', 'sort_order', 'owner_id'],
     })
-  }
-  if (name === 'stage_item_reorder') {
-    const ids = [...new Set((Array.isArray(args.ids) ? args.ids : []).map(Number))]
-    const rows = ids.length
-      ? await database.prepare(`SELECT i.id, i.name, i.owner_id, i.status, i.stage_id, s.project_id
-        FROM pms_project_plan_item i
-        JOIN pms_project_plan_stage s ON s.id = i.stage_id AND s.is_deleted = 0
-        JOIN pms_project p ON p.id = s.project_id AND p.is_deleted = 0
-        WHERE i.id IN (${ids.map(() => '?').join(',')}) AND i.stage_id = ? AND s.project_id = ? AND i.is_deleted = 0`)
-        .all(...ids, args.stage_id, args.project_id)
-      : []
-    if (rows.length !== ids.length) throw new Error('部分关键事项不存在或已删除')
-    return {
-      type: 'stage_item',
-      ids,
-      name: `${ids.length}条关键事项`,
-      current: rows.map((row) => ({
-        id: row.id,
-        name: row.name,
-        ...currentSnapshot(row, ['owner_id', 'status', 'stage_id', 'project_id']),
-      })),
-    }
   }
   if (name.startsWith('stage_item_')) {
     return loadOneTarget(database, {
@@ -690,7 +673,9 @@ function ownershipError(message) {
 
 function assertActionTargetOwnership(target, context, mode) {
   if (target.current === null) return
-  const rows = Array.isArray(target.current)
+  const rows = target.type === 'stage_item_order' && Array.isArray(target.current?.order)
+    ? target.current.order
+    : Array.isArray(target.current)
     ? target.current
     : [{ id: target.id, name: target.name, ...target.current }]
   const userId = Number(context.user.id)
