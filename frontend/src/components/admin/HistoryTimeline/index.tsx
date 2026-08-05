@@ -12,6 +12,8 @@ export type HistoryChange = {
   before?: ReactNode;
   /** 最终展示值，不能传数据库 ID 或枚举编码。 */
   after?: ReactNode;
+  /** 覆盖整条记录的展示方式；values 仅展示当前值。 */
+  changeMode?: 'diff' | 'values';
 };
 
 export type HistoryTimelineItem = {
@@ -97,7 +99,7 @@ export function HistoryTimeline({ items, expandedKeys: controlledKeys, onExpande
                 {item.changes.map((change, index) => (
                   <div className="admin-history-timeline__change" key={`${change.field}-${index}`}>
                     <span>{change.field}：</span>
-                    {item.changeMode === 'values' ? null : (
+                    {change.changeMode === 'values' || item.changeMode === 'values' ? null : (
                       <>
                         <span className="admin-history-timeline__value is-before" title={typeof change.before === 'string' ? formatHistoryValue(change.field, change.before) as string : undefined}>
                           {formatHistoryValue(change.field, change.before)}
