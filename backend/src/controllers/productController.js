@@ -4,9 +4,28 @@ const { ok, fail } = require('../utils/response')
 const { validateBody } = require('../utils/validation')
 const { groupOperationLogs } = require('../utils/operationHistory')
 const { formatHistoryChanges } = require('../utils/productProjectHistory')
+const { formatMaintenanceContractTargetValue } = require('../services/productMaintenanceContractRules')
 
-const DETAIL_FIELD_ORDER = ['name', 'owner_id', 'description', 'status']
-const HISTORY_FIELD_LABELS = { name: '产品名称', owner_id: '负责人', description: '产品描述', status: '状态', is_deleted: '删除状态' }
+const DETAIL_FIELD_ORDER = [
+  'name', 'owner_id', 'description', 'status',
+  'maintenance_contract_target', 'maintenance_contract_code', 'maintenance_contract_name', 'maintenance_contract_supplier',
+  'maintenance_contract_signed_date', 'maintenance_contract_service_start_date', 'maintenance_contract_service_end_date',
+  'maintenance_contract_amount', 'maintenance_contract_remark',
+  'maintenance_contract_termination_date', 'maintenance_contract_termination_reason',
+]
+const HISTORY_FIELD_LABELS = {
+  name: '产品名称', owner_id: '负责人', description: '产品描述', status: '状态', is_deleted: '删除状态',
+  maintenance_contract_target: '合同编号',
+  maintenance_contract_code: '合同编号', maintenance_contract_name: '合同名称', maintenance_contract_supplier: '供应商',
+  maintenance_contract_signed_date: '签订时间', maintenance_contract_service_start_date: '服务开始时间',
+  maintenance_contract_service_end_date: '服务结束时间', maintenance_contract_amount: '合同金额（元）',
+  maintenance_contract_remark: '备注', maintenance_contract_termination_date: '终止时间',
+  maintenance_contract_termination_reason: '终止原因',
+}
+const HISTORY_DATE_FIELDS = new Set([
+  'maintenance_contract_signed_date', 'maintenance_contract_service_start_date',
+  'maintenance_contract_service_end_date', 'maintenance_contract_termination_date',
+])
 
 const schema = {
   name: { required: true, label: '产品名称' },
@@ -119,7 +138,8 @@ exports.remove = async (req, res) => {
     if (!product) return fail(res, 404, 404, '产品不存在')
     const projectReference = await db.prepare('SELECT COUNT(*) count FROM pms_project WHERE product_id = ? AND is_deleted = 0').get(req.params.id)
     const workOrderReference = await db.prepare('SELECT COUNT(*) count FROM pms_work_order WHERE product_id = ? AND is_deleted = 0').get(req.params.id)
-    if (Number(projectReference.count) || Number(workOrderReference.count)) return fail(res, 400, 400, '该产品已被项目或运维工单引用，无法删除')
+    const maintenanceContractReference = await db.prepare('SELECT COUNT(*) count FROM pms_product_maintenance_contract WHERE product_id = ? AND is_deleted = 0').get(req.params.id)
+    if (Number(projectReference.count) || Number(workOrderReference.count) || Number(maintenanceContractReference.count)) return fail(res, 400, 400, '该产品已被项目、运维工单或运维合同引用，无法删除')
     await db.prepare('UPDATE pms_product SET is_deleted = 1, updater_id = ?, updated_at = NOW() WHERE id = ?').run(req.user.id, req.params.id)
     await db.writeLog(req.user.id, '删除', '产品', req.params.id, 'is_deleted', 0, 1, req.ip, product.name)
     ok(res, null)
@@ -136,7 +156,13 @@ exports.history = async (req, res) => {
       status: new Map([['0', '停用'], ['1', '启用']]),
       is_deleted: new Map([['0', '正常'], ['1', '已删除']]),
     }
-    ok(res, groupOperationLogs(logs, DETAIL_FIELD_ORDER).map((group) => ({ id: group.id, action: group.action, created_at: group.created_at, operator: group.operator, changes: formatHistoryChanges(group.changes, { fieldLabels: HISTORY_FIELD_LABELS, valueLookups }) })))
+    ok(res, groupOperationLogs(logs, DETAIL_FIELD_ORDER).map((group) => {
+      const changes = formatHistoryChanges(group.changes, { fieldLabels: HISTORY_FIELD_LABELS, dateFields: HISTORY_DATE_FIELDS, valueLookups })
+        .map((change, index) => group.changes[index]?.field_name === 'maintenance_contract_target'
+          ? { ...change, new_value: formatMaintenanceContractTargetValue(change.new_value), display_mode: 'values' }
+          : change)
+      return { id: group.id, action: group.action, created_at: group.created_at, operator: group.operator, changes }
+    }))
   }
   catch (error) { console.error(error); fail(res, 500, 500, '查询失败') }
 }

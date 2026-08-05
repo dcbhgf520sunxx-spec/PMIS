@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { DeleteConfirmAction, DetailMetaList, HistoryTimelineSection, PermissionButton, StatusConfirmAction, StatusTag, TemplateDetailPage, TemplateDetailSection , usePageReturnNavigation } from '../../../components/admin';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { DeleteConfirmAction, DetailMetaList, HistoryTimelineSection, PermissionButton, StatusConfirmAction, StatusTag, TemplateDetailPage, TemplateDetailSection, usePageReturnNavigation } from '../../../components/admin';
 import { deleteProduct, getProduct, getProductHistory, updateProductStatus } from '../../../api/productApi';
 import type { ProductRecord } from '../types';
 
 export function ProductDetailPage() {
   const { navigateWithReturn, returnToSource } = usePageReturnNavigation('/products');
   const params = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [row, setRow] = useState<ProductRecord>();
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,7 +24,10 @@ export function ProductDetailPage() {
       getProductHistory(params.id).then((items) => setHistory(items.map((item) => ({
         id: String(item.id), operator: item.operator, action: item.action,
         time: String(item.created_at).slice(0, 19).replace('T', ' '),
-        changes: item.changes.map((change) => ({ field: change.field_name || '-', before: change.old_value, after: change.new_value }))
+        changes: item.changes.map((change) => ({
+          field: change.field_name || '-', before: change.old_value, after: change.new_value,
+          changeMode: change.display_mode === 'values' ? change.display_mode : undefined,
+        }))
       }))))
     ]).catch((loadError) => {
       const text = loadError instanceof Error ? loadError.message : '加载失败';
@@ -34,12 +39,22 @@ export function ProductDetailPage() {
     <TemplateDetailPage
       title="产品详情" loading={loading} error={error} notFound={notFound}
       onRetry={() => setRevision((value) => value + 1)} onBack={returnToSource}
+      sectionNavigation={{
+        items: [
+          { key: 'basic', title: '基本信息' },
+          { key: 'contract', title: '合同信息' },
+        ],
+        activeKey: 'basic',
+        onChange: (key) => {
+          if (key === 'contract' && row) navigate(`/products/${row.id}/maintenance-contracts${location.search}`);
+        },
+      }}
       actions={row ? <><PermissionButton permission="product" type="primary" onClick={() => navigateWithReturn(`/products/${row.id}/edit`)}>编辑</PermissionButton><DeleteConfirmAction entityName="产品" targetName={row.name} successMessage="删除成功" onConfirm={async () => { await deleteProduct(row.id); returnToSource(); }}>删除</DeleteConfirmAction></> : null}
       statusSection={row ? { items: [{ label: '状态', value: <StatusTag status={row.status === 1 ? 'enabled' : 'disabled'} />, wide: true }] } : null}
       statusAction={row ? <StatusConfirmAction block type="primary" action={row.status === 1 ? 'disable' : 'enable'} entityName="产品" targetName={row.name} successMessage={row.status === 1 ? '停用成功' : '启用成功'} onConfirm={async () => { const status = row.status === 1 ? 0 : 1; await updateProductStatus(row.id, status); setRow({ ...row, status }); }}>{row.status === 1 ? '停用产品' : '启用产品'}</StatusConfirmAction> : null}
       documentSection={row ? { items: [{ label: '创建人', value: row.creatorName }, { label: '创建时间', value: row.createdAt, wide: true }, { label: '更新人', value: row.updaterName }, { label: '更新时间', value: row.updatedAt, wide: true }] } : null}
     >
-      {row ? <><TemplateDetailSection title="基本信息"><DetailMetaList items={[
+      {row ? <><TemplateDetailSection title="基本信息" sectionKey="product-basic"><DetailMetaList items={[
         { label: '产品名称', value: row.name },
         { label: '负责人', value: row.ownerName },
         { label: '产品描述', value: row.description, wide: true, longText: true },

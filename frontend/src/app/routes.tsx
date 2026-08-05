@@ -103,6 +103,9 @@ const AccessLogListPage = lazy(() =>
 const ProductListPage = lazy(() => import('../modules/product/pages/ProductListPage').then((module) => ({ default: module.ProductListPage })));
 const ProductFormPage = lazy(() => import('../modules/product/pages/ProductFormPage').then((module) => ({ default: module.ProductFormPage })));
 const ProductDetailPage = lazy(() => import('../modules/product/pages/ProductDetailPage').then((module) => ({ default: module.ProductDetailPage })));
+const ProductMaintenanceContractListPage = lazy(() => import('../modules/product/pages/ProductMaintenanceContractListPage').then((module) => ({ default: module.ProductMaintenanceContractListPage })));
+const ProductMaintenanceContractFormPage = lazy(() => import('../modules/product/pages/ProductMaintenanceContractFormPage').then((module) => ({ default: module.ProductMaintenanceContractFormPage })));
+const ProductMaintenanceContractDetailPage = lazy(() => import('../modules/product/pages/ProductMaintenanceContractDetailPage').then((module) => ({ default: module.ProductMaintenanceContractDetailPage })));
 const ProjectListPage = lazy(() => import('../modules/project/pages/ProjectListPage').then((module) => ({ default: module.ProjectListPage })));
 const ProjectFormPage = lazy(() => import('../modules/project/pages/ProjectFormPage').then((module) => ({ default: module.ProjectFormPage })));
 const ProjectDetailPage = lazy(() => import('../modules/project/pages/ProjectDetailPage').then((module) => ({ default: module.ProjectDetailPage })));
@@ -134,6 +137,10 @@ export const routes: RouteObject[] = [
       { path: 'products', element: withRouteSuspense(<ProductListPage />) },
       { path: 'products/new', element: withRouteSuspense(<ProductFormPage mode="create" />) },
       { path: 'products/:id/edit', element: withRouteSuspense(<ProductFormPage mode="edit" />) },
+      { path: 'products/:id/maintenance-contracts', element: withRouteSuspense(<ProductMaintenanceContractListPage />) },
+      { path: 'products/:id/maintenance-contracts/new', element: withRouteSuspense(<ProductMaintenanceContractFormPage />) },
+      { path: 'products/:id/maintenance-contracts/:contractId/edit', element: withRouteSuspense(<ProductMaintenanceContractFormPage />) },
+      { path: 'products/:id/maintenance-contracts/:contractId', element: withRouteSuspense(<ProductMaintenanceContractDetailPage />) },
       { path: 'products/:id', element: withRouteSuspense(<ProductDetailPage />) },
       { path: 'projects', element: withRouteSuspense(<ProjectListPage />) },
       { path: 'projects/new', element: withRouteSuspense(<ProjectFormPage mode="create" />) },

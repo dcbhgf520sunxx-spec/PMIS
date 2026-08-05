@@ -9,7 +9,7 @@ const detailDemo = read('src/modules/design-system/pages/demos/DetailTemplateDem
 
 test('HistoryTimeline 支持当前值模式且默认仍展示字段差异', () => {
   assert.match(timeline, /changeMode\?: 'diff' \| 'values'/);
-  assert.match(timeline, /item\.changeMode === 'values'/);
+  assert.match(timeline, /change\.changeMode === 'values' \|\| item\.changeMode === 'values'/);
   assert.match(timeline, /formatHistoryValue\(change\.field, change\.after\)/);
   assert.match(timeline, /admin-history-timeline__arrow/);
 });
@@ -25,4 +25,5 @@ test('项目付款历史将阶段放入标题并从展开明细移除', () => {
 test('组件工作台展示当前值模式示例', () => {
   assert.match(detailDemo, /action: '登记付款 · 阶段一'/);
   assert.match(detailDemo, /changeMode: 'values'/);
+  assert.match(detailDemo, /field: '对象编号', after: 'AREA-001', changeMode: 'values'/);
 });
