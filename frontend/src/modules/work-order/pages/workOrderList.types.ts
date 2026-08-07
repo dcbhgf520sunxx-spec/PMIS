@@ -13,4 +13,6 @@ export type WorkOrderListFilters = {
   submitterName: string;
   submitTimeRange: unknown[];
   expectedResolveDateRange: unknown[];
+  creatorId?: string;
+  createdAtRange: unknown[];
 };

@@ -46,7 +46,9 @@ export function WorkOrderListPage() {
       isOverdue: listRouteCodecs.boolean,
       followerId: listRouteCodecs.string,
       submitTimeRange: listRouteCodecs.dateArray,
-      expectedResolveDateRange: listRouteCodecs.dateArray
+      expectedResolveDateRange: listRouteCodecs.dateArray,
+      creatorId: listRouteCodecs.string,
+      createdAtRange: listRouteCodecs.dateArray
     }
   });
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
@@ -78,6 +80,7 @@ export function WorkOrderListPage() {
   const openDetail = useCallback((record: WorkOrderRecord) => {
     const submitTimeRange = appliedFilters.submitTimeRange || [];
     const expectedRange = appliedFilters.expectedResolveDateRange || [];
+    const createdAtRange = appliedFilters.createdAtRange || [];
     const params = buildWorkOrderQueryParams({
       problemDesc: appliedFilters.problemDesc || undefined,
       productId: appliedFilters.productId || undefined,
@@ -95,6 +98,9 @@ export function WorkOrderListPage() {
       submitTimeTo: toDateText(submitTimeRange[1]),
       expectedResolveDateFrom: toDateText(expectedRange[0]),
       expectedResolveDateTo: toDateText(expectedRange[1]),
+      creatorId: appliedFilters.creatorId,
+      createdAtFrom: toDateText(createdAtRange[0]),
+      createdAtTo: toDateText(createdAtRange[1]),
       sortField: listData.sortState.field,
       sortOrder: listData.sortState.order || undefined
     });

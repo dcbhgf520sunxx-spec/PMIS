@@ -168,6 +168,32 @@ export function WorkOrderListFilterBar({
           onChange={(value) => setDraftFilters((prev) => ({ ...prev, expectedResolveDateRange: value || [] }))}
         />
       )
+    },
+    {
+      key: 'creatorId',
+      label: '创建人',
+      node: (
+        <AdminSelect
+          size="small"
+          value={draftFilters.creatorId}
+          options={userOptions}
+          placeholder="全部"
+          onChange={(value) => setDraftFilters((prev) => ({ ...prev, creatorId: value }))}
+        />
+      )
+    },
+    {
+      key: 'createdAtRange',
+      label: '创建时间',
+      wide: true,
+      node: (
+        <AdminRangePicker
+          size="small"
+          value={draftFilters.createdAtRange as never}
+          placeholder={['开始时间', '结束时间']}
+          onChange={(value) => setDraftFilters((prev) => ({ ...prev, createdAtRange: value || [] }))}
+        />
+      )
     }
   ]);
 

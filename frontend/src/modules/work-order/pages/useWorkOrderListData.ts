@@ -31,6 +31,7 @@ export function useWorkOrderListData({
     request: async ({ current, pageSize, sortField, sortOrder }) => {
       const submitTimeRange = appliedFilters.submitTimeRange || [];
       const expectedRange = appliedFilters.expectedResolveDateRange || [];
+      const createdAtRange = appliedFilters.createdAtRange || [];
       const result = await getWorkOrderList({
         problemDesc: appliedFilters.problemDesc || undefined,
         productId: appliedFilters.productId || undefined,
@@ -46,6 +47,9 @@ export function useWorkOrderListData({
         submitTimeTo: toDateText(submitTimeRange[1]),
         expectedResolveDateFrom: toDateText(expectedRange[0]),
         expectedResolveDateTo: toDateText(expectedRange[1]),
+        creatorId: appliedFilters.creatorId,
+        createdAtFrom: toDateText(createdAtRange[0]),
+        createdAtTo: toDateText(createdAtRange[1]),
         current,
         pageSize,
         sortField,

@@ -50,6 +50,9 @@ function where(q) {
     if (ids.length) { sql += ` AND p.owner_id IN (${ids.map(() => '?').join(',')})`; params.push(...ids) }
   }
   if (q.status !== undefined && q.status !== '') { sql += ' AND p.status = ?'; params.push(Number(q.status)) }
+  if (q.creator_id) { sql += ' AND p.creator_id = ?'; params.push(Number(q.creator_id)) }
+  if (q.created_at_from) { sql += ' AND p.created_at >= ?'; params.push(q.created_at_from) }
+  if (q.created_at_to) { sql += " AND p.created_at < ?::date + INTERVAL '1 day'"; params.push(q.created_at_to) }
   return { sql, params }
 }
 

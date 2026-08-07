@@ -24,7 +24,9 @@ const defaults = {
   status: undefined as number | undefined,
   isOverdue: undefined as number | undefined,
   ownerId: undefined as string | undefined,
-  expectedEndTimeRange: [] as unknown[]
+  expectedEndTimeRange: [] as unknown[],
+  creatorId: undefined as string | undefined,
+  createdAtRange: [] as unknown[]
 };
 const date = (value: any) => value?.format?.('YYYY-MM-DD');
 
@@ -40,13 +42,14 @@ export function TaskListPage() {
   const [taskTypes, setTaskTypes] = useState<Option[]>([]);
   const [optionsError, setOptionsError] = useState('');
   const [optionsRevision, setOptionsRevision] = useState(0);
-  const filters = useCommittedFilters(defaults, { urlSync: true, codecs: { name: listRouteCodecs.string, sourceType: listRouteCodecs.number, projectId: listRouteCodecs.string, requirementId: listRouteCodecs.string, taskType: listRouteCodecs.string, priority: listRouteCodecs.number, status: listRouteCodecs.number, isOverdue: listRouteCodecs.number, ownerId: listRouteCodecs.string, expectedEndTimeRange: listRouteCodecs.dateArray } });
+  const filters = useCommittedFilters(defaults, { urlSync: true, codecs: { name: listRouteCodecs.string, sourceType: listRouteCodecs.number, projectId: listRouteCodecs.string, requirementId: listRouteCodecs.string, taskType: listRouteCodecs.string, priority: listRouteCodecs.number, status: listRouteCodecs.number, isOverdue: listRouteCodecs.number, ownerId: listRouteCodecs.string, expectedEndTimeRange: listRouteCodecs.dateArray, creatorId: listRouteCodecs.string, createdAtRange: listRouteCodecs.dateArray } });
   const list = useTemplateServerListData<TaskRecord, { viewCounts: { all: number; mine: number } }>({
     queryKey: ['tasks', filters.appliedFilters, filters.revision, view],
     request: async ({ current, pageSize, sortField, sortOrder }) => {
       const expectedRange = filters.appliedFilters.expectedEndTimeRange || [];
+      const createdAtRange = filters.appliedFilters.createdAtRange || [];
       const owner = resolveListViewFilter(view, filters.appliedFilters.ownerId);
-      const result = await getTaskList({ view, name: filters.appliedFilters.name || undefined, source_type: filters.appliedFilters.sourceType, project_id: filters.appliedFilters.projectId, requirement_id: filters.appliedFilters.requirementId, task_type: filters.appliedFilters.taskType, priority: filters.appliedFilters.priority, status: filters.appliedFilters.status, is_overdue: filters.appliedFilters.isOverdue, owner_id: owner.scopeValue, filter_owner_id: owner.filterValue, expected_end_date_from: date(expectedRange[0]), expected_end_date_to: date(expectedRange[1]), sort_field: sortField, sort_order: sortOrder, page: current, pageSize });
+      const result = await getTaskList({ view, name: filters.appliedFilters.name || undefined, source_type: filters.appliedFilters.sourceType, project_id: filters.appliedFilters.projectId, requirement_id: filters.appliedFilters.requirementId, task_type: filters.appliedFilters.taskType, priority: filters.appliedFilters.priority, status: filters.appliedFilters.status, is_overdue: filters.appliedFilters.isOverdue, owner_id: owner.scopeValue, filter_owner_id: owner.filterValue, expected_end_date_from: date(expectedRange[0]), expected_end_date_to: date(expectedRange[1]), creator_id: filters.appliedFilters.creatorId, created_at_from: date(createdAtRange[0]), created_at_to: date(createdAtRange[1]), sort_field: sortField, sort_order: sortOrder, page: current, pageSize });
       return { list: result.list, total: result.total, meta: { viewCounts: result.viewCounts } };
     },
     urlSync: true
@@ -73,6 +76,7 @@ export function TaskListPage() {
 
   const buildQuery = () => {
     const expectedRange = filters.appliedFilters.expectedEndTimeRange || [];
+    const createdAtRange = filters.appliedFilters.createdAtRange || [];
     const owner = resolveListViewFilter(view, filters.appliedFilters.ownerId);
     return {
       view,
@@ -88,6 +92,9 @@ export function TaskListPage() {
       filter_owner_id: owner.filterValue,
       expected_end_date_from: date(expectedRange[0]),
       expected_end_date_to: date(expectedRange[1]),
+      creator_id: filters.appliedFilters.creatorId,
+      created_at_from: date(createdAtRange[0]),
+      created_at_to: date(createdAtRange[1]),
       sort_field: list.sortState.field,
       sort_order: list.sortState.order
     };
@@ -156,7 +163,9 @@ export function TaskListPage() {
     { key: 'status', label: '状态', node: <AdminSelect size="small" value={filters.draftFilters.status} options={Object.entries(taskStatusLabels).map(([value, label]) => ({ value: Number(value), label }))} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, status: value }))} /> },
     { key: 'isOverdue', label: '逾期状态', node: <AdminSelect size="small" value={filters.draftFilters.isOverdue} options={[{ label: '已逾期', value: 1 }, { label: '未逾期', value: 0 }]} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, isOverdue: value }))} /> },
     { key: 'ownerId', label: '负责人', hidden: view !== 'all', node: <AdminSelect size="small" value={filters.draftFilters.ownerId} options={users} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, ownerId: value }))} /> },
-    { key: 'expectedEndTimeRange', label: '预计完成时间', wide: true, node: <AdminRangePicker size="small" value={filters.draftFilters.expectedEndTimeRange as never} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, expectedEndTimeRange: value || [] }))} /> }
+    { key: 'expectedEndTimeRange', label: '预计完成时间', wide: true, node: <AdminRangePicker size="small" value={filters.draftFilters.expectedEndTimeRange as never} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, expectedEndTimeRange: value || [] }))} /> },
+    { key: 'creatorId', label: '创建人', node: <AdminSelect size="small" value={filters.draftFilters.creatorId} options={users} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, creatorId: value }))} /> },
+    { key: 'createdAtRange', label: '创建时间', wide: true, node: <AdminRangePicker size="small" value={filters.draftFilters.createdAtRange as never} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, createdAtRange: value || [] }))} /> }
   ]);
 
   const handleViewChange = (nextView: 'all' | 'mine') => { setView(nextView); clearSelection(); };

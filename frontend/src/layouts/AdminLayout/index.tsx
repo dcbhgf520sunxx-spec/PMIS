@@ -50,14 +50,14 @@ const businessMenuItems: AdminMenuItems = [
     label: '产品管理'
   },
   {
-    key: '/projects',
-    icon: <ProjectOutlined />,
-    label: '项目管理'
-  },
-  {
     key: '/requirements',
     icon: <FileTextOutlined />,
     label: '需求管理'
+  },
+  {
+    key: '/projects',
+    icon: <ProjectOutlined />,
+    label: '项目管理'
   },
   {
     key: '/tasks',
@@ -422,7 +422,10 @@ export function AdminLayout() {
       >
         <div className="admin-layout__brand">
           <span className="admin-layout__brand-mark">P</span>
-          <span className="admin-layout__brand-name">项目管理系统</span>
+          <span className="admin-layout__brand-name">
+            <span className="admin-layout__brand-title">智能项管</span>
+            <span className="admin-layout__brand-code">SIP</span>
+          </span>
         </div>
         <Menu
           mode="inline"
