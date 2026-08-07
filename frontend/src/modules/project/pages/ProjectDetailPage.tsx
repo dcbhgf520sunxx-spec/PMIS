@@ -100,7 +100,7 @@ export function ProjectDetailPage() {
         <>
           <TemplateDetailSection title="基本信息" sectionKey="project-basic">
             <DetailMetaList items={[
-              { label: '项目名称', value: row.name }, { label: '所属产品', value: row.productName },
+              { label: '项目名称', value: row.name }, { label: '所属产品', value: row.productName }, { label: '所属需求', value: row.requirementName },
               { label: '负责人', value: row.ownerName }, { label: '项目成员', value: row.members.map((member) => member.name).join('、') || '-' },
               { label: '启动时间', value: row.startDate }, { label: '预计完成时间', value: row.expectedEndDate },
               { label: '实际完成时间', value: row.actualEndDate }, { label: '暂停时间', value: row.suspendDate },

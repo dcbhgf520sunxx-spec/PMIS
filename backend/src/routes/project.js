@@ -24,6 +24,7 @@ const uploadStatusDelivery = (req, res, next) => upload.array('files')(req, res,
 })
 router.get('/', ctrl.list)
 router.get('/options', ctrl.options)
+router.get('/requirement-options', ctrl.requirementOptions)
 router.get('/:projectId/stage-plan', planCtrl.getPlan)
 router.get('/:projectId/stage-plan/history', planCtrl.history)
 router.get('/:projectId/stage-plan/templates', planCtrl.listTemplates)

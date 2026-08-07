@@ -13,6 +13,9 @@ export type WorkOrderListParams = {
   submitTimeTo?: string;
   expectedResolveDateFrom?: string;
   expectedResolveDateTo?: string;
+  creatorId?: string;
+  createdAtFrom?: string;
+  createdAtTo?: string;
   current?: number;
   pageSize?: number;
   sortField?: string;
@@ -54,6 +57,9 @@ export function buildWorkOrderQueryParams(params: WorkOrderListParams = {}) {
     submit_time_to: params.submitTimeTo,
     expected_resolve_date_from: params.expectedResolveDateFrom,
     expected_resolve_date_to: params.expectedResolveDateTo,
+    creator_id: params.creatorId,
+    created_at_from: params.createdAtFrom,
+    created_at_to: params.createdAtTo,
     page: params.current,
     pageSize: params.pageSize,
     sort_field: toWorkOrderSortField(params.sortField),

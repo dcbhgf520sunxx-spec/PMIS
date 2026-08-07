@@ -112,9 +112,24 @@
 .admin-layout__brand-name {
   min-width: 0;
   flex: 1;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.admin-layout__brand-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-layout__brand-code {
+  flex-shrink: 0;
+  color: var(--app-primary);
+  font-size: 10px;
+  letter-spacing: 0.08em;
 }
 
 .admin-layout__collapse {

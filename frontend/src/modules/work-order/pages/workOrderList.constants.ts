@@ -14,7 +14,9 @@ export const defaultWorkOrderListFilters: WorkOrderListFilters = {
   followerId: undefined,
   submitterName: '',
   submitTimeRange: [],
-  expectedResolveDateRange: []
+  expectedResolveDateRange: [],
+  creatorId: undefined,
+  createdAtRange: []
 };
 
 export const workOrderSorters = createListSorters<WorkOrderRecord>({

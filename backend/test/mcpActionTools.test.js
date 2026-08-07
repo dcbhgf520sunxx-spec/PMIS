@@ -633,7 +633,6 @@ test('edit arguments preserve omitted optional scalar fields from the current re
     },
     pms_requirement: {
       description: '需求说明',
-      project_id: 12,
       priority: 2,
       submitter_dept: '技术部',
       start_date: '2026-07-02',

@@ -26,7 +26,7 @@ function where(q) {
     sql += ' AND t.name ILIKE ?'
     params.push(`%${q.name}%`)
   }
-  for (const [key, column] of Object.entries({ source_type: 't.source_type', project_id: 't.project_id', requirement_id: 't.requirement_id', task_type: 't.task_type', priority: 't.priority', status: 't.status', is_overdue: 't.is_overdue' })) {
+  for (const [key, column] of Object.entries({ source_type: 't.source_type', project_id: 't.project_id', requirement_id: 't.requirement_id', task_type: 't.task_type', priority: 't.priority', status: 't.status', is_overdue: 't.is_overdue', creator_id: 't.creator_id' })) {
     if (q[key] !== undefined && q[key] !== '') {
       sql += ` AND ${column}=?`
       params.push(Number(q[key]))
@@ -42,6 +42,8 @@ function where(q) {
       params.push(q[key])
     }
   }
+  if (q.created_at_from) { sql += ' AND t.created_at >= ?'; params.push(q.created_at_from) }
+  if (q.created_at_to) { sql += " AND t.created_at < ?::date + INTERVAL '1 day'"; params.push(q.created_at_to) }
   return { sql, params }
 }
 

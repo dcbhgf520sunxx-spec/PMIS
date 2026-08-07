@@ -105,6 +105,9 @@ function buildWhereClause(q) {
   if (q.submit_time_to) { sql += ' AND w.submit_time <= ?'; params.push(q.submit_time_to) }
   if (q.expected_resolve_date_from) { sql += ' AND w.expected_resolve_date >= ?'; params.push(q.expected_resolve_date_from) }
   if (q.expected_resolve_date_to) { sql += ' AND w.expected_resolve_date <= ?'; params.push(q.expected_resolve_date_to) }
+  if (q.creator_id) { sql += ' AND w.creator_id = ?'; params.push(q.creator_id) }
+  if (q.created_at_from) { sql += ' AND w.created_at >= ?'; params.push(q.created_at_from) }
+  if (q.created_at_to) { sql += " AND w.created_at < ?::date + INTERVAL '1 day'"; params.push(q.created_at_to) }
   return { sql, params }
 }
 

@@ -115,6 +115,7 @@ CREATE TABLE IF NOT EXISTS pms_project (
   name VARCHAR(200) NOT NULL,
   description TEXT,
   product_id BIGINT NOT NULL REFERENCES pms_product(id) ON DELETE RESTRICT,
+  requirement_id BIGINT,
   owner_id BIGINT NOT NULL REFERENCES pms_user(id) ON DELETE RESTRICT,
   status SMALLINT NOT NULL DEFAULT 0 CHECK (status IN (0, 1, 2, 3)),
   is_overdue SMALLINT NOT NULL DEFAULT 0 CHECK (is_overdue IN (0, 1)),
@@ -316,7 +317,6 @@ CREATE TABLE IF NOT EXISTS pms_requirement (
   description TEXT,
   requirement_type SMALLINT NOT NULL CHECK (requirement_type IN (1,2,3,4)),
   product_id BIGINT NOT NULL REFERENCES pms_product(id) ON DELETE RESTRICT,
-  project_id BIGINT REFERENCES pms_project(id) ON DELETE RESTRICT,
   owner_id BIGINT NOT NULL REFERENCES pms_user(id) ON DELETE RESTRICT,
   priority SMALLINT NOT NULL DEFAULT 1 CHECK (priority IN (0,1,2)),
   status SMALLINT NOT NULL,
@@ -335,6 +335,15 @@ CREATE TABLE IF NOT EXISTS pms_requirement (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_pms_project_requirement') THEN
+    ALTER TABLE pms_project
+      ADD CONSTRAINT fk_pms_project_requirement
+      FOREIGN KEY (requirement_id) REFERENCES pms_requirement(id) ON DELETE RESTRICT;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS pms_archive_type (
   id BIGSERIAL PRIMARY KEY,
@@ -642,7 +651,7 @@ CREATE INDEX IF NOT EXISTS idx_project_payment_stage_contract ON pms_project_pay
 CREATE INDEX IF NOT EXISTS idx_project_payment_record_stage ON pms_project_payment_record(stage_id, payment_month, id) WHERE is_deleted = 0;
 CREATE UNIQUE INDEX IF NOT EXISTS uk_requirement_title_active ON pms_requirement(title) WHERE is_deleted = 0;
 CREATE INDEX IF NOT EXISTS idx_requirement_product_status ON pms_requirement(product_id, status, is_deleted);
-CREATE INDEX IF NOT EXISTS idx_requirement_project ON pms_requirement(project_id, is_deleted);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_project_requirement_active ON pms_project(requirement_id) WHERE is_deleted = 0 AND requirement_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_requirement_owner_status ON pms_requirement(owner_id, status, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_requirement_type_status ON pms_requirement(requirement_type, status, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_requirement_expected_end ON pms_requirement(expected_end_date, is_deleted);
@@ -724,8 +733,8 @@ VALUES
   (16, 9, '反馈组件', 'design_system_feedback', 2, '/system/design-system?category=feedback', NULL, 47, 1, 1),
   (17, 9, '数据展示', 'design_system_display', 2, '/system/design-system?category=display', NULL, 48, 1, 1),
   (18, 0, '产品管理', 'product', 2, '/products', 'AppstoreOutlined', 6, 1, 1),
-  (19, 0, '项目管理', 'project', 2, '/projects', 'ProjectOutlined', 7, 1, 1),
-  (20, 0, '需求管理', 'requirement', 2, '/requirements', 'FileTextOutlined', 8, 1, 1),
+  (19, 0, '项目管理', 'project', 2, '/projects', 'ProjectOutlined', 8, 1, 1),
+  (20, 0, '需求管理', 'requirement', 2, '/requirements', 'FileTextOutlined', 7, 1, 1),
   (21, 0, '任务管理', 'task', 2, '/tasks', 'CheckSquareOutlined', 9, 1, 1),
   (22, 0, 'BUG管理', 'bug', 2, '/bugs', 'BugOutlined', 10, 1, 1)
 ON CONFLICT (code) DO UPDATE SET

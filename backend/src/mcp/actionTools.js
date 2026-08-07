@@ -32,12 +32,12 @@ const MAIN_TARGETS = {
   project: {
     table: 'pms_project',
     nameColumn: 'name',
-    currentFields: ['status', 'product_id', 'owner_id', 'expected_end_date'],
+    currentFields: ['status', 'product_id', 'requirement_id', 'owner_id', 'expected_end_date'],
   },
   requirement: {
     table: 'pms_requirement',
     nameColumn: 'title',
-    currentFields: ['status', 'requirement_type', 'product_id', 'project_id', 'owner_id'],
+    currentFields: ['status', 'requirement_type', 'product_id', 'owner_id'],
   },
   task: {
     table: 'pms_task',
@@ -136,10 +136,10 @@ const UPDATE_SPECS = {
     fields: ['name', 'description', 'owner_id'],
   },
   project_update: {
-    sql: `SELECT name, description, product_id, owner_id, start_date, expected_end_date, progress_text, risk_text
+    sql: `SELECT name, description, product_id, requirement_id, owner_id, start_date, expected_end_date, progress_text, risk_text
       FROM pms_project WHERE id = ? AND is_deleted = 0`,
     params: (args) => [args.id],
-    fields: ['name', 'description', 'product_id', 'owner_id', 'start_date', 'expected_end_date', 'progress_text', 'risk_text'],
+    fields: ['name', 'description', 'product_id', 'requirement_id', 'owner_id', 'start_date', 'expected_end_date', 'progress_text', 'risk_text'],
     relationship: {
       field: 'member_ids',
       sql: 'SELECT user_id id FROM pms_project_member WHERE project_id = ? ORDER BY user_id',
@@ -147,11 +147,11 @@ const UPDATE_SPECS = {
     },
   },
   requirement_update: {
-    sql: `SELECT title, description, requirement_type, product_id, project_id, owner_id, priority,
+    sql: `SELECT title, description, requirement_type, product_id, owner_id, priority,
       submitter_name, submitter_dept, submit_date, start_date, expected_end_date
       FROM pms_requirement WHERE id = ? AND is_deleted = 0`,
     params: (args) => [args.id],
-    fields: ['title', 'description', 'requirement_type', 'product_id', 'project_id', 'owner_id', 'priority',
+    fields: ['title', 'description', 'requirement_type', 'product_id', 'owner_id', 'priority',
       'submitter_name', 'submitter_dept', 'submit_date', 'start_date', 'expected_end_date'],
   },
   task_update: {

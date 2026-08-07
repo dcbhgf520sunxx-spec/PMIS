@@ -147,15 +147,15 @@ function fields(names, overrides = {}) {
 
 const querySchemas = {
   global_search: fields(['keyword', 'page_size']),
-  product_search: fields(['name', 'owner_ids', 'status', 'sort_field', 'sort_order', 'page', 'page_size']),
-  project_search: fields(['name', 'product_id', 'owner_id', 'member_ids', 'status', 'is_overdue', 'expected_end_date_from', 'expected_end_date_to', 'view', 'sort_field', 'sort_order', 'page', 'page_size']),
+  product_search: fields(['name', 'owner_ids', 'status', 'creator_id', 'created_at_from', 'created_at_to', 'sort_field', 'sort_order', 'page', 'page_size']),
+  project_search: fields(['name', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'status', 'is_overdue', 'expected_end_date_from', 'expected_end_date_to', 'creator_id', 'created_at_from', 'created_at_to', 'view', 'sort_field', 'sort_order', 'page', 'page_size']),
   stage_plan_search: fields(['keyword', 'project_id', 'owner_id', 'status', 'is_overdue', 'sort_field', 'sort_order', 'page', 'page_size']),
   contract_search: fields(['keyword', 'project_id', 'supplier_id', 'signed_date_from', 'signed_date_to', 'sort_field', 'sort_order', 'page', 'page_size']),
   payment_search: fields(['keyword', 'project_id', 'stage_id', 'handler_id', 'payment_month_from', 'payment_month_to', 'sort_field', 'sort_order', 'page', 'page_size']),
-  requirement_search: fields(['title', 'product_id', 'project_id', 'owner_id', 'requirement_type', 'priority', 'status', 'is_overdue', 'submitter_name', 'submit_date_from', 'submit_date_to', 'expected_end_date_from', 'expected_end_date_to', 'view', 'sort_field', 'sort_order', 'page', 'page_size']),
-  task_search: fields(['name', 'source_type', 'project_id', 'requirement_id', 'task_type', 'priority', 'status', 'is_overdue', 'owner_id', 'expected_end_date_from', 'expected_end_date_to', 'view', 'sort_field', 'sort_order', 'page', 'page_size']),
+  requirement_search: fields(['title', 'product_id', 'owner_id', 'requirement_type', 'priority', 'status', 'is_overdue', 'submitter_name', 'submit_date_from', 'submit_date_to', 'expected_end_date_from', 'expected_end_date_to', 'creator_id', 'created_at_from', 'created_at_to', 'view', 'sort_field', 'sort_order', 'page', 'page_size']),
+  task_search: fields(['name', 'source_type', 'project_id', 'requirement_id', 'task_type', 'priority', 'status', 'is_overdue', 'owner_id', 'expected_end_date_from', 'expected_end_date_to', 'creator_id', 'created_at_from', 'created_at_to', 'view', 'sort_field', 'sort_order', 'page', 'page_size']),
   bug_search: fields(['title', 'source_type', 'project_id', 'requirement_id', 'bug_type_id', 'severity', 'status', 'assignee_id', 'creator_id', 'created_at_from', 'created_at_to', 'view', 'sort_field', 'sort_order', 'page', 'page_size']),
-  work_order_search: fields(['problem_desc', 'product_id', 'problem_type', 'urgency', 'status', 'is_overdue', 'follower_id', 'submitter_name', 'submit_time_from', 'submit_time_to', 'expected_resolve_date_from', 'expected_resolve_date_to', 'sort_field', 'sort_order', 'page', 'page_size']),
+  work_order_search: fields(['problem_desc', 'product_id', 'problem_type', 'urgency', 'status', 'is_overdue', 'follower_id', 'submitter_name', 'submit_time_from', 'submit_time_to', 'expected_resolve_date_from', 'expected_resolve_date_to', 'creator_id', 'created_at_from', 'created_at_to', 'sort_field', 'sort_order', 'page', 'page_size']),
   business_options: {
     option_type: described({
       type: 'string',
@@ -176,8 +176,8 @@ const querySchemas = {
 
 const SORT_FIELDS = {
   product_search: ['name', 'ownerName', 'description', 'status', 'creatorName', 'createdAt'],
-  project_search: ['name', 'productName', 'ownerName', 'status', 'startDate', 'expectedEndDate', 'members', 'creatorName', 'createdAt'],
-  requirement_search: ['title', 'requirementType', 'status', 'productName', 'projectName', 'ownerName', 'priority', 'submitterName', 'submitDate', 'expectedEndDate', 'creatorName', 'createdAt'],
+  project_search: ['name', 'productName', 'requirementName', 'ownerName', 'status', 'startDate', 'expectedEndDate', 'members', 'creatorName', 'createdAt'],
+  requirement_search: ['title', 'requirementType', 'status', 'productName', 'ownerName', 'priority', 'submitterName', 'submitDate', 'expectedEndDate', 'creatorName', 'createdAt'],
   task_search: ['name', 'sourceName', 'ownerNames', 'taskTypeName', 'priority', 'status', 'expectedEndTime', 'createdAt'],
   bug_search: ['title', 'sourceName', 'assigneeName', 'bugTypeName', 'severity', 'status', 'creatorName', 'createdAt'],
   work_order_search: ['problem_desc', 'product_id', 'problem_type', 'urgency', 'status', 'is_overdue', 'follower_name', 'follower_id', 'submitter_name', 'submitter_dept', 'submit_time', 'expected_resolve_date', 'creator_name', 'created_at'],
@@ -209,12 +209,12 @@ const actionFields = {
   product_update: ['id', 'name', 'description', 'owner_id'],
   product_change_status: ['id', 'status'],
   product_delete: ['id'],
-  project_create: ['name', 'description', 'product_id', 'owner_id', 'member_ids', 'start_date', 'expected_end_date', 'progress_text', 'risk_text'],
-  project_update: ['id', 'name', 'description', 'product_id', 'owner_id', 'member_ids', 'start_date', 'expected_end_date', 'progress_text', 'risk_text'],
+  project_create: ['name', 'description', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'start_date', 'expected_end_date', 'progress_text', 'risk_text'],
+  project_update: ['id', 'name', 'description', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'start_date', 'expected_end_date', 'progress_text', 'risk_text'],
   project_change_status: ['id', 'status', 'actual_end_date', 'suspend_date'],
   project_delete: ['id'],
-  requirement_create: ['title', 'description', 'requirement_type', 'product_id', 'project_id', 'owner_id', 'priority', 'submitter_name', 'submitter_dept', 'submit_date', 'start_date', 'expected_end_date'],
-  requirement_update: ['id', 'title', 'description', 'requirement_type', 'product_id', 'project_id', 'owner_id', 'priority', 'submitter_name', 'submitter_dept', 'submit_date', 'start_date', 'expected_end_date'],
+  requirement_create: ['title', 'description', 'requirement_type', 'product_id', 'owner_id', 'priority', 'submitter_name', 'submitter_dept', 'submit_date', 'start_date', 'expected_end_date'],
+  requirement_update: ['id', 'title', 'description', 'requirement_type', 'product_id', 'owner_id', 'priority', 'submitter_name', 'submitter_dept', 'submit_date', 'start_date', 'expected_end_date'],
   requirement_change_status: ['id', 'status', 'actual_end_date', 'completion_status', 'pause_date'],
   requirement_delete: ['id'],
   task_create: ['name', 'description', 'source_type', 'project_id', 'requirement_id', 'task_type', 'priority', 'owner_ids', 'start_date', 'expected_end_date'],
@@ -259,7 +259,7 @@ const actionFields = {
 const actionRequired = {
   product_create: ['name', 'owner_id', 'idempotency_key'],
   product_update: ['id'], product_change_status: ['id', 'status'], product_delete: ['id'],
-  project_create: ['name', 'product_id', 'owner_id', 'expected_end_date', 'idempotency_key'],
+  project_create: ['name', 'product_id', 'requirement_id', 'owner_id', 'expected_end_date', 'idempotency_key'],
   project_update: ['id'],
   project_change_status: ['id', 'status'], project_delete: ['id'],
   requirement_create: ['title', 'requirement_type', 'product_id', 'owner_id', 'priority', 'submitter_name', 'submit_date', 'idempotency_key'],
@@ -674,6 +674,7 @@ const SEARCH_OUTPUT_FIELDS = {
   },
   project_search: {
     id: outputField('项目标识'), name: outputField('项目名称'), product_name: outputField('所属产品名称'),
+    requirement_id: outputField('所属需求标识'), requirement_name: outputField('所属需求名称'),
     owner_name: outputField('负责人姓名'), status: outputField('项目状态代码'),
     status_label: outputField('项目状态中文名称'), is_overdue: outputField('逾期代码'),
     is_overdue_label: outputField('逾期状态中文名称'), expected_end_date: outputField('预计完成日期，YYYY-MM-DD'),
