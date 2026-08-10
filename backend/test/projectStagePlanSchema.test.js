@@ -94,6 +94,14 @@ test('交付文件不做版本管理并只开放上传下载删除', () => {
   assert.doesNotMatch(controller, /exports\.replaceFile|exports\.voidFile|MAX\(version_no\)|replaces_file_id/)
 })
 
+test('关键事项由已完成退回进行中时在同一事务内失效上一轮文件', () => {
+  const controller = read('src/controllers/projectStagePlanController.js')
+
+  assert.match(controller, /shouldInvalidatePlanItemFiles\(item\.status,\s*target\)/)
+  assert.match(controller, /UPDATE pms_project_plan_delivery_file SET is_current=0 WHERE plan_item_id=\? AND is_current=1 AND is_void=0/)
+  assert.match(controller, /db\.transaction\(async \(tx\) => \{[\s\S]*is_current=0[\s\S]*UPDATE pms_project_plan_item SET status=/)
+})
+
 test('交付文件新上传统一进入OSS且历史本地文件保留迁移兼容', () => {
   const schema = read('db/init/001_schema.sql')
   const migration = read('db/migrations/20260730_01_use_oss_for_all_files.sql')
