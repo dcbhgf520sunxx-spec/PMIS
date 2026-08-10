@@ -1,6 +1,7 @@
 import {
   DownOutlined,
   AppstoreOutlined,
+  BookOutlined,
   BugOutlined,
   ExperimentOutlined,
   FileTextOutlined,
@@ -73,6 +74,11 @@ const businessMenuItems: AdminMenuItems = [
     key: '/work-orders',
     icon: <ToolOutlined />,
     label: '运维工单'
+  },
+  {
+    key: '/knowledge-base',
+    icon: <BookOutlined />,
+    label: '知识库'
   },
   {
     key: 'base_settings',

@@ -20,6 +20,7 @@ import { getUserOptions } from '../../../api/userApi';
 import type { ProjectPlanAdjustment, ProjectPlanDeliveryFile, ProjectPlanItem, ProjectPlanItemForm, ProjectPlanStage, ProjectPlanTemplate } from '../types';
 import { ProjectPlanStatusChangeAction, renderProjectPlanItemStatus } from '../components/ProjectPlanStatusChangeAction';
 import { getProjectPlanStagePresentation, resolveProjectPlanRowOrder } from '../projectPlanRowSort';
+import { requiresPendingDeliveryUpload, saveProjectPlanItemEdit } from '../projectPlanItemEditSave';
 import './ProjectStagePlanPage.css';
 
 type TableRow={key:string;kind:'stage'|'item';stage:ProjectPlanStage;item?:ProjectPlanItem};
@@ -85,7 +86,7 @@ export function ProjectStagePlanPage(){
   const [createSubmitting,setCreateSubmitting]=useState(false);
   const [stageModal,setStageModal]=useState<{stage?:ProjectPlanStage}>();
   const [stageSubmitting,setStageSubmitting]=useState(false);
-  const [itemModal,setItemModal]=useState<{item:ProjectPlanItem;values:ProjectPlanItemForm}>();
+  const [itemModal,setItemModal]=useState<{item:ProjectPlanItem;values:ProjectPlanItemForm;pendingAttachments:AdminAttachment[]}>();
   const [itemAttempted,setItemAttempted]=useState(false);
   const [itemSubmitting,setItemSubmitting]=useState(false);
   const [adjustModal,setAdjustModal]=useState<{item:ProjectPlanItem;date:string;reason:string;attempted:boolean}>();
@@ -298,7 +299,7 @@ export function ProjectStagePlanPage(){
     {title:'操作',valueType:'option',width:230,fixed:'right',render:(_,row)=>{
       if(row.kind==='stage')return <OperationColumnActions><AdminTextAction onClick={()=>{setCreateDrawer({stage:row.stage,items:[emptyItem(row.stage.id)]});setCreateAttempted(false);setCollapsed((current)=>{const next=new Set(current);next.delete(row.stage.id);return next;});}}>新增关键事项</AdminTextAction><AdminTextAction onClick={()=>{stageForm.setFieldsValue({name:row.stage.name});setStageModal({stage:row.stage});}}>编辑阶段</AdminTextAction><DeleteConfirmAction variant="text" entityName="阶段" targetName={row.stage.name} onConfirm={async()=>{await deleteProjectPlanStage(params.id!,row.stage.id);refresh();}}>删除</DeleteConfirmAction></OperationColumnActions>;
       const item=row.item!;
-      return <OperationColumnActions><AdminTextAction onClick={()=>setItemModal({item,values:{stageId:item.stageId,name:item.name,ownerId:item.ownerId,collaboratorIds:item.collaborators.map((person)=>person.id),requiresDeliveryFile:item.requiresDeliveryFile,deliveryRequirement:item.deliveryRequirement,remark:item.remark}})}>编辑</AdminTextAction><ProjectPlanStatusChangeAction variant="text" item={item} onConfirm={async(target,values)=>{await changeProjectPlanItemStatus(params.id!,item.id,target,{actual_end_date:(values.actualEndDate as any)?.format?.('YYYY-MM-DD'),pause_reason:values.pauseReason,completionFiles:(values.completionFiles as Array<{rawFile?:File}>|undefined)?.map((attachment)=>attachment.rawFile).filter((file):file is File=>Boolean(file))});message.success('状态更新成功');refresh();}}>状态变更</ProjectPlanStatusChangeAction><AdminTextAction onClick={()=>setAdjustModal({item,date:'',reason:'',attempted:false})}>调整计划</AdminTextAction><DeleteConfirmAction variant="text" entityName="关键事项" targetName={item.name} onConfirm={async()=>{await deleteProjectPlanItem(params.id!,item.id);refresh();}}>删除</DeleteConfirmAction></OperationColumnActions>;
+      return <OperationColumnActions><AdminTextAction onClick={()=>setItemModal({item,pendingAttachments:[],values:{stageId:item.stageId,name:item.name,ownerId:item.ownerId,collaboratorIds:item.collaborators.map((person)=>person.id),requiresDeliveryFile:item.requiresDeliveryFile,deliveryRequirement:item.deliveryRequirement,remark:item.remark}})}>编辑</AdminTextAction><ProjectPlanStatusChangeAction variant="text" item={item} onConfirm={async(target,values)=>{await changeProjectPlanItemStatus(params.id!,item.id,target,{actual_end_date:(values.actualEndDate as any)?.format?.('YYYY-MM-DD'),pause_reason:values.pauseReason,completionFiles:(values.completionFiles as Array<{rawFile?:File}>|undefined)?.map((attachment)=>attachment.rawFile).filter((file):file is File=>Boolean(file))});message.success('状态更新成功');refresh();}}>状态变更</ProjectPlanStatusChangeAction><AdminTextAction onClick={()=>setAdjustModal({item,date:'',reason:'',attempted:false})}>调整计划</AdminTextAction><DeleteConfirmAction variant="text" entityName="关键事项" targetName={item.name} onConfirm={async()=>{await deleteProjectPlanItem(params.id!,item.id);refresh();}}>删除</DeleteConfirmAction></OperationColumnActions>;
     }},
   ];
 
@@ -436,11 +437,21 @@ export function ProjectStagePlanPage(){
         if(!params.id||!itemModal)return;
         setItemAttempted(true);
         if(!itemModal.values.stageId||!itemModal.values.name.trim()||!itemModal.values.ownerId)return;
+        const pendingFiles=itemModal.pendingAttachments.flatMap((attachment)=>attachment.rawFile?[attachment.rawFile]:[]);
+        if(requiresPendingDeliveryUpload(itemModal.item,itemModal.values)&&pendingFiles.length===0)return;
         setItemSubmitting(true);
         try{
-          await updateProjectPlanItem(params.id,itemModal.item.id,itemModal.values);
+          await saveProjectPlanItemEdit({
+            item:itemModal.item,
+            values:itemModal.values,
+            files:pendingFiles,
+            upload:(file)=>uploadProjectPlanFile(params.id!,itemModal.item.id,file),
+            save:async()=>{await updateProjectPlanItem(params.id!,itemModal.item.id,itemModal.values);},
+            remove:async(fileId)=>{await deleteProjectPlanFile(params.id!,itemModal.item.id,fileId);},
+          });
           setItemModal(undefined);setItemAttempted(false);refresh();
-        }finally{setItemSubmitting(false);}
+        }catch(cause){message.error(cause instanceof Error?cause.message:'保存失败');}
+        finally{setItemSubmitting(false);}
       }}>确认</AdminButton></ActionBar>}>
       {itemModal?<Form layout="vertical" className="project-plan-create-form">
         <div className="project-plan-create-drawer">
@@ -453,6 +464,21 @@ export function ProjectStagePlanPage(){
             showStage
             onChange={(values)=>setItemModal({...itemModal,values})}
           />
+          {requiresPendingDeliveryUpload(itemModal.item,itemModal.values)?<AdminFormItem
+            label="关键交付文件"
+            required
+            validateStatus={itemAttempted&&!itemModal.pendingAttachments.length?'error':undefined}
+            help={itemAttempted&&!itemModal.pendingAttachments.length?'请上传至少一个关键交付文件':undefined}
+          >
+            <AdminAttachmentUpload
+              multiple
+              value={itemModal.pendingAttachments}
+              onChange={(pendingAttachments)=>setItemModal({...itemModal,pendingAttachments})}
+              onUpload={async(file)=>({id:`pending-${file.uid}`,name:file.name,size:file.size,contentType:file.type})}
+              onRemove={async()=>{}}
+              hint={itemModal.values.deliveryRequirement||'请上传关键交付文件'}
+            />
+          </AdminFormItem>:null}
         </div>
       </Form>:null}
     </AdminDrawer>

@@ -1,3 +1,5 @@
+const { validateActualBusinessDate } = require('./actualBusinessDateRules')
+
 const WORK_ORDER_STATUS_TRANSITIONS = {
   0: [1, 2, 4],
   1: [2, 4],
@@ -45,15 +47,20 @@ function resolveWorkOrderResultFields(status, body = {}, old = {}) {
   }
 }
 
-function validateWorkOrderResultFields(status, values) {
+function validateWorkOrderResultFields(status, values, today) {
   const target = Number(status)
   if (target === 5 && !values.activationReason) return '激活工单时必须填写激活原因'
   if (target === 5 && values.activationReason.length > 100) return '激活原因不能超过100字'
   if (target === 2 && (!values.resolveDate || !values.resultDesc)) {
     return '标记为已解决时必须填写实际修复时间和处置结果'
   }
+  if (target === 2) return validateActualBusinessDate(values.resolveDate, '实际修复时间', today) || ''
   if (target === 4 && !values.suspendDate) return '暂停工单时必须填写暂停时间'
   return ''
+}
+
+function validateWorkOrderEditActualDate(body = {}, today) {
+  return validateActualBusinessDate(body.resolve_date, '实际修复时间', today) || ''
 }
 
 function resolveWorkOrderActivationReason(status, body = {}, old = {}) {
@@ -68,5 +75,6 @@ module.exports = {
   allowedWorkOrderStatuses,
   resolveWorkOrderResultFields,
   resolveWorkOrderActivationReason,
-  validateWorkOrderResultFields
+  validateWorkOrderResultFields,
+  validateWorkOrderEditActualDate
 }

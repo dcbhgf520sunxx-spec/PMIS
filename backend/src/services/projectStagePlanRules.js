@@ -1,3 +1,5 @@
+const { validateActualBusinessDate } = require('./actualBusinessDateRules')
+
 const PLAN_ITEM_STATUS = Object.freeze({
   NOT_STARTED: 0,
   IN_PROGRESS: 1,
@@ -14,10 +16,14 @@ function allowedPlanItemStatuses(status, previousStatus) {
   return []
 }
 
-function validatePlanItemStatusChange(target, body, requiresDeliveryFile, activeFileCount) {
+function validatePlanItemStatusChange(target, body, requiresDeliveryFile, activeFileCount, today) {
   const value = Number(target)
   if (value === PLAN_ITEM_STATUS.COMPLETED && !body.actual_end_date) return '请填写实际完成时间'
   if (value === PLAN_ITEM_STATUS.COMPLETED && requiresDeliveryFile && Number(activeFileCount) < 1) return '请上传至少一个关键交付文件'
+  if (value === PLAN_ITEM_STATUS.COMPLETED) {
+    const dateError = validateActualBusinessDate(body.actual_end_date, '实际完成时间', today)
+    if (dateError) return dateError
+  }
   const pauseReason = String(body.pause_reason || '').trim()
   if (value === PLAN_ITEM_STATUS.PAUSED && !pauseReason) return '请填写暂停原因'
   if (value === PLAN_ITEM_STATUS.PAUSED && pauseReason.length > 200) return '暂停原因不能超过200个字符'

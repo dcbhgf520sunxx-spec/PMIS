@@ -75,6 +75,11 @@ const WorkOrderDetailPage = lazy(() =>
     default: module.WorkOrderDetailPage
   }))
 );
+const KnowledgeBasePage = lazy(() =>
+  import('../modules/knowledge-base/pages/KnowledgeBasePage').then((module) => ({
+    default: module.KnowledgeBasePage
+  }))
+);
 const WorkOrderTemplatePage = lazy(() =>
   import('../modules/work-order-template/pages/WorkOrderTemplatePage').then((module) => ({
     default: module.WorkOrderTemplatePage
@@ -176,6 +181,7 @@ export const routes: RouteObject[] = [
       { path: 'work-orders/:id/copy', element: withRouteSuspense(<WorkOrderFormPage mode="copy" />) },
       { path: 'work-orders/:id/edit', element: withRouteSuspense(<WorkOrderFormPage mode="edit" />) },
       { path: 'work-orders/:id', element: withRouteSuspense(<WorkOrderDetailPage />) },
+      { path: 'knowledge-base', element: withRouteSuspense(<KnowledgeBasePage />) },
       { path: 'samples/work-order', element: withRouteSuspense(<WorkOrderTemplatePage />) },
       { path: 'samples/work-order/new', element: withRouteSuspense(<WorkOrderTemplateFormPage mode="create" />) },
       { path: 'samples/work-order/:id/copy', element: withRouteSuspense(<WorkOrderTemplateFormPage mode="copy" />) },

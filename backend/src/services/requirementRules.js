@@ -1,3 +1,5 @@
+const { validateActualBusinessDate } = require('./actualBusinessDateRules')
+
 const TERMINAL = new Set([3, 13, 22, 33, 34, 35])
 const TRANSITIONS = {
   '1_0': [1, 35], '1_1': [2, 3, 35], '1_2': [30, 35], '1_3': [0, 35],
@@ -21,11 +23,13 @@ function allowedRequirementStatuses(type, current, _previous) {
   if (Number(current) === 35) return PATH_STATUSES[Number(type)] || []
   return TRANSITIONS[`${Number(type)}_${Number(current)}`] || TRANSITIONS[`_${Number(current)}`] || []
 }
-function validateRequirementStatusChange(status, values = {}) {
+function validateRequirementStatusChange(status, values = {}, today) {
   if ([33, 34].includes(Number(status)) && !values.actual_end_date) return '请选择实际完成时间'
   if ([33, 34].includes(Number(status)) && !String(values.completion_status || '').trim()) return '请输入完成情况'
   if (Number(status) === 35 && !values.pause_date) return '请选择暂停时间'
-  return null
+  return [33, 34].includes(Number(status))
+    ? validateActualBusinessDate(values.actual_end_date, '实际完成时间', today)
+    : null
 }
 function resolveRequirementStatusFields(old, target, values = {}) {
   const completed = [33, 34].includes(Number(target))

@@ -1,0 +1,17 @@
+.knowledge-base-page__empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.knowledge-base-page__construction .ant-empty-image {
+  height: 80px;
+  margin-bottom: 20px;
+}
+
+.knowledge-base-page__construction .ant-empty-description {
+  font-size: 18px;
+  line-height: 28px;
+}
