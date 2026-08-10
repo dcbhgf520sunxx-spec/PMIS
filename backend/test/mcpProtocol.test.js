@@ -6,17 +6,61 @@ const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js')
 const { createMcpServer } = require('../src/mcp/createServer')
 const { invokeController } = require('../src/mcp/controllerAdapter')
 const { filterToolsForContext } = require('../src/mcp/catalog')
-const { createMcpRateLimit, validateMcpOrigin } = require('../src/routes/mcp')
+const { createFileDownloadHandler, createMcpRateLimit, validateMcpOrigin } = require('../src/routes/mcp')
 const { validateToolArguments, validateToolPermission } = require('../src/mcp/dispatcher')
 const { actions } = require('../src/mcp/actionTools')
 const {
   buildGlobalSearchPlan,
   buildProjectSearchInput,
   dispatchQueryTool,
+  searchBusinessAttachments,
   searchContracts,
   searchPayments,
   searchStagePlans,
 } = require('../src/mcp/queryTools')
+
+test('temporary file download rechecks active employee permissions and redirects to a fresh signed URL', async () => {
+  const response = {
+    statusCode: 200,
+    headers: {},
+    set(name, value) { this.headers[name] = value; return this },
+    status(code) { this.statusCode = code; return this },
+    json(value) { this.body = value; return this },
+    redirect(code, location) { this.statusCode = code; this.headers.Location = location; return this },
+  }
+  const handler = createFileDownloadHandler({
+    verifyToken: () => ({ uri: 'pmis://projects/12/contract/attachments/34', userId: 8 }),
+    database: { prepare: () => ({ get: async () => ({ id: 8, status: 1, is_deleted: 0 }) }) },
+    permissionService: { getAllowedMenuPaths: async () => new Set(['/projects']) },
+    loadDescriptor: async () => ({ fileUrl: 'https://pmis.example.com/api/files/oss?signed=1' }),
+  })
+
+  await handler({ params: { token: 'signed-token' } }, response)
+
+  assert.equal(response.statusCode, 302)
+  assert.equal(response.headers.Location, 'https://pmis.example.com/api/files/oss?signed=1')
+  assert.equal(response.headers['Cache-Control'], 'private, no-store')
+})
+
+test('temporary file download rejects disabled employees before resolving a file URL', async () => {
+  let loaded = false
+  const response = {
+    statusCode: 200,
+    status(code) { this.statusCode = code; return this },
+    json(value) { this.body = value; return this },
+  }
+  const handler = createFileDownloadHandler({
+    verifyToken: () => ({ uri: 'pmis://projects/12/contract/attachments/34', userId: 8 }),
+    database: { prepare: () => ({ get: async () => ({ id: 8, status: 0, is_deleted: 0 }) }) },
+    permissionService: { getAllowedMenuPaths: async () => new Set(['/projects']) },
+    loadDescriptor: async () => { loaded = true },
+  })
+
+  await handler({ params: { token: 'signed-token' } }, response)
+
+  assert.equal(response.statusCode, 403)
+  assert.equal(loaded, false)
+})
 
 test('MCP server initializes and exposes only endpoint and menu-permitted tools', async (t) => {
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
@@ -237,6 +281,68 @@ test('global business search tools can be called without filters', () => {
     assert.doesNotThrow(() => validateToolArguments(definition, {}))
     assert.equal(definition.inputSchema.additionalProperties, false)
   }
+})
+
+test('business attachment search is read-only and exposes governed filters', () => {
+  const catalog = require('../src/mcp/catalog')
+  const context = { endpointType: 'query', allowedMenuPaths: new Set(['/projects']) }
+  const definition = catalog.getToolDefinition('business_attachment_search', 'query')
+
+  assert.equal(filterToolsForContext(context).some((tool) => tool.name === 'business_attachment_search'), true)
+  assert.equal(definition.annotations.readOnlyHint, true)
+  assert.deepEqual(
+    filterToolsForContext(context).find((tool) => tool.name === 'business_attachment_search')
+      .inputSchema.properties.attachment_type.enum,
+    ['stage_delivery', 'project_contract']
+  )
+  assert.doesNotThrow(() => validateToolArguments(definition, {
+    keyword: '验收', attachment_type: 'stage_delivery', project_id: 12, page: 1, page_size: 20,
+  }))
+  assert.throws(() => validateToolArguments(definition, { attachment_type: 'avatar' }), /附件类型必须是/)
+})
+
+test('business attachment search returns permitted active files as URLs and never inline bytes', async () => {
+  const rows = [
+    { attachment_type: 'stage_delivery', file_id: 31, file_name: '验收报告.pdf', mime_type: 'application/pdf', file_size: 1024, project_id: 12, product_id: null, business_id: 21, business_name: '完成验收', parent_name: 'A项目' },
+    { attachment_type: 'project_contract', file_id: 32, file_name: '项目合同.pdf', mime_type: 'application/pdf', file_size: 6291456, project_id: 12, product_id: null, business_id: 22, business_name: '建设合同', parent_name: 'A项目' },
+    { attachment_type: 'product_maintenance_contract', file_id: 33, file_name: '运维合同.pdf', mime_type: 'application/pdf', file_size: 2048, project_id: null, product_id: 7, business_id: 23, business_name: '年度运维合同', parent_name: 'B产品' },
+  ]
+  const executedSql = []
+  const database = {
+    prepare(sql) {
+      executedSql.push(sql)
+      return {
+        get: async () => ({ total: rows.length }),
+        all: async () => rows,
+      }
+    },
+  }
+  const result = await searchBusinessAttachments({}, {
+    allowedMenuPaths: new Set(['/projects', '/products']), user: { id: 8 },
+  }, database, {
+    createDownloadUrl: (uri) => `https://pmis.example.com/api/mcp/files/${encodeURIComponent(uri)}`,
+  })
+
+  assert.deepEqual(result.items.map((item) => item.resource_uri), [
+    'pmis://projects/12/stage-plan/items/21/files/31',
+    'pmis://projects/12/contract/attachments/32',
+    'pmis://products/7/maintenance-contracts/23/attachments/33',
+  ])
+  assert.equal(result.items.every((item) => /^https:/.test(item.download_url)), true)
+  assert.doesNotMatch(JSON.stringify(result), /base64|inline_available|blob|buffer/i)
+  assert.match(executedSql.join('\n'), /f\.is_current = 1 AND f\.is_void = 0/)
+  assert.match(executedSql.join('\n'), /oss_response IS NOT NULL/)
+})
+
+test('business attachment search never queries modules outside employee menu permissions', async () => {
+  const sql = []
+  const database = { prepare(statement) { sql.push(statement); return { get: async () => ({ total: 0 }), all: async () => [] } } }
+  await searchBusinessAttachments({}, {
+    allowedMenuPaths: new Set(['/products']), user: { id: 8 },
+  }, database, { createDownloadUrl: () => 'https://pmis.example.com/file' })
+
+  assert.match(sql.join('\n'), /pms_product_maintenance_contract_attachment/)
+  assert.doesNotMatch(sql.join('\n'), /pms_project_contract_attachment|pms_project_plan_delivery_file/)
 })
 
 test('global search builds one zero-filter search per permitted business domain', () => {

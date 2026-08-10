@@ -1,5 +1,6 @@
 const QUERY_TOOLS = [
   ['global_search', null],
+  ['business_attachment_search', null],
   ['product_search', '/products'], ['product_get', '/products'], ['product_history', '/products'],
   ['project_search', '/projects'], ['project_get', '/projects'], ['project_history', '/projects'],
   ['stage_plan_search', '/projects'], ['stage_plan_get', '/projects'], ['stage_plan_history', '/projects'],
@@ -147,6 +148,18 @@ function fields(names, overrides = {}) {
 
 const querySchemas = {
   global_search: fields(['keyword', 'page_size']),
+  business_attachment_search: {
+    keyword: withDescription('keyword', { type: 'string' }),
+    attachment_type: described({
+      type: 'string',
+      enum: ['stage_delivery', 'project_contract', 'product_maintenance_contract'],
+    }, '附件类型：stage_delivery=阶段交付文件，project_contract=项目合同附件，product_maintenance_contract=产品运维合同附件'),
+    project_id: withDescription('project_id', idField),
+    product_id: withDescription('product_id', idField),
+    business_id: described(idField, '所属关键事项或合同标识'),
+    page: withDescription('page', { type: 'integer', minimum: 1 }),
+    page_size: withDescription('page_size', { type: 'integer', minimum: 1, maximum: 100 }),
+  },
   product_search: fields(['name', 'owner_ids', 'status', 'creator_id', 'created_at_from', 'created_at_to', 'sort_field', 'sort_order', 'page', 'page_size']),
   project_search: fields(['name', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'status', 'is_overdue', 'expected_end_date_from', 'expected_end_date_to', 'creator_id', 'created_at_from', 'created_at_to', 'view', 'sort_field', 'sort_order', 'page', 'page_size']),
   stage_plan_search: fields(['keyword', 'project_id', 'owner_id', 'status', 'is_overdue', 'sort_field', 'sort_order', 'page', 'page_size']),
@@ -649,6 +662,10 @@ function actionTitle(name) {
 
 const queryDescriptions = {
   global_search: '全局搜索当前员工有权限的全部PMIS业务模块；可不传任何参数，默认返回各模块前20条有效数据',
+  business_attachment_search: '查询当前员工有权限的全部有效业务附件；返回文件名称、业务归属、MCP资源地址和短时下载URL。用户要求获取文件时必须优先调用本工具，不要只返回详情中的文件数量；不得把文件原文或Base64放入模型上下文。',
+  product_get: '查询产品详情；用户要求获取产品运维合同附件时，使用 business_attachment_search 定位并返回短时下载URL',
+  stage_plan_get: '查询指定项目的阶段主计划；用户要求获取关键事项交付文件时，使用 business_attachment_search，不要只返回文件数量',
+  contract_get: '查询指定项目的合同和付款信息；用户要求获取合同附件时，使用 business_attachment_search 定位并返回短时下载URL',
   stage_plan_search: '全局搜索所有项目的阶段主计划事项；可不传任何参数',
   contract_search: '全局搜索所有项目合同；可不传任何参数',
   payment_search: '全局搜索所有项目付款记录；可不传任何参数',
@@ -657,6 +674,7 @@ const queryDescriptions = {
 }
 
 const queryTitles = {
+  business_attachment_search: '查询业务附件',
   business_options: '查询业务选项',
   business_analyze: '统计业务数据',
 }
@@ -723,6 +741,15 @@ const SEARCH_OUTPUT_FIELDS = {
     id: outputField('付款记录标识'), project_name: outputField('项目名称'), stage_name: outputField('付款阶段名称'),
     payment_month: outputField('付款月份，YYYY-MM'), payment_amount: outputField('付款金额，单位：元'),
     handler_name: outputField('经办人姓名'),
+  },
+  business_attachment_search: {
+    attachment_type: outputField('附件类型代码'), file_id: outputField('附件标识'),
+    file_name: outputField('文件名称'), mime_type: outputField('MIME类型'), file_size: outputField('文件大小，字节'),
+    business_id: outputField('所属关键事项或合同标识'), business_name: outputField('所属关键事项或合同名称'),
+    parent_name: outputField('所属项目或产品名称'), project_id: outputField('项目标识'), product_id: outputField('产品标识'),
+    resource_uri: outputField('MCP资源地址；读取时仍只返回URL元数据'),
+    download_url: outputField('绑定当前员工、短时有效的HTTPS下载地址'),
+    delivery_mode: outputField('固定为 temporary_url，表示不内联文件内容'),
   },
 }
 
@@ -938,6 +965,7 @@ const commandCatalog = [
 
 const PUBLIC_QUERY_NAMES = [
   'global_search',
+  'business_attachment_search',
   'product_search',
   'project_search',
   'stage_plan_search',
@@ -1213,14 +1241,40 @@ function scopeBusinessAnalysis(tool, allowedMenuPaths) {
   }
 }
 
+function scopeBusinessAttachmentSearch(tool, allowedMenuPaths) {
+  if (tool.name !== 'business_attachment_search') return tool
+  const attachmentType = tool.inputSchema.properties.attachment_type
+  const allowed = new Set([
+    ...(allowedMenuPaths.has('/projects') ? ['stage_delivery', 'project_contract'] : []),
+    ...(allowedMenuPaths.has('/products') ? ['product_maintenance_contract'] : []),
+  ])
+  return {
+    ...tool,
+    inputSchema: {
+      ...tool.inputSchema,
+      properties: {
+        ...tool.inputSchema.properties,
+        attachment_type: {
+          ...attachmentType,
+          enum: attachmentType.enum.filter((item) => allowed.has(item)),
+        },
+      },
+    },
+  }
+}
+
 function filterToolsForContext(context) {
   return publicToolCatalog.filter((tool) => {
     if (tool._meta.endpointType !== context.endpointType) return false
+    if (tool.name === 'business_attachment_search') {
+      return context.allowedMenuPaths.has('/projects') || context.allowedMenuPaths.has('/products')
+    }
     if (!tool._meta.menuPath) {
       return context.endpointType === 'query' && context.allowedMenuPaths.size > 0
     }
     return context.allowedMenuPaths.has(tool._meta.menuPath)
   }).map((tool) => scopeGenericQueryDomains(tool, context.allowedMenuPaths))
+    .map((tool) => scopeBusinessAttachmentSearch(tool, context.allowedMenuPaths))
     .map((tool) => scopeBusinessOptions(tool, context.allowedMenuPaths))
     .map((tool) => scopeBusinessAnalysis(tool, context.allowedMenuPaths))
     .filter((tool) => !['business_get', 'business_history', 'business_options', 'business_analyze'].includes(tool.name)
