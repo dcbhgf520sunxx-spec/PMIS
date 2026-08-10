@@ -16,6 +16,11 @@ function allowedPlanItemStatuses(status, previousStatus) {
   return []
 }
 
+function shouldInvalidatePlanItemFiles(currentStatus, targetStatus) {
+  return Number(currentStatus) === PLAN_ITEM_STATUS.COMPLETED
+    && Number(targetStatus) === PLAN_ITEM_STATUS.IN_PROGRESS
+}
+
 function validatePlanItemStatusChange(target, body, requiresDeliveryFile, activeFileCount, today) {
   const value = Number(target)
   if (value === PLAN_ITEM_STATUS.COMPLETED && !body.actual_end_date) return '请填写实际完成时间'
@@ -57,6 +62,7 @@ function getPlanItemProgressHint(item, today = new Date().toISOString().slice(0,
 module.exports = {
   PLAN_ITEM_STATUS,
   allowedPlanItemStatuses,
+  shouldInvalidatePlanItemFiles,
   validatePlanItemStatusChange,
   validatePlanAdjustmentReason,
   getPlanItemProgressHint,

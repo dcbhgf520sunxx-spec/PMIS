@@ -5,6 +5,7 @@ const { fail, failField, ok } = require('../utils/response')
 const {
   PLAN_ITEM_STATUS,
   allowedPlanItemStatuses,
+  shouldInvalidatePlanItemFiles,
   validatePlanItemStatusChange,
   validatePlanAdjustmentReason,
   getPlanItemProgressHint,
@@ -509,6 +510,9 @@ exports.changeStatus = async (req, res) => {
       savedFiles.push({ file, saved })
     }
     await db.transaction(async (tx) => {
+      if (shouldInvalidatePlanItemFiles(item.status, target)) {
+        await tx.prepare('UPDATE pms_project_plan_delivery_file SET is_current=0 WHERE plan_item_id=? AND is_current=1 AND is_void=0').run(item.id)
+      }
       await tx.prepare('UPDATE pms_project_plan_item SET status=?,previous_status=?,actual_end_date=?,pause_reason=?,updater_id=?,updated_at=NOW()WHERE id=?')
         .run(target, previousStatus, actualEndDate, pauseReason, req.user.id, item.id)
       for (const entry of savedFiles) {

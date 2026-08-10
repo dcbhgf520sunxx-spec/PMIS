@@ -3,6 +3,7 @@ const assert = require('node:assert/strict')
 const {
   PLAN_ITEM_STATUS,
   allowedPlanItemStatuses,
+  shouldInvalidatePlanItemFiles,
   validatePlanItemStatusChange,
   validatePlanAdjustmentReason,
   getPlanItemProgressHint,
@@ -16,6 +17,14 @@ test('关键事项四态流转只开放已确认的目标', () => {
   assert.deepEqual(allowedPlanItemStatuses(COMPLETED), [IN_PROGRESS])
   assert.deepEqual(allowedPlanItemStatuses(PAUSED, NOT_STARTED), [NOT_STARTED])
   assert.deepEqual(allowedPlanItemStatuses(PAUSED, IN_PROGRESS), [IN_PROGRESS])
+})
+
+test('已完成关键事项退回进行中时上一轮交付文件失效', () => {
+  const { NOT_STARTED, IN_PROGRESS, COMPLETED, PAUSED } = PLAN_ITEM_STATUS
+  assert.equal(shouldInvalidatePlanItemFiles(COMPLETED, IN_PROGRESS), true)
+  assert.equal(shouldInvalidatePlanItemFiles(IN_PROGRESS, COMPLETED), false)
+  assert.equal(shouldInvalidatePlanItemFiles(COMPLETED, PAUSED), false)
+  assert.equal(shouldInvalidatePlanItemFiles(NOT_STARTED, IN_PROGRESS), false)
 })
 
 test('状态变更校验完成信息和暂停原因', () => {
