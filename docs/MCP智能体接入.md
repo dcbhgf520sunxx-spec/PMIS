@@ -91,12 +91,14 @@ MCP_ALLOWED_ORIGINS=http://pmis.company.internal
 MCP_QUERY_RATE_LIMIT=240
 MCP_ACTION_RATE_LIMIT=60
 MCP_FILE_INLINE_LIMIT=5242880
+MCP_PUBLIC_BASE_URL=https://pmis.company.internal
+MCP_FILE_DOWNLOAD_TTL_SECONDS=300
 MCP_EMPLOYEE_RSA_PRIVATE_KEY_BASE64=<PKCS8 私钥 PEM 的 Base64>
 MCP_EMPLOYEE_ASSERTION_SECRET=<至少32字节随机密钥>
 MCP_EMPLOYEE_LEGACY_IDENTITY_ENABLED=true
 ```
 
-`MCP_ALLOWED_ORIGINS` 用英文逗号分隔多个可信浏览器来源。服务端 MCP 客户端通常不发送 `Origin`。限流只统计实际 `tools/call`，初始化和工具列表不计数；额度按“智能体凭据 + 当前员工”分别统计，默认 Query 每分钟 240 次、Action 每分钟 60 次。超限响应包含 `Retry-After`、剩余等待秒数和请求编号，并写入 MCP 审计日志。附件读取和上传默认最大 5MB。
+`MCP_ALLOWED_ORIGINS` 用英文逗号分隔多个可信浏览器来源。服务端 MCP 客户端通常不发送 `Origin`。限流只统计实际 `tools/call`，初始化和工具列表不计数；额度按“智能体凭据 + 当前员工”分别统计，默认 Query 每分钟 240 次、Action 每分钟 60 次。超限响应包含 `Retry-After`、剩余等待秒数和请求编号，并写入 MCP 审计日志。`MCP_FILE_INLINE_LIMIT` 只限制 Action 从受信 URL 读取上传文件，不表示 Query 会把文件内联到模型上下文。`MCP_PUBLIC_BASE_URL` 必须是 PMIS 对外 HTTPS 根地址，下载凭证默认 300 秒过期。
 `MCP_EMPLOYEE_RSA_PRIVATE_KEY_BASE64` 和 `MCP_EMPLOYEE_ASSERTION_SECRET` 只能保存在正式服务器环境文件中，权限必须为 `600`；私钥和 HMAC Secret 不得进入 Git 或聊天。RSA 公钥可以提供给调用平台，HMAC Secret 只能放在平台受保护环境变量中。
 
 ## 创建和管理智能体凭据
@@ -122,18 +124,23 @@ Query 凭据不能调用 Action 入口，Action 凭据也不能调用 Query 入�
 
 服务会根据员工当前已有的 PMIS 菜单权限动态裁剪工具。例如员工没有项目管理权限时，不会看到项目、阶段计划、合同、付款和项目附件相关工具。MCP 不新增或维护权限。
 
-对外工具目录固定收敛为 14 个 Query 工具和 19 个 Action 工具；原有细粒度命令只在 PMIS 后端内部复用，不再通过 MCP 工具发现暴露。
+对外工具目录固定收敛为 15 个 Query 工具和 19 个 Action 工具；原有细粒度命令只在 PMIS 后端内部复用，不再通过 MCP 工具发现暴露。
 
 所有 `*_search` 查询工具都可以使用空对象 `{}` 直接调用，不要求先确定项目、阶段、负责人或其他筛选参数；默认搜索该模块全部数据并返回第一页。所有搜索统一返回 `items`、`total`、`page`、`pageSize`、`totalPages` 和 `hasNextPage`，部分人员视角列表额外返回 `viewCounts`，不再混用 `list`。`global_search` 可以使用空对象一次搜索当前员工有权限的全部业务模块，也可以只传一个可选的 `keyword` 进行跨模块关键字搜索。筛选字段仍然可以按需使用，分页单次最多 100 条。
 
-详情统一调用 `business_get`，历史统一调用 `business_history`，参数均为 `domain` 和 `target_id`。其中阶段主计划和合同的 `target_id` 传项目标识；服务会按照当前员工菜单权限动态缩减可选 `domain`。人员、任务类型、BUG 类型、BUG 解决方案、工单问题类型和供应商统一调用 `business_options` 查询有效选项，不得猜测名称对应的内部标识；服务会按当前员工菜单权限缩减 `option_type`。统计继续使用 `business_analyze`，其 Schema 会按业务领域给出准确的指标和状态范围，不接受 SQL。附件通过以下资源地址读取：
+详情统一调用 `business_get`，历史统一调用 `business_history`，参数均为 `domain` 和 `target_id`。其中阶段主计划和合同的 `target_id` 传项目标识；服务会按照当前员工菜单权限动态缩减可选 `domain`。人员、任务类型、BUG 类型、BUG 解决方案、工单问题类型和供应商统一调用 `business_options` 查询有效选项，不得猜测名称对应的内部标识；服务会按当前员工菜单权限缩减 `option_type`。统计继续使用 `business_analyze`，其 Schema 会按业务领域给出准确的指标和状态范围，不接受 SQL。
+
+用户要求“把文件给我”“下载附件”或按文件名查找时，优先调用 `business_attachment_search`。该工具统一查询当前员工有权限的项目阶段交付文件、项目合同附件和产品运维合同附件，只返回当前有效文件，并提供文件名称、大小、业务归属、`resource_uri` 和短时 `download_url`。不要只根据业务详情中的 `file_count` 回复用户去系统中查找。附件资源地址包括：
 
 Action MCP 在菜单权限之外还强制校验业务负责人，而且在 `preview` 和 `execute` 两个阶段分别校验，避免确认后负责人变化造成越权。产品、项目和需求按负责人判断；任务按多负责人列表判断；BUG 按当前指派人判断；工单按当前跟进人判断；关键事项和交付文件按关键事项负责人判断；阶段、阶段排序、合同、付款及合同附件按所属项目负责人判断；关键事项排序要求排序列表中的全部事项均由当前员工负责。批量或排序操作只要包含一条当前员工不负责的数据，就会整批拒绝并返回无权操作的具体对象。查询 MCP 仍按原有菜单和数据范围查询，不受这条 Action 负责人限制影响。
 
 ```text
 pmis://projects/{projectId}/contract/attachments/{attachmentId}
 pmis://projects/{projectId}/stage-plan/items/{itemId}/files/{fileId}
+pmis://products/{productId}/maintenance-contracts/{contractId}/attachments/{attachmentId}
 ```
+
+MCP Resource 和查询工具都只返回文件元数据与 URL，不返回文件二进制、Base64 或富文本内联图片内容。`download_url` 绑定当前员工与单个资源，短时过期；下载时重新检查员工启用状态、当前菜单权限和文件有效性，再跳转到新生成的 OSS 签名地址。
 
 Action 工具采用两步确认：
 

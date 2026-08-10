@@ -5,6 +5,10 @@ const { dispatchMcpTool } = require('../mcp/dispatcher')
 const fileResources = require('../mcp/fileResources')
 const { middleware: authenticateMcp } = require('../middleware/mcpAuth')
 const { recordMcpAudit } = require('../services/mcpAuditService')
+const db = require('../db')
+const permissionService = require('../services/mcpPermissionService')
+const { verifyDownloadToken } = require('../services/mcpFileDownloadService')
+const { fail } = require('../utils/response')
 
 function configuredOrigins(env = process.env) {
   return [...new Set([
@@ -16,6 +20,37 @@ function configuredOrigins(env = process.env) {
 function validateMcpOrigin(origin, allowedOrigins = configuredOrigins()) {
   if (!origin) return
   if (!allowedOrigins.includes(origin)) throw new Error('MCP Origin不受信任')
+}
+
+function createFileDownloadHandler({
+  verifyToken = verifyDownloadToken,
+  database = db,
+  permissionService: permissions = permissionService,
+  loadDescriptor = fileResources.loadResourceDescriptor,
+} = {}) {
+  return async (req, res) => {
+    try {
+      const identity = verifyToken(req.params.token)
+      const user = await database.prepare(`
+        SELECT id, status, is_deleted FROM pms_user WHERE id = ?
+      `).get(identity.userId)
+      if (!user || Number(user.status) !== 1 || Number(user.is_deleted) === 1) {
+        const error = new Error('当前员工已停用或不存在')
+        error.status = 403
+        throw error
+      }
+      const context = {
+        user: { id: user.id },
+        allowedMenuPaths: await permissions.getAllowedMenuPaths(user.id),
+      }
+      const descriptor = await loadDescriptor(identity.uri, context)
+      res.set('Cache-Control', 'private, no-store')
+      return res.redirect(302, descriptor.fileUrl)
+    } catch (error) {
+      const status = Number(error.status || error.statusCode) || (String(error.message).includes('不存在') ? 404 : 403)
+      return fail(res, status, status, error.message || '文件下载失败')
+    }
+  }
 }
 
 function createMcpRateLimit(endpointType, {
@@ -162,12 +197,14 @@ function createMcpRouter(endpointType, {
 }
 
 const mcpRouter = express.Router()
+mcpRouter.get('/files/:token', createFileDownloadHandler())
 mcpRouter.use('/query', createMcpRouter('query'))
 mcpRouter.use('/action', createMcpRouter('action'))
 
 module.exports = Object.assign(mcpRouter, {
   auditProtocolRequest,
   configuredOrigins,
+  createFileDownloadHandler,
   createMcpRateLimit,
   createMcpRouter,
   validateMcpOrigin,

@@ -16,6 +16,7 @@ const { allowedBugStatuses } = require('../services/bugRules')
 const { allowedWorkOrderStatuses } = require('../services/workOrderStatusRules')
 const { allowedPlanItemStatuses } = require('../services/projectStagePlanRules')
 const { normalizeMcpQueryContent } = require('./contentPolicy')
+const { createDownloadUrl } = require('../services/mcpFileDownloadService')
 
 const GLOBAL_SEARCH_TOOLS = [
   ['/products', 'product_search'],
@@ -332,6 +333,90 @@ async function searchStagePlans(args = {}, database = db) {
   })
 }
 
+function attachmentResourceUri(row) {
+  if (row.attachment_type === 'stage_delivery') {
+    return `pmis://projects/${row.project_id}/stage-plan/items/${row.business_id}/files/${row.file_id}`
+  }
+  if (row.attachment_type === 'project_contract') {
+    return `pmis://projects/${row.project_id}/contract/attachments/${row.file_id}`
+  }
+  return `pmis://products/${row.product_id}/maintenance-contracts/${row.business_id}/attachments/${row.file_id}`
+}
+
+function businessAttachmentBranches(context) {
+  const branches = []
+  if (context.allowedMenuPaths.has('/projects')) {
+    branches.push(`SELECT 'stage_delivery' attachment_type, f.id file_id, f.original_name file_name,
+      f.mime_type, f.size_bytes file_size, f.created_at, uploader.real_name uploader_name,
+      p.id project_id, NULL::BIGINT product_id, i.id business_id, i.name business_name, p.name parent_name
+      FROM pms_project_plan_delivery_file f
+      JOIN pms_project_plan_item i ON i.id = f.plan_item_id AND i.is_deleted = 0
+      JOIN pms_project_plan_stage s ON s.id = i.stage_id AND s.is_deleted = 0
+      JOIN pms_project p ON p.id = s.project_id AND p.is_deleted = 0
+      LEFT JOIN pms_user uploader ON uploader.id = f.uploader_id
+      WHERE f.is_current = 1 AND f.is_void = 0 AND f.oss_response IS NOT NULL`)
+    branches.push(`SELECT 'project_contract' attachment_type, a.id file_id, a.original_name file_name,
+      a.mime_type, a.file_size, a.created_at, creator.real_name uploader_name,
+      p.id project_id, NULL::BIGINT product_id, c.id business_id, c.contract_name business_name, p.name parent_name
+      FROM pms_project_contract_attachment a
+      JOIN pms_project_contract c ON c.id = a.contract_id AND c.is_deleted = 0
+      JOIN pms_project p ON p.id = c.project_id AND p.is_deleted = 0
+      LEFT JOIN pms_user creator ON creator.id = a.creator_id
+      WHERE a.is_deleted = 0 AND a.oss_response IS NOT NULL`)
+  }
+  if (context.allowedMenuPaths.has('/products')) {
+    branches.push(`SELECT 'product_maintenance_contract' attachment_type, a.id file_id, a.original_name file_name,
+      a.mime_type, a.file_size, a.created_at, creator.real_name uploader_name,
+      NULL::BIGINT project_id, p.id product_id, c.id business_id, c.contract_name business_name, p.name parent_name
+      FROM pms_product_maintenance_contract_attachment a
+      JOIN pms_product_maintenance_contract c ON c.id = a.contract_id AND c.is_deleted = 0
+      JOIN pms_product p ON p.id = c.product_id AND p.is_deleted = 0
+      LEFT JOIN pms_user creator ON creator.id = a.creator_id
+      WHERE a.is_deleted = 0 AND a.oss_response IS NOT NULL`)
+  }
+  return branches
+}
+
+async function searchBusinessAttachments(args = {}, context, database = db, dependencies = {}) {
+  const branches = businessAttachmentBranches(context)
+  const { page, pageSize, offset } = normalizePage(args)
+  if (!branches.length) return { items: [], total: 0, page, pageSize }
+  const where = []
+  const params = []
+  const keyword = String(args.keyword || '').trim()
+  if (keyword) {
+    where.push('(file_name ILIKE ? OR business_name ILIKE ? OR parent_name ILIKE ?)')
+    params.push(...Array(3).fill(`%${keyword}%`))
+  }
+  if (args.attachment_type) { where.push('attachment_type = ?'); params.push(args.attachment_type) }
+  for (const [field, column] of [
+    ['project_id', 'project_id'], ['product_id', 'product_id'], ['business_id', 'business_id'],
+  ]) {
+    const id = positiveId(args[field])
+    if (id) { where.push(`${column} = ?`); params.push(id) }
+  }
+  const from = `FROM (${branches.join('\nUNION ALL\n')}) business_attachment`
+  const clause = where.length ? ` WHERE ${where.join(' AND ')}` : ''
+  const count = await database.prepare(`SELECT COUNT(*)::INTEGER total ${from}${clause}`).get(...params)
+  const rows = await database.prepare(`SELECT * ${from}${clause} ORDER BY created_at DESC, file_id DESC LIMIT ? OFFSET ?`)
+    .all(...params, pageSize, offset)
+  const makeDownloadUrl = dependencies.createDownloadUrl || createDownloadUrl
+  return {
+    items: rows.map((row) => {
+      const resourceUri = attachmentResourceUri(row)
+      return {
+        ...row,
+        resource_uri: resourceUri,
+        download_url: makeDownloadUrl(resourceUri, context.user.id),
+        delivery_mode: 'temporary_url',
+      }
+    }),
+    total: Number(count?.total || 0),
+    page,
+    pageSize,
+  }
+}
+
 async function searchContracts(args = {}, database = db) {
   const where = ['c.is_deleted = 0', 'p.is_deleted = 0']
   const params = []
@@ -497,6 +582,11 @@ async function dispatchQueryTool(name, args, context, dependencies = {}) {
       results: Object.fromEntries(entries),
     }
   }
+  if (name === 'business_attachment_search') {
+    return normalizeMcpQueryContent(normalizeSearchResult(
+      await searchBusinessAttachments(args, context, dependencies.database, dependencies)
+    ), { summary: true })
+  }
   if (name === 'stage_plan_search') return normalizeMcpQueryContent(decorateQueryResult(name, normalizeSearchResult(await searchStagePlans(args, dependencies.database))), { summary: true })
   if (name === 'contract_search') return normalizeMcpQueryContent(decorateQueryResult(name, normalizeSearchResult(await searchContracts(args, dependencies.database))), { summary: true })
   if (name === 'payment_search') return normalizeMcpQueryContent(decorateQueryResult(name, normalizeSearchResult(await searchPayments(args, dependencies.database))), { summary: true })
@@ -519,6 +609,7 @@ module.exports = {
   dispatchQueryTool,
   normalizeSearchResult,
   normalizeQuery,
+  searchBusinessAttachments,
   searchBusinessOptions,
   searchContracts,
   searchPayments,

@@ -10,14 +10,15 @@ const {
 
 const allMenus = new Set(['/products', '/projects', '/requirements', '/tasks', '/bugs', '/work-orders'])
 
-test('public MCP catalog exposes 14 query tools and 19 action tools', () => {
+test('public MCP catalog exposes 15 query tools and 19 action tools', () => {
   const query = filterToolsForContext({ endpointType: 'query', allowedMenuPaths: allMenus })
   const action = filterToolsForContext({ endpointType: 'action', allowedMenuPaths: allMenus })
 
-  assert.equal(query.length, 14)
+  assert.equal(query.length, 15)
   assert.equal(action.length, 19)
   assert.deepEqual(query.map((tool) => tool.name), [
     'global_search',
+    'business_attachment_search',
     'product_search',
     'project_search',
     'stage_plan_search',
@@ -117,7 +118,7 @@ test('public action metadata describes operation branches and status-specific fi
 })
 
 test('every public tool and operation branch has complete metadata', () => {
-  assert.equal(publicToolCatalog.length, 33)
+  assert.equal(publicToolCatalog.length, 34)
   for (const tool of publicToolCatalog) {
     assert.ok(tool.title, `${tool.name}缺少标题`)
     assert.ok(tool.description, `${tool.name}缺少说明`)
