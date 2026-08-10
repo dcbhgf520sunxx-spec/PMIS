@@ -51,7 +51,8 @@ test('解决工单保留历史关闭时间并要求新的修复信息', () => {
     resultDesc: '重新处理完成',
     suspendDate: null
   })
-  assert.equal(rules.validateWorkOrderResultFields(2, values), '')
+  assert.equal(rules.validateWorkOrderResultFields(2, values, '2026-07-20'), '')
+  assert.equal(rules.validateWorkOrderResultFields(2, { ...values, resolveDate: '2026-07-21' }, '2026-07-20'), '实际修复时间不能晚于今天（2026-07-20）')
 })
 
 test('激活工单只必填激活原因并沿用原预计完成时间', () => {

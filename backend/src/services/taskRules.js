@@ -1,12 +1,16 @@
+const { validateActualBusinessDate } = require('./actualBusinessDateRules')
+
 function allowedTaskStatuses(status) {
   if (Number(status) === 3) return [0, 1, 2]
   return { 0: [1, 3], 1: [2, 3], 2: [3] }[Number(status)] || []
 }
 
-function validateTaskStatusChange(target, body = {}) {
+function validateTaskStatusChange(target, body = {}, today) {
   if (Number(target) === 2 && !body.actual_end_date) return '请填写实际完成时间'
   if (Number(target) === 3 && !body.suspend_date) return '请填写暂停时间'
-  return null
+  return Number(target) === 2
+    ? validateActualBusinessDate(body.actual_end_date, '实际完成时间', today)
+    : null
 }
 
 function resolveTaskStatusFields(old, target, body = {}) {

@@ -1,13 +1,17 @@
+const { validateActualBusinessDate } = require('./actualBusinessDateRules')
+
 function allowedBugStatuses(status) {
   return { 0: [1, 2], 1: [2, 3], 2: [3], 3: [1] }[Number(status)] || []
 }
 
-function validateBugStatusChange(target, body = {}) {
+function validateBugStatusChange(target, body = {}, today) {
   if (Number(target) === 1 && !body.resolved_date) return '请填写修复时间'
   if (Number(target) === 1 && !body.resolution_id) return '请选择解决方案'
   if (Number(target) === 2 && !body.closed_date) return '请填写关闭时间'
   if (Number(target) === 3 && !String(body.activation_reason || '').trim()) return '请填写激活原因'
   if (Number(target) === 3 && String(body.activation_reason).trim().length > 100) return '激活原因不能超过100字'
+  if (Number(target) === 1) return validateActualBusinessDate(body.resolved_date, '修复时间', today)
+  if (Number(target) === 2) return validateActualBusinessDate(body.closed_date, '关闭时间', today)
   return null
 }
 

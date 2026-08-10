@@ -21,8 +21,10 @@ test('关键事项四态流转只开放已确认的目标', () => {
 test('状态变更校验完成信息和暂停原因', () => {
   const { COMPLETED, PAUSED, IN_PROGRESS } = PLAN_ITEM_STATUS
   assert.equal(validatePlanItemStatusChange(COMPLETED, {}, true, 0), '请填写实际完成时间')
-  assert.equal(validatePlanItemStatusChange(COMPLETED, { actual_end_date: '2026-07-23' }, true, 0), '请上传至少一个关键交付文件')
-  assert.equal(validatePlanItemStatusChange(COMPLETED, { actual_end_date: '2026-07-23' }, true, 1), null)
+  assert.equal(validatePlanItemStatusChange(COMPLETED, { actual_end_date: '2026-07-23' }, true, 0, '2026-07-23'), '请上传至少一个关键交付文件')
+  assert.equal(validatePlanItemStatusChange(COMPLETED, { actual_end_date: '2026-02-30' }, false, 0, '2026-07-23'), '实际完成时间格式不正确，请使用YYYY-MM-DD')
+  assert.equal(validatePlanItemStatusChange(COMPLETED, { actual_end_date: '2026-07-24' }, false, 0, '2026-07-23'), '实际完成时间不能晚于今天（2026-07-23）')
+  assert.equal(validatePlanItemStatusChange(COMPLETED, { actual_end_date: '2026-07-23' }, true, 1, '2026-07-23'), null)
   assert.equal(validatePlanItemStatusChange(PAUSED, {}, false, 0), '请填写暂停原因')
   assert.equal(validatePlanItemStatusChange(PAUSED, { pause_reason: '等待客户确认' }, false, 0), null)
   assert.equal(validatePlanItemStatusChange(PAUSED, { pause_reason: '原'.repeat(201) }, false, 0), '暂停原因不能超过200个字符')

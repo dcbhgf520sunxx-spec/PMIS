@@ -736,7 +736,8 @@ VALUES
   (19, 0, '项目管理', 'project', 2, '/projects', 'ProjectOutlined', 8, 1, 1),
   (20, 0, '需求管理', 'requirement', 2, '/requirements', 'FileTextOutlined', 7, 1, 1),
   (21, 0, '任务管理', 'task', 2, '/tasks', 'CheckSquareOutlined', 9, 1, 1),
-  (22, 0, 'BUG管理', 'bug', 2, '/bugs', 'BugOutlined', 10, 1, 1)
+  (22, 0, 'BUG管理', 'bug', 2, '/bugs', 'BugOutlined', 10, 1, 1),
+  (23, 0, '知识库', 'knowledge_base', 2, '/knowledge-base', 'BookOutlined', 12, 1, 1)
 ON CONFLICT (code) DO UPDATE SET
   parent_id = EXCLUDED.parent_id,
   name = EXCLUDED.name,

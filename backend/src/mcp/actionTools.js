@@ -18,10 +18,25 @@ const { allowedPlanItemStatuses, validatePlanItemStatusChange } = require('../se
 const { normalizePaymentMonth, validateContractStages, validatePaymentAmount } = require('../services/projectContractRules')
 const { validateAttachmentFile } = require('../services/projectContractAttachmentService')
 const { OSS_FILE_ORIGIN } = require('../services/projectContractOssService')
+const { validateActualBusinessDate } = require('../services/actualBusinessDateRules')
 const { invokeController } = require('./controllerAdapter')
 const { unwrapEnvelope } = require('./queryTools')
 
 const highRiskPattern = /(delete|change_status|reorder|adjust|payment|assign|upload|batch)/
+const ACTUAL_DATE_FIELDS = {
+  actual_end_date: '实际完成时间',
+  resolved_date: '修复时间',
+  closed_date: '关闭时间',
+  resolve_date: '实际修复时间',
+  close_date: '关闭时间',
+}
+
+function validateActionActualDates(args) {
+  for (const [field, label] of Object.entries(ACTUAL_DATE_FIELDS)) {
+    const message = validateActualBusinessDate(args[field], label)
+    if (message) throw businessValidationError(field, message)
+  }
+}
 const FILE_LIMIT = Number(process.env.MCP_FILE_INLINE_LIMIT || 5 * 1024 * 1024)
 const MAIN_TARGETS = {
   product: {
@@ -1079,6 +1094,7 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
   }
   const mode = args.mode || 'preview'
   if (!['preview', 'execute'].includes(mode)) throw businessValidationError('mode', 'mode必须是preview或execute')
+  validateActionActualDates(args)
   const preparedArgs = await mergeArguments(name, args, database)
   await validateStatus(name, preparedArgs, database)
   await validateBusinessRules(name, preparedArgs, database)

@@ -14,7 +14,9 @@ test('normalizeMemberIds removes invalid and duplicate user ids', () => {
 
 test('project status requires completion date when completed', () => {
   assert.equal(validateProjectStatusChange(2, {}), '请选择实际完成日期')
-  assert.equal(validateProjectStatusChange(2, { actual_end_date: '2026-07-11' }), null)
+  assert.equal(validateProjectStatusChange(2, { actual_end_date: '2026-07-11' }, '2026-07-11'), null)
+  assert.equal(validateProjectStatusChange(2, { actual_end_date: '2026-02-30' }, '2026-07-11'), '实际完成日期格式不正确，请使用YYYY-MM-DD')
+  assert.equal(validateProjectStatusChange(2, { actual_end_date: '2026-07-12' }, '2026-07-11'), '实际完成日期不能晚于今天（2026-07-11）')
 })
 
 test('project status requires suspend date when paused', () => {

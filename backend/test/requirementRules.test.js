@@ -20,9 +20,11 @@ test('requirement transitions preserve path approval and common delivery stages'
 
 test('completion and pause require their business fields', () => {
   assert.equal(validateRequirementStatusChange(33, {}), '请选择实际完成时间')
-  assert.equal(validateRequirementStatusChange(33, { actual_end_date: '2026-07-12' }), '请输入完成情况')
+  assert.equal(validateRequirementStatusChange(33, { actual_end_date: '2026-07-12' }, '2026-07-12'), '请输入完成情况')
+  assert.equal(validateRequirementStatusChange(33, { actual_end_date: '2026-02-29', completion_status: '已完成' }, '2026-07-12'), '实际完成时间格式不正确，请使用YYYY-MM-DD')
+  assert.equal(validateRequirementStatusChange(33, { actual_end_date: '2026-07-13', completion_status: '已完成' }, '2026-07-12'), '实际完成时间不能晚于今天（2026-07-12）')
   assert.equal(validateRequirementStatusChange(35, {}), '请选择暂停时间')
-  assert.equal(validateRequirementStatusChange(34, { actual_end_date: '2026-07-12', completion_status: '未投入使用' }), null)
+  assert.equal(validateRequirementStatusChange(34, { actual_end_date: '2026-07-12', completion_status: '未投入使用' }, '2026-07-12'), null)
 })
 
 test('pause preserves completion fields and restoring follows project field rules', () => {

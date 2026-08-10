@@ -19,7 +19,9 @@ test('任务暂停后可以恢复到任意其他状态', () => {
 test('完成和暂停要求对应时间', () => {
   assert.equal(validateTaskStatusChange(2, {}), '请填写实际完成时间')
   assert.equal(validateTaskStatusChange(3, {}), '请填写暂停时间')
-  assert.equal(validateTaskStatusChange(2, { actual_end_date: '2026-07-13' }), null)
+  assert.equal(validateTaskStatusChange(2, { actual_end_date: '2026-07-13' }, '2026-07-13'), null)
+  assert.equal(validateTaskStatusChange(2, { actual_end_date: '2026-07-32' }, '2026-07-13'), '实际完成时间格式不正确，请使用YYYY-MM-DD')
+  assert.equal(validateTaskStatusChange(2, { actual_end_date: '2026-07-14' }, '2026-07-13'), '实际完成时间不能晚于今天（2026-07-13）')
 })
 
 test('暂停任务恢复时按目标状态清理时间字段', () => {

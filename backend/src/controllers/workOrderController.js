@@ -11,7 +11,8 @@ const {
   allowedWorkOrderStatuses,
   resolveWorkOrderResultFields,
   resolveWorkOrderActivationReason,
-  validateWorkOrderResultFields
+  validateWorkOrderResultFields,
+  validateWorkOrderEditActualDate
 } = require('../services/workOrderStatusRules')
 
 const workOrderFormSchema = {
@@ -238,6 +239,8 @@ exports.update = async (req, res) => {
   try {
     if (!requireValidBody(res, req.body, workOrderFormSchema)) return
     const { product_id, problem_type, problem_desc, result_desc, follower_id, urgency, status, expected_resolve_date, resolve_date, submitter_name, submitter_dept, submit_time } = req.body
+    const actualDateError = validateWorkOrderEditActualDate(req.body)
+    if (actualDateError) return failField(res, 'resolve_date', actualDateError)
     const operatorId = req.user.id
     const safeProblemDesc = sanitizeRichText(problem_desc)
     const safeResultDesc = result_desc === undefined ? undefined : sanitizeRichText(result_desc)

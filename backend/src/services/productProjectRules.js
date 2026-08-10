@@ -1,12 +1,16 @@
+const { validateActualBusinessDate } = require('./actualBusinessDateRules')
+
 function normalizeMemberIds(value) {
   if (!Array.isArray(value)) return []
   return [...new Set(value.map(Number).filter((id) => Number.isInteger(id) && id > 0))]
 }
 
-function validateProjectStatusChange(status, values = {}) {
+function validateProjectStatusChange(status, values = {}, today) {
   if (Number(status) === 2 && !values.actual_end_date) return '请选择实际完成日期'
   if (Number(status) === 3 && !values.suspend_date) return '请选择暂停日期'
-  return null
+  return Number(status) === 2
+    ? validateActualBusinessDate(values.actual_end_date, '实际完成日期', today)
+    : null
 }
 
 function calculateProjectOverdue(expectedEndDate, status, today = new Date().toISOString().slice(0, 10)) {

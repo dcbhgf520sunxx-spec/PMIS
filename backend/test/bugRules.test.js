@@ -16,9 +16,10 @@ test('BUG 状态流转保持源系统规则', () => {
 test('已修复和已关闭要求对应处理信息', () => {
   assert.equal(validateBugStatusChange(1, {}), '请填写修复时间')
   assert.equal(validateBugStatusChange(1, { resolved_date: '2026-07-13' }), '请选择解决方案')
-  assert.equal(validateBugStatusChange(1, { resolved_date: '2026-07-13', resolution_id: 1 }), null)
+  assert.equal(validateBugStatusChange(1, { resolved_date: '2026-07-13', resolution_id: 1 }, '2026-07-13'), null)
+  assert.equal(validateBugStatusChange(1, { resolved_date: '2026-07-14', resolution_id: 1 }, '2026-07-13'), '修复时间不能晚于今天（2026-07-13）')
   assert.equal(validateBugStatusChange(2, {}), '请填写关闭时间')
-  assert.equal(validateBugStatusChange(2, { closed_date: '2026-07-13' }), null)
+  assert.equal(validateBugStatusChange(2, { closed_date: '2026-07-13' }, '2026-07-13'), null)
   assert.equal(validateBugStatusChange(3, {}), '请填写激活原因')
   assert.equal(validateBugStatusChange(3, { activation_reason: '   ' }), '请填写激活原因')
   assert.equal(validateBugStatusChange(3, { activation_reason: 'a'.repeat(101) }), '激活原因不能超过100字')
