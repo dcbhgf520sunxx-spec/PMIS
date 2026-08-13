@@ -187,17 +187,7 @@ const querySchemas = {
   },
 }
 
-const SORT_FIELDS = {
-  product_search: ['name', 'ownerName', 'description', 'status', 'creatorName', 'createdAt'],
-  project_search: ['name', 'productName', 'requirementName', 'ownerName', 'status', 'startDate', 'expectedEndDate', 'members', 'creatorName', 'createdAt'],
-  requirement_search: ['title', 'requirementType', 'status', 'productName', 'ownerName', 'priority', 'submitterName', 'submitDate', 'expectedEndDate', 'creatorName', 'createdAt'],
-  task_search: ['name', 'sourceName', 'ownerNames', 'taskTypeName', 'priority', 'status', 'expectedEndTime', 'createdAt'],
-  bug_search: ['title', 'sourceName', 'assigneeName', 'bugTypeName', 'severity', 'status', 'creatorName', 'createdAt'],
-  work_order_search: ['problem_desc', 'product_id', 'problem_type', 'urgency', 'status', 'is_overdue', 'follower_name', 'follower_id', 'submitter_name', 'submitter_dept', 'submit_time', 'expected_resolve_date', 'creator_name', 'created_at'],
-  stage_plan_search: ['project_name', 'stage_name', 'item_name', 'status', 'current_due_date', 'created_at'],
-  contract_search: ['project_name', 'contract_code', 'contract_name', 'signed_date', 'contract_amount', 'created_at'],
-  payment_search: ['project_name', 'stage_name', 'payment_month', 'payment_amount', 'handler_name', 'created_at'],
-}
+const { SORT_FIELDS } = require('./sortFields')
 
 const ANALYSIS_BRANCHES = {
   product: { label: '产品', metrics: ['count', 'status_distribution'], status: ENUMS.enabled },

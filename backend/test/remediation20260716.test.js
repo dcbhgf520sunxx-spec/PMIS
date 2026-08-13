@@ -52,7 +52,7 @@ test('本地、部署和远程检查使用兼容 TypeScript 测试的 Node 版�
   assert.match(workflow, /node-version:\s*22\.18\.0/)
   assert.match(workflow, /actions\/checkout@v5/)
   assert.match(workflow, /actions\/setup-node@v5/)
-  assert.match(nginx, /client_max_body_size\s+8m;/)
+  assert.match(nginx, /client_max_body_size\s+25m;/)
 })
 
 test('软删除后角色和档案类型编码可复用且工单关联有外键', () => {

@@ -199,6 +199,10 @@ sudo vi /etc/nginx/conf.d/PMIS.conf
 - `server_name`
 - `root`
 
+仓库配置使用 `client_max_body_size 25m`。PMIS 业务层仍按单文件最大
+20MB 校验；Nginx 额外预留 multipart 请求开销，避免合规文件在到达后端和
+OSS 前被网关以 HTTP 413 拒绝。正式环境不得继续保留旧的 8MB 上限。
+
 检查并重载：
 
 ```bash

@@ -181,9 +181,20 @@ test('personal view metadata only exposes views implemented by each module', () 
   }
 })
 
-test('search metadata rejects unknown sort fields and accepts ID arrays', () => {
+test('search metadata publishes one snake_case sort contract and accepts ID arrays', () => {
   const projectSearch = getToolDefinition('project_search', 'query')
-  assert.ok(projectSearch.inputSchema.properties.sort_field.enum.includes('expectedEndDate'))
+  assert.ok(projectSearch.inputSchema.properties.sort_field.enum.includes('expected_end_date'))
+  assert.equal(projectSearch.inputSchema.properties.sort_field.enum.includes('expectedEndDate'), false)
+
+  for (const name of [
+    'product_search', 'project_search', 'requirement_search', 'task_search', 'bug_search',
+    'work_order_search', 'stage_plan_search', 'contract_search', 'payment_search',
+  ]) {
+    const values = getToolDefinition(name, 'query').inputSchema.properties.sort_field.enum
+    assert.ok(values.length > 0, `${name}缺少排序字段元数据`)
+    assert.equal(values.some((value) => /[A-Z]/.test(value)), false, `${name}仍暴露camelCase排序字段`)
+  }
+
   assert.throws(
     () => require('../src/mcp/dispatcher').validateToolArguments(projectSearch, { sort_field: 'anything' }),
     (error) => error.code === 'MCP_ARGUMENT_INVALID' && Boolean(error.fieldErrors.sort_field)

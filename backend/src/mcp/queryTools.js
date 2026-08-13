@@ -17,6 +17,7 @@ const { allowedWorkOrderStatuses } = require('../services/workOrderStatusRules')
 const { allowedPlanItemStatuses } = require('../services/projectStagePlanRules')
 const { normalizeMcpQueryContent } = require('./contentPolicy')
 const { createDownloadUrl } = require('../services/mcpFileDownloadService')
+const { controllerSortField } = require('./sortFields')
 
 const GLOBAL_SEARCH_TOOLS = [
   ['/products', 'product_search'],
@@ -138,7 +139,7 @@ function allowedStatusesForRecord(domain, record) {
 }
 
 const handlers = {
-  product_search: [product.list, (a) => ({ query: normalizeQuery(a) })],
+  product_search: [product.list, (a) => ({ query: normalizeQuery(a, 'product_search') })],
   product_get: [product.getById, (a) => ({ params: { id: requireId(a) } })],
   product_history: [product.history, (a) => ({ params: { id: requireId(a) } })],
   project_search: [project.list, buildProjectSearchInput],
@@ -147,16 +148,16 @@ const handlers = {
   stage_plan_get: [stagePlan.getPlan, (a) => ({ params: { projectId: requireProjectId(a) } })],
   stage_plan_history: [stagePlan.history, (a) => ({ params: { projectId: requireProjectId(a) } })],
   contract_get: [contract.getByProject, (a) => ({ params: { id: requireProjectId(a) } })],
-  requirement_search: [requirement.list, (a) => ({ query: normalizeQuery(a) })],
+  requirement_search: [requirement.list, (a) => ({ query: normalizeQuery(a, 'requirement_search') })],
   requirement_get: [requirement.getById, (a) => ({ params: { id: requireId(a) } })],
   requirement_history: [requirement.history, (a) => ({ params: { id: requireId(a) } })],
   task_search: [task.list, buildTaskSearchInput],
   task_get: [task.getById, (a) => ({ params: { id: requireId(a) } })],
   task_history: [task.history, (a) => ({ params: { id: requireId(a) } })],
-  bug_search: [bug.list, (a) => ({ query: normalizeQuery(a) })],
+  bug_search: [bug.list, (a) => ({ query: normalizeQuery(a, 'bug_search') })],
   bug_get: [bug.getById, (a) => ({ params: { id: requireId(a) } })],
   bug_history: [bug.history, (a) => ({ params: { id: requireId(a) } })],
-  work_order_search: [workOrder.list, (a) => ({ query: normalizeQuery(a) })],
+  work_order_search: [workOrder.list, (a) => ({ query: normalizeQuery(a, 'work_order_search') })],
   work_order_get: [workOrder.getById, (a) => ({ params: { id: requireId(a) } })],
   work_order_history: [workOrder.getHistory, (a) => ({ params: { id: requireId(a) } })],
 }
@@ -521,8 +522,9 @@ function requireProjectId(args) {
   return required(args.project_id, 'project_id')
 }
 
-function normalizeQuery(args) {
+function normalizeQuery(args, toolName) {
   const query = { ...args }
+  if (query.sort_field !== undefined) query.sort_field = controllerSortField(toolName, query.sort_field)
   if (query.page_size !== undefined) {
     query.pageSize = Math.min(100, Math.max(1, Number(query.page_size) || 20))
     delete query.page_size
@@ -531,7 +533,7 @@ function normalizeQuery(args) {
 }
 
 function buildProjectSearchInput(args, context) {
-  const query = normalizeQuery(args)
+  const query = normalizeQuery(args, 'project_search')
   delete query.view
   query.current_user_id = context.user.id
   if (args.view === 'mine') query.owner_id = context.user.id
@@ -542,7 +544,7 @@ function buildProjectSearchInput(args, context) {
 function buildTaskSearchInput(args) {
   return {
     query: {
-      ...normalizeQuery(args),
+      ...normalizeQuery(args, 'task_search'),
       mcp_flat: '1',
     },
   }
