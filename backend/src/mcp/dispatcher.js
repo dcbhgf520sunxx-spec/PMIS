@@ -7,6 +7,7 @@ const {
 const { dispatchQueryTool } = require('./queryTools')
 const { dispatchActionTool } = require('./actionTools')
 const { recordMcpAudit } = require('../services/mcpAuditService')
+const { normalizeSortField } = require('./sortFields')
 
 const ANALYSIS_DOMAIN_MENU_PATHS = {
   product: '/products',
@@ -314,6 +315,12 @@ function validateToolArguments(definition, args) {
   }
 }
 
+function normalizeToolArguments(definition, args) {
+  if (!args || typeof args !== 'object' || Array.isArray(args) || args.sort_field === undefined) return args
+  const sortField = normalizeSortField(definition.name, args.sort_field)
+  return sortField === args.sort_field ? args : { ...args, sort_field: sortField }
+}
+
 function validateToolPermission(definition, args, context) {
   if (definition.name === 'business_options' && args.option_type === 'user'
     && context.allowedMenuPaths.size === 0) {
@@ -347,8 +354,9 @@ async function dispatchMcpTool(name, args, context) {
       error.code = 'MCP_TOOL_NOT_FOUND'
       throw error
     }
-    validateToolArguments(definition, args)
-    const resolved = resolvePublicTool(name, args, context.endpointType)
+    const publicArgs = normalizeToolArguments(definition, args)
+    validateToolArguments(definition, publicArgs)
+    const resolved = resolvePublicTool(name, publicArgs, context.endpointType)
     commandName = resolved.name
     commandArgs = resolved.args
     commandDefinition = getCommandDefinition(commandName, context.endpointType)
@@ -411,6 +419,7 @@ module.exports = {
   argumentError,
   buildAuditSummary,
   dispatchMcpTool,
+  normalizeToolArguments,
   resultCount,
   validateToolArguments,
   validateToolPermission,

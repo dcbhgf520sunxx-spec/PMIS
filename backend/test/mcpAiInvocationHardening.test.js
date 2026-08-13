@@ -2,9 +2,10 @@ const assert = require('node:assert/strict')
 const test = require('node:test')
 
 const { getToolDefinition, publicToolCatalog } = require('../src/mcp/catalog')
-const { validateToolArguments } = require('../src/mcp/dispatcher')
+const { normalizeToolArguments, validateToolArguments } = require('../src/mcp/dispatcher')
 const {
   decorateQueryResult,
+  normalizeQuery,
   normalizeSearchResult,
   searchBusinessOptions,
 } = require('../src/mcp/queryTools')
@@ -30,6 +31,35 @@ test('query text and time filters reject non-text values', () => {
     getToolDefinition('work_order_search', 'query'),
     { submit_time_from: '2026-07-01T08:30:00+08:00' }
   ))
+})
+
+test('legacy camelCase sort values remain compatible before schema validation', () => {
+  const definition = getToolDefinition('project_search', 'query')
+  const args = normalizeToolArguments(definition, {
+    sort_field: 'expectedEndDate',
+    sort_order: 'asc',
+  })
+
+  assert.deepEqual(args, {
+    sort_field: 'expected_end_date',
+    sort_order: 'asc',
+  })
+  assert.doesNotThrow(() => validateToolArguments(definition, args))
+})
+
+test('canonical MCP sort fields map to existing controller sort keys', () => {
+  assert.deepEqual(
+    normalizeQuery({ sort_field: 'expected_end_date', page_size: 10 }, 'project_search'),
+    { sort_field: 'expectedEndDate', pageSize: 10 }
+  )
+  assert.deepEqual(
+    normalizeQuery({ sort_field: 'owner_name' }, 'requirement_search'),
+    { sort_field: 'ownerName' }
+  )
+  assert.deepEqual(
+    normalizeQuery({ sort_field: 'created_at' }, 'work_order_search'),
+    { sort_field: 'created_at' }
+  )
 })
 
 test('payment stage metadata points to contract payment stages and product selection requires active products', () => {
