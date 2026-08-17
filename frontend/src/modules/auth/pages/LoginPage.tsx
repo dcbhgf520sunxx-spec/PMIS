@@ -203,7 +203,8 @@ export function LoginPage() {
           </span>
         </div>
         <Typography.Title className="login-title" level={3}>
-          项目管理系统
+          <span className="login-title-text">智能项管</span>
+          <span className="login-title-code">SIP</span>
         </Typography.Title>
         <form autoComplete="on" className="login-form" onSubmit={handleSubmit}>
           <label
