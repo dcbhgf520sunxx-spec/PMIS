@@ -58,7 +58,8 @@ export function TaskFormPage({ mode }: { mode: Mode }) {
           parentTaskName: row.name,
           sourceType: row.sourceType,
           projectId: row.projectId || undefined,
-          requirementId: row.requirementId || undefined
+          requirementId: row.requirementId || undefined,
+          priority: 0
         } : {
           name: row.name,
           description: row.description,
@@ -68,12 +69,12 @@ export function TaskFormPage({ mode }: { mode: Mode }) {
           requirementId: row.requirementId || undefined,
           ownerIds: row.ownerIds,
           taskType: row.taskType,
-          priority: row.priority,
+          priority: mode === 'edit' ? row.priority : 0,
           startTime: row.startTime || undefined,
           expectedEndTime: row.expectedEndTime || undefined
         });
       } else {
-        setInitial({ sourceType: 1 });
+        setInitial({ sourceType: 1, priority: 0 });
       }
     }).catch((loadError) => {
       if (cancelled) return;
@@ -127,7 +128,7 @@ export function TaskFormPage({ mode }: { mode: Mode }) {
           ? <AdminProFormSelect name="requirementId" label="关联需求" options={requirements} rules={[{ required: true, message: '请选择关联需求' }]} fieldProps={{ disabled: associationLocked }} />
           : <AdminProFormSelect name="projectId" label="关联项目" options={projects} rules={[{ required: true, message: '请选择关联项目' }]} fieldProps={{ disabled: associationLocked }} />}
         <AdminProFormSelect name="taskType" label="任务类型" options={types} rules={[{ required: true, message: '请选择任务类型' }]} />
-        <AdminProFormSelect name="priority" label="优先级" options={[{ label: '低', value: 0 }, { label: '中', value: 1 }, { label: '高', value: 2 }]} rules={[{ required: true, message: '请选择优先级' }]} />
+        <AdminProFormSelect name="priority" label="优先级" options={[{ label: '低', value: 0 }, { label: '中', value: 1 }, { label: '高', value: 2 }]} disabled />
       </div>
     </TemplateFormSection>
     <TemplateFormSection title="处理信息">

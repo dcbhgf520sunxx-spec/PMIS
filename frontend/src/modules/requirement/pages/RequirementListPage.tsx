@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
 import { App } from 'antd';
-import { ActionBar, AdminInput, AdminRangePicker, AdminSelect, AdminTextAction, CompactFilterBar, createDetailNeighborContext, createListFilterItems, DeleteConfirmAction, DetailLinkCell, OperationColumnActions, PermissionButton, resolveListViewFilter, saveDetailNeighborContext, TemplateListPage, useCommittedFilters, useTemplateServerListData, ViewTabs , listRouteCodecs, useListViewState, usePageReturnNavigation } from '../../../components/admin';
-import { deleteRequirement, getRequirementList, updateRequirementStatus } from '../../../api/requirementApi';
+import { ActionBar, AdminInput, AdminRangePicker, AdminSelect, AdminTextAction, CompactFilterBar, createDetailNeighborContext, createListFilterItems, DeleteConfirmAction, DetailLinkCell, OperationColumnActions, PermissionButton, PriorityChangeAction, resolveListViewFilter, saveDetailNeighborContext, TemplateListPage, useCommittedFilters, useTemplateServerListData, ViewTabs , listRouteCodecs, useListViewState, usePageReturnNavigation } from '../../../components/admin';
+import { deleteRequirement, getRequirementList, updateRequirementPriority, updateRequirementStatus } from '../../../api/requirementApi';
 import { getProductOptions } from '../../../api/productApi';
 import { getUserOptions } from '../../../api/userApi';
 import type { RequirementRecord, RequirementStatus, RequirementType } from '../types';
@@ -51,7 +51,7 @@ export function RequirementListPage() {
     { title: '预计完成时间', dataIndex: 'expectedEndDate', width: 140, sorter: true, sortOrder: sortOrder('expectedEndDate'), render: (_, row) => row.expectedEndDate || '-' },
     { title: '创建人', dataIndex: 'creatorName', width: 100, sorter: true, sortOrder: sortOrder('creatorName') },
     { title: '创建时间', dataIndex: 'createdAt', width: 170, sorter: true, sortOrder: sortOrder('createdAt') },
-    { title: '操作', valueType: 'option', width: 190, fixed: 'right', render: (_, row) => <OperationColumnActions><AdminTextAction onClick={() => navigate(`/requirements/${row.id}/edit`)}>编辑</AdminTextAction><RequirementStatusChangeAction variant="text" requirement={row} onConfirm={(status, values) => submitStatus(row, status, values)}>状态变更</RequirementStatusChangeAction><AdminTextAction onClick={() => navigate(`/requirements/${row.id}/copy`)}>复制</AdminTextAction><DeleteConfirmAction variant="text" entityName="需求" targetName={row.title} successMessage="删除成功" onConfirm={async () => { await deleteRequirement(row.id); await load(); }}>删除</DeleteConfirmAction></OperationColumnActions> }
+    { title: '操作', valueType: 'option', width: 190, fixed: 'right', render: (_, row) => <OperationColumnActions><AdminTextAction onClick={() => navigate(`/requirements/${row.id}/edit`)}>编辑</AdminTextAction><RequirementStatusChangeAction variant="text" requirement={row} onConfirm={(status, values) => submitStatus(row, status, values)}>状态变更</RequirementStatusChangeAction><PriorityChangeAction variant="text" permission="requirement_priority_adjust" current={row.priority} onConfirm={async (priority) => { await updateRequirementPriority(row.id, priority); message.success('优先级调整成功'); await load(); }} /><AdminTextAction onClick={() => navigate(`/requirements/${row.id}/copy`)}>复制</AdminTextAction><DeleteConfirmAction variant="text" entityName="需求" targetName={row.title} successMessage="删除成功" onConfirm={async () => { await deleteRequirement(row.id); await load(); }}>删除</DeleteConfirmAction></OperationColumnActions> }
   ];
   const statusOptions=requirementStatusesForType(filters.draftFilters.requirementType as RequirementType|undefined).map(value=>({value,label:requirementStatusLabels[value]}));
   const items = createListFilterItems([

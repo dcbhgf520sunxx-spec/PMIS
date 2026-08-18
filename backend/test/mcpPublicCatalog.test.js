@@ -62,13 +62,13 @@ test('public task action resolves to the existing internal command without opera
   assert.deepEqual(resolvePublicTool('task_manage', {
     operation: 'update',
     id: 59,
-    priority: 1,
+    description: '更新说明',
     mode: 'preview',
   }, 'action'), {
     name: 'task_update',
     args: {
       id: 59,
-      priority: 1,
+      description: '更新说明',
       mode: 'preview',
     },
   })

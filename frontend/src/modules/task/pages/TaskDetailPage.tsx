@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
 import { App } from 'antd';
 import { useParams } from 'react-router-dom';
-import { AdminTextAction, DeleteConfirmAction, DetailLinkCell, DetailMetaList, DetailNeighborNav, HistoryTimelineSection, OperationColumnActions, PermissionButton, RichTextViewer, TemplateDetailPage, TemplateDetailSection, TemplateDetailTableSection, useDetailNeighbors, usePageReturnNavigation } from '../../../components/admin';
-import { deleteTask, getSubtasks, getTask, getTaskHistory, getTaskNeighbors, updateTaskStatus } from '../../../api/taskApi';
+import { AdminTextAction, DeleteConfirmAction, DetailLinkCell, DetailMetaList, DetailNeighborNav, HistoryTimelineSection, OperationColumnActions, PermissionButton, PriorityChangeAction, RichTextViewer, TemplateDetailPage, TemplateDetailSection, TemplateDetailTableSection, useDetailNeighbors, usePageReturnNavigation } from '../../../components/admin';
+import { deleteTask, getSubtasks, getTask, getTaskHistory, getTaskNeighbors, updateTaskPriority, updateTaskStatus } from '../../../api/taskApi';
 import type { TaskRecord } from '../types';
 import { TaskStatusChangeAction } from '../components/TaskStatusChangeAction';
 import { renderTaskLevel, renderTaskOverdue, renderTaskPriority, renderTaskStatus } from '../helpers';
@@ -76,7 +76,7 @@ export function TaskDetailPage() {
     { title: '状态', dataIndex: 'status', width: 100, render: (_, task) => renderTaskStatus(task.status) },
     { title: '预计完成时间', dataIndex: 'expectedEndTime', width: 140, render: (_, task) => task.expectedEndTime || '-' },
     { title: '实际完成时间', dataIndex: 'actualEndTime', width: 140, render: (_, task) => task.actualEndTime || '-' },
-    { title: '操作', valueType: 'option', width: 190, fixed: 'right', render: (_, task) => <OperationColumnActions><AdminTextAction onClick={() => navigateWithReturn(`/tasks/${task.id}/edit`)}>编辑</AdminTextAction><TaskStatusChangeAction variant="text" task={task} onConfirm={(status, values) => changeStatus(task, status, values)}>状态变更</TaskStatusChangeAction><AdminTextAction onClick={() => navigateWithReturn(`/tasks/${task.id}/copy`)}>复制</AdminTextAction><DeleteConfirmAction variant="text" entityName="子任务" targetName={task.name} onConfirm={async () => { await deleteTask(task.id); setRevision((value) => value + 1); }}>删除</DeleteConfirmAction></OperationColumnActions> }
+    { title: '操作', valueType: 'option', width: 190, fixed: 'right', render: (_, task) => <OperationColumnActions><AdminTextAction onClick={() => navigateWithReturn(`/tasks/${task.id}/edit`)}>编辑</AdminTextAction><PriorityChangeAction variant="text" permission="task_priority_adjust" current={task.priority} onConfirm={async (priority) => { await updateTaskPriority(task.id, priority); message.success('优先级调整成功'); setRevision((value) => value + 1); }} /><TaskStatusChangeAction variant="text" task={task} onConfirm={(status, values) => changeStatus(task, status, values)}>状态变更</TaskStatusChangeAction><AdminTextAction onClick={() => navigateWithReturn(`/tasks/${task.id}/copy`)}>复制</AdminTextAction><DeleteConfirmAction variant="text" entityName="子任务" targetName={task.name} onConfirm={async () => { await deleteTask(task.id); setRevision((value) => value + 1); }}>删除</DeleteConfirmAction></OperationColumnActions> }
   ];
 
   return <TemplateDetailPage
@@ -88,7 +88,7 @@ export function TaskDetailPage() {
     onBack={returnToSource}
     backText={returnsToTaskDetail ? '返回' : '返回列表'}
     titleCenter={<DetailNeighborNav placement="title" loading={neighbors.loading} prevId={neighbors.prevId} nextId={neighbors.nextId} ordinal={neighbors.ordinal} total={neighbors.total} onNavigate={neighbors.navigateNeighbor} />}
-    actions={row ? <><PermissionButton permission="task" type="primary" onClick={() => navigateWithReturn(`/tasks/${row.id}/edit`)}>编辑</PermissionButton><PermissionButton permission="task" onClick={() => navigateWithReturn(`/tasks/${row.id}/copy`)}>复制</PermissionButton><DeleteConfirmAction entityName="任务" targetName={row.name} onConfirm={async () => { await deleteTask(row.id); returnToSource(); }}>删除</DeleteConfirmAction></> : null}
+    actions={row ? <><PermissionButton permission="task" type="primary" onClick={() => navigateWithReturn(`/tasks/${row.id}/edit`)}>编辑</PermissionButton><PriorityChangeAction permission="task_priority_adjust" current={row.priority} onConfirm={async (priority) => { await updateTaskPriority(row.id, priority); message.success('优先级调整成功'); setRevision((value) => value + 1); }} /><PermissionButton permission="task" onClick={() => navigateWithReturn(`/tasks/${row.id}/copy`)}>复制</PermissionButton><DeleteConfirmAction entityName="任务" targetName={row.name} onConfirm={async () => { await deleteTask(row.id); returnToSource(); }}>删除</DeleteConfirmAction></> : null}
     statusSection={row ? { items: [{ label: '任务状态', value: renderTaskStatus(row.status), wide: true }, { label: '优先级', value: renderTaskPriority(row.priority), wide: true }, { label: '逾期状态', value: renderTaskOverdue(row.isOverdue, row.expectedEndTime), wide: true }] } : null}
     statusAction={row ? <TaskStatusChangeAction block type="primary" task={row} onConfirm={(status, values) => changeStatus(row, status, values)} /> : null}
     documentSection={row ? { items: [{ label: '创建人', value: row.creatorName }, { label: '创建时间', value: row.createdAt, wide: true }, { label: '更新人', value: row.updaterName }, { label: '更新时间', value: row.updatedAt, wide: true }] } : null}

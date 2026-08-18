@@ -18,7 +18,7 @@ import {
   getRoleMenuIds,
   type RoleRecord
 } from '../../../api/roleApi';
-import { buildMenuTree, collectTreeKeys } from '../roleMenuTree';
+import { buildMenuTree, collectHalfCheckedKeys, collectTreeKeys } from '../roleMenuTree';
 
 export function RoleDetailPage() {
   const { navigateWithReturn, returnToSource } = usePageReturnNavigation('/roles');
@@ -109,10 +109,14 @@ export function RoleDetailPage() {
           <TemplateDetailSection title="菜单权限">
             <AdminTree
               checkable
+              checkStrictly
               disabled
               expandedKeys={expandedMenuIds}
               treeData={menuTree}
-              checkedKeys={menuTree.length ? checkedMenuIds : []}
+              checkedKeys={{
+                checked: menuTree.length ? checkedMenuIds : [],
+                halfChecked: menuTree.length ? collectHalfCheckedKeys(menuTree, checkedMenuIds) : []
+              }}
               onExpand={(keys) => setExpandedMenuIds(keys)}
             />
           </TemplateDetailSection>

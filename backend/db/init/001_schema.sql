@@ -117,6 +117,7 @@ CREATE TABLE IF NOT EXISTS pms_project (
   product_id BIGINT NOT NULL REFERENCES pms_product(id) ON DELETE RESTRICT,
   requirement_id BIGINT,
   owner_id BIGINT NOT NULL REFERENCES pms_user(id) ON DELETE RESTRICT,
+  priority SMALLINT NOT NULL DEFAULT 0 CHECK (priority IN (0, 1, 2)),
   status SMALLINT NOT NULL DEFAULT 0 CHECK (status IN (0, 1, 2, 3)),
   is_overdue SMALLINT NOT NULL DEFAULT 0 CHECK (is_overdue IN (0, 1)),
   start_date DATE,
@@ -318,7 +319,7 @@ CREATE TABLE IF NOT EXISTS pms_requirement (
   requirement_type SMALLINT NOT NULL CHECK (requirement_type IN (1,2,3,4)),
   product_id BIGINT NOT NULL REFERENCES pms_product(id) ON DELETE RESTRICT,
   owner_id BIGINT NOT NULL REFERENCES pms_user(id) ON DELETE RESTRICT,
-  priority SMALLINT NOT NULL DEFAULT 1 CHECK (priority IN (0,1,2)),
+  priority SMALLINT NOT NULL DEFAULT 0 CHECK (priority IN (0,1,2)),
   status SMALLINT NOT NULL,
   is_overdue SMALLINT CHECK (is_overdue IN (0,1)),
   submitter_name VARCHAR(50) NOT NULL,
@@ -445,7 +446,7 @@ CREATE TABLE IF NOT EXISTS pms_task (
   project_id BIGINT REFERENCES pms_project(id) ON DELETE RESTRICT,
   requirement_id BIGINT REFERENCES pms_requirement(id) ON DELETE RESTRICT,
   task_type BIGINT NOT NULL REFERENCES pms_archive(id) ON DELETE RESTRICT,
-  priority SMALLINT NOT NULL DEFAULT 1 CHECK (priority IN (0,1,2)),
+  priority SMALLINT NOT NULL DEFAULT 0 CHECK (priority IN (0,1,2)),
   status SMALLINT NOT NULL DEFAULT 0 CHECK (status IN (0,1,2,3)),
   is_overdue SMALLINT NOT NULL DEFAULT 0 CHECK (is_overdue IN (0,1)),
   start_date DATE, expected_end_date DATE, actual_end_date DATE, suspend_date DATE,
@@ -737,7 +738,10 @@ VALUES
   (20, 0, '需求管理', 'requirement', 2, '/requirements', 'FileTextOutlined', 7, 1, 1),
   (21, 0, '任务管理', 'task', 2, '/tasks', 'CheckSquareOutlined', 9, 1, 1),
   (22, 0, 'BUG管理', 'bug', 2, '/bugs', 'BugOutlined', 10, 1, 1),
-  (23, 0, '知识库', 'knowledge_base', 2, '/knowledge-base', 'BookOutlined', 12, 1, 1)
+  (23, 0, '知识库', 'knowledge_base', 2, '/knowledge-base', 'BookOutlined', 12, 1, 1),
+  (24, 20, '调整优先级', 'requirement_priority_adjust', 3, NULL, NULL, 701, 1, 1),
+  (25, 19, '调整优先级', 'project_priority_adjust', 3, NULL, NULL, 801, 1, 1),
+  (26, 21, '调整优先级', 'task_priority_adjust', 3, NULL, NULL, 901, 1, 1)
 ON CONFLICT (code) DO UPDATE SET
   parent_id = EXCLUDED.parent_id,
   name = EXCLUDED.name,

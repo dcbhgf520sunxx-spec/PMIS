@@ -55,7 +55,6 @@ test('fixed business enums publish exact values and Chinese mappings', () => {
     ['project_search', 'query', 'view', ['mine', 'joined'], 'mine=我负责的'],
     ['project_search', 'query', 'sort_order', ['asc', 'desc'], 'asc=升序'],
     ['stage_item_create', 'action', 'requires_delivery_file', [0, 1], '0=不要求'],
-    ['task_create', 'action', 'priority', [0, 1, 2], '1=中'],
   ]
 
   for (const [toolName, endpoint, field, values, description] of cases) {
@@ -70,7 +69,7 @@ test('action schemas expose only relevant fields and encode conditional requirem
   assert.deepEqual(taskUpdate.required, ['id'])
   assert.equal(taskUpdate.properties.status, undefined)
   assert.equal(taskUpdate.properties.actual_end_date, undefined)
-  assert.ok(taskUpdate.properties.priority)
+  assert.equal(taskUpdate.properties.priority, undefined)
   assert.ok(taskUpdate.allOf?.length)
 
   const taskStatus = getToolDefinition('task_change_status', 'action').inputSchema
@@ -99,11 +98,11 @@ test('status schemas publish fields required by each target status', () => {
   }
 })
 
-test('task sparse edit accepts only the target and changed field', () => {
+test('task sparse edit accepts only the target and an editable changed field', () => {
   const definition = getToolDefinition('task_update', 'action')
   assert.doesNotThrow(() => validateToolArguments(definition, {
     id: 59,
-    priority: 1,
+    description: '更新说明',
     mode: 'preview',
   }))
 })
@@ -122,7 +121,6 @@ test('public action schemas validate the selected operation branch', () => {
     project_id: 66,
     task_type: 1,
     owner_ids: [8],
-    priority: 1,
     expected_end_date: '2026-08-31',
     idempotency_key: 'task-metadata-1',
   }))
@@ -141,9 +139,13 @@ test('required action fields are non-null and non-blank in metadata', () => {
   }
 })
 
-test('requirement priority and update changes are enforced by action contracts', () => {
+test('requirement and task action contracts do not expose priority editing', () => {
   const requirementCreate = getToolDefinition('requirement_create', 'action')
-  assert.ok(requirementCreate.inputSchema.required.includes('priority'))
+  assert.equal(requirementCreate.inputSchema.properties.priority, undefined)
+  assert.equal(getToolDefinition('requirement_update', 'action').inputSchema.properties.priority, undefined)
+  assert.equal(getToolDefinition('task_create', 'action').inputSchema.properties.priority, undefined)
+  assert.equal(getToolDefinition('task_create_subtask', 'action').inputSchema.properties.priority, undefined)
+  assert.equal(getToolDefinition('task_update', 'action').inputSchema.properties.priority, undefined)
 
   const taskUpdate = getToolDefinition('task_update', 'action')
   assert.throws(
@@ -200,7 +202,6 @@ test('argument errors retain a stable code, field and readable message', () => {
       source_type: 1,
       task_type: 2,
       owner_ids: [8],
-      priority: 1,
       expected_end_date: '2026-08-31',
       idempotency_key: 'task-create-1',
     })
@@ -215,6 +216,12 @@ test('argument errors retain a stable code, field and readable message', () => {
 })
 
 test('invalid enum and date errors identify the exact field', () => {
+  const queryDefinition = getToolDefinition('task_search', 'query')
+  assert.throws(
+    () => validateToolArguments(queryDefinition, { priority: 9 }),
+    (error) => error.code === 'MCP_ARGUMENT_INVALID'
+      && error.fieldErrors.priority === '优先级必须是：0=低，1=中，2=高'
+  )
   const definition = getToolDefinition('task_create', 'action')
   assert.throws(
     () => validateToolArguments(definition, {
@@ -223,12 +230,11 @@ test('invalid enum and date errors identify the exact field', () => {
       project_id: 10,
       task_type: 2,
       owner_ids: [8],
-      priority: 9,
       expected_end_date: '2026/08/31',
       idempotency_key: 'task-create-1',
     }),
     (error) => error.code === 'MCP_ARGUMENT_INVALID'
-      && error.fieldErrors.priority === '优先级必须是：0=低，1=中，2=高'
+      && error.fieldErrors.expected_end_date === '预计完成日期必须是真实存在的日期，格式为YYYY-MM-DD'
   )
 })
 

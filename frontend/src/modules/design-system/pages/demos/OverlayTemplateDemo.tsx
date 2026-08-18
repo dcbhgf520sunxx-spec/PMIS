@@ -13,6 +13,7 @@ import {
   createListSorters,
   DeleteConfirmAction,
   listSorters,
+  PriorityChangeAction,
   StatusChangeAction,
   TemplateDrawerTable,
   useAdminFeedback,
@@ -55,6 +56,7 @@ export function OverlayTemplateDemo() {
   const [tableDrawerOpen, setTableDrawerOpen] = useState(false);
   const [draftKeyword, setDraftKeyword] = useState('');
   const [keyword, setKeyword] = useState('');
+  const [priority, setPriority] = useState<0 | 1 | 2>(0);
 
   const filteredRows = useMemo(
     () => overlayTableRows.filter((row) => row.name.includes(keyword)),
@@ -78,7 +80,7 @@ export function OverlayTemplateDemo() {
     <div className="design-system-page__layout-pattern-template overlay-template-demo">
       <div className="design-system-page__input-panel-head">
         <h3>弹窗 / 抽屉模板</h3>
-        <ComponentEntry name="AdminModal / StatusChangeAction / DeleteConfirmAction / AdminDrawer / TemplateDrawerTable" />
+        <ComponentEntry name="AdminModal / StatusChangeAction / PriorityChangeAction / DeleteConfirmAction / AdminDrawer / TemplateDrawerTable" />
         <p>页面模式展示完整业务组合：弹窗负责短流程和确认，抽屉负责侧向表单与关联列表。</p>
       </div>
 
@@ -111,6 +113,14 @@ export function OverlayTemplateDemo() {
               onConfirm={() => { message.success('危险状态变更已确认'); }}
             >危险状态</StatusChangeAction>
           </AdminSpace>
+        </section>
+        <section>
+          <h4>优先级调整</h4>
+          <p>业务页面通过独立按钮权限调整高、中、低优先级。</p>
+          <PriorityChangeAction
+            current={priority}
+            onConfirm={(value) => { setPriority(value); message.success('优先级调整已确认'); }}
+          />
         </section>
         <section>
           <h4>删除确认弹窗</h4>

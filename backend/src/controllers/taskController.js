@@ -3,6 +3,7 @@ const { parsePagination, getSortDirection } = require('../utils/pagination')
 const { ok, fail, failField } = require('../utils/response')
 const { formatHistoryChanges, groupOperationLogs } = require('../utils/operationHistory')
 const { allowedTaskStatuses, validateTaskStatusChange, resolveTaskStatusFields, calculateTaskOverdue, canCompleteParent, canLeaveCompletedSubtask } = require('../services/taskRules')
+const { DEFAULT_PRIORITY, parsePriority } = require('../services/priorityRules')
 
 const DETAIL_FIELD_ORDER = ['name', 'description', 'parent_task_id', 'source_type', 'project_id', 'requirement_id', 'owner_id', 'owner_ids', 'task_type', 'priority', 'status', 'is_overdue', 'start_date', 'expected_end_date', 'actual_end_date', 'suspend_date']
 const HISTORY_FIELD_LABELS = {
@@ -203,10 +204,6 @@ async function validate(res, body, exclude) {
     failField(res, 'task_type', '请选择任务类型')
     return false
   }
-  if (body.priority === undefined || body.priority === null || ![0, 1, 2].includes(Number(body.priority))) {
-    failField(res, 'priority', '请选择优先级')
-    return false
-  }
   if (!body.expected_end_date) {
     failField(res, 'expected_end_date', '请选择预计完成时间')
     return false
@@ -259,7 +256,7 @@ exports.create = async (req, res) => {
     const overdue = calculateTaskOverdue(body.expected_end_date, 0)
     let result
     await db.transaction(async (connection) => {
-      result = await connection.prepare('INSERT INTO pms_task(name,description,source_type,project_id,requirement_id,task_type,priority,status,is_overdue,start_date,expected_end_date,creator_id,updater_id)VALUES(?,?,?,?,?,?,?,0,?,?,?,?,?)').run(body.name.trim(), body.description || null, Number(body.source_type), Number(body.source_type) === 1 ? body.project_id : null, Number(body.source_type) === 2 ? body.requirement_id : null, body.task_type, Number(body.priority), overdue, body.start_date || null, body.expected_end_date, req.user.id, req.user.id)
+      result = await connection.prepare('INSERT INTO pms_task(name,description,source_type,project_id,requirement_id,task_type,priority,status,is_overdue,start_date,expected_end_date,creator_id,updater_id)VALUES(?,?,?,?,?,?,?,0,?,?,?,?,?)').run(body.name.trim(), body.description || null, Number(body.source_type), Number(body.source_type) === 1 ? body.project_id : null, Number(body.source_type) === 2 ? body.requirement_id : null, body.task_type, DEFAULT_PRIORITY, overdue, body.start_date || null, body.expected_end_date, req.user.id, req.user.id)
       await saveOwners(connection, result.lastInsertRowid, normalizeOwnerIds(body.owner_ids))
       await connection.writeLog(req.user.id, '新增', '任务', result.lastInsertRowid, null, null, null, req.ip, body.name.trim())
     })
@@ -286,7 +283,7 @@ exports.createSubtask = async (req, res) => {
     const overdue = calculateTaskOverdue(body.expected_end_date, 0)
     let result
     await db.transaction(async (connection) => {
-      result = await connection.prepare('INSERT INTO pms_task(name,description,parent_task_id,source_type,project_id,requirement_id,task_type,priority,status,is_overdue,start_date,expected_end_date,creator_id,updater_id)VALUES(?,?,?,?,?,?,?,?,0,?,?,?,?,?)').run(body.name.trim(), body.description || null, parentTask.id, parentTask.source_type, parentTask.project_id, parentTask.requirement_id, body.task_type, Number(body.priority), overdue, body.start_date || null, body.expected_end_date, req.user.id, req.user.id)
+      result = await connection.prepare('INSERT INTO pms_task(name,description,parent_task_id,source_type,project_id,requirement_id,task_type,priority,status,is_overdue,start_date,expected_end_date,creator_id,updater_id)VALUES(?,?,?,?,?,?,?,?,0,?,?,?,?,?)').run(body.name.trim(), body.description || null, parentTask.id, parentTask.source_type, parentTask.project_id, parentTask.requirement_id, body.task_type, DEFAULT_PRIORITY, overdue, body.start_date || null, body.expected_end_date, req.user.id, req.user.id)
       await saveOwners(connection, result.lastInsertRowid, normalizeOwnerIds(body.owner_ids))
       await connection.writeLog(req.user.id, '新增', '任务', result.lastInsertRowid, 'parent_task_id', null, parentTask.id, req.ip, body.name.trim())
     })
@@ -314,7 +311,7 @@ exports.update = async (req, res) => {
     if (!await validate(res, body, Number(req.params.id))) return
     const overdue = calculateTaskOverdue(body.expected_end_date, old.status)
     const changes = []
-    for (const field of ['name', 'description', 'source_type', 'project_id', 'requirement_id', 'task_type', 'priority', 'is_overdue', 'start_date', 'expected_end_date']) {
+    for (const field of ['name', 'description', 'source_type', 'project_id', 'requirement_id', 'task_type', 'is_overdue', 'start_date', 'expected_end_date']) {
       const next = field === 'is_overdue' ? overdue : (field === 'project_id' && Number(body.source_type) !== 1 ? null : field === 'requirement_id' && Number(body.source_type) !== 2 ? null : body[field])
       if (String(old[field] ?? '') !== String(next ?? '')) changes.push({ field, oldVal: old[field], newVal: next })
     }
@@ -323,7 +320,7 @@ exports.update = async (req, res) => {
     const nextOwners = await loadUsers(db, nextOwnerIds)
     if (oldOwnerIds.join(',') !== nextOwnerIds.join(',')) changes.push({ field: 'owner_ids', oldVal: ownerNames(oldOwners), newVal: ownerNames(nextOwners) })
     await db.transaction(async (connection) => {
-      await connection.prepare('UPDATE pms_task SET name=?,description=?,source_type=?,project_id=?,requirement_id=?,task_type=?,priority=?,is_overdue=?,start_date=?,expected_end_date=?,updater_id=?,updated_at=NOW()WHERE id=?').run(body.name.trim(), body.description || null, body.source_type, Number(body.source_type) === 1 ? body.project_id : null, Number(body.source_type) === 2 ? body.requirement_id : null, body.task_type, Number(body.priority), overdue, body.start_date || null, body.expected_end_date, req.user.id, req.params.id)
+      await connection.prepare('UPDATE pms_task SET name=?,description=?,source_type=?,project_id=?,requirement_id=?,task_type=?,is_overdue=?,start_date=?,expected_end_date=?,updater_id=?,updated_at=NOW()WHERE id=?').run(body.name.trim(), body.description || null, body.source_type, Number(body.source_type) === 1 ? body.project_id : null, Number(body.source_type) === 2 ? body.requirement_id : null, body.task_type, overdue, body.start_date || null, body.expected_end_date, req.user.id, req.params.id)
       await saveOwners(connection, req.params.id, nextOwnerIds)
       if (changes.length) await connection.writeLogs(req.user.id, '编辑', '任务', req.params.id, changes, req.ip, body.name.trim())
     })
@@ -332,6 +329,19 @@ exports.update = async (req, res) => {
     console.error(error)
     fail(res, 500, 500, '更新失败')
   }
+}
+
+exports.updatePriority = async (req, res) => {
+  try {
+    const priority = parsePriority(req.body.priority)
+    if (priority === null) return failField(res, 'priority', '请选择正确的优先级')
+    const old = await db.prepare('SELECT name,priority FROM pms_task WHERE id=? AND is_deleted=0').get(req.params.id)
+    if (!old) return fail(res, 404, 404, '任务不存在')
+    if (Number(old.priority) === priority) return ok(res, null)
+    await db.prepare('UPDATE pms_task SET priority=?,updater_id=?,updated_at=NOW() WHERE id=?').run(priority, req.user.id, req.params.id)
+    await db.writeLog(req.user.id, '调整优先级', '任务', req.params.id, 'priority', old.priority, priority, req.ip, old.name)
+    ok(res, null)
+  } catch (error) { console.error(error); fail(res, 500, 500, '优先级调整失败') }
 }
 
 exports.batchAssign = async (req, res) => {

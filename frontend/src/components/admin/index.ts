@@ -15,6 +15,7 @@ export * from './SectionTitle';
 export * from './InfoGrid';
 export * from './ViewTabs';
 export * from './PriorityTag';
+export * from './PriorityChangeAction';
 export * from './OverdueTag';
 export * from './MetricCard';
 export * from './RichDescriptionEditor';

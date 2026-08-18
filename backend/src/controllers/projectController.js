@@ -5,9 +5,10 @@ const { validateBody } = require('../utils/validation')
 const { normalizeMemberIds, validateProjectStatusChange, calculateProjectOverdue, allowedProjectStatuses } = require('../services/productProjectRules')
 const { groupOperationLogs } = require('../utils/operationHistory')
 const { formatHistoryChanges, serializeMemberIds } = require('../utils/productProjectHistory')
+const { DEFAULT_PRIORITY, parsePriority } = require('../services/priorityRules')
 
-const DETAIL_FIELD_ORDER = ['name', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'description', 'start_date', 'expected_end_date', 'progress_text', 'risk_text', 'status', 'is_overdue', 'actual_end_date', 'suspend_date', 'contract', 'contract_code', 'contract_name', 'contract_supplier', 'contract_signed_date', 'contract_amount', 'contract_remark', 'contract_stages', 'contract_attachment', 'payment', 'payment_stage', 'payment_amount', 'payment_month', 'payment_handler', 'payment_remark']
-const HISTORY_FIELD_LABELS = { name: '项目名称', product_id: '所属产品', requirement_id: '所属需求', owner_id: '负责人', member_ids: '项目成员', description: '项目描述', start_date: '启动日期', expected_end_date: '预计完成日期', progress_text: '进度记录', risk_text: '风险记录', status: '状态', is_overdue: '逾期状态', actual_end_date: '实际完成日期', suspend_date: '暂停日期', contract: '合同信息', contract_code: '合同编码', contract_name: '合同名称', contract_supplier: '供应商', contract_signed_date: '签订时间', contract_amount: '合同金额（元）', contract_remark: '备注', contract_stages: '付款阶段', contract_attachment: '合同附件', payment: '付款记录', payment_stage: '付款阶段', payment_amount: '本次付款金额（元）', payment_month: '付款时间', payment_handler: '经办人', payment_remark: '备注', is_deleted: '删除状态' }
+const DETAIL_FIELD_ORDER = ['name', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'priority', 'description', 'start_date', 'expected_end_date', 'progress_text', 'risk_text', 'status', 'is_overdue', 'actual_end_date', 'suspend_date', 'contract', 'contract_code', 'contract_name', 'contract_supplier', 'contract_signed_date', 'contract_amount', 'contract_remark', 'contract_stages', 'contract_attachment', 'payment', 'payment_stage', 'payment_amount', 'payment_month', 'payment_handler', 'payment_remark']
+const HISTORY_FIELD_LABELS = { name: '项目名称', product_id: '所属产品', requirement_id: '所属需求', owner_id: '负责人', member_ids: '项目成员', priority: '优先级', description: '项目描述', start_date: '启动日期', expected_end_date: '预计完成日期', progress_text: '进度记录', risk_text: '风险记录', status: '状态', is_overdue: '逾期状态', actual_end_date: '实际完成日期', suspend_date: '暂停日期', contract: '合同信息', contract_code: '合同编码', contract_name: '合同名称', contract_supplier: '供应商', contract_signed_date: '签订时间', contract_amount: '合同金额（元）', contract_remark: '备注', contract_stages: '付款阶段', contract_attachment: '合同附件', payment: '付款记录', payment_stage: '付款阶段', payment_amount: '本次付款金额（元）', payment_month: '付款时间', payment_handler: '经办人', payment_remark: '备注', is_deleted: '删除状态' }
 const HISTORY_DATE_FIELDS = new Set(['start_date', 'expected_end_date', 'actual_end_date', 'suspend_date', 'contract_signed_date'])
 
 const schema = {
@@ -20,7 +21,7 @@ const schema = {
 
 const fields = `p.id, p.name, p.description, p.product_id, product.name product_name,
   p.requirement_id, requirement.title requirement_name,
-  p.owner_id, owner.real_name owner_name, p.status, p.is_overdue, p.start_date,
+  p.owner_id, owner.real_name owner_name, p.priority, p.status, p.is_overdue, p.start_date,
   p.expected_end_date, p.actual_end_date, p.suspend_date, p.progress_text, p.risk_text,
   p.creator_id, creator.real_name creator_name, p.updater_id, updater.real_name updater_name,
   p.created_at, p.updated_at,
@@ -50,6 +51,7 @@ function where(q) {
   }
   if (q.joined_user_id) { sql += ' AND EXISTS (SELECT 1 FROM pms_project_member pm WHERE pm.project_id = p.id AND pm.user_id = ?)'; params.push(Number(q.joined_user_id)) }
   if (q.status !== undefined && q.status !== '') { sql += ' AND p.status = ?'; params.push(Number(q.status)) }
+  if (q.priority !== undefined && q.priority !== '') { sql += ' AND p.priority = ?'; params.push(Number(q.priority)) }
   if (q.is_overdue !== undefined && q.is_overdue !== '') { sql += ' AND p.is_overdue = ?'; params.push(Number(q.is_overdue)) }
   if (q.expected_end_date_from) { sql += ' AND p.expected_end_date >= ?'; params.push(q.expected_end_date_from) }
   if (q.expected_end_date_to) { sql += ' AND p.expected_end_date <= ?'; params.push(q.expected_end_date_to) }
@@ -69,7 +71,7 @@ exports.list = async (req, res) => {
   try {
     const { page, pageSize, offset } = parsePagination(req.query)
     const condition = where(req.query)
-    const sortMap = { name: 'p.name', productName: 'product.name', requirementName: 'requirement.title', ownerName: 'owner.real_name', status: 'p.status', startDate: 'p.start_date', expectedEndDate: 'p.expected_end_date', members: "COALESCE((SELECT STRING_AGG(u.real_name, '、' ORDER BY u.real_name) FROM pms_project_member pm JOIN pms_user u ON u.id = pm.user_id WHERE pm.project_id = p.id), '')", creatorName: 'creator.real_name', createdAt: 'p.created_at' }
+    const sortMap = { name: 'p.name', productName: 'product.name', requirementName: 'requirement.title', ownerName: 'owner.real_name', priority: 'p.priority', status: 'p.status', startDate: 'p.start_date', expectedEndDate: 'p.expected_end_date', members: "COALESCE((SELECT STRING_AGG(u.real_name, '、' ORDER BY u.real_name) FROM pms_project_member pm JOIN pms_user u ON u.id = pm.user_id WHERE pm.project_id = p.id), '')", creatorName: 'creator.real_name', createdAt: 'p.created_at' }
     const sort = sortMap[req.query.sort_field] || 'p.created_at'
     const direction = getSortDirection(req.query.sort_order)
     const rows = await db.prepare(baseSelect(`COUNT(*) OVER() total, ${fields}`) + condition.sql + ` ORDER BY ${sort} ${direction}, p.id ${direction} LIMIT ? OFFSET ?`).all(...condition.params, pageSize, offset)
@@ -151,9 +153,9 @@ exports.create = async (req, res) => {
     const operatorId = req.user.id
     const id = await db.transaction(async (tx) => {
       const result = await tx.prepare(`INSERT INTO pms_project
-        (name, description, product_id, requirement_id, owner_id, status, is_overdue, start_date, expected_end_date, progress_text, risk_text, creator_id, updater_id)
-        VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)`)
-        .run(req.body.name.trim(), req.body.description || null, req.body.product_id, req.body.requirement_id, req.body.owner_id, calculateProjectOverdue(req.body.expected_end_date, 0), req.body.start_date || null, req.body.expected_end_date, req.body.progress_text || null, req.body.risk_text || null, operatorId, operatorId)
+        (name, description, product_id, requirement_id, owner_id, priority, status, is_overdue, start_date, expected_end_date, progress_text, risk_text, creator_id, updater_id)
+        VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(req.body.name.trim(), req.body.description || null, req.body.product_id, req.body.requirement_id, req.body.owner_id, DEFAULT_PRIORITY, calculateProjectOverdue(req.body.expected_end_date, 0), req.body.start_date || null, req.body.expected_end_date, req.body.progress_text || null, req.body.risk_text || null, operatorId, operatorId)
       await replaceMembers(tx, result.lastInsertRowid, req.body.member_ids)
       return result.lastInsertRowid
     })
@@ -220,6 +222,19 @@ exports.toggleStatus = async (req, res) => {
   } catch (error) { console.error(error); fail(res, 500, 500, '操作失败') }
 }
 
+exports.updatePriority = async (req, res) => {
+  try {
+    const priority = parsePriority(req.body.priority)
+    if (priority === null) return failField(res, 'priority', '请选择正确的优先级')
+    const old = await db.prepare('SELECT name, priority FROM pms_project WHERE id = ? AND is_deleted = 0').get(req.params.id)
+    if (!old) return fail(res, 404, 404, '项目不存在')
+    if (Number(old.priority) === priority) return ok(res, null)
+    await db.prepare('UPDATE pms_project SET priority = ?, updater_id = ?, updated_at = NOW() WHERE id = ?').run(priority, req.user.id, req.params.id)
+    await db.writeLog(req.user.id, '调整优先级', '项目', req.params.id, 'priority', old.priority, priority, req.ip, old.name)
+    ok(res, null)
+  } catch (error) { console.error(error); fail(res, 500, 500, '优先级调整失败') }
+}
+
 exports.remove = async (req, res) => {
   try {
     const project = await db.prepare('SELECT name FROM pms_project WHERE id = ? AND is_deleted = 0').get(req.params.id)
@@ -257,6 +272,7 @@ exports.history = async (req, res) => {
       product_id: new Map(products.map((product) => [String(product.id), product.name])),
       requirement_id: new Map(requirements.map((requirement) => [String(requirement.id), requirement.title])),
       owner_id: userLookup,
+      priority: new Map([['0', '低'], ['1', '中'], ['2', '高']]),
       status: new Map([['0', '未开始'], ['1', '进行中'], ['2', '已完成'], ['3', '已暂停']]),
       is_overdue: new Map([['0', '未逾期'], ['1', '已逾期']]),
       is_deleted: new Map([['0', '正常'], ['1', '已删除']]),

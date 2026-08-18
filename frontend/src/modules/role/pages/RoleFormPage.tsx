@@ -13,7 +13,7 @@ import {
   updateRole,
   type RoleFormValues
 } from '../../../api/roleApi';
-import { buildMenuTree, collectTreeKeys } from '../roleMenuTree';
+import { buildMenuTree, collectHalfCheckedKeys, collectTreeKeys } from '../roleMenuTree';
 
 type RoleFormPageProps = {
   mode: 'create' | 'edit';
@@ -123,9 +123,13 @@ export function RoleFormPage({ mode }: RoleFormPageProps) {
           <div className="admin-template-form-page__tree">
             <AdminTree
               checkable
+              checkStrictly
               expandedKeys={expandedMenuIds}
               treeData={menuTree}
-              checkedKeys={menuTree.length ? checkedMenuIds : []}
+              checkedKeys={{
+                checked: menuTree.length ? checkedMenuIds : [],
+                halfChecked: menuTree.length ? collectHalfCheckedKeys(menuTree, checkedMenuIds) : []
+              }}
               onExpand={(keys) => setExpandedMenuIds(keys)}
               onCheck={(keys) => {
                 setCheckedMenuIds(Array.isArray(keys) ? keys : keys.checked);

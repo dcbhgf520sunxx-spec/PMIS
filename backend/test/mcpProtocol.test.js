@@ -536,11 +536,11 @@ test('action schemas require complete create inputs and retry-safe idempotency k
     ['project_create', { name: '项目', product_id: 1, requirement_id: 2, owner_id: 8, expected_end_date: '2026-08-31' }, ['idempotency_key']],
     ['requirement_create', {
       title: '需求', requirement_type: 1, product_id: 1, owner_id: 8,
-      priority: 1, submitter_name: '张三', submit_date: '2026-07-28',
+      submitter_name: '张三', submit_date: '2026-07-28',
     }, ['idempotency_key']],
     ['task_create', {
       name: '任务', source_type: 1, project_id: 1, task_type: 2, owner_ids: [8],
-      priority: 1, expected_end_date: '2026-08-31',
+      expected_end_date: '2026-08-31',
     }, ['idempotency_key']],
     ['bug_create', {
       title: 'BUG', source_type: 1, project_id: 1, bug_type_id: 2, severity: 2, assignee_id: 8,
@@ -582,7 +582,7 @@ test('action schemas require complete create inputs and retry-safe idempotency k
   }
 })
 
-test('task create schemas require priority and expected completion time while update keeps sparse editing', () => {
+test('task create schemas default priority and require expected completion time while update keeps sparse editing', () => {
   const { getToolDefinition } = require('../src/mcp/catalog')
   const cases = [
     ['task_create', {
@@ -599,12 +599,11 @@ test('task create schemas require priority and expected completion time while up
     const definition = getToolDefinition(name, 'action')
     assert.throws(
       () => validateToolArguments(definition, args),
-      /缺少参数：priority、expected_end_date/,
+      /缺少参数：expected_end_date/,
       name
     )
     assert.doesNotThrow(() => validateToolArguments(definition, {
       ...args,
-      priority: 1,
       expected_end_date: '2026-08-31',
     }), name)
   }
@@ -678,7 +677,6 @@ test('action argument validation rejects malformed types, nested values and exec
       project_id: 1,
       task_type: 2,
       owner_ids: [],
-      priority: 1,
       expected_end_date: '2026-08-31',
       idempotency_key: 'task-1',
     }),
