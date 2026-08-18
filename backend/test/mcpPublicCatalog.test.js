@@ -74,6 +74,33 @@ test('public task action resolves to the existing internal command without opera
   })
 })
 
+test('优先级 MCP 使用独立工具并按按钮权限精确暴露', () => {
+  const context = {
+    endpointType: 'action',
+    allowedMenuPaths: allMenus,
+    allowedPermissionCodes: new Set([
+      'project_priority_adjust',
+      'requirement_priority_adjust',
+      'task_priority_adjust',
+    ]),
+  }
+  const names = filterToolsForContext(context).map((tool) => tool.name)
+  assert.ok(names.includes('project_priority'))
+  assert.ok(names.includes('requirement_priority'))
+  assert.ok(names.includes('task_priority'))
+  assert.equal(filterToolsForContext({
+    ...context,
+    allowedPermissionCodes: new Set(['task_priority_adjust']),
+  }).some((tool) => tool.name === 'project_priority'), false)
+
+  assert.deepEqual(resolvePublicTool('task_priority', {
+    operation: 'change_priority', id: 59, priority: 2, mode: 'preview',
+  }, 'action'), {
+    name: 'task_change_priority',
+    args: { id: 59, priority: 2, mode: 'preview' },
+  })
+})
+
 test('generic detail and history tools normalize one target id to internal query commands', () => {
   assert.deepEqual(resolvePublicTool('business_get', {
     domain: 'task',
@@ -118,7 +145,7 @@ test('public action metadata describes operation branches and status-specific fi
 })
 
 test('every public tool and operation branch has complete metadata', () => {
-  assert.equal(publicToolCatalog.length, 34)
+  assert.equal(publicToolCatalog.length, 37)
   for (const tool of publicToolCatalog) {
     assert.ok(tool.title, `${tool.name}缺少标题`)
     assert.ok(tool.description, `${tool.name}缺少说明`)
@@ -137,6 +164,14 @@ test('every public tool and operation branch has complete metadata', () => {
       }
     }
   }
+})
+
+test('项目查询支持优先级筛选、排序和中文返回契约', () => {
+  const projectSearch = getToolDefinition('project_search', 'query')
+  assert.deepEqual(projectSearch.inputSchema.properties.priority.enum, [0, 1, 2])
+  assert.ok(projectSearch.inputSchema.properties.sort_field.enum.includes('priority'))
+  assert.ok(projectSearch.outputSchema.properties.items.items.properties.priority)
+  assert.ok(projectSearch.outputSchema.properties.items.items.properties.priority_label)
 })
 
 test('business option types are reduced to the current employee menu permissions', () => {
@@ -251,6 +286,22 @@ test('business option permission is enforced even when a hidden option type is c
     }),
     (error) => error.code === 'MCP_PERMISSION_DENIED'
   )
+})
+
+test('priority actions require their independent button permission', () => {
+  const { validateToolPermission } = require('../src/mcp/dispatcher')
+  const definition = getToolDefinition('task_change_priority', 'action')
+  assert.throws(
+    () => validateToolPermission(definition, { id: 59, priority: 1 }, {
+      allowedMenuPaths: new Set(['/tasks']),
+      allowedPermissionCodes: new Set(),
+    }),
+    (error) => error.code === 'MCP_PERMISSION_DENIED'
+  )
+  assert.doesNotThrow(() => validateToolPermission(definition, { id: 59, priority: 1 }, {
+    allowedMenuPaths: new Set(['/tasks']),
+    allowedPermissionCodes: new Set(['task_priority_adjust']),
+  }))
 })
 
 test('invalid public operation returns an exact field error', () => {

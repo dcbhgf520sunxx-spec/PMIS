@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Button, Dropdown } from 'antd';
 import type { ButtonProps } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import { CheckOutlined, SearchOutlined } from '@ant-design/icons';
 import { AdminInput } from '../AdminInput';
 import './index.css';
 
@@ -12,15 +12,29 @@ export type AdminSearchDropdownOption = {
   searchText?: string;
 };
 
-type AdminSearchDropdownProps = {
+type AdminSearchDropdownBaseProps = {
   options: AdminSearchDropdownOption[];
   children: ReactNode;
   disabled?: boolean;
   placeholder?: string;
   emptyText?: string;
   buttonProps?: ButtonProps;
-  onSelect: (value: string, option: AdminSearchDropdownOption) => void | Promise<void>;
+  confirmText?: string;
 };
+
+type AdminSearchDropdownSingleProps = AdminSearchDropdownBaseProps & {
+  multiple?: false;
+  onSelect: (value: string, option: AdminSearchDropdownOption) => void | Promise<void>;
+  onConfirm?: never;
+};
+
+type AdminSearchDropdownMultipleProps = AdminSearchDropdownBaseProps & {
+  multiple: true;
+  onSelect?: never;
+  onConfirm: (values: string[]) => void | Promise<void>;
+};
+
+type AdminSearchDropdownProps = AdminSearchDropdownSingleProps | AdminSearchDropdownMultipleProps;
 
 function textOf(value: ReactNode) {
   if (typeof value === 'string' || typeof value === 'number') return String(value);
@@ -34,10 +48,14 @@ export function AdminSearchDropdown({
   placeholder = '请输入关键字',
   emptyText = '暂无数据',
   buttonProps,
-  onSelect
+  multiple = false,
+  onSelect,
+  onConfirm,
+  confirmText = '下一步'
 }: AdminSearchDropdownProps) {
   const [open, setOpen] = useState(false);
   const [keyword, setKeyword] = useState('');
+  const [selectedValues, setSelectedValues] = useState<string[]>([]);
   const filteredOptions = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
     if (!normalizedKeyword) return options;
@@ -55,7 +73,8 @@ export function AdminSearchDropdown({
       disabled={disabled}
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen);
-        if (!nextOpen) setKeyword('');
+        setKeyword('');
+        setSelectedValues([]);
       }}
       popupRender={() => (
         <div className="admin-search-dropdown">
@@ -75,14 +94,20 @@ export function AdminSearchDropdown({
               <button
                 key={option.value}
                 type="button"
-                className="admin-search-dropdown__item"
+                className={`admin-search-dropdown__item${selectedValues.includes(option.value) ? ' is-selected' : ''}`}
                 onClick={async () => {
-                  await onSelect(option.value, option);
+                  if (multiple) {
+                    setSelectedValues((current) => current.includes(option.value)
+                      ? current.filter((value) => value !== option.value)
+                      : [...current, option.value]);
+                    return;
+                  }
+                  await onSelect?.(option.value, option);
                   setOpen(false);
-                  setKeyword('');
                 }}
               >
-                {option.label}
+                <span>{option.label}</span>
+                {multiple && selectedValues.includes(option.value) ? <CheckOutlined /> : null}
               </button>
             )) : (
               <div className="admin-search-dropdown__empty">
@@ -90,6 +115,25 @@ export function AdminSearchDropdown({
               </div>
             )}
           </div>
+          {multiple ? (
+            <div className="admin-search-dropdown__footer">
+              <span>已选择 {selectedValues.length} 项</span>
+              <div className="admin-search-dropdown__footer-actions">
+                <Button size="small" onClick={() => setOpen(false)}>取消</Button>
+                <Button
+                  type="primary"
+                  size="small"
+                  disabled={selectedValues.length === 0}
+                  onClick={async () => {
+                    await onConfirm?.(selectedValues);
+                    setOpen(false);
+                  }}
+                >
+                  {confirmText}
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </div>
       )}
     >

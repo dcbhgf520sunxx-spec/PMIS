@@ -112,11 +112,19 @@ function createMcpAuth({
       throw new McpAuthError('当前员工已停用', 403)
     }
 
+    const [allowedMenuPaths, allowedPermissionCodes] = await Promise.all([
+      permissions.getAllowedMenuPaths(user.id),
+      permissions.getAllowedPermissionCodes
+        ? permissions.getAllowedPermissionCodes(user.id)
+        : Promise.resolve(new Set()),
+    ])
+
     return {
       endpointType,
       client,
       user: { id: user.id, employeeNo: user.employee_no, realName: user.real_name },
-      allowedMenuPaths: await permissions.getAllowedMenuPaths(user.id),
+      allowedMenuPaths,
+      allowedPermissionCodes,
       ip: req.ip || req.socket?.remoteAddress || null,
       requestId: req.requestId,
       auditRequestId: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(req.requestId || ''))

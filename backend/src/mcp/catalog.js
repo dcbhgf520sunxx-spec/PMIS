@@ -15,14 +15,14 @@ const QUERY_TOOLS = [
 
 const ACTION_TOOLS = [
   ['product_create', '/products'], ['product_update', '/products'], ['product_change_status', '/products'], ['product_delete', '/products'],
-  ['project_create', '/projects'], ['project_update', '/projects'], ['project_change_status', '/projects'], ['project_delete', '/projects'],
+  ['project_create', '/projects'], ['project_update', '/projects'], ['project_change_priority', '/projects'], ['project_change_status', '/projects'], ['project_delete', '/projects'],
   ['stage_create', '/projects'], ['stage_update', '/projects'], ['stage_reorder', '/projects'], ['stage_delete', '/projects'],
   ['stage_item_create', '/projects'], ['stage_item_batch_create', '/projects'], ['stage_item_update', '/projects'],
   ['stage_item_reorder', '/projects'], ['stage_item_change_status', '/projects'], ['stage_item_adjust', '/projects'], ['stage_item_delete', '/projects'],
   ['contract_create', '/projects'], ['contract_update', '/projects'], ['contract_delete', '/projects'],
   ['payment_create', '/projects'], ['payment_update', '/projects'], ['payment_delete', '/projects'],
-  ['requirement_create', '/requirements'], ['requirement_update', '/requirements'], ['requirement_change_status', '/requirements'], ['requirement_delete', '/requirements'],
-  ['task_create', '/tasks'], ['task_create_subtask', '/tasks'], ['task_update', '/tasks'], ['task_assign', '/tasks'], ['task_change_status', '/tasks'], ['task_delete', '/tasks'],
+  ['requirement_create', '/requirements'], ['requirement_update', '/requirements'], ['requirement_change_priority', '/requirements'], ['requirement_change_status', '/requirements'], ['requirement_delete', '/requirements'],
+  ['task_create', '/tasks'], ['task_create_subtask', '/tasks'], ['task_update', '/tasks'], ['task_assign', '/tasks'], ['task_change_priority', '/tasks'], ['task_change_status', '/tasks'], ['task_delete', '/tasks'],
   ['bug_create', '/bugs'], ['bug_update', '/bugs'], ['bug_assign', '/bugs'], ['bug_change_status', '/bugs'], ['bug_delete', '/bugs'],
   ['work_order_create', '/work-orders'], ['work_order_update', '/work-orders'], ['work_order_assign', '/work-orders'], ['work_order_change_status', '/work-orders'], ['work_order_delete', '/work-orders'],
   ['contract_attachment_upload', '/projects'], ['contract_attachment_delete', '/projects'],
@@ -161,7 +161,7 @@ const querySchemas = {
     page_size: withDescription('page_size', { type: 'integer', minimum: 1, maximum: 100 }),
   },
   product_search: fields(['name', 'owner_ids', 'status', 'creator_id', 'created_at_from', 'created_at_to', 'sort_field', 'sort_order', 'page', 'page_size']),
-  project_search: fields(['name', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'status', 'is_overdue', 'expected_end_date_from', 'expected_end_date_to', 'creator_id', 'created_at_from', 'created_at_to', 'view', 'sort_field', 'sort_order', 'page', 'page_size']),
+  project_search: fields(['name', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'priority', 'status', 'is_overdue', 'expected_end_date_from', 'expected_end_date_to', 'creator_id', 'created_at_from', 'created_at_to', 'view', 'sort_field', 'sort_order', 'page', 'page_size']),
   stage_plan_search: fields(['keyword', 'project_id', 'owner_id', 'status', 'is_overdue', 'sort_field', 'sort_order', 'page', 'page_size']),
   contract_search: fields(['keyword', 'project_id', 'supplier_id', 'signed_date_from', 'signed_date_to', 'sort_field', 'sort_order', 'page', 'page_size']),
   payment_search: fields(['keyword', 'project_id', 'stage_id', 'handler_id', 'payment_month_from', 'payment_month_to', 'sort_field', 'sort_order', 'page', 'page_size']),
@@ -214,16 +214,19 @@ const actionFields = {
   product_delete: ['id'],
   project_create: ['name', 'description', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'start_date', 'expected_end_date', 'progress_text', 'risk_text'],
   project_update: ['id', 'name', 'description', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'start_date', 'expected_end_date', 'progress_text', 'risk_text'],
+  project_change_priority: ['id', 'priority'],
   project_change_status: ['id', 'status', 'actual_end_date', 'suspend_date'],
   project_delete: ['id'],
   requirement_create: ['title', 'description', 'requirement_type', 'product_id', 'owner_id', 'submitter_name', 'submitter_dept', 'submit_date', 'start_date', 'expected_end_date'],
   requirement_update: ['id', 'title', 'description', 'requirement_type', 'product_id', 'owner_id', 'submitter_name', 'submitter_dept', 'submit_date', 'start_date', 'expected_end_date'],
+  requirement_change_priority: ['id', 'priority'],
   requirement_change_status: ['id', 'status', 'actual_end_date', 'completion_status', 'pause_date'],
   requirement_delete: ['id'],
   task_create: ['name', 'description', 'source_type', 'project_id', 'requirement_id', 'task_type', 'owner_ids', 'start_date', 'expected_end_date'],
   task_create_subtask: ['parent_id', 'name', 'description', 'task_type', 'owner_ids', 'start_date', 'expected_end_date'],
   task_update: ['id', 'name', 'description', 'source_type', 'project_id', 'requirement_id', 'task_type', 'owner_ids', 'start_date', 'expected_end_date'],
   task_assign: ['ids', 'owner_ids'],
+  task_change_priority: ['id', 'priority'],
   task_change_status: ['id', 'status', 'actual_end_date', 'suspend_date'],
   task_delete: ['id'],
   bug_create: ['title', 'description', 'source_type', 'project_id', 'requirement_id', 'bug_type_id', 'severity', 'assignee_id'],
@@ -264,13 +267,16 @@ const actionRequired = {
   product_update: ['id'], product_change_status: ['id', 'status'], product_delete: ['id'],
   project_create: ['name', 'product_id', 'requirement_id', 'owner_id', 'expected_end_date', 'idempotency_key'],
   project_update: ['id'],
+  project_change_priority: ['id', 'priority'],
   project_change_status: ['id', 'status'], project_delete: ['id'],
   requirement_create: ['title', 'requirement_type', 'product_id', 'owner_id', 'submitter_name', 'submit_date', 'idempotency_key'],
   requirement_update: ['id'],
+  requirement_change_priority: ['id', 'priority'],
   requirement_change_status: ['id', 'status'], requirement_delete: ['id'],
   task_create: ['name', 'source_type', 'task_type', 'owner_ids', 'expected_end_date', 'idempotency_key'],
   task_create_subtask: ['parent_id', 'name', 'task_type', 'owner_ids', 'expected_end_date', 'idempotency_key'],
   task_update: ['id'], task_assign: ['ids', 'owner_ids'],
+  task_change_priority: ['id', 'priority'],
   task_change_status: ['id', 'status'], task_delete: ['id'],
   bug_create: ['title', 'source_type', 'bug_type_id', 'severity', 'assignee_id', 'idempotency_key'],
   bug_update: ['id'],
@@ -621,6 +627,7 @@ function actionTitle(name) {
     if (operation === 'create_subtask') return '新增子任务'
     if (operation === 'update') return `编辑${entity}`
     if (operation === 'assign') return `批量指派${entity}`
+    if (operation === 'change_priority') return `调整${entity}优先级`
     if (operation === 'change_status') return `变更${entity}状态`
     if (operation === 'delete') return `删除${entity}`
   }
@@ -683,7 +690,8 @@ const SEARCH_OUTPUT_FIELDS = {
   project_search: {
     id: outputField('项目标识'), name: outputField('项目名称'), product_name: outputField('所属产品名称'),
     requirement_id: outputField('所属需求标识'), requirement_name: outputField('所属需求名称'),
-    owner_name: outputField('负责人姓名'), status: outputField('项目状态代码'),
+    owner_name: outputField('负责人姓名'), priority: outputField('优先级代码'),
+    priority_label: outputField('优先级中文名称'), status: outputField('项目状态代码'),
     status_label: outputField('项目状态中文名称'), is_overdue: outputField('逾期代码'),
     is_overdue_label: outputField('逾期状态中文名称'), expected_end_date: outputField('预计完成日期，YYYY-MM-DD'),
     created_at: outputField('创建时间，ISO 8601日期时间'),
@@ -741,6 +749,12 @@ const SEARCH_OUTPUT_FIELDS = {
     download_url: outputField('绑定当前员工、短时有效的HTTPS下载地址'),
     delivery_mode: outputField('固定为 temporary_url，表示不内联文件内容'),
   },
+}
+
+const ACTION_PERMISSION_CODES = {
+  project_change_priority: 'project_priority_adjust',
+  requirement_change_priority: 'requirement_priority_adjust',
+  task_change_priority: 'task_priority_adjust',
 }
 
 function resultItemSchema(name) {
@@ -941,6 +955,7 @@ function baseDefinition([name, menuPath], endpointType) {
     _meta: {
       endpointType,
       menuPath,
+      permissionCode: ACTION_PERMISSION_CODES[name] || null,
       requiresSourceTarget: endpointType === 'action' && SOURCE_TARGET_ACTIONS.has(name),
       requiresChanges: editableFields.length > 0,
       editableFields,
@@ -977,16 +992,19 @@ const PUBLIC_ACTION_GROUPS = [
     create: 'project_create', update: 'project_update', delete: 'project_delete',
   }],
   ['project_status', '项目状态变更', { change_status: 'project_change_status' }],
+  ['project_priority', '项目优先级调整', { change_priority: 'project_change_priority' }],
   ['requirement_manage', '需求新增、编辑或删除', {
     create: 'requirement_create', update: 'requirement_update', delete: 'requirement_delete',
   }],
   ['requirement_status', '需求状态变更', { change_status: 'requirement_change_status' }],
+  ['requirement_priority', '需求优先级调整', { change_priority: 'requirement_change_priority' }],
   ['task_manage', '任务新增、创建子任务、编辑或删除', {
     create: 'task_create', create_subtask: 'task_create_subtask', update: 'task_update', delete: 'task_delete',
   }],
   ['task_flow', '任务指派或状态变更', {
     assign: 'task_assign', change_status: 'task_change_status',
   }],
+  ['task_priority', '任务优先级调整', { change_priority: 'task_change_priority' }],
   ['bug_manage', 'BUG新增、编辑或删除', {
     create: 'bug_create', update: 'bug_update', delete: 'bug_delete',
   }],
@@ -1123,6 +1141,9 @@ function publicActionDefinition([name, title, operations]) {
     _meta: {
       endpointType: 'action',
       menuPath: definitions[0]._meta.menuPath,
+      permissionCode: definitions.every((definition) => definition._meta.permissionCode === definitions[0]._meta.permissionCode)
+        ? definitions[0]._meta.permissionCode
+        : null,
       operations,
     },
   }
@@ -1256,6 +1277,9 @@ function scopeBusinessAttachmentSearch(tool, allowedMenuPaths) {
 function filterToolsForContext(context) {
   return publicToolCatalog.filter((tool) => {
     if (tool._meta.endpointType !== context.endpointType) return false
+    if (tool._meta.permissionCode
+      && !(context.allowedPermissionCodes instanceof Set
+        && context.allowedPermissionCodes.has(tool._meta.permissionCode))) return false
     if (tool.name === 'business_attachment_search') {
       return context.allowedMenuPaths.has('/projects') || context.allowedMenuPaths.has('/products')
     }

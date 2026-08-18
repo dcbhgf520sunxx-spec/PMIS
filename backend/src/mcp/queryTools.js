@@ -46,6 +46,7 @@ const RESULT_ENUMS = {
   product: { status: { 0: '停用', 1: '启用' } },
   project: {
     status: { 0: '未开始', 1: '进行中', 2: '已完成', 3: '已暂停' },
+    priority: { 0: '低', 1: '中', 2: '高' },
     is_overdue: { 0: '未逾期', 1: '已逾期' },
   },
   stage_plan: {

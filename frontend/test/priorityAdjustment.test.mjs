@@ -75,6 +75,21 @@ test('三个 API 提供独立优先级调整接口且项目契约包含优先级
   assert.match(types, /priority: ProjectPriority/)
 })
 
+test('任务列表批量调整优先级复用统一组件和独立按钮权限', () => {
+  const list = read('src/modules/task/pages/TaskListPage.tsx')
+  const batch = read('src/modules/task/pages/useTaskBatchActions.tsx')
+  const api = read('src/api/taskApi.ts')
+  assert.match(list, /batch\.priorityAction/)
+  assert.doesNotMatch(list, /batch\.priorityModal/)
+  assert.match(batch, /<PriorityChangeAction/)
+  assert.match(batch, /permission="task_priority_adjust"/)
+  assert.doesNotMatch(batch, /priorityModal:\s*<AdminModal/)
+  assert.match(batch, /batchUpdateTaskPriority/)
+  assert.match(batch, /批量调整优先级/)
+  assert.match(api, /export async function batchUpdateTaskPriority/)
+  assert.match(api, /\/tasks\/batch-priority/)
+})
+
 test('组件工作台展示优先级调整操作示例', () => {
   const demo = read('src/modules/design-system/pages/demos/OverlayTemplateDemo.tsx')
   assert.match(demo, /PriorityChangeAction/)

@@ -20,7 +20,7 @@ export type StatusChangeActionProps<T extends StatusFlowValue = StatusFlowValue>
   ComponentProps<typeof PermissionButton>,
   'children' | 'onClick' | 'title' | 'variant'
 > & {
-  current: T;
+  current?: T;
   currentValue: ReactNode;
   options: ReadonlyArray<StatusChangeOption<T>>;
   children?: ReactNode;
@@ -86,7 +86,7 @@ export function StatusChangeAction<T extends StatusFlowValue = StatusFlowValue>(
         currentValue={currentValue}
         targetValue={target}
         formValues={formValues}
-        targetOptions={options.filter((item) => item.value !== current)}
+        targetOptions={options.filter((item) => current === undefined || item.value !== current)}
         targetText={selectedOption?.label}
         currentLabel={currentLabel}
         targetLabel={targetLabel}

@@ -1,6 +1,6 @@
 import type { DefaultOptionType } from 'antd/es/select';
 import {
-  AdminCard, AdminCascader, AdminDatePicker, AdminRangePicker, AdminSelect,
+  AdminCard, AdminCascader, AdminDatePicker, AdminRangePicker, AdminSearchDropdown, AdminSelect,
   AdminTimePicker, AdminTreeSelect
 } from '../../../../../components/admin';
 import { ComponentEntry } from '../../components/ComponentEntry';
@@ -116,6 +116,18 @@ export function SelectionInputExamples() {
                   defaultValue={['daily', 'other']}
                   options={selectOptions}
                 />
+              </div>
+              <div className="design-system-page__input-demo">
+                <h4>搜索动作下拉（多选）</h4>
+                <ComponentEntry name="AdminSearchDropdown" />
+                <AdminSearchDropdown
+                  multiple
+                  placeholder="搜索负责人"
+                  options={selectOptions}
+                  onConfirm={() => undefined}
+                >
+                  批量指派
+                </AdminSearchDropdown>
               </div>
             </div>
           </section>

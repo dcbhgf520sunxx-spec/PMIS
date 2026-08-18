@@ -65,6 +65,16 @@ test('三个优先级调整接口使用独立按钮权限', () => {
   }
 })
 
+test('任务批量调整优先级复用独立按钮权限并记录每条变更', () => {
+  const route = read('src/routes/task.js')
+  const controller = read('src/controllers/taskController.js')
+  assert.match(route, /router\.put\('\/batch-priority', checkPermissionCode\('task_priority_adjust'\), controller\.batchUpdatePriority\)/)
+  assert.match(controller, /exports\.batchUpdatePriority/)
+  assert.match(controller, /parsePriority\(req\.body\.priority\)/)
+  assert.match(controller, /'\u6279\u91cf调整优先级'/)
+  assert.match(controller, /updated, requested: ids\.length/)
+})
+
 test('按钮权限沿用菜单和角色权限表、名称与页面按钮一致且默认只授予管理员', () => {
   const schema = read('db/init/001_schema.sql')
   for (const code of [
