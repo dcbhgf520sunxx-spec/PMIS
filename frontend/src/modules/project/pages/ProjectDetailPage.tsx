@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { App } from 'antd';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { DeleteConfirmAction, DetailMetaList, HistoryTimelineSection, PermissionButton, TemplateDetailPage, TemplateDetailSection, usePageReturnNavigation } from '../../../components/admin';
+import { DeleteConfirmAction, DetailMetaList, HistoryTimelineSection, PermissionButton, PriorityChangeAction, TemplateDetailPage, TemplateDetailSection, usePageReturnNavigation } from '../../../components/admin';
 import type { HistoryTimelineItem } from '../../../components/admin';
-import { deleteProject, getProject, getProjectHistory, updateProjectStatus } from '../../../api/projectApi';
+import { deleteProject, getProject, getProjectHistory, updateProjectPriority, updateProjectStatus } from '../../../api/projectApi';
 import type { ProjectHistoryItem } from '../../../api/projectApi';
 import type { ProjectRecord } from '../types';
-import { renderProjectOverdue } from '../helpers';
+import { renderProjectOverdue, renderProjectPriority } from '../helpers';
 import { ProjectStatusChangeAction, renderProjectStatus } from '../components/ProjectStatusChangeAction';
 
 const dateValue = (value: unknown) => value && typeof value === 'object' && 'format' in value && typeof value.format === 'function' ? value.format('YYYY-MM-DD') : undefined;
@@ -79,11 +79,13 @@ export function ProjectDetailPage() {
       actions={row ? (
         <>
           <PermissionButton permission="project" type="primary" onClick={() => navigateWithReturn(`/projects/${row.id}/edit`)}>编辑</PermissionButton>
+          <PriorityChangeAction permission="project_priority_adjust" current={row.priority} onConfirm={async (priority) => { await updateProjectPriority(row.id, priority); message.success('优先级调整成功'); load(); }} />
           <DeleteConfirmAction entityName="项目" targetName={row.name} successMessage="删除成功" onConfirm={async () => { await deleteProject(row.id); returnToSource(); }}>删除</DeleteConfirmAction>
         </>
       ) : null}
       statusSection={row ? { items: [
         { label: '项目状态', value: renderProjectStatus(row.status), wide: true },
+        { label: '优先级', value: renderProjectPriority(row.priority), wide: true },
         { label: '逾期状态', value: renderProjectOverdue(row.isOverdue, row.expectedEndDate), wide: true },
       ] } : null}
       statusAction={row ? <ProjectStatusChangeAction block type="primary" project={row} onConfirm={async (status, values) => {

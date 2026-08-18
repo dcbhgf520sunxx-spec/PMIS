@@ -21,3 +21,18 @@ export function buildMenuTree(menus: MenuRecord[]): DataNode[] {
 export function collectTreeKeys(nodes: DataNode[]): Key[] {
   return nodes.flatMap((node) => [node.key, ...collectTreeKeys(node.children || [])]);
 }
+
+export function collectHalfCheckedKeys(nodes: DataNode[], checkedKeys: Key[]): Key[] {
+  const checkedKeySet = new Set(checkedKeys);
+  const halfCheckedKeys: Key[] = [];
+
+  const hasCheckedNode = (node: DataNode): boolean => {
+    const hasCheckedChild = (node.children || []).map(hasCheckedNode).some(Boolean);
+    const isChecked = checkedKeySet.has(node.key);
+    if (!isChecked && hasCheckedChild) halfCheckedKeys.push(node.key);
+    return isChecked || hasCheckedChild;
+  };
+
+  nodes.forEach(hasCheckedNode);
+  return halfCheckedKeys;
+}

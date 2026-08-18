@@ -46,6 +46,7 @@ export function ProjectFormPage({ mode }: { mode: 'create' | 'edit' }) {
 
   useEffect(() => {
     setLoading(true);
+    setInitial(mode === 'create' ? { priority: 0 } : undefined);
     Promise.all([
       getProductOptions().then((value) => setProducts(value.filter((item) => item.status === 1))),
       getProjectRequirementOptions({ availableOnly: true, projectId: mode === 'edit' ? params.id : undefined }).then(setRequirements),
@@ -55,6 +56,7 @@ export function ProjectFormPage({ mode }: { mode: 'create' | 'edit' }) {
           name: row.name,
           productId: row.productId,
           requirementId: row.requirementId,
+          priority: row.priority,
           ownerId: row.ownerId,
           memberIds: row.memberIds,
           startDate: row.startDate || undefined,
@@ -93,6 +95,7 @@ export function ProjectFormPage({ mode }: { mode: 'create' | 'edit' }) {
         <AdminProFormSelect name="productId" label="所属产品" options={products} rules={[{ required: true, message: '请选择所属产品' }]} fieldProps={{ onChange: handleProductChange }} />
         <AdminProFormSelect name="requirementId" label="所属需求" options={requirementOptions} rules={[{ required: true, message: '请选择所属需求' }]} fieldProps={{ onChange: handleRequirementChange }} />
         <AdminProFormSelect name="ownerId" label="负责人" options={users} rules={[{ required: true, message: '请选择负责人' }]} />
+        <AdminProFormSelect name="priority" label="优先级" options={[{ label: '低', value: 0 }, { label: '中', value: 1 }, { label: '高', value: 2 }]} disabled />
         <AdminProFormDatePicker name="startDate" label="启动时间" />
         <AdminProFormDatePicker name="expectedEndDate" label="预计完成时间" rules={[{ required: true, message: '请选择预计完成时间' }]} />
         <AdminProFormSelect name="memberIds" label="项目成员" mode="multiple" options={users} />

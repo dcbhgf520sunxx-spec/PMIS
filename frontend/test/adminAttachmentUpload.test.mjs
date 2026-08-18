@@ -105,6 +105,14 @@ test('两个附件组件共用上传状态、失败重试、预览、下载和�
   assert.match(styles, /@media\s*\(max-width:\s*760px\)/);
 });
 
+test('上传失败的临时附件只从本地列表移除且不调用业务删除接口', () => {
+  const source = read('src/components/admin/AdminAttachmentUpload/index.tsx');
+
+  assert.match(source, /if \(attachment\.status === 'done' && onRemove\) await onRemove\(attachment\)/);
+  assert.match(source, /attachment\.status === 'error' \|\| \(attachment\.status === 'done' && onRemove\)/);
+  assert.doesNotMatch(source, /if \(onRemove\) await onRemove\(attachment\)/);
+});
+
 test('已上传附件保持单行紧凑布局且窄屏不把操作换行', () => {
   const source = read('src/components/admin/AdminAttachmentUpload/index.tsx');
   const styles = read('src/components/admin/AdminAttachmentUpload/index.css');

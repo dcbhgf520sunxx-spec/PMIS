@@ -302,6 +302,7 @@ function collectSemanticViolations(files) {
     'AdminTextAction',
     'StatusConfirmAction',
     'StatusChangeAction',
+    'PriorityChangeAction',
     'DeleteConfirmAction',
     'ConfirmAction',
     'AdminActionDropdown'
@@ -309,6 +310,7 @@ function collectSemanticViolations(files) {
   const textVariantActions = new Set([
     'StatusConfirmAction',
     'StatusChangeAction',
+    'PriorityChangeAction',
     'DeleteConfirmAction',
     'ConfirmAction'
   ]);

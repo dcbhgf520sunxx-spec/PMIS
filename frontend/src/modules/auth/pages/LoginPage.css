@@ -162,9 +162,19 @@
 .login-title.ant-typography {
   margin: 0;
   color: #111c33;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
   font-size: 25px;
   font-weight: 780;
   letter-spacing: 0;
+}
+
+.login-title-code {
+  color: var(--app-primary);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
 }
 
 .login-form {

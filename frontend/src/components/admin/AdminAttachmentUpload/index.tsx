@@ -289,7 +289,7 @@ function AttachmentUpload({
   };
 
   const handleRemove = async (attachment: AdminAttachment) => {
-    if (onRemove) await onRemove(attachment);
+    if (attachment.status === 'done' && onRemove) await onRemove(attachment);
     commit(attachmentsRef.current.filter((item) => item.id !== attachment.id));
   };
 
@@ -387,7 +387,7 @@ function AttachmentUpload({
                     onClick={() => void handleDownload(attachment)}
                   />
                 ) : null}
-                {!readOnly && !disabled && (onRemove || attachment.status !== 'done') ? (
+                {!readOnly && !disabled && (attachment.status === 'error' || (attachment.status === 'done' && onRemove)) ? (
                   <AdminDeleteIconAction
                     entityName="附件"
                     targetName={attachment.name}

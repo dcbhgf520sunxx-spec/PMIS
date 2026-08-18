@@ -63,13 +63,13 @@ export async function checkTaskName(name: string, excludeId?: string) {
 }
 
 const date = (value?: string) => value ? dayjs(value).format('YYYY-MM-DD') : null;
-const payload = (values: TaskFormValues) => ({ name: values.name, description: values.description || null, source_type: values.sourceType, project_id: values.sourceType === 1 ? Number(values.projectId) : null, requirement_id: values.sourceType === 2 ? Number(values.requirementId) : null, owner_ids: values.ownerIds.map(Number), task_type: Number(values.taskType), priority: Number(values.priority), start_date: date(values.startTime), expected_end_date: date(values.expectedEndTime) });
+const payload = (values: TaskFormValues) => ({ name: values.name, description: values.description || null, source_type: values.sourceType, project_id: values.sourceType === 1 ? Number(values.projectId) : null, requirement_id: values.sourceType === 2 ? Number(values.requirementId) : null, owner_ids: values.ownerIds.map(Number), task_type: Number(values.taskType), start_date: date(values.startTime), expected_end_date: date(values.expectedEndTime) });
 
 export async function createTask(values: TaskFormValues) {
   return unwrap<{ id: number }>(request.post('/tasks', payload(values)), objectContract(['id']));
 }
 
-const subtaskPayload = (values: TaskFormValues) => ({ name: values.name, description: values.description || null, owner_ids: values.ownerIds.map(Number), task_type: Number(values.taskType), priority: Number(values.priority), start_date: date(values.startTime), expected_end_date: date(values.expectedEndTime) });
+const subtaskPayload = (values: TaskFormValues) => ({ name: values.name, description: values.description || null, owner_ids: values.ownerIds.map(Number), task_type: Number(values.taskType), start_date: date(values.startTime), expected_end_date: date(values.expectedEndTime) });
 
 export async function createSubtask(parentId: string, values: TaskFormValues) {
   return unwrap<{ id: number }>(request.post(`/tasks/${parentId}/subtasks`, subtaskPayload(values)), objectContract(['id']));
@@ -82,6 +82,10 @@ export async function getSubtasks(parentId: string) {
 
 export async function updateTask(id: string, values: TaskFormValues) {
   return unwrap<null>(request.put(`/tasks/${id}`, payload(values)));
+}
+
+export async function updateTaskPriority(id: string, priority: TaskPriority) {
+  return unwrap<null>(request.put(`/tasks/${id}/priority`, { priority }));
 }
 
 export async function batchAssignTasks(ids: string[], ownerIds: string[]) {

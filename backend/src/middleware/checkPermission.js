@@ -6,13 +6,11 @@ const db = require('../db')
  * @param {string} menuPath - 菜单路径，如 '/users'、'/roles'
  * @returns {Function} Express 中间件
  */
-function checkPermission(menuPath) {
+function createPermissionChecker(lookupSql, value) {
   return async (req, res, next) => {
     try {
       const user = req.user // verifyToken 中间件已注入，字段为 id
-      const menuRow = await db.prepare(
-        'SELECT id FROM pms_menu WHERE path = ? AND is_deleted = 0'
-      ).get(menuPath)
+      const menuRow = await db.prepare(lookupSql).get(value)
       if (!menuRow) {
         return res.status(403).json({ code: 403, message: '权限不足', data: null })
       }
@@ -30,4 +28,12 @@ function checkPermission(menuPath) {
   }
 }
 
-module.exports = { checkPermission }
+function checkPermission(menuPath) {
+  return createPermissionChecker('SELECT id FROM pms_menu WHERE path = ? AND is_deleted = 0 AND status = 1', menuPath)
+}
+
+function checkPermissionCode(permissionCode) {
+  return createPermissionChecker('SELECT id FROM pms_menu WHERE code = ? AND is_deleted = 0 AND status = 1', permissionCode)
+}
+
+module.exports = { checkPermission, checkPermissionCode }

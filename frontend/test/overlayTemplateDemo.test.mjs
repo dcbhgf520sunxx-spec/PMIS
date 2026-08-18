@@ -23,5 +23,5 @@ test('弹窗抽屉模板展示真实可运行组件组合', () => {
   assert.ok(demoSource.includes('<DeleteConfirmAction'));
   assert.ok(demoSource.includes('<AdminDrawer'));
   assert.ok(demoSource.includes('<TemplateDrawerTable<OverlayTableRecord>'));
-  assert.ok(demoSource.includes('ComponentEntry name="AdminModal / StatusChangeAction / DeleteConfirmAction / AdminDrawer / TemplateDrawerTable"'));
+  assert.ok(demoSource.includes('ComponentEntry name="AdminModal / StatusChangeAction / PriorityChangeAction / DeleteConfirmAction / AdminDrawer / TemplateDrawerTable"'));
 });

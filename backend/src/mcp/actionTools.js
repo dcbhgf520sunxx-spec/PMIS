@@ -162,18 +162,18 @@ const UPDATE_SPECS = {
     },
   },
   requirement_update: {
-    sql: `SELECT title, description, requirement_type, product_id, owner_id, priority,
+    sql: `SELECT title, description, requirement_type, product_id, owner_id,
       submitter_name, submitter_dept, submit_date, start_date, expected_end_date
       FROM pms_requirement WHERE id = ? AND is_deleted = 0`,
     params: (args) => [args.id],
-    fields: ['title', 'description', 'requirement_type', 'product_id', 'owner_id', 'priority',
+    fields: ['title', 'description', 'requirement_type', 'product_id', 'owner_id',
       'submitter_name', 'submitter_dept', 'submit_date', 'start_date', 'expected_end_date'],
   },
   task_update: {
-    sql: `SELECT name, description, source_type, project_id, requirement_id, task_type, priority, start_date, expected_end_date
+    sql: `SELECT name, description, source_type, project_id, requirement_id, task_type, start_date, expected_end_date
       FROM pms_task WHERE id = ? AND is_deleted = 0`,
     params: (args) => [args.id],
-    fields: ['name', 'description', 'source_type', 'project_id', 'requirement_id', 'task_type', 'priority', 'start_date', 'expected_end_date'],
+    fields: ['name', 'description', 'source_type', 'project_id', 'requirement_id', 'task_type', 'start_date', 'expected_end_date'],
     relationship: {
       field: 'owner_ids',
       sql: 'SELECT user_id id FROM pms_task_owner WHERE task_id = ? ORDER BY sort_order, user_id',

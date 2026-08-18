@@ -56,7 +56,7 @@ test('action preview loads the current target without invoking a business write'
   })
 })
 
-test('task sparse preview merges current fields before ticket creation', async () => {
+test('task sparse preview merges editable current fields before ticket creation', async () => {
   let ticketArgs
   const currentTask = {
     name: '原任务',
@@ -65,7 +65,6 @@ test('task sparse preview merges current fields before ticket creation', async (
     project_id: 2,
     requirement_id: null,
     task_type: 3,
-    priority: 1,
     start_date: '2026-07-24',
     expected_end_date: '2026-07-31',
   }
@@ -75,7 +74,7 @@ test('task sparse preview merges current fields before ticket creation', async (
       return { async get() { return currentTask } }
     },
   }
-  await dispatchActionTool('task_update', { id: 59, priority: 2, mode: 'preview' }, {
+  await dispatchActionTool('task_update', { id: 59, description: '更新说明', mode: 'preview' }, {
     client: { id: 3 },
     user: { id: 8, employeeNo: '005829', realName: '孙鑫鑫' },
   }, {
@@ -94,7 +93,7 @@ test('task sparse preview merges current fields before ticket creation', async (
     id: 59,
     mode: 'preview',
     ...currentTask,
-    priority: 2,
+    description: '更新说明',
     owner_ids: [8],
   })
 })
@@ -633,7 +632,6 @@ test('edit arguments preserve omitted optional scalar fields from the current re
     },
     pms_requirement: {
       description: '需求说明',
-      priority: 2,
       submitter_dept: '技术部',
       start_date: '2026-07-02',
       expected_end_date: '2026-08-01',
@@ -642,7 +640,6 @@ test('edit arguments preserve omitted optional scalar fields from the current re
       description: '任务说明',
       project_id: 12,
       requirement_id: null,
-      priority: 2,
       start_date: '2026-07-03',
       expected_end_date: '2026-08-02',
     },

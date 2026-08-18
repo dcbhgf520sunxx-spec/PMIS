@@ -18,6 +18,13 @@ test('角色表单和详情复用菜单树工具', () => {
   assert.match(detail, /from '\.\.\/roleMenuTree'/);
 });
 
+test('角色菜单和按钮权限使用严格勾选且互不级联', () => {
+  const form = read('../src/modules/role/pages/RoleFormPage.tsx');
+  const detail = read('../src/modules/role/pages/RoleDetailPage.tsx');
+  assert.match(form, /<AdminTree[\s\S]*?checkStrictly[\s\S]*?checkedKeys=/);
+  assert.match(detail, /<AdminTree[\s\S]*?checkStrictly[\s\S]*?checkedKeys=/);
+});
+
 test('工单暂停使用危险语义，恢复后的目标状态使用自身语义', () => {
   const action = read('../src/modules/work-order/components/WorkOrderStatusChangeAction/index.tsx');
   assert.match(action, /getTransitionTone/);
