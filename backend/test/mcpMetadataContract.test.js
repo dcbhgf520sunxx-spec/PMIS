@@ -7,7 +7,7 @@ const { normalizeToolError } = require('../src/mcp/createServer')
 const { decorateQueryResult } = require('../src/mcp/queryTools')
 
 test('every MCP tool publishes described input fields and an output schema', () => {
-  assert.equal(toolCatalog.length, 77)
+  assert.equal(toolCatalog.length, 80)
   for (const tool of toolCatalog) {
     assert.ok(tool.description, `${tool.name}缺少工具说明`)
     assert.ok(tool.outputSchema, `${tool.name}缺少输出Schema`)
@@ -46,6 +46,7 @@ test('nested MCP input fields are described and update tools are truly sparse', 
 
 test('fixed business enums publish exact values and Chinese mappings', () => {
   const cases = [
+    ['project_search', 'query', 'priority', [0, 1, 2], '0=低，1=中，2=高'],
     ['task_search', 'query', 'priority', [0, 1, 2], '0=低，1=中，2=高'],
     ['task_search', 'query', 'source_type', [1, 2], '1=项目，2=需求'],
     ['task_search', 'query', 'status', [0, 1, 2, 3], '0=待处理'],
@@ -61,6 +62,15 @@ test('fixed business enums publish exact values and Chinese mappings', () => {
     const schema = getToolDefinition(toolName, endpoint).inputSchema.properties[field]
     assert.deepEqual(schema.enum, values, `${toolName}.${field}`)
     assert.match(schema.description, new RegExp(description), `${toolName}.${field}`)
+  }
+})
+
+test('三类优先级操作只暴露 id 和 priority 且保留预览确认流程', () => {
+  for (const name of ['project_change_priority', 'requirement_change_priority', 'task_change_priority']) {
+    const schema = getToolDefinition(name, 'action').inputSchema
+    assert.deepEqual(schema.required, ['id', 'priority'])
+    assert.deepEqual(schema.properties.priority.enum, [0, 1, 2])
+    assert.equal(schema.properties.status, undefined)
   }
 })
 

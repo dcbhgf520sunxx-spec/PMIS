@@ -380,6 +380,7 @@ test('target snapshot verifies an existing task and returns only confirmation-sa
             id: 9,
             name: '原任务名称',
             status: 1,
+            priority: 1,
             source_type: 1,
             project_id: 2,
             requirement_id: null,
@@ -396,6 +397,7 @@ test('target snapshot verifies an existing task and returns only confirmation-sa
     name: '原任务名称',
     current: {
       status: 1,
+      priority: 1,
       source_type: 1,
       project_id: 2,
       requirement_id: null,

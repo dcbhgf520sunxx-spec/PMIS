@@ -322,6 +322,13 @@ function normalizeToolArguments(definition, args) {
 }
 
 function validateToolPermission(definition, args, context) {
+  const permissionCode = definition._meta?.permissionCode
+  if (permissionCode && !(context.allowedPermissionCodes instanceof Set
+    && context.allowedPermissionCodes.has(permissionCode))) {
+    const error = new Error('当前账号没有该按钮操作权限')
+    error.code = 'MCP_PERMISSION_DENIED'
+    throw error
+  }
   if (definition.name === 'business_options' && args.option_type === 'user'
     && context.allowedMenuPaths.size === 0) {
     const error = new Error('当前账号没有可用的业务模块权限')

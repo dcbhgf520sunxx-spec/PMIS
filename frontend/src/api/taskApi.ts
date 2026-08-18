@@ -88,6 +88,13 @@ export async function updateTaskPriority(id: string, priority: TaskPriority) {
   return unwrap<null>(request.put(`/tasks/${id}/priority`, { priority }));
 }
 
+export async function batchUpdateTaskPriority(ids: string[], priority: TaskPriority) {
+  return unwrap<{ updated: number; requested: number }>(request.put('/tasks/batch-priority', {
+    ids: ids.map(Number),
+    priority,
+  }), batchResultContract);
+}
+
 export async function batchAssignTasks(ids: string[], ownerIds: string[]) {
   return unwrap<{ updated: number; requested: number }>(request.put('/tasks/batch-assign', { ids: ids.map(Number), owner_ids: ownerIds.map(Number) }), batchResultContract);
 }

@@ -28,7 +28,7 @@ test('任务批量指派支持搜索并选择多个平级负责人', () => {
   const batch = read('src/modules/task/pages/useTaskBatchActions.tsx');
   const api = read('src/api/taskApi.ts');
 
-  assert.match(batch, /mode="multiple"/);
+  assert.match(batch, /<AdminSearchDropdown[\s\S]*?multiple/);
   assert.match(batch, /assignTargets/);
   assert.match(api, /batchAssignTasks\(ids: string\[\], ownerIds: string\[\]\)/);
 });

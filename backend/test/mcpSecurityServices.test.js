@@ -3,6 +3,7 @@ const crypto = require('node:crypto')
 const test = require('node:test')
 
 const { createMcpAuth, parseBearerToken } = require('../src/middleware/mcpAuth')
+const { getAllowedPermissionCodes } = require('../src/services/mcpPermissionService')
 const { redactAuditInput } = require('../src/services/mcpAuditService')
 const {
   createEmployeeIdentityAssertion,
@@ -25,7 +26,10 @@ test('MCP identity accepts only a short-lived encrypted employee header', async 
           : null
       })
     },
-    permissionService: { getAllowedMenuPaths: async () => new Set(['/projects']) }
+    permissionService: {
+      getAllowedMenuPaths: async () => new Set(['/projects']),
+      getAllowedPermissionCodes: async () => new Set(['project_priority_adjust']),
+    }
   })
   const principal = await auth.resolvePrincipal({
     headers: {
@@ -39,7 +43,22 @@ test('MCP identity accepts only a short-lived encrypted employee header', async 
   assert.equal(principal.user.id, 8)
   assert.equal(principal.user.employeeNo, 'JS001')
   assert.equal(principal.allowedMenuPaths.has('/projects'), true)
+  assert.equal(principal.allowedPermissionCodes.has('project_priority_adjust'), true)
   assert.equal(parseBearerToken('Basic abc'), null)
+})
+
+test('MCP permission service returns independently assigned button codes', async () => {
+  const database = {
+    prepare: () => ({
+      all: async () => [
+        { code: 'task_priority_adjust' },
+        { code: 'project_priority_adjust' },
+        { code: null },
+      ],
+    }),
+  }
+  const codes = await getAllowedPermissionCodes(8, database)
+  assert.deepEqual([...codes], ['task_priority_adjust', 'project_priority_adjust'])
 })
 
 test('MCP identity assertion supports one protocol flow but rejects an exact request replay', async (t) => {

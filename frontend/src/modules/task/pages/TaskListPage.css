@@ -70,4 +70,6 @@
 .task-batch-assign-confirm {
   display: grid;
   gap: 8px;
+  color: var(--app-text-secondary);
+  line-height: 1.7;
 }

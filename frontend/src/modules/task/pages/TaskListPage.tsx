@@ -188,6 +188,7 @@ export function TaskListPage() {
         actions: <>
           {batch.assignAction}
           {sameStatus ? <TaskStatusChangeAction size="small" task={selectedRecords[0]} onConfirm={async (status, values) => { const results = await Promise.all(selectedRecords.map((row) => updateTaskStatus(row.id, status, status === 2 ? { actual_end_date: date(values.actualEndTime) } : status === 3 ? { suspend_date: date(values.suspendTime) } : {}))); message.success(`成功变更 ${selectedRecords.length} 项任务状态`); clearSelection(); await load(); const completed = results.find((result) => result.allSubtasksCompleted); if (completed) promptParentCompletion(completed.parentTaskId); }}>批量状态变更</TaskStatusChangeAction> : <AdminButton size="small" disabled title="请选择状态相同的任务">批量状态变更</AdminButton>}
+          {batch.priorityAction}
           {batch.deleteAction}
         </>
       }}

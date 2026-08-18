@@ -1,6 +1,6 @@
 const SORT_FIELDS = {
   product_search: ['name', 'owner_name', 'description', 'status', 'creator_name', 'created_at'],
-  project_search: ['name', 'product_name', 'requirement_name', 'owner_name', 'status', 'start_date', 'expected_end_date', 'members', 'creator_name', 'created_at'],
+  project_search: ['name', 'product_name', 'requirement_name', 'owner_name', 'priority', 'status', 'start_date', 'expected_end_date', 'members', 'creator_name', 'created_at'],
   requirement_search: ['title', 'requirement_type', 'status', 'product_name', 'owner_name', 'priority', 'submitter_name', 'submit_date', 'expected_end_date', 'creator_name', 'created_at'],
   task_search: ['name', 'source_name', 'owner_names', 'task_type_name', 'priority', 'status', 'expected_end_date', 'created_at'],
   bug_search: ['title', 'source_name', 'assignee_name', 'bug_type_name', 'severity', 'status', 'creator_name', 'created_at'],

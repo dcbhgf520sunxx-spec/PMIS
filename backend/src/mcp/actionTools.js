@@ -22,7 +22,7 @@ const { validateActualBusinessDate } = require('../services/actualBusinessDateRu
 const { invokeController } = require('./controllerAdapter')
 const { unwrapEnvelope } = require('./queryTools')
 
-const highRiskPattern = /(delete|change_status|reorder|adjust|payment|assign|upload|batch)/
+const highRiskPattern = /(delete|change_status|change_priority|reorder|adjust|payment|assign|upload|batch)/
 const ACTUAL_DATE_FIELDS = {
   actual_end_date: '实际完成时间',
   resolved_date: '修复时间',
@@ -47,17 +47,17 @@ const MAIN_TARGETS = {
   project: {
     table: 'pms_project',
     nameColumn: 'name',
-    currentFields: ['status', 'product_id', 'requirement_id', 'owner_id', 'expected_end_date'],
+    currentFields: ['status', 'priority', 'product_id', 'requirement_id', 'owner_id', 'expected_end_date'],
   },
   requirement: {
     table: 'pms_requirement',
     nameColumn: 'title',
-    currentFields: ['status', 'requirement_type', 'product_id', 'owner_id'],
+    currentFields: ['status', 'priority', 'requirement_type', 'product_id', 'owner_id'],
   },
   task: {
     table: 'pms_task',
     nameColumn: 'name',
-    currentFields: ['status', 'source_type', 'project_id', 'requirement_id', 'owner_ids'],
+    currentFields: ['status', 'priority', 'source_type', 'project_id', 'requirement_id', 'owner_ids'],
   },
   bug: {
     table: 'pms_bug',
@@ -713,16 +713,19 @@ const actions = {
   product_delete: [product.remove, (a) => ({ params: { id: id(a) } })],
   project_create: [project.create, (a) => ({ body: cleanBody(a) })],
   project_update: [project.update, (a) => ({ params: { id: id(a) }, body: cleanBody(a) })],
+  project_change_priority: [project.updatePriority, (a) => ({ params: { id: id(a) }, body: cleanBody(a) })],
   project_change_status: [project.toggleStatus, (a) => ({ params: { id: id(a) }, body: cleanBody(a) })],
   project_delete: [project.remove, (a) => ({ params: { id: id(a) } })],
   requirement_create: [requirement.create, (a) => ({ body: cleanBody(a) })],
   requirement_update: [requirement.update, (a) => ({ params: { id: id(a) }, body: cleanBody(a) })],
+  requirement_change_priority: [requirement.updatePriority, (a) => ({ params: { id: id(a) }, body: cleanBody(a) })],
   requirement_change_status: [requirement.toggleStatus, (a) => ({ params: { id: id(a) }, body: cleanBody(a) })],
   requirement_delete: [requirement.remove, (a) => ({ params: { id: id(a) } })],
   task_create: [task.create, (a) => ({ body: cleanBody(a) })],
   task_create_subtask: [task.createSubtask, (a) => ({ params: { id: id(a, 'parent_id') }, body: cleanBody(a) })],
   task_update: [task.update, (a) => ({ params: { id: id(a) }, body: cleanBody(a) })],
   task_assign: [task.batchAssign, (a) => ({ body: cleanBody(a) })],
+  task_change_priority: [task.updatePriority, (a) => ({ params: { id: id(a) }, body: cleanBody(a) })],
   task_change_status: [task.toggleStatus, (a) => ({ params: { id: id(a) }, body: cleanBody(a) })],
   task_delete: [task.remove, (a) => ({ params: { id: id(a) } })],
   bug_create: [bug.create, (a) => ({ body: cleanBody(a) })],
@@ -1100,7 +1103,7 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
   await validateBusinessRules(name, preparedArgs, database)
   const riskLevel = highRiskPattern.test(name) ? 'high' : 'medium'
   const riskReason = riskLevel === 'high'
-    ? '该操作会删除、变更状态、调整顺序、处理金额、批量处理或变更文件'
+    ? '该操作会删除、变更状态或优先级、调整顺序、处理金额、批量处理或变更文件'
     : '该操作会新增或修改PMIS业务数据'
   const target = await loadTarget(name, preparedArgs, database)
   const affectedTargets = [target]

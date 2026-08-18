@@ -344,6 +344,33 @@ exports.updatePriority = async (req, res) => {
   } catch (error) { console.error(error); fail(res, 500, 500, '优先级调整失败') }
 }
 
+exports.batchUpdatePriority = async (req, res) => {
+  try {
+    const ids = [...new Set((Array.isArray(req.body.ids) ? req.body.ids : [])
+      .map(Number).filter((id) => Number.isInteger(id) && id > 0))]
+    const priority = parsePriority(req.body.priority)
+    if (!ids.length) return fail(res, 400, 400, '请选择要调整的任务')
+    if (priority === null) return failField(res, 'priority', '请选择正确的优先级')
+    let updated = 0
+    await db.transaction(async (connection) => {
+      const rows = await connection.prepare(`SELECT id,name,priority FROM pms_task
+        WHERE id IN (${ids.map(() => '?').join(',')}) AND is_deleted=0`).all(...ids)
+      if (rows.length !== ids.length) throw new Error('部分任务不存在或已删除，请刷新后重试')
+      for (const row of rows) {
+        if (Number(row.priority) === priority) continue
+        await connection.prepare('UPDATE pms_task SET priority=?,updater_id=?,updated_at=NOW() WHERE id=?')
+          .run(priority, req.user.id, row.id)
+        await connection.writeLog(req.user.id, '批量调整优先级', '任务', row.id, 'priority', row.priority, priority, req.ip, row.name)
+        updated += 1
+      }
+    })
+    ok(res, { updated, requested: ids.length })
+  } catch (error) {
+    console.error(error)
+    fail(res, 400, 400, error.message || '批量调整优先级失败')
+  }
+}
+
 exports.batchAssign = async (req, res) => {
   try {
     const ids = [...new Set((Array.isArray(req.body.ids) ? req.body.ids : []).map(Number).filter((id) => Number.isInteger(id) && id > 0))]
