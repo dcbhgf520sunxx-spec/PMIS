@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS pms_project (
   product_id BIGINT NOT NULL REFERENCES pms_product(id) ON DELETE RESTRICT,
   requirement_id BIGINT,
   owner_id BIGINT NOT NULL REFERENCES pms_user(id) ON DELETE RESTRICT,
-  priority SMALLINT NOT NULL DEFAULT 0 CHECK (priority IN (0, 1, 2)),
+  priority SMALLINT NOT NULL DEFAULT 0 CHECK (priority IN (0, 1, 2)), -- 新建默认低；历史数据由增量迁移回填为中
   status SMALLINT NOT NULL DEFAULT 0 CHECK (status IN (0, 1, 2, 3)),
   is_overdue SMALLINT NOT NULL DEFAULT 0 CHECK (is_overdue IN (0, 1)),
   start_date DATE,
@@ -319,7 +319,7 @@ CREATE TABLE IF NOT EXISTS pms_requirement (
   requirement_type SMALLINT NOT NULL CHECK (requirement_type IN (1,2,3,4)),
   product_id BIGINT NOT NULL REFERENCES pms_product(id) ON DELETE RESTRICT,
   owner_id BIGINT NOT NULL REFERENCES pms_user(id) ON DELETE RESTRICT,
-  priority SMALLINT NOT NULL DEFAULT 0 CHECK (priority IN (0,1,2)),
+  priority SMALLINT NOT NULL DEFAULT 0 CHECK (priority IN (0,1,2)), -- 新建默认低；历史数据由增量迁移回填为中
   status SMALLINT NOT NULL,
   is_overdue SMALLINT CHECK (is_overdue IN (0,1)),
   submitter_name VARCHAR(50) NOT NULL,
@@ -446,7 +446,7 @@ CREATE TABLE IF NOT EXISTS pms_task (
   project_id BIGINT REFERENCES pms_project(id) ON DELETE RESTRICT,
   requirement_id BIGINT REFERENCES pms_requirement(id) ON DELETE RESTRICT,
   task_type BIGINT NOT NULL REFERENCES pms_archive(id) ON DELETE RESTRICT,
-  priority SMALLINT NOT NULL DEFAULT 0 CHECK (priority IN (0,1,2)),
+  priority SMALLINT NOT NULL DEFAULT 0 CHECK (priority IN (0,1,2)), -- 新建默认低；历史数据由增量迁移回填为中
   status SMALLINT NOT NULL DEFAULT 0 CHECK (status IN (0,1,2,3)),
   is_overdue SMALLINT NOT NULL DEFAULT 0 CHECK (is_overdue IN (0,1)),
   start_date DATE, expected_end_date DATE, actual_end_date DATE, suspend_date DATE,
