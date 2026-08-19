@@ -7,6 +7,7 @@ const {
   publicToolCatalog,
   resolvePublicTool,
 } = require('../src/mcp/catalog')
+const { buildExecutePayload } = require('../src/mcp/dispatcher')
 
 const allMenus = new Set(['/products', '/projects', '/requirements', '/tasks', '/bugs', '/work-orders'])
 
@@ -72,6 +73,49 @@ test('public task action resolves to the existing internal command without opera
       mode: 'preview',
     },
   })
+})
+
+test('preview exposes a directly reusable execute payload for the same public action', () => {
+  const result = buildExecutePayload('task_manage', { operation: 'update' }, {
+    confirmationId: '00000000-0000-4000-8000-000000000001',
+    resultStatus: 'preview',
+    executeArguments: {
+      id: 59,
+      description: '更新说明',
+      owner_ids: [8],
+      mode: 'execute',
+      confirmation_id: '00000000-0000-4000-8000-000000000001',
+    },
+  })
+
+  assert.deepEqual(result.execute_payload, {
+    tool_name: 'task_manage',
+    arguments: {
+      operation: 'update',
+      id: 59,
+      description: '更新说明',
+      owner_ids: [8],
+      mode: 'execute',
+      confirmation_id: '00000000-0000-4000-8000-000000000001',
+    },
+  })
+  assert.equal('executeArguments' in result, false)
+})
+
+test('all action schemas require an explicit mode', () => {
+  for (const tool of filterToolsForContext({
+    endpointType: 'action',
+    allowedMenuPaths: allMenus,
+    allowedPermissionCodes: new Set([
+      'project_priority_adjust',
+      'requirement_priority_adjust',
+      'task_priority_adjust',
+    ]),
+  })) {
+    for (const branch of tool.inputSchema.oneOf || []) {
+      assert.ok(branch.required.includes('mode'), `${tool.name} must require mode`)
+    }
+  }
 })
 
 test('优先级 MCP 使用独立工具并按按钮权限精确暴露', () => {
@@ -145,7 +189,7 @@ test('public action metadata describes operation branches and status-specific fi
 })
 
 test('every public tool and operation branch has complete metadata', () => {
-  assert.equal(publicToolCatalog.length, 37)
+  assert.equal(publicToolCatalog.length, 38)
   for (const tool of publicToolCatalog) {
     assert.ok(tool.title, `${tool.name}缺少标题`)
     assert.ok(tool.description, `${tool.name}缺少说明`)

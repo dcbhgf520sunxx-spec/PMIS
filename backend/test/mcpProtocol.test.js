@@ -285,7 +285,7 @@ test('global business search tools can be called without filters', () => {
 
 test('business attachment search is read-only and exposes governed filters', () => {
   const catalog = require('../src/mcp/catalog')
-  const context = { endpointType: 'query', allowedMenuPaths: new Set(['/projects']) }
+  const context = { endpointType: 'query', allowedMenuPaths: new Set(['/projects', '/tasks']) }
   const definition = catalog.getToolDefinition('business_attachment_search', 'query')
 
   assert.equal(filterToolsForContext(context).some((tool) => tool.name === 'business_attachment_search'), true)
@@ -293,7 +293,7 @@ test('business attachment search is read-only and exposes governed filters', () 
   assert.deepEqual(
     filterToolsForContext(context).find((tool) => tool.name === 'business_attachment_search')
       .inputSchema.properties.attachment_type.enum,
-    ['stage_delivery', 'project_contract']
+    ['stage_delivery', 'project_contract', 'project_attachment', 'task_attachment']
   )
   assert.doesNotThrow(() => validateToolArguments(definition, {
     keyword: '验收', attachment_type: 'stage_delivery', project_id: 12, page: 1, page_size: 20,
@@ -532,39 +532,47 @@ test('action controller input preserves real business foreign keys', () => {
 test('action schemas require complete create inputs and retry-safe idempotency keys', () => {
   const { getToolDefinition } = require('../src/mcp/catalog')
   const cases = [
-    ['product_create', { name: '产品', owner_id: 8 }, ['idempotency_key']],
-    ['project_create', { name: '项目', product_id: 1, requirement_id: 2, owner_id: 8, expected_end_date: '2026-08-31' }, ['idempotency_key']],
+    ['product_create', { name: '产品', owner_id: 8, mode: 'preview' }, ['idempotency_key']],
+    ['project_create', { name: '项目', product_id: 1, requirement_id: 2, owner_id: 8, expected_end_date: '2026-08-31', mode: 'preview' }, ['idempotency_key']],
     ['requirement_create', {
       title: '需求', requirement_type: 1, product_id: 1, owner_id: 8,
       submitter_name: '张三', submit_date: '2026-07-28',
+      mode: 'preview',
     }, ['idempotency_key']],
     ['task_create', {
       name: '任务', source_type: 1, project_id: 1, task_type: 2, owner_ids: [8],
       expected_end_date: '2026-08-31',
+      mode: 'preview',
     }, ['idempotency_key']],
     ['bug_create', {
       title: 'BUG', source_type: 1, project_id: 1, bug_type_id: 2, severity: 2, assignee_id: 8,
+      mode: 'preview',
     }, ['idempotency_key']],
     ['work_order_create', {
       product_id: 1, problem_type: 2, problem_desc: '无法登录', follower_id: 8,
       urgency: 1, expected_resolve_date: '2026-07-29', submitter_name: '张三',
       submitter_dept: '技术部', submit_time: '2026-07-28',
+      mode: 'preview',
     }, ['idempotency_key']],
-    ['stage_create', { project_id: 1, name: '启动' }, ['idempotency_key']],
+    ['stage_create', { project_id: 1, name: '启动', mode: 'preview' }, ['idempotency_key']],
     ['stage_item_create', {
       project_id: 1, stage_id: 2, name: '上线', owner_id: 8, original_due_date: '2026-08-01',
+      mode: 'preview',
     }, ['idempotency_key']],
     ['contract_create', {
       project_id: 1, contract_code: 'HT-001', contract_name: '建设合同',
       supplier_id: 3, signed_date: '2026-07-28', contract_amount: 100,
       stages: [{ stage_name: '首付款', planned_amount: 100 }],
+      mode: 'preview',
     }, ['idempotency_key']],
     ['payment_create', {
       project_id: 1, stage_id: 2, payment_amount: 100,
       payment_month: '2026-07', handler_id: 8,
+      mode: 'preview',
     }, ['idempotency_key']],
     ['contract_attachment_upload', {
       project_id: 1, file_name: '合同.pdf', file_url: 'https://oss.example.com/pmis/contracts/a.pdf',
+      mode: 'preview',
     }, ['idempotency_key']],
   ]
 
@@ -588,10 +596,12 @@ test('task create schemas default priority and require expected completion time 
     ['task_create', {
       name: '任务', source_type: 1, project_id: 1, task_type: 2, owner_ids: [8],
       idempotency_key: 'task-create-1',
+      mode: 'preview',
     }],
     ['task_create_subtask', {
       parent_id: 1, name: '子任务', task_type: 2, owner_ids: [8],
       idempotency_key: 'task-subtask-1',
+      mode: 'preview',
     }],
   ]
 
@@ -616,6 +626,7 @@ test('task create schemas default priority and require expected completion time 
     project_id: 1,
     task_type: 2,
     owner_ids: [8],
+    mode: 'preview',
   }))
 })
 
@@ -627,7 +638,7 @@ test('action argument validation rejects malformed types, nested values and exec
   const taskDelete = getToolDefinition('task_delete', 'action')
 
   assert.throws(
-    () => validateToolArguments(taskAssign, { ids: '1,2', owner_ids: [8] }),
+    () => validateToolArguments(taskAssign, { ids: '1,2', owner_ids: [8], mode: 'preview' }),
     /ids参数类型不合法/
   )
   assert.throws(
@@ -635,6 +646,7 @@ test('action argument validation rejects malformed types, nested values and exec
       name: 123,
       owner_id: 8,
       idempotency_key: 'product-1',
+      mode: 'preview',
     }),
     /name参数类型不合法/
   )
@@ -650,11 +662,12 @@ test('action argument validation rejects malformed types, nested values and exec
       submitter_dept: '技术部',
       submit_time: '2026-07-28',
       idempotency_key: 'work-order-1',
+      mode: 'preview',
     }),
     /urgency参数类型不合法/
   )
   assert.throws(
-    () => validateToolArguments(taskAssign, { ids: [1, { id: 2 }], owner_ids: [8] }),
+    () => validateToolArguments(taskAssign, { ids: [1, { id: 2 }], owner_ids: [8], mode: 'preview' }),
     /ids\[1\]参数类型不合法/
   )
   assert.throws(
@@ -667,6 +680,7 @@ test('action argument validation rejects malformed types, nested values and exec
       contract_amount: 100,
       stages: [{ stage_name: ['错误'], planned_amount: 100 }],
       idempotency_key: 'contract-1',
+      mode: 'preview',
     }),
     /stages\[0\]\.stage_name参数类型不合法/
   )
@@ -679,6 +693,7 @@ test('action argument validation rejects malformed types, nested values and exec
       owner_ids: [],
       expected_end_date: '2026-08-31',
       idempotency_key: 'task-1',
+      mode: 'preview',
     }),
     /owner_ids参数数量不足/
   )
@@ -692,6 +707,7 @@ test('action argument validation rejects malformed types, nested values and exec
       contract_amount: 100,
       stages: [{}],
       idempotency_key: 'contract-1',
+      mode: 'preview',
     }),
     /缺少参数：stages\[0\]\.stage_name、stages\[0\]\.planned_amount/
   )
@@ -730,6 +746,7 @@ test('action argument validation rejects malformed types, nested values and exec
         requires_delivery_file: true,
       }],
       idempotency_key: 'stage-items-1',
+      mode: 'preview',
     }),
     /items\[0\]\.requires_delivery_file参数类型不合法/
   )

@@ -342,6 +342,13 @@ function attachmentResourceUri(row) {
   if (row.attachment_type === 'project_contract') {
     return `pmis://projects/${row.project_id}/contract/attachments/${row.file_id}`
   }
+  const genericPaths = {
+    requirement_attachment: 'requirements', project_attachment: 'projects', task_attachment: 'tasks',
+    bug_attachment: 'bugs', work_order_attachment: 'work-orders',
+  }
+  if (genericPaths[row.attachment_type]) {
+    return `pmis://${genericPaths[row.attachment_type]}/${row.business_id}/attachments/${row.file_id}`
+  }
   return `pmis://products/${row.product_id}/maintenance-contracts/${row.business_id}/attachments/${row.file_id}`
 }
 
@@ -375,6 +382,24 @@ function businessAttachmentBranches(context) {
       JOIN pms_product p ON p.id = c.product_id AND p.is_deleted = 0
       LEFT JOIN pms_user creator ON creator.id = a.creator_id
       WHERE a.is_deleted = 0 AND a.oss_response IS NOT NULL`)
+  }
+  const generic = [
+    ['/requirements', 'requirement', 'requirement_attachment', 'pms_requirement', 'title', 'NULL::BIGINT', 'NULL::BIGINT'],
+    ['/projects', 'project', 'project_attachment', 'pms_project', 'name', 'b.id', 'NULL::BIGINT'],
+    ['/tasks', 'task', 'task_attachment', 'pms_task', 'name', 'b.project_id', 'NULL::BIGINT'],
+    ['/bugs', 'bug', 'bug_attachment', 'pms_bug', 'title', 'b.project_id', 'NULL::BIGINT'],
+    ['/work-orders', 'work_order', 'work_order_attachment', 'pms_work_order', "LEFT(COALESCE(b.problem_desc, ''), 200)", 'NULL::BIGINT', 'b.product_id'],
+  ]
+  for (const [menu, type, attachmentType, table, nameColumn, projectId, productId] of generic) {
+    if (!context.allowedMenuPaths.has(menu)) continue
+    branches.push(`SELECT '${attachmentType}' attachment_type, a.id file_id, a.original_name file_name,
+      a.mime_type, a.file_size, a.created_at, creator.real_name uploader_name,
+      ${projectId} project_id, ${productId} product_id, b.id business_id,
+      ${nameColumn} business_name, '${type}' parent_name
+      FROM pms_business_attachment a
+      JOIN ${table} b ON b.id = a.business_id AND b.is_deleted = 0
+      LEFT JOIN pms_user creator ON creator.id = a.creator_id
+      WHERE a.business_type = '${type}' AND a.is_deleted = 0 AND a.oss_response IS NOT NULL`)
   }
   return branches
 }

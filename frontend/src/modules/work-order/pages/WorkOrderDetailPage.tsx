@@ -26,6 +26,7 @@ import {
 } from '../helpers';
 import './WorkOrderDetailPage.css';
 import { buildStatusPayload, statusTransitions } from './workOrderList.constants';
+import { BusinessAttachmentField } from '../../../components/business/BusinessAttachmentField';
 
 export function WorkOrderDetailPage() {
   const { message } = App.useApp();
@@ -162,7 +163,8 @@ export function WorkOrderDetailPage() {
             <DetailMetaList
               items={[
                 { label: '所属产品', value: detail.productName },
-                { label: '问题类型', value: problemTypeText(detail.problemType, detail.problemTypeName) }
+                { label: '问题类型', value: problemTypeText(detail.problemType, detail.problemTypeName) },
+                { label: '附件', value: <BusinessAttachmentField readOnly apiPath="/work-orders" businessId={detail.id} />, wide: true }
               ]}
             />
           </TemplateDetailSection>

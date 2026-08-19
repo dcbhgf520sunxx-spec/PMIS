@@ -27,6 +27,7 @@ const ACTION_TOOLS = [
   ['work_order_create', '/work-orders'], ['work_order_update', '/work-orders'], ['work_order_assign', '/work-orders'], ['work_order_change_status', '/work-orders'], ['work_order_delete', '/work-orders'],
   ['contract_attachment_upload', '/projects'], ['contract_attachment_delete', '/projects'],
   ['stage_delivery_upload', '/projects'], ['stage_delivery_delete', '/projects'],
+  ['business_attachment_upload', null], ['business_attachment_delete', null],
 ]
 const SOURCE_TARGET_ACTIONS = new Set(['task_create', 'task_update', 'bug_create', 'bug_update'])
 const UPDATE_ACTIONS = new Set(ACTION_TOOLS.map(([name]) => name).filter((name) => name.endsWith('_update')))
@@ -67,7 +68,7 @@ const scalarField = described({ type: ['string', 'number', 'integer', 'boolean',
 const idArrayField = described({ type: 'array', items: arrayIdField, minItems: 1, maxItems: 500 }, '业务记录标识列表，至少一项')
 const optionalIdArrayField = described({ type: 'array', items: arrayIdField, minItems: 0, maxItems: 500 }, '业务记录标识列表；传空数组表示清空')
 const controlProperties = {
-  mode: described({ type: 'string', enum: ['preview', 'execute'] }, '操作模式：preview=仅预览，execute=确认后执行；默认 preview'),
+  mode: described({ type: 'string', enum: ['preview', 'execute'] }, '操作模式，必须显式传递：preview=仅预览，execute=确认后执行'),
   confirmation_id: described({ type: 'string', format: 'uuid' }, '预览返回的一次性确认号；execute 时必填'),
   idempotency_key: described({ type: 'string', minLength: 1, maxLength: 100 }, '由智能体自动生成的新增、上传或批量操作幂等键，不要询问用户；同一次 preview 和 execute 必须保持一致'),
 }
@@ -152,8 +153,8 @@ const querySchemas = {
     keyword: withDescription('keyword', { type: 'string' }),
     attachment_type: described({
       type: 'string',
-      enum: ['stage_delivery', 'project_contract', 'product_maintenance_contract'],
-    }, '附件类型：stage_delivery=阶段交付文件，project_contract=项目合同附件，product_maintenance_contract=产品运维合同附件'),
+      enum: ['stage_delivery', 'project_contract', 'product_maintenance_contract', 'requirement_attachment', 'project_attachment', 'task_attachment', 'bug_attachment', 'work_order_attachment'],
+    }, '附件类型：阶段交付文件、项目合同附件、产品运维合同附件，或需求、项目、任务、BUG、运维工单附件'),
     project_id: withDescription('project_id', idField),
     product_id: withDescription('product_id', idField),
     business_id: described(idField, '所属关键事项或合同标识'),
@@ -260,6 +261,8 @@ const actionFields = {
   contract_attachment_delete: ['project_id', 'attachment_id'],
   stage_delivery_upload: ['project_id', 'item_id', 'file_name', 'mime_type', 'file_url'],
   stage_delivery_delete: ['project_id', 'item_id', 'file_id'],
+  business_attachment_upload: ['business_type', 'business_id', 'file_name', 'mime_type', 'file_url'],
+  business_attachment_delete: ['business_type', 'business_id', 'attachment_id'],
 }
 
 const actionRequired = {
@@ -303,6 +306,8 @@ const actionRequired = {
   contract_attachment_delete: ['project_id', 'attachment_id'],
   stage_delivery_upload: ['project_id', 'item_id', 'file_name', 'file_url', 'idempotency_key'],
   stage_delivery_delete: ['project_id', 'item_id', 'file_id'],
+  business_attachment_upload: ['business_type', 'business_id', 'file_name', 'file_url', 'idempotency_key'],
+  business_attachment_delete: ['business_type', 'business_id', 'attachment_id'],
 }
 
 const statusActionSchemas = {
@@ -534,6 +539,10 @@ function actionInputSchema(name) {
   if ('requires_delivery_file' in properties) {
     properties.requires_delivery_file = described({ type: 'integer', enum: [0, 1] }, '是否要求交付文件：0=不要求，1=要求')
   }
+  if ('business_type' in properties) properties.business_type = described({
+    type: 'string', enum: ['requirement', 'project', 'task', 'bug', 'work_order'],
+  }, '业务类型：requirement=需求，project=项目，task=任务，bug=BUG，work_order=运维工单')
+  if ('business_id' in properties) properties.business_id = withDescription('business_id', idField)
   for (const key of ['id', 'parent_id', 'project_id', 'requirement_id', 'stage_id', 'item_id', 'payment_id', 'attachment_id', 'file_id', 'owner_id', 'product_id', 'supplier_id', 'handler_id', 'assignee_id', 'follower_id', 'problem_type', 'task_type', 'bug_type_id', 'resolution_id', 'moved_id']) {
     if (key in properties) properties[key] = withDescription(key, idField)
   }
@@ -547,7 +556,12 @@ function actionInputSchema(name) {
     if (key in properties) properties[key] = described({ type: 'number', exclusiveMinimum: 0, multipleOf: 0.01 }, `${FIELD_DESCRIPTIONS[key]}且最多两位小数`)
   }
   if (statusActionSchemas[name]) properties.status = statusActionSchemas[name]
-  const schema = { type: 'object', properties, required: actionRequired[name], additionalProperties: false }
+  const schema = {
+    type: 'object',
+    properties,
+    required: [...new Set(['mode', ...(actionRequired[name] || [])])],
+    additionalProperties: false,
+  }
   if (SOURCE_TARGET_ACTIONS.has(name)) {
     schema.allOf = [
       {
@@ -653,6 +667,8 @@ function actionTitle(name) {
     contract_attachment_delete: '删除合同附件',
     stage_delivery_upload: '上传关键事项交付文件',
     stage_delivery_delete: '删除关键事项交付文件',
+    business_attachment_upload: '上传业务附件',
+    business_attachment_delete: '删除业务附件',
   }
   return special[name] || titleFromName(name)
 }
@@ -930,6 +946,20 @@ function actionOutputSchema() {
         description: '操作完成后的业务附带结果；其中的布尔字段不代表本次操作成功或失败',
       },
       preview: { type: 'object', additionalProperties: true, description: '待执行操作的可读预览' },
+      execute_payload: {
+        type: 'object',
+        description: '用户确认后可原样复用的正式执行调用；不要重新拼装其中参数',
+        properties: {
+          tool_name: { type: 'string', description: '应再次调用的当前公共操作工具名' },
+          arguments: {
+            type: 'object',
+            additionalProperties: true,
+            description: '已锁定的完整执行参数，应原样传递',
+          },
+        },
+        required: ['tool_name', 'arguments'],
+        additionalProperties: false,
+      },
       data: { description: '无对象结果在结构化响应中的包装字段' },
     },
     additionalProperties: true,
@@ -1038,6 +1068,9 @@ const PUBLIC_ACTION_GROUPS = [
   }],
   ['stage_delivery_manage', '关键事项交付文件上传或删除', {
     upload: 'stage_delivery_upload', delete: 'stage_delivery_delete',
+  }],
+  ['business_attachment_manage', '需求、项目、任务、BUG或运维工单附件上传或删除', {
+    upload: 'business_attachment_upload', delete: 'business_attachment_delete',
   }],
 ]
 
@@ -1258,6 +1291,11 @@ function scopeBusinessAttachmentSearch(tool, allowedMenuPaths) {
   const allowed = new Set([
     ...(allowedMenuPaths.has('/projects') ? ['stage_delivery', 'project_contract'] : []),
     ...(allowedMenuPaths.has('/products') ? ['product_maintenance_contract'] : []),
+    ...(allowedMenuPaths.has('/requirements') ? ['requirement_attachment'] : []),
+    ...(allowedMenuPaths.has('/projects') ? ['project_attachment'] : []),
+    ...(allowedMenuPaths.has('/tasks') ? ['task_attachment'] : []),
+    ...(allowedMenuPaths.has('/bugs') ? ['bug_attachment'] : []),
+    ...(allowedMenuPaths.has('/work-orders') ? ['work_order_attachment'] : []),
   ])
   return {
     ...tool,
@@ -1274,6 +1312,27 @@ function scopeBusinessAttachmentSearch(tool, allowedMenuPaths) {
   }
 }
 
+function scopeBusinessAttachmentAction(tool, allowedMenuPaths) {
+  if (tool.name !== 'business_attachment_upload' && tool.name !== 'business_attachment_delete') return tool
+  const businessType = tool.inputSchema.properties.business_type
+  const menuByType = {
+    requirement: '/requirements', project: '/projects', task: '/tasks', bug: '/bugs', work_order: '/work-orders',
+  }
+  return {
+    ...tool,
+    inputSchema: {
+      ...tool.inputSchema,
+      properties: {
+        ...tool.inputSchema.properties,
+        business_type: {
+          ...businessType,
+          enum: businessType.enum.filter((type) => allowedMenuPaths.has(menuByType[type])),
+        },
+      },
+    },
+  }
+}
+
 function filterToolsForContext(context) {
   return publicToolCatalog.filter((tool) => {
     if (tool._meta.endpointType !== context.endpointType) return false
@@ -1281,7 +1340,12 @@ function filterToolsForContext(context) {
       && !(context.allowedPermissionCodes instanceof Set
         && context.allowedPermissionCodes.has(tool._meta.permissionCode))) return false
     if (tool.name === 'business_attachment_search') {
-      return context.allowedMenuPaths.has('/projects') || context.allowedMenuPaths.has('/products')
+      return ['/projects', '/products', '/requirements', '/tasks', '/bugs', '/work-orders']
+        .some((path) => context.allowedMenuPaths.has(path))
+    }
+    if (tool.name === 'business_attachment_upload' || tool.name === 'business_attachment_delete') {
+      return ['/requirements', '/projects', '/tasks', '/bugs', '/work-orders']
+        .some((path) => context.allowedMenuPaths.has(path))
     }
     if (!tool._meta.menuPath) {
       return context.endpointType === 'query' && context.allowedMenuPaths.size > 0
@@ -1289,6 +1353,7 @@ function filterToolsForContext(context) {
     return context.allowedMenuPaths.has(tool._meta.menuPath)
   }).map((tool) => scopeGenericQueryDomains(tool, context.allowedMenuPaths))
     .map((tool) => scopeBusinessAttachmentSearch(tool, context.allowedMenuPaths))
+    .map((tool) => scopeBusinessAttachmentAction(tool, context.allowedMenuPaths))
     .map((tool) => scopeBusinessOptions(tool, context.allowedMenuPaths))
     .map((tool) => scopeBusinessAnalysis(tool, context.allowedMenuPaths))
     .filter((tool) => !['business_get', 'business_history', 'business_options', 'business_analyze'].includes(tool.name)

@@ -7,7 +7,7 @@ const { normalizeToolError } = require('../src/mcp/createServer')
 const { decorateQueryResult } = require('../src/mcp/queryTools')
 
 test('every MCP tool publishes described input fields and an output schema', () => {
-  assert.equal(toolCatalog.length, 80)
+  assert.equal(toolCatalog.length, 82)
   for (const tool of toolCatalog) {
     assert.ok(tool.description, `${tool.name}缺少工具说明`)
     assert.ok(tool.outputSchema, `${tool.name}缺少输出Schema`)
@@ -28,16 +28,16 @@ test('nested MCP input fields are described and update tools are truly sparse', 
   for (const tool of toolCatalog) assertDescribed(tool.inputSchema, tool.name)
 
   const updateTargets = {
-    product_update: ['id'],
-    project_update: ['id'],
-    requirement_update: ['id'],
-    task_update: ['id'],
-    bug_update: ['id'],
-    work_order_update: ['id'],
-    stage_update: ['project_id', 'stage_id'],
-    stage_item_update: ['project_id', 'item_id'],
-    contract_update: ['project_id'],
-    payment_update: ['project_id', 'payment_id'],
+    product_update: ['mode', 'id'],
+    project_update: ['mode', 'id'],
+    requirement_update: ['mode', 'id'],
+    task_update: ['mode', 'id'],
+    bug_update: ['mode', 'id'],
+    work_order_update: ['mode', 'id'],
+    stage_update: ['mode', 'project_id', 'stage_id'],
+    stage_item_update: ['mode', 'project_id', 'item_id'],
+    contract_update: ['mode', 'project_id'],
+    payment_update: ['mode', 'project_id', 'payment_id'],
   }
   for (const [name, required] of Object.entries(updateTargets)) {
     assert.deepEqual(getToolDefinition(name, 'action').inputSchema.required, required, name)
@@ -68,7 +68,7 @@ test('fixed business enums publish exact values and Chinese mappings', () => {
 test('三类优先级操作只暴露 id 和 priority 且保留预览确认流程', () => {
   for (const name of ['project_change_priority', 'requirement_change_priority', 'task_change_priority']) {
     const schema = getToolDefinition(name, 'action').inputSchema
-    assert.deepEqual(schema.required, ['id', 'priority'])
+    assert.deepEqual(schema.required, ['mode', 'id', 'priority'])
     assert.deepEqual(schema.properties.priority.enum, [0, 1, 2])
     assert.equal(schema.properties.status, undefined)
   }
@@ -76,7 +76,7 @@ test('三类优先级操作只暴露 id 和 priority 且保留预览确认流程
 
 test('action schemas expose only relevant fields and encode conditional requirements', () => {
   const taskUpdate = getToolDefinition('task_update', 'action').inputSchema
-  assert.deepEqual(taskUpdate.required, ['id'])
+  assert.deepEqual(taskUpdate.required, ['mode', 'id'])
   assert.equal(taskUpdate.properties.status, undefined)
   assert.equal(taskUpdate.properties.actual_end_date, undefined)
   assert.equal(taskUpdate.properties.priority, undefined)
@@ -133,6 +133,7 @@ test('public action schemas validate the selected operation branch', () => {
     owner_ids: [8],
     expected_end_date: '2026-08-31',
     idempotency_key: 'task-metadata-1',
+    mode: 'preview',
   }))
 })
 
@@ -159,7 +160,7 @@ test('requirement and task action contracts do not expose priority editing', () 
 
   const taskUpdate = getToolDefinition('task_update', 'action')
   assert.throws(
-    () => validateToolArguments(taskUpdate, { id: 59 }),
+    () => validateToolArguments(taskUpdate, { id: 59, mode: 'preview' }),
     (error) => error.code === 'MCP_ARGUMENT_INVALID'
       && error.fieldErrors.changes === '编辑操作至少需要提供一个要修改的字段'
   )
@@ -170,6 +171,7 @@ test('conditional status fields are enforced before business dispatch', () => {
     () => validateToolArguments(getToolDefinition('task_change_status', 'action'), {
       id: 59,
       status: 2,
+      mode: 'preview',
     }),
     (error) => error.code === 'MCP_ARGUMENT_INVALID'
       && error.fieldErrors.actual_end_date === '实际完成日期为必填项'
@@ -214,6 +216,7 @@ test('argument errors retain a stable code, field and readable message', () => {
       owner_ids: [8],
       expected_end_date: '2026-08-31',
       idempotency_key: 'task-create-1',
+      mode: 'preview',
     })
   } catch (error) {
     caught = normalizeToolError(error)
@@ -242,6 +245,7 @@ test('invalid enum and date errors identify the exact field', () => {
       owner_ids: [8],
       expected_end_date: '2026/08/31',
       idempotency_key: 'task-create-1',
+      mode: 'preview',
     }),
     (error) => error.code === 'MCP_ARGUMENT_INVALID'
       && error.fieldErrors.expected_end_date === '预计完成日期必须是真实存在的日期，格式为YYYY-MM-DD'

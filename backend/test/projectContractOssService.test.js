@@ -47,6 +47,36 @@ test('合同附件上传固定使用小写 pmis bucket 并保留完整 OSS 响�
   assert.deepEqual(saved.file, ossResponse.data[0])
 })
 
+test('上传前把写错后缀的受支持图片纠正为真实格式', async () => {
+  let uploadedFile
+  const file = {
+    originalname: '测试3.png',
+    mimetype: 'image/png',
+    buffer: Buffer.concat([
+      Buffer.from('RIFF'),
+      Buffer.from([0x10, 0x00, 0x00, 0x00]),
+      Buffer.from('WEBP'),
+      Buffer.from('VP8 '),
+    ]),
+  }
+  file.size = file.buffer.length
+
+  await uploadAttachmentToOss(file, {
+    fetchImpl: async (_url, options) => {
+      uploadedFile = options.body.get('file')
+      return new Response(JSON.stringify(ossResponse), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    },
+  })
+
+  assert.equal(uploadedFile.name, '测试3.webp')
+  assert.equal(uploadedFile.type, 'image/webp')
+  assert.equal(file.originalname, '测试3.webp')
+  assert.equal(file.mimetype, 'image/webp')
+})
+
 test('合同附件上传拒绝 OSS 空数据和失败响应', async () => {
   const file = {
     originalname: '合同附件.pdf',
@@ -65,7 +95,7 @@ test('合同附件上传拒绝 OSS 空数据和失败响应', async () => {
     uploadAttachmentToOss(file, {
       fetchImpl: async () => new Response('bad gateway', { status: 502 }),
     }),
-    /OSS 上传失败/
+    /OSS 上传失败：合同附件\.pdf/
   )
 })
 
