@@ -1,8 +1,11 @@
+const AUTHENTICATED_ONLY_PAGE_PATHS = new Set(['/release-notes']);
+
 function routeRoots(source = '') {
   return new Set([...source.matchAll(/path:\s*'([^/'][^']*)'/g)]
     .map((match) => match[1])
     .filter((route) => !route.startsWith('samples/') && !route.startsWith('system/'))
-    .map((route) => `/${route.split('/')[0]}`));
+    .map((route) => `/${route.split('/')[0]}`)
+    .filter((route) => !AUTHENTICATED_ONLY_PAGE_PATHS.has(route)));
 }
 
 export function resolveDeliveryChangeContext({

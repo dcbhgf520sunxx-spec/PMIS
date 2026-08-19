@@ -71,6 +71,16 @@ test('uses the list route menu for nested create and detail routes', () => {
   assert.deepEqual(checkDeliveryContract(root), []);
 });
 
+test('allows the shared authenticated release-notes page without a business menu or migration', () => {
+  const root = createProject();
+  write(root, 'frontend/src/app/routes.tsx', [
+    "{ path: 'orders', element: <Orders /> },",
+    "{ path: 'release-notes', element: <ReleaseNotes /> }"
+  ].join('\n'));
+
+  assert.deepEqual(checkDeliveryContract(root, { changedRouteRoots: ['/release-notes'] }), []);
+});
+
 test('allows deployment text that explicitly says MySQL is not used', () => {
   const root = createProject();
   write(root, 'deploy/README.md', 'PostgreSQL 16\nReact/Vite\n数据库为 PostgreSQL，不使用 MySQL。');

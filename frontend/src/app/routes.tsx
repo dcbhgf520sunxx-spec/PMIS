@@ -25,6 +25,11 @@ const HomePage = lazy(() =>
     default: module.HomePage
   }))
 );
+const ReleaseNotesPage = lazy(() =>
+  import('../modules/release-notes/pages/ReleaseNotesPage').then((module) => ({
+    default: module.ReleaseNotesPage
+  }))
+);
 const DesignSystemPage = lazy(() =>
   import('../modules/design-system/pages/DesignSystemPage').then((module) => ({
     default: module.DesignSystemPage
@@ -139,6 +144,7 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <DefaultEntryRedirect /> },
       { path: 'home', element: withRouteSuspense(<HomePage />) },
+      { path: 'release-notes', element: withRouteSuspense(<ReleaseNotesPage />) },
       { path: 'products', element: withRouteSuspense(<ProductListPage />) },
       { path: 'products/new', element: withRouteSuspense(<ProductFormPage mode="create" />) },
       { path: 'products/:id/edit', element: withRouteSuspense(<ProductFormPage mode="edit" />) },

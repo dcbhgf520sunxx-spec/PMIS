@@ -26,6 +26,16 @@ test('reports routes and files added after an existing Git baseline', () => {
   });
 });
 
+test('does not treat the shared authenticated release-notes page as a new business menu', () => {
+  const context = resolveDeliveryChangeContext({
+    currentRoutes: "{ path: 'orders', element: <Orders /> }\n{ path: 'release-notes', element: <ReleaseNotes /> }",
+    baseRoutes: "{ path: 'orders', element: <Orders /> }",
+    hasGitBaseline: true
+  });
+
+  assert.deepEqual(context.changedRouteRoots, []);
+});
+
 test('统一门禁读取中文文档路径时禁用 Git 引号转义', () => {
   const source = readFileSync(new URL('./verify-change.mjs', import.meta.url), 'utf8');
   assert.match(source, /execFileSync\('git', \['-c', 'core\.quotePath=false', \.\.\.args\]/);

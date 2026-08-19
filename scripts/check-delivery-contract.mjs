@@ -9,6 +9,7 @@ const AUTHENTICATED_ONLY_API_PATHS = new Set([
   '/api/messages'
 ]);
 const MCP_API_PATHS = new Set(['/api/mcp']);
+const AUTHENTICATED_ONLY_PAGE_PATHS = new Set(['/release-notes']);
 const DATABASE_STRUCTURE_SQL = /\b(?:CREATE\s+(?:UNIQUE\s+)?INDEX|CREATE\s+TABLE|ALTER\s+TABLE|DROP\s+(?:TABLE|INDEX))\b/i;
 
 function stripSqlComments(source) {
@@ -69,7 +70,7 @@ export function checkDeliveryContract(rootDir, { changedFiles = [], changedRoute
   const permissionPaths = paths(app, /checkPermission\('([^']+)'\)/g);
   const routeDirectory = join(rootDir, 'backend/src/routes');
 
-  for (const route of new Set(businessRoutes)) {
+  for (const route of new Set(businessRoutes.filter((route) => !AUTHENTICATED_ONLY_PAGE_PATHS.has(route)))) {
     if (!sidebarPaths.has(route)) errors.push(`业务路由 ${route} 未配置侧栏菜单`);
     if (!schemaPaths.has(route)) errors.push(`业务路由 ${route} 未配置 pms_menu.path`);
   }
@@ -126,10 +127,11 @@ export function checkDeliveryContract(rootDir, { changedFiles = [], changedRoute
       errors.push('数据库结构已变更，但未同步修改 docs/数据库表结构.xlsx');
     }
   }
-  if (changedRouteRoots.length && !migrationFiles.length) {
-    for (const route of changedRouteRoots) errors.push(`新增业务路由 ${route} 未同时新增 migration`);
+  const changedBusinessRouteRoots = changedRouteRoots.filter((route) => !AUTHENTICATED_ONLY_PAGE_PATHS.has(route));
+  if (changedBusinessRouteRoots.length && !migrationFiles.length) {
+    for (const route of changedBusinessRouteRoots) errors.push(`新增业务路由 ${route} 未同时新增 migration`);
   }
-  for (const route of changedRouteRoots) {
+  for (const route of changedBusinessRouteRoots) {
     if (migrationFiles.length && !migrationFiles.some((file) => read(rootDir, file).includes(route))) {
       errors.push(`新增业务路由 ${route} 的 migration 未写入对应 pms_menu.path`);
     }
