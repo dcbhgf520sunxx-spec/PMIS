@@ -49,6 +49,17 @@ export function checkDeliveryContract(rootDir, { changedFiles = [], changedRoute
   if (!/^\s*try_files\s+\$uri\s+\$uri\/\s+\/index\.html;/m.test(nginx)) {
     errors.push('Nginx 未配置 React history 路由 fallback');
   }
+  const indexLocation = nginx.match(/location\s*=\s*\/index\.html\s*\{([\s\S]*?)\}/)?.[1] ?? '';
+  if (!/Cache-Control\s+"[^"]*(?:no-store|no-cache)[^"]*max-age=0[^"]*"/i.test(indexLocation)) {
+    errors.push('Nginx 未禁止缓存前端入口 index.html');
+  }
+  const assetsLocation = nginx.match(/location\s+\^~\s+\/assets\/\s*\{([\s\S]*?)\}/)?.[1] ?? '';
+  if (
+    !/^\s*expires\s+1y;/m.test(assetsLocation)
+    || !/Cache-Control\s+"[^"]*max-age=31536000[^"]*immutable[^"]*"/i.test(assetsLocation)
+  ) {
+    errors.push('Nginx 未为哈希静态资源配置一年 immutable 缓存');
+  }
 
   const businessRoutes = paths(routes, /path:\s*'([^/'][^']*)'/g)
     .filter((route) => !route.startsWith('samples/') && !route.startsWith('system/'))
