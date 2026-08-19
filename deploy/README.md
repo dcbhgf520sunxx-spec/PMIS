@@ -168,8 +168,15 @@ sudo mkdir -p \
   /opt/pmis/shared/private-uploads/project-contracts \
   /opt/pmis/shared/private-uploads/project-plan-deliveries
 sudo chown -R pmis:pmis /opt/pmis/shared/uploads /opt/pmis/shared/private-uploads
+sudo bash /opt/pmis/releases/<release>/deploy/retain-previous-frontend-assets.sh \
+  /opt/pmis/current/frontend/dist \
+  /opt/pmis/releases/<release>/frontend/dist
 sudo ln -sfn /opt/pmis/releases/<release> /opt/pmis/current
 ```
+
+保留脚本只把上一版本构建自身的哈希资源补入新版本，不覆盖新构建同名文件，也不会继续传递更早版本已经保留的资源。这样已打开的旧页面在发布切换期间仍能加载原分包，同时避免静态资源无限累积。首次发布或不存在上一版本目录时，脚本会直接跳过。
+
+Nginx 必须对 `index.html` 使用 `no-store`，对 `/assets/` 下的 Vite 哈希资源使用一年 `immutable` 缓存。前端还会在旧分包确实无法加载时自动刷新一次；一分钟内不会循环刷新。
 
 新上传的合同附件、阶段计划交付文件、头像和富文本图片统一写入 OSS。`/opt/pmis/shared/uploads` 与 `/opt/pmis/shared/private-uploads` 仅用于历史迁移兼容；历史迁移和业务抽查通过前必须保留。
 
