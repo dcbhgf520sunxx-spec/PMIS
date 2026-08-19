@@ -221,8 +221,8 @@ test('合同新增编辑复用底座上传组件并支持多个附件', async ()
   assert.doesNotMatch(form, /\bAdminUpload\b/);
   assert.match(form, /multiple/);
   assert.match(form, /maxCount=\{10\}/);
-  assert.match(form, /maxSize=\{maxAttachmentSize\}/);
-  assert.match(form, /accept=\{attachmentAccept\}/);
+  assert.match(form, /maxSize=\{COMMON_ATTACHMENT_MAX_SIZE\}/);
+  assert.match(form, /accept=\{COMMON_ATTACHMENT_ACCEPT\}/);
   assert.match(form, /单个文件不超过 20MB，最多 10 个/);
   assert.match(form, /uploadProjectContractAttachment/);
   assert.match(form, /deleteProjectContractAttachment/);

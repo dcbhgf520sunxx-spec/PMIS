@@ -10,6 +10,7 @@ import {
   ExpandToggleButton, HistoryTimelineSection, OperationColumnActions, PermissionButton, StatusTag, TemplateDetailPage,
   TemplateDetailTableSection, usePageReturnNavigation, type AdminAttachment, type HistoryTimelineItem,
 } from '../../../components/admin';
+import { COMMON_ATTACHMENT_ACCEPT, COMMON_ATTACHMENT_MAX_SIZE } from '../../../components/business/businessAttachmentRules';
 import {
   adjustProjectPlanItem, applyProjectPlanTemplate, changeProjectPlanItemStatus, createProjectPlanItems, createProjectPlanStage,
   deleteProjectPlanFile, deleteProjectPlanItem, deleteProjectPlanStage, downloadProjectPlanFile, getProjectPlanAdjustments,
@@ -471,6 +472,8 @@ export function ProjectStagePlanPage(){
             help={itemAttempted&&!itemModal.pendingAttachments.length?'请上传至少一个关键交付文件':undefined}
           >
             <AdminAttachmentUpload
+              accept={COMMON_ATTACHMENT_ACCEPT}
+              maxSize={COMMON_ATTACHMENT_MAX_SIZE}
               multiple
               value={itemModal.pendingAttachments}
               onChange={(pendingAttachments)=>setItemModal({...itemModal,pendingAttachments})}
@@ -506,7 +509,7 @@ export function ProjectStagePlanPage(){
         </div>
       </section>)}</div>:<AdminEmptyState description="暂无调整记录"/>}
     </AdminModal>
-    <AdminModal title={`交付文件 · ${fileModal?.item.name||''}`} size="large" open={Boolean(fileModal)} footer={null} onCancel={()=>setFileModal(undefined)}>{fileModal&&params.id?<AdminAttachmentUpload multiple value={fileModal.files.map(deliveryAttachment)} onUpload={async(file)=>{const saved=await uploadProjectPlanFile(params.id!,fileModal.item.id,file);const files=await getProjectPlanFiles(params.id!,fileModal.item.id);setFileModal({...fileModal,files});refresh();return {id:saved.id,name:saved.name,size:saved.size,contentType:saved.contentType};}} onRemove={async(attachment)=>{await deleteProjectPlanFile(params.id!,fileModal.item.id,attachment.id);const files=await getProjectPlanFiles(params.id!,fileModal.item.id);setFileModal({...fileModal,files});refresh();}} onLoadPreview={(attachment)=>loadProjectPlanFilePreview(params.id!,fileModal.item.id,attachment.id)} onDownload={(attachment)=>downloadProjectPlanFile(params.id!,fileModal.item.id,attachment.id,attachment.name)} hint={fileModal.item.deliveryRequirement||'上传关键交付文件'}/>:null}</AdminModal>
+    <AdminModal title={`交付文件 · ${fileModal?.item.name||''}`} size="large" open={Boolean(fileModal)} footer={null} onCancel={()=>setFileModal(undefined)}>{fileModal&&params.id?<AdminAttachmentUpload accept={COMMON_ATTACHMENT_ACCEPT} maxSize={COMMON_ATTACHMENT_MAX_SIZE} multiple value={fileModal.files.map(deliveryAttachment)} onUpload={async(file)=>{const saved=await uploadProjectPlanFile(params.id!,fileModal.item.id,file);const files=await getProjectPlanFiles(params.id!,fileModal.item.id);setFileModal({...fileModal,files});refresh();return {id:saved.id,name:saved.name,size:saved.size,contentType:saved.contentType};}} onRemove={async(attachment)=>{await deleteProjectPlanFile(params.id!,fileModal.item.id,attachment.id);const files=await getProjectPlanFiles(params.id!,fileModal.item.id);setFileModal({...fileModal,files});refresh();}} onLoadPreview={(attachment)=>loadProjectPlanFilePreview(params.id!,fileModal.item.id,attachment.id)} onDownload={(attachment)=>downloadProjectPlanFile(params.id!,fileModal.item.id,attachment.id,attachment.name)} hint={fileModal.item.deliveryRequirement||'上传关键交付文件'}/>:null}</AdminModal>
   </>;
 }
 

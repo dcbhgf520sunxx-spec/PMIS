@@ -7,6 +7,7 @@ const { requireValidBody } = require('../utils/requestValidation')
 const { buildViewQuery, calculateViewCounts } = require('../utils/viewCounts')
 const { formatHistoryChanges, groupOperationLogs } = require('../utils/operationHistory')
 const { sanitizeRichText } = require('../services/richTextSanitizer')
+const { softDeleteBusinessAttachments } = require('../services/businessAttachmentService')
 const {
   allowedWorkOrderStatuses,
   resolveWorkOrderResultFields,
@@ -454,6 +455,7 @@ exports.remove = async (req, res) => {
     const workOrder = await db.prepare('SELECT id FROM pms_work_order WHERE id = ? AND is_deleted = 0').get(req.params.id)
     if (!workOrder) return fail(res, 404, 404, '数据不存在或已被删除')
     await db.prepare('UPDATE pms_work_order SET is_deleted = 1, updater_id = ?, updated_at = NOW() WHERE id = ?').run(operatorId, req.params.id)
+    await softDeleteBusinessAttachments(db, 'work_order', req.params.id, operatorId)
     await db.writeLog(operatorId, '删除', '运维工单', req.params.id, 'is_deleted', '0', '1', req.ip)
     ok(res, null)
   } catch (err) {

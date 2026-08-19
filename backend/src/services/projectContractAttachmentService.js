@@ -1,6 +1,7 @@
 const crypto = require('node:crypto')
 const fs = require('node:fs/promises')
 const path = require('node:path')
+const { TextDecoder } = require('node:util')
 
 const MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024
 const PRIVATE_UPLOAD_ROOT = path.resolve(process.env.PMIS_PRIVATE_UPLOAD_ROOT || path.join(__dirname, '../../private-uploads'))
@@ -17,8 +18,13 @@ const typeRules = new Map([
   ['.xls', { mimes: ['application/vnd.ms-excel'], signature: hasOleSignature }],
   ['.docx', { mimes: ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'], signature: hasZipSignature }],
   ['.xlsx', { mimes: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'], signature: hasZipSignature }],
+  ['.ppt', { mimes: ['application/vnd.ms-powerpoint'], signature: hasOleSignature }],
+  ['.pptx', { mimes: ['application/vnd.openxmlformats-officedocument.presentationml.presentation'], signature: hasZipSignature }],
+  ['.txt', { mimes: ['text/plain'], signature: hasUtf8TextSignature }],
+  ['.md', { mimes: ['text/markdown', 'text/x-markdown', 'text/plain'], signature: hasUtf8TextSignature }],
   ['.zip', { mimes: ['application/zip', 'application/x-zip-compressed'], signature: hasZipSignature }],
 ])
+const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp']
 
 function hasZipSignature(buffer) {
   return buffer.subarray(0, 2).toString() === 'PK'
@@ -26,6 +32,16 @@ function hasZipSignature(buffer) {
 
 function hasOleSignature(buffer) {
   return buffer.subarray(0, 8).equals(Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]))
+}
+
+function hasUtf8TextSignature(buffer) {
+  if (buffer.includes(0)) return false
+  try {
+    new TextDecoder('utf-8', { fatal: true }).decode(buffer)
+    return true
+  } catch {
+    return false
+  }
 }
 
 function attachmentError(message) {
@@ -49,8 +65,33 @@ function validateAttachmentFile(file = {}) {
   if (size > MAX_ATTACHMENT_SIZE) throw attachmentError('单个附件不能超过20MB')
   const extension = path.extname(originalName).toLowerCase()
   const rule = typeRules.get(extension)
-  if (!rule || !rule.mimes.includes(String(file.mimetype || '').toLowerCase())) throw attachmentError('不支持该文件类型')
-  if (!rule.signature(buffer)) throw attachmentError('文件内容与类型不匹配')
+  const mime = String(file.mimetype || '').toLowerCase()
+  const genericMimes = ['', 'application/octet-stream']
+  const zipMimes = ['application/zip', 'application/x-zip-compressed']
+  const isOfficeZip = ['.docx', '.xlsx', '.pptx'].includes(extension)
+  if (imageExtensions.includes(extension)) {
+    const actualExtension = imageExtensions.find((candidate) => typeRules.get(candidate).signature(buffer))
+    if (actualExtension) {
+      const actualRule = typeRules.get(actualExtension)
+      const correctedExtension = actualExtension === '.jpeg' ? '.jpg' : actualExtension
+      if (correctedExtension !== extension || (!actualRule.mimes.includes(mime) && !genericMimes.includes(mime))) {
+        return {
+          extension: correctedExtension,
+          mimetype: actualRule.mimes[0],
+          originalname: `${originalName.slice(0, -extension.length)}${correctedExtension}`,
+        }
+      }
+    }
+  }
+  const mimeMatches = rule && (
+    rule.mimes.includes(mime)
+    || genericMimes.includes(mime)
+    || (isOfficeZip && zipMimes.includes(mime))
+  )
+  if (!mimeMatches) throw attachmentError(`不支持该文件类型：${originalName}`)
+  if (!rule.signature(buffer)) {
+    throw attachmentError(`文件内容与类型不匹配：${originalName}`)
+  }
   return { extension }
 }
 

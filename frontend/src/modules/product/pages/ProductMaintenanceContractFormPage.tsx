@@ -7,9 +7,12 @@ import { AdminAlert, AdminAttachmentUpload, AdminFormItem, AdminProFormDatePicke
 import { getArchiveOptionsByTypeName } from '../../../api/archiveApi';
 import { createProductMaintenanceContract, deleteProductMaintenanceContractAttachment, downloadProductMaintenanceContractAttachment, getProductMaintenanceContract, getProductMaintenanceContracts, loadProductMaintenanceContractAttachmentPreview, updateProductMaintenanceContract, uploadProductMaintenanceContractAttachment } from '../../../api/productApi';
 import type { ProductMaintenanceContractAttachment, ProductMaintenanceContractFormValues } from '../types';
+import {
+  COMMON_ATTACHMENT_ACCEPT,
+  COMMON_ATTACHMENT_MAX_SIZE,
+  COMMON_ATTACHMENT_TYPE_HINT,
+} from '../../../components/business/businessAttachmentRules';
 
-const attachmentAccept = '.jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx,.zip';
-const maxAttachmentSize = 20 * 1024 * 1024;
 const pendingPrefix = 'pending-maintenance-contract-';
 const amountPattern = /^\d+(\.\d{1,2})?$/;
 const reminderText = '到期前30、15、7天提醒，最后3天每天提醒，并在到期当天提醒；到期后每7天提醒一次，直至完成续签或终止合同。';
@@ -113,10 +116,10 @@ export function ProductMaintenanceContractFormPage() {
         <AdminProFormTextArea name="remark" label="备注" className="admin-template-form-page__field is-full" fieldProps={{ rows: 3, maxLength: 1000 }} />
         <AdminFormItem label="合同附件" required validateStatus={attachmentError ? 'error' : undefined} help={attachmentError || undefined} className="admin-template-form-page__field is-full">
           <AdminAttachmentUpload
-            accept={attachmentAccept}
+            accept={COMMON_ATTACHMENT_ACCEPT}
             multiple
             maxCount={10}
-            maxSize={maxAttachmentSize}
+            maxSize={COMMON_ATTACHMENT_MAX_SIZE}
             value={attachments}
             onChange={(value) => { setAttachments(value); if (value.length > 0) setAttachmentError(''); }}
             onUpload={async (file, { onProgress }) => { onProgress(100); return { id: `${pendingPrefix}${file.uid}`, name: file.name, size: file.size, contentType: file.type }; }}
@@ -132,7 +135,7 @@ export function ProductMaintenanceContractFormPage() {
               }
               if (params.id && params.contractId) await downloadProductMaintenanceContractAttachment(params.id, params.contractId, attachment.id, attachment.name);
             }}
-            hint="单个文件不超过20MB，最多10个"
+            hint={`${COMMON_ATTACHMENT_TYPE_HINT}；单个文件不超过20MB，最多10个。`}
           />
         </AdminFormItem>
       </div>

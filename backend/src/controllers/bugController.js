@@ -3,6 +3,7 @@ const { parsePagination, getSortDirection } = require('../utils/pagination')
 const { ok, fail, failField } = require('../utils/response')
 const { formatHistoryChanges, groupOperationLogs } = require('../utils/operationHistory')
 const { allowedBugStatuses, validateBugStatusChange, resolveBugStatusFields } = require('../services/bugRules')
+const { softDeleteBusinessAttachments } = require('../services/businessAttachmentService')
 
 const DETAIL_FIELD_ORDER = ['title', 'description', 'source_type', 'project_id', 'requirement_id', 'bug_type_id', 'severity', 'status', 'activation_reason', 'assignee_id', 'resolved_date', 'resolution_id', 'closed_date']
 const HISTORY_FIELD_LABELS = {
@@ -197,6 +198,7 @@ exports.remove = async (req, res) => {
     const row = await db.prepare('SELECT title FROM pms_bug WHERE id=? AND is_deleted=0').get(req.params.id)
     if (!row) return fail(res, 404, 404, 'BUG不存在')
     await db.prepare('UPDATE pms_bug SET is_deleted=1,updater_id=?,updated_at=NOW()WHERE id=?').run(req.user.id, req.params.id)
+    await softDeleteBusinessAttachments(db, 'bug', req.params.id, req.user.id)
     await db.writeLog(req.user.id, '删除', 'BUG', req.params.id, 'is_deleted', 0, 1, req.ip, row.title)
     ok(res, null)
   } catch (error) { console.error(error); fail(res, 500, 500, '删除失败') }

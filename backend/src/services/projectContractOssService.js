@@ -41,7 +41,9 @@ async function uploadFileToOss(file, {
   uploadUrl = OSS_UPLOAD_URL,
   validateFile = validateAttachmentFile,
 } = {}) {
-  validateFile(file)
+  const validation = validateFile(file)
+  if (validation?.originalname) file.originalname = validation.originalname
+  if (validation?.mimetype) file.mimetype = validation.mimetype
   const form = new FormData()
   form.append('file', new Blob([file.buffer], { type: file.mimetype }), file.originalname)
   form.append('bucketName', OSS_BUCKET_NAME)
@@ -50,9 +52,9 @@ async function uploadFileToOss(file, {
   try {
     response = await fetchImpl(uploadUrl, { method: 'POST', body: form })
   } catch {
-    throw ossError('OSS 上传失败，请稍后重试')
+    throw ossError(`OSS 上传失败：${file.originalname}`)
   }
-  if (!response.ok) throw ossError('OSS 上传失败，请稍后重试')
+  if (!response.ok) throw ossError(`OSS 上传失败：${file.originalname}`)
 
   let payload
   try {

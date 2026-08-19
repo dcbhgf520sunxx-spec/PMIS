@@ -15,6 +15,7 @@ const {
   PROJECT_PLAN_DELIVERY_DIR,
   removeAttachmentFile,
   resolveAttachmentPath,
+  validateAttachmentFile,
 } = require('../services/projectContractAttachmentService')
 const {
   loadOssAttachment,
@@ -506,6 +507,11 @@ exports.changeStatus = async (req, res) => {
     const actualEndDate = target === PLAN_ITEM_STATUS.COMPLETED ? req.body.actual_end_date : null
     for (const file of uploadedFiles) {
       file.originalname = normalizeOriginalName(file.originalname)
+      const validation = validateAttachmentFile(file)
+      if (validation.originalname) file.originalname = validation.originalname
+      if (validation.mimetype) file.mimetype = validation.mimetype
+    }
+    for (const file of uploadedFiles) {
       const saved = await uploadAttachmentToOss(file)
       savedFiles.push({ file, saved })
     }
@@ -606,7 +612,7 @@ async function listFiles(itemId) {
   return db.prepare(`SELECT f.id,f.plan_item_id,f.original_name,f.mime_type,f.size_bytes,f.created_at,u.real_name uploader_name
     FROM pms_project_plan_delivery_file f LEFT JOIN pms_user u ON u.id=f.uploader_id
     WHERE f.plan_item_id=? AND f.is_current=1 AND f.is_void=0
-    ORDER BY f.created_at DESC,f.id DESC`).all(itemId)
+    ORDER BY f.created_at ASC,f.id ASC`).all(itemId)
 }
 
 exports.listFiles = async (req, res) => {

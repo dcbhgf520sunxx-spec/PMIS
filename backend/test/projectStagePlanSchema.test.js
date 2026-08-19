@@ -94,6 +94,13 @@ test('交付文件不做版本管理并只开放上传下载删除', () => {
   assert.doesNotMatch(controller, /exports\.replaceFile|exports\.voidFile|MAX\(version_no\)|replaces_file_id/)
 })
 
+test('交付文件按上传先后顺序返回', () => {
+  const controller = read('src/controllers/projectStagePlanController.js')
+
+  assert.match(controller, /FROM pms_project_plan_delivery_file f[\s\S]*?ORDER BY f\.created_at ASC,f\.id ASC/)
+  assert.doesNotMatch(controller, /FROM pms_project_plan_delivery_file f[\s\S]*?ORDER BY f\.created_at DESC,f\.id DESC/)
+})
+
 test('关键事项由已完成退回进行中时在同一事务内失效上一轮文件', () => {
   const controller = read('src/controllers/projectStagePlanController.js')
 
