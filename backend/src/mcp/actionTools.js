@@ -1124,7 +1124,10 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
     error.code = 'MCP_TOOL_NOT_FOUND'
     throw error
   }
-  const mode = args.mode || 'preview'
+  if (args.mode === undefined || args.mode === null || args.mode === '') {
+    throw businessValidationError('mode', 'mode必须显式传递preview或execute')
+  }
+  const mode = args.mode
   if (!['preview', 'execute'].includes(mode)) throw businessValidationError('mode', 'mode必须是preview或execute')
   if (name === 'business_attachment_upload' || name === 'business_attachment_delete') {
     const menuByType = {
@@ -1165,6 +1168,11 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
       executed: false,
       affectedTargets,
       resultStatus: 'preview',
+      executeArguments: {
+        ...preparedArgs,
+        mode: 'execute',
+        confirmation_id: ticket.confirmationId,
+      },
     }
   }
   await actionTicketService.consumeTicket(context, name, preparedArgs, args.confirmation_id)

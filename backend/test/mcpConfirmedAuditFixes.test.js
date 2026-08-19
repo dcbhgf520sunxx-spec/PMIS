@@ -25,6 +25,7 @@ test('date validation rejects impossible calendar dates and invalid date order',
       start_date: '2026-02-30',
       expected_end_date: '2026-02-28',
       idempotency_key: 'invalid-calendar-date',
+      mode: 'preview',
     }),
     (error) => error.code === 'MCP_ARGUMENT_INVALID'
       && Boolean(error.fieldErrors.start_date)
@@ -223,6 +224,28 @@ test('preview response states that the operation is not executed and requires co
   assert.equal(result.requiresConfirmation, true)
   assert.equal(result.riskLevel, 'high')
   assert.deepEqual(result.affectedTargets, [{ type: 'task', id: 59, name: '任务59', current: { owner_ids: [8] } }])
+  assert.deepEqual(result.executeArguments, {
+    id: 59,
+    mode: 'execute',
+    confirmation_id: 'ticket-59',
+  })
+})
+
+test('action dispatch rejects an omitted mode instead of silently falling back to preview', async () => {
+  await assert.rejects(
+    () => dispatchActionTool('task_delete', { id: 59 }, {
+      user: { id: 8, employeeNo: '005829', realName: '孙鑫鑫' },
+    }, {
+      mergeArguments: async (_name, args) => args,
+      validateStatus: async () => {},
+      validateBusinessRules: async () => {},
+      loadTarget: async () => {
+        throw new Error('缺失mode时不应继续加载业务对象')
+      },
+    }),
+    (error) => error.code === 'MCP_BUSINESS_VALIDATION'
+      && error.fieldErrors.mode === 'mode必须显式传递preview或execute'
+  )
 })
 
 test('audit result count uses the normalized items collection', () => {
@@ -271,6 +294,7 @@ test('action metadata publishes database-backed text limits and rejects invalid 
       submitter_dept: '研发部',
       submit_time: '2026-07-29T25:80:00+08:00',
       idempotency_key: 'invalid-hour',
+      mode: 'preview',
     }),
     (error) => error.code === 'MCP_ARGUMENT_INVALID'
       && Boolean(error.fieldErrors.submit_time)

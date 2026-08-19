@@ -413,6 +413,7 @@ test('batch and other high-impact actions are labeled high risk in preview', asy
     stage_id: 2,
     items: [{ name: '上线', owner_id: 8, original_due_date: '2026-08-01' }],
     idempotency_key: 'stage-items-1',
+    mode: 'preview',
   }, {
     client: { id: 3 },
     user: { id: 8, employeeNo: 'JS001', realName: '张三' },
