@@ -1,5 +1,6 @@
 import { Tooltip } from 'antd';
 import { AdminAttachmentUpload, AdminDatePicker, AdminFormItem, AdminTextArea, StatusChangeAction, StatusTag, type StatusChangeActionProps } from '../../../components/admin';
+import { COMMON_ATTACHMENT_ACCEPT, COMMON_ATTACHMENT_MAX_SIZE } from '../../../components/business/businessAttachmentRules';
 import type { ProjectPlanItem, ProjectPlanItemStatus } from '../types';
 
 const labels:Record<ProjectPlanItemStatus,string>={0:'未开始',1:'进行中',2:'已完成',3:'暂停'};
@@ -28,6 +29,8 @@ export function ProjectPlanStatusChangeAction({item,...props}:Props){
       {target===3?<AdminFormItem name="pauseReason" label="暂停原因" rules={[{required:true,whitespace:true,message:'请填写暂停原因'},{max:200,message:'暂停原因不能超过200个字符'}]}><AdminTextArea rows={3} maxLength={200} showCount placeholder="请输入暂停原因"/></AdminFormItem>:null}
       {target===2&&item.requiresDeliveryFile&&item.fileCount===0?<AdminFormItem name="completionFiles" label="关键交付文件" rules={[{required:true,message:'请上传关键交付文件'}]}>
         <AdminAttachmentUpload
+          accept={COMMON_ATTACHMENT_ACCEPT}
+          maxSize={COMMON_ATTACHMENT_MAX_SIZE}
           multiple
           onUpload={async(file)=>({id:`pending-${file.uid}`,name:file.name,size:file.size,contentType:file.type})}
           hint={item.deliveryRequirement||'请上传关键交付文件后再确认完成'}/>

@@ -25,16 +25,47 @@ test('parses only governed PMIS business attachment resource URIs', () => {
     parsePmisResourceUri('pmis://products/7/maintenance-contracts/9/attachments/11'),
     { type: 'maintenance', productId: 7, contractId: 9, attachmentId: 11 }
   )
+  assert.deepEqual(
+    parsePmisResourceUri('pmis://tasks/59/attachments/12'),
+    { type: 'business', businessType: 'task', businessId: 59, attachmentId: 12 }
+  )
   assert.throws(() => parsePmisResourceUri('file:///etc/passwd'), /资源地址/)
 })
 
 test('lists only URL-based resource templates permitted by employee menus', async () => {
   const projects = await listResourceTemplates({ allowedMenuPaths: new Set(['/projects']) })
-  assert.deepEqual(projects.map((item) => item.name), ['项目合同附件', '阶段计划交付文件'])
+  assert.deepEqual(projects.map((item) => item.name), ['项目合同附件', '阶段计划交付文件', '项目附件'])
   assert.equal(projects.every((item) => /URL/.test(item.description)), true)
 
   const products = await listResourceTemplates({ allowedMenuPaths: new Set(['/products']) })
   assert.deepEqual(products.map((item) => item.name), ['产品运维合同附件'])
+
+  const tasks = await listResourceTemplates({ allowedMenuPaths: new Set(['/tasks']) })
+  assert.deepEqual(tasks.map((item) => item.name), ['任务附件'])
+})
+
+test('loads generic business attachment as signed URL metadata without file bytes', async () => {
+  const descriptor = await loadResourceDescriptor(
+    'pmis://tasks/59/attachments/12',
+    { allowedMenuPaths: new Set(['/tasks']) },
+    {
+      database: {
+        prepare(sql) {
+          assert.match(sql, /pms_business_attachment/)
+          assert.match(sql, /pms_task/)
+          return { async get() { return {
+            original_name: '任务说明.pptx', oss_response: { data: [{ filePath: 'pmis/tasks/12.pptx' }] },
+            mime_type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', file_size: 2048,
+          } } }
+        },
+      },
+      resolveFile: () => ({ filePath: 'pmis/tasks/12.pptx' }),
+      createAccessUrl: ({ fileName }) => `https://pmis.example.com/file?name=${encodeURIComponent(fileName)}`,
+    }
+  )
+  assert.equal(descriptor.fileName, '任务说明.pptx')
+  assert.match(descriptor.fileUrl, /^https:/)
+  assert.equal(Object.hasOwn(descriptor, 'buffer'), false)
 })
 
 test('returns governed file metadata and URL without embedding file bytes', () => {

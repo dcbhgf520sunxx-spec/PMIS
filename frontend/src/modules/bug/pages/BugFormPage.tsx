@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { App } from 'antd';
 import { ProForm } from '@ant-design/pro-components';
 import { useParams } from 'react-router-dom';
@@ -8,6 +8,7 @@ import { getUserOptions } from '../../../api/userApi';
 import { getArchiveOptionsByTypeName } from '../../../api/archiveApi';
 import type { BugFormValues } from '../types';
 import { createRichTextImageUploader } from '../../../api/richTextImageApi';
+import { BusinessAttachmentField, type BusinessAttachmentFieldHandle } from '../../../components/business/BusinessAttachmentField';
 
 const uploadRichTextImage = createRichTextImageUploader('/bugs');
 
@@ -28,6 +29,7 @@ export function BugFormPage({ mode }: { mode: Mode }) {
   const [error, setError] = useState('');
   const [notFound, setNotFound] = useState(false);
   const [revision, setRevision] = useState(0);
+  const attachmentRef = useRef<BusinessAttachmentFieldHandle>(null);
   const sourceType = ProForm.useWatch('sourceType', form);
 
   useEffect(() => {
@@ -53,7 +55,7 @@ export function BugFormPage({ mode }: { mode: Mode }) {
     formId="bug-form" form={form} initialValues={initial} loading={loading} error={error} notFound={notFound}
     onRetry={() => setRevision((value) => value + 1)} onCancel={returnToSource}
     fieldNameMap={{ source_type: 'sourceType', project_id: 'projectId', requirement_id: 'requirementId', bug_type_id: 'bugTypeId', assignee_id: 'assigneeId' }}
-    onSubmit={async (values) => { if (mode === 'edit' && params.id) await updateBug(params.id, values); else await createBug(values); message.success(mode === 'edit' ? '保存成功' : '新增成功'); returnToSource(); }}
+    onSubmit={async (values) => { let savedId=params.id;if (mode === 'edit' && params.id) await updateBug(params.id, values); else savedId=String((await createBug(values)).id);if(savedId)await attachmentRef.current?.commit(savedId);message.success(mode === 'edit' ? '保存成功' : '新增成功'); returnToSource(); }}
   >
     <TemplateFormSection title="基本信息"><div className="admin-template-form-page__grid">
       <AdminProFormText name="title" label="Bug标题" rules={titleRules} fieldProps={{ maxLength: 200 }} formItemProps={{ className: 'admin-template-form-page__field is-full' }} />
@@ -62,6 +64,7 @@ export function BugFormPage({ mode }: { mode: Mode }) {
       {sourceType === 2 ? <AdminProFormSelect name="requirementId" label="关联需求" options={requirements} rules={[{ required: true, message: '请选择关联需求' }]} /> : <AdminProFormSelect name="projectId" label="关联项目" options={projects} rules={[{ required: true, message: '请选择关联项目' }]} />}
       <AdminProFormSelect name="bugTypeId" label="Bug类型" options={bugTypes} rules={[{ required: true, message: '请选择Bug类型' }]} />
       <AdminProFormSelect name="severity" label="严重程度" options={[{ label: '低', value: 1 }, { label: '中', value: 2 }, { label: '高', value: 3 }, { label: '致命', value: 4 }]} rules={[{ required: true, message: '请选择严重程度' }]} />
+      <BusinessAttachmentField ref={attachmentRef} apiPath="/bugs" businessId={mode==='edit'?params.id:undefined}/>
     </div></TemplateFormSection>
     <TemplateFormSection title="处理信息"><div className="admin-template-form-page__grid"><AdminProFormSelect name="assigneeId" label="指派给" options={users} rules={[{ required: true, message: '请选择指派人' }]} /></div></TemplateFormSection>
   </TemplateFormPage>;

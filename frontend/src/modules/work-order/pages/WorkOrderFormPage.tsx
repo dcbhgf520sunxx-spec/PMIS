@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { App, Space } from 'antd';
 import type { RuleObject } from 'antd/es/form';
 import dayjs from 'dayjs';
@@ -22,6 +22,7 @@ import type { WorkOrderRecord } from '../types';
 import { urgencyOptions } from '../helpers';
 import { buildWorkOrderCreateInitialValues } from './workOrderFormDefaults';
 import { createRichTextImageUploader } from '../../../api/richTextImageApi';
+import { BusinessAttachmentField, type BusinessAttachmentFieldHandle } from '../../../components/business/BusinessAttachmentField';
 
 const uploadRichTextImage = createRichTextImageUploader('/work-orders');
 
@@ -85,6 +86,7 @@ export function WorkOrderFormPage({ mode }: { mode: 'create' | 'edit' | 'copy' }
   const [loadError, setLoadError] = useState('');
   const [notFound, setNotFound] = useState(false);
   const [reloadRevision, setReloadRevision] = useState(0);
+  const attachmentRef = useRef<BusinessAttachmentFieldHandle>(null);
   const initialValues = useMemo(() => (
     source && mode !== 'create'
       ? toInitialValues(source)
@@ -128,13 +130,15 @@ export function WorkOrderFormPage({ mode }: { mode: 'create' | 'edit' | 'copy' }
       fieldNameMap={{ problem_desc: 'problemDesc' }}
       onSubmit={async (values) => {
         const payload = toPayload(values);
+        let savedId = params.id;
         if (mode === 'edit' && params.id) {
           await updateWorkOrder(params.id, payload);
           message.success('工单已更新');
         } else {
-          await createWorkOrder(payload);
+          savedId = String((await createWorkOrder(payload)).id);
           message.success('工单已创建');
         }
+        if (savedId) await attachmentRef.current?.commit(savedId);
         returnToSource();
       }}
     >
@@ -188,6 +192,7 @@ export function WorkOrderFormPage({ mode }: { mode: 'create' | 'edit' | 'copy' }
                   placeholder="请选择跟进人"
                   rules={[{ required: true, message: '请选择跟进人' }]}
                 />
+                <BusinessAttachmentField ref={attachmentRef} apiPath="/work-orders" businessId={mode === 'edit' ? params.id : undefined} />
         </div>
       </TemplateFormSection>
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { App } from 'antd';
 import { ProForm } from '@ant-design/pro-components';
 import { useParams } from 'react-router-dom';
@@ -8,6 +8,7 @@ import { getUserOptions } from '../../../api/userApi';
 import { getArchiveOptionsByTypeName } from '../../../api/archiveApi';
 import type { TaskFormValues, TaskRecord } from '../types';
 import { createRichTextImageUploader } from '../../../api/richTextImageApi';
+import { BusinessAttachmentField, type BusinessAttachmentFieldHandle } from '../../../components/business/BusinessAttachmentField';
 
 const uploadRichTextImage = createRichTextImageUploader('/tasks');
 
@@ -29,6 +30,7 @@ export function TaskFormPage({ mode }: { mode: Mode }) {
   const [error, setError] = useState('');
   const [notFound, setNotFound] = useState(false);
   const [revision, setRevision] = useState(0);
+  const attachmentRef = useRef<BusinessAttachmentFieldHandle>(null);
   const sourceType = ProForm.useWatch('sourceType', form);
   const subtaskMode = mode === 'create-subtask';
   const associationLocked = subtaskMode || Boolean(sourceTask?.parentTaskId);
@@ -110,10 +112,12 @@ export function TaskFormPage({ mode }: { mode: Mode }) {
     onCancel={returnToSource}
     fieldNameMap={{ source_type: 'sourceType', project_id: 'projectId', requirement_id: 'requirementId', owner_ids: 'ownerIds', task_type: 'taskType', expected_end_date: 'expectedEndTime' }}
     onSubmit={async (values) => {
+      let savedId = params.id;
       if (mode === 'edit' && params.id) await updateTask(params.id, values);
-      else if (subtaskMode && params.id) await createSubtask(params.id, values);
-      else if (mode === 'copy' && sourceTask?.parentTaskId) await createSubtask(sourceTask.parentTaskId, values);
-      else await createTask(values);
+      else if (subtaskMode && params.id) savedId = String((await createSubtask(params.id, values)).id);
+      else if (mode === 'copy' && sourceTask?.parentTaskId) savedId = String((await createSubtask(sourceTask.parentTaskId, values)).id);
+      else savedId = String((await createTask(values)).id);
+      if (savedId) await attachmentRef.current?.commit(savedId);
       message.success(mode === 'edit' ? '保存成功' : '新增成功');
       returnToSource();
     }}
@@ -129,6 +133,7 @@ export function TaskFormPage({ mode }: { mode: Mode }) {
           : <AdminProFormSelect name="projectId" label="关联项目" options={projects} rules={[{ required: true, message: '请选择关联项目' }]} fieldProps={{ disabled: associationLocked }} />}
         <AdminProFormSelect name="taskType" label="任务类型" options={types} rules={[{ required: true, message: '请选择任务类型' }]} />
         <AdminProFormSelect name="priority" label="优先级" options={[{ label: '低', value: 0 }, { label: '中', value: 1 }, { label: '高', value: 2 }]} disabled />
+        <BusinessAttachmentField ref={attachmentRef} apiPath="/tasks" businessId={mode === 'edit' ? params.id : undefined} />
       </div>
     </TemplateFormSection>
     <TemplateFormSection title="处理信息">
