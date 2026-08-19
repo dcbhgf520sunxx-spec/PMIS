@@ -67,7 +67,7 @@ const scalarField = described({ type: ['string', 'number', 'integer', 'boolean',
 const idArrayField = described({ type: 'array', items: arrayIdField, minItems: 1, maxItems: 500 }, '业务记录标识列表，至少一项')
 const optionalIdArrayField = described({ type: 'array', items: arrayIdField, minItems: 0, maxItems: 500 }, '业务记录标识列表；传空数组表示清空')
 const controlProperties = {
-  mode: described({ type: 'string', enum: ['preview', 'execute'] }, '操作模式：preview=仅预览，execute=确认后执行；默认 preview'),
+  mode: described({ type: 'string', enum: ['preview', 'execute'] }, '操作模式，必须显式传递：preview=仅预览，execute=确认后执行'),
   confirmation_id: described({ type: 'string', format: 'uuid' }, '预览返回的一次性确认号；execute 时必填'),
   idempotency_key: described({ type: 'string', minLength: 1, maxLength: 100 }, '由智能体自动生成的新增、上传或批量操作幂等键，不要询问用户；同一次 preview 和 execute 必须保持一致'),
 }
@@ -547,7 +547,12 @@ function actionInputSchema(name) {
     if (key in properties) properties[key] = described({ type: 'number', exclusiveMinimum: 0, multipleOf: 0.01 }, `${FIELD_DESCRIPTIONS[key]}且最多两位小数`)
   }
   if (statusActionSchemas[name]) properties.status = statusActionSchemas[name]
-  const schema = { type: 'object', properties, required: actionRequired[name], additionalProperties: false }
+  const schema = {
+    type: 'object',
+    properties,
+    required: [...new Set(['mode', ...(actionRequired[name] || [])])],
+    additionalProperties: false,
+  }
   if (SOURCE_TARGET_ACTIONS.has(name)) {
     schema.allOf = [
       {
@@ -930,6 +935,20 @@ function actionOutputSchema() {
         description: '操作完成后的业务附带结果；其中的布尔字段不代表本次操作成功或失败',
       },
       preview: { type: 'object', additionalProperties: true, description: '待执行操作的可读预览' },
+      execute_payload: {
+        type: 'object',
+        description: '用户确认后可原样复用的正式执行调用；不要重新拼装其中参数',
+        properties: {
+          tool_name: { type: 'string', description: '应再次调用的当前公共操作工具名' },
+          arguments: {
+            type: 'object',
+            additionalProperties: true,
+            description: '已锁定的完整执行参数，应原样传递',
+          },
+        },
+        required: ['tool_name', 'arguments'],
+        additionalProperties: false,
+      },
       data: { description: '无对象结果在结构化响应中的包装字段' },
     },
     additionalProperties: true,

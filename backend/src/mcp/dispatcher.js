@@ -299,7 +299,7 @@ function validateToolArguments(definition, args) {
     throw argumentErrors(fieldErrors, validationMessages.length === 1 ? validationMessages[0] : undefined)
   }
   if (definition._meta?.endpointType === 'action') {
-    const mode = args.mode || 'preview'
+    const mode = args.mode
     if (mode === 'execute' && !args.confirmation_id) {
       throw argumentError('confirmation_id', '缺少操作确认号：执行操作时必须提供 preview 返回的 confirmation_id')
     }
@@ -319,6 +319,21 @@ function normalizeToolArguments(definition, args) {
   if (!args || typeof args !== 'object' || Array.isArray(args) || args.sort_field === undefined) return args
   const sortField = normalizeSortField(definition.name, args.sort_field)
   return sortField === args.sort_field ? args : { ...args, sort_field: sortField }
+}
+
+function buildExecutePayload(publicToolName, publicArgs, result) {
+  if (result?.resultStatus !== 'preview' || !result.executeArguments) return result
+  const { executeArguments, ...publicResult } = result
+  return {
+    ...publicResult,
+    execute_payload: {
+      tool_name: publicToolName,
+      arguments: {
+        ...(publicArgs?.operation ? { operation: publicArgs.operation } : {}),
+        ...executeArguments,
+      },
+    },
+  }
 }
 
 function validateToolPermission(definition, args, context) {
@@ -377,6 +392,9 @@ async function dispatchMcpTool(name, args, context) {
     result = await (context.endpointType === 'query'
       ? dispatchQueryTool(commandName, commandArgs, context)
       : dispatchActionTool(commandName, commandArgs, context))
+    if (context.endpointType === 'action') {
+      result = buildExecutePayload(name, publicArgs, result)
+    }
   } catch (error) {
     const audit = buildAuditSummary(commandName, commandArgs)
     await recordMcpAudit({
@@ -424,6 +442,7 @@ async function dispatchMcpTool(name, args, context) {
 
 module.exports = {
   argumentError,
+  buildExecutePayload,
   buildAuditSummary,
   dispatchMcpTool,
   normalizeToolArguments,
