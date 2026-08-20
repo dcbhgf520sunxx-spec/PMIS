@@ -55,6 +55,16 @@ test('本地、部署和远程检查使用兼容 TypeScript 测试的 Node 版�
   assert.match(nginx, /client_max_body_size\s+25m;/)
 })
 
+test('生产 CSP 允许嵌入正式 Agent 页面', () => {
+  const nginx = read('deploy/nginx.conf')
+  const policies = nginx.match(/add_header Content-Security-Policy "[^"]+" always;/g) || []
+
+  assert.ok(policies.length > 0)
+  for (const policy of policies) {
+    assert.match(policy, /frame-src 'self' https:\/\/ai\.znjs\.com:3100;/)
+  }
+})
+
 test('软删除后角色和档案类型编码可复用且工单关联有外键', () => {
   const schema = read('backend/db/init/001_schema.sql')
   const migration = read('backend/db/migrations/20260716_01_enforce_confirmed_constraints.sql')

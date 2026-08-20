@@ -21,3 +21,9 @@ test('业务附件入口统一使用包含 TXT 和 Markdown 的公共类型规�
     assert.match(source, /COMMON_ATTACHMENT_MAX_SIZE/, `${file} 未使用公共附件大小规则`);
   }
 });
+
+test('统一业务附件提示只说明文件规则', () => {
+  const source = read('src/components/business/BusinessAttachmentField.tsx');
+  assert.doesNotMatch(source, /随业务数据保存上传/);
+  assert.match(source, /单个文件不超过20MB，最多10个。/);
+});

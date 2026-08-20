@@ -137,7 +137,7 @@ export const BusinessAttachmentField = forwardRef<BusinessAttachmentFieldHandle,
         }}
         onLoadPreview={loadPreview}
         onDownload={download}
-        hint={`${COMMON_ATTACHMENT_TYPE_HINT}；单个文件不超过20MB，最多10个；随业务数据保存上传。`}
+        hint={`${COMMON_ATTACHMENT_TYPE_HINT}；单个文件不超过20MB，最多10个。`}
       />
     </AdminFormItem>
   );
