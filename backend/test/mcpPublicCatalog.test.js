@@ -11,12 +11,12 @@ const { buildExecutePayload } = require('../src/mcp/dispatcher')
 
 const allMenus = new Set(['/products', '/projects', '/requirements', '/tasks', '/bugs', '/work-orders'])
 
-test('public MCP catalog exposes 15 query tools and 19 action tools', () => {
+test('public MCP catalog exposes 15 query tools and 20 action tools', () => {
   const query = filterToolsForContext({ endpointType: 'query', allowedMenuPaths: allMenus })
   const action = filterToolsForContext({ endpointType: 'action', allowedMenuPaths: allMenus })
 
   assert.equal(query.length, 15)
-  assert.equal(action.length, 19)
+  assert.equal(action.length, 20)
   assert.deepEqual(query.map((tool) => tool.name), [
     'global_search',
     'business_attachment_search',
@@ -54,9 +54,41 @@ test('public MCP catalog exposes 15 query tools and 19 action tools', () => {
     'payment_manage',
     'contract_attachment_manage',
     'stage_delivery_manage',
+    'business_attachment_manage',
   ])
   assert.equal(query.some((tool) => tool.name === 'task_get'), false)
   assert.equal(action.some((tool) => tool.name === 'task_update'), false)
+})
+
+test('business attachment action is exposed and scoped by current employee menu permissions', () => {
+  const taskTools = filterToolsForContext({
+    endpointType: 'action',
+    allowedMenuPaths: new Set(['/tasks']),
+  })
+  const attachmentTool = taskTools.find((tool) => tool.name === 'business_attachment_manage')
+
+  assert.ok(attachmentTool)
+  assert.deepEqual(attachmentTool.inputSchema.properties.business_type.enum, ['task'])
+  for (const branch of attachmentTool.inputSchema.oneOf) {
+    assert.deepEqual(branch.properties.business_type.enum, ['task'])
+  }
+
+  const unrelatedTools = filterToolsForContext({
+    endpointType: 'action',
+    allowedMenuPaths: new Set(['/unknown-menu']),
+  })
+  assert.equal(unrelatedTools.some((tool) => tool.name === 'business_attachment_manage'), false)
+
+  const completeTools = filterToolsForContext({
+    endpointType: 'action',
+    allowedMenuPaths: allMenus,
+    allowedPermissionCodes: new Set([
+      'project_priority_adjust',
+      'requirement_priority_adjust',
+      'task_priority_adjust',
+    ]),
+  })
+  assert.equal(completeTools.length, 23)
 })
 
 test('public task action resolves to the existing internal command without operation leakage', () => {
