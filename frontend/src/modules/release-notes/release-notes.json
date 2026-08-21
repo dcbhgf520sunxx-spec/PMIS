@@ -1,6 +1,19 @@
 {
   "releases": [
     {
+      "version": "v2026.08.21.1",
+      "releasedAt": "2026-08-21",
+      "summary": "开放 Agent 业务附件操作并统一系统品牌。",
+      "features": [
+        "操作 MCP 开放统一业务附件管理工具，支持 Agent 使用受信任文件地址关联附件"
+      ],
+      "improvements": [
+        "登录页、系统左上角和浏览器页签统一展示智能数管 SIDM"
+      ],
+      "fixes": [],
+      "security": []
+    },
+    {
       "version": "v2026.08.20.1",
       "releasedAt": "2026-08-20",
       "summary": "优化附件提示并恢复正式环境智能助手嵌入。",
