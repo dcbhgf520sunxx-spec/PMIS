@@ -432,8 +432,8 @@ export function AdminLayout() {
         <div className="admin-layout__brand">
           <span className="admin-layout__brand-mark">P</span>
           <span className="admin-layout__brand-name">
-            <span className="admin-layout__brand-title">智能项管</span>
-            <span className="admin-layout__brand-code">SIP</span>
+            <span className="admin-layout__brand-title">智能数管</span>
+            <span className="admin-layout__brand-code">SIDM</span>
           </span>
         </div>
         <Menu
