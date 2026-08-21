@@ -1313,22 +1313,32 @@ function scopeBusinessAttachmentSearch(tool, allowedMenuPaths) {
 }
 
 function scopeBusinessAttachmentAction(tool, allowedMenuPaths) {
-  if (tool.name !== 'business_attachment_upload' && tool.name !== 'business_attachment_delete') return tool
-  const businessType = tool.inputSchema.properties.business_type
+  if (!['business_attachment_manage', 'business_attachment_upload', 'business_attachment_delete'].includes(tool.name)) return tool
   const menuByType = {
     requirement: '/requirements', project: '/projects', task: '/tasks', bug: '/bugs', work_order: '/work-orders',
+  }
+  const scopeProperties = (properties) => {
+    const businessType = properties?.business_type
+    if (!businessType) return properties
+    return {
+      ...properties,
+      business_type: {
+        ...businessType,
+        enum: businessType.enum.filter((type) => allowedMenuPaths.has(menuByType[type])),
+      },
+    }
   }
   return {
     ...tool,
     inputSchema: {
       ...tool.inputSchema,
-      properties: {
-        ...tool.inputSchema.properties,
-        business_type: {
-          ...businessType,
-          enum: businessType.enum.filter((type) => allowedMenuPaths.has(menuByType[type])),
-        },
-      },
+      properties: scopeProperties(tool.inputSchema.properties),
+      ...(tool.inputSchema.oneOf ? {
+        oneOf: tool.inputSchema.oneOf.map((branch) => ({
+          ...branch,
+          properties: scopeProperties(branch.properties),
+        })),
+      } : {}),
     },
   }
 }
@@ -1343,7 +1353,7 @@ function filterToolsForContext(context) {
       return ['/projects', '/products', '/requirements', '/tasks', '/bugs', '/work-orders']
         .some((path) => context.allowedMenuPaths.has(path))
     }
-    if (tool.name === 'business_attachment_upload' || tool.name === 'business_attachment_delete') {
+    if (['business_attachment_manage', 'business_attachment_upload', 'business_attachment_delete'].includes(tool.name)) {
       return ['/requirements', '/projects', '/tasks', '/bugs', '/work-orders']
         .some((path) => context.allowedMenuPaths.has(path))
     }
