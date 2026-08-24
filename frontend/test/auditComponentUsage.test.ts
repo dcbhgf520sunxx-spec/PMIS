@@ -41,6 +41,34 @@ test('组件审计阻断在 AdminDrawer 中直接拼 TemplateListPage', () => {
   }
 });
 
+test('组件审计阻断主页面把 TemplateListPage 降级为内嵌列表', () => {
+  const result = runStrictAudit(
+    'export function InterfaceConfigPage() { return <TemplateListPage embedded pagination={{}} />; }',
+    'InterfaceConfigPage.tsx'
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /主页面.*embedded/);
+});
+
+test('组件审计阻断主页面在 PageShell 或 AdminCard 中重复嵌套列表模板', () => {
+  for (const container of ['PageShell', 'AdminCard']) {
+    const result = runStrictAudit(
+      `export function InterfaceConfigPage() { return <${container}><TemplateListPage pagination={{}} /></${container}>; }`,
+      'InterfaceConfigPage.tsx'
+    );
+    assert.equal(result.status, 1, container);
+    assert.match(result.stdout, /主列表.*TemplateListPage/);
+  }
+});
+
+test('组件审计允许页面内部组合组件使用内嵌列表', () => {
+  const result = runStrictAuditFiles({
+    'archive/pages/components/ArchiveRecordTable.tsx':
+      'export function ArchiveRecordTable() { return <TemplateListPage embedded pagination={{}} />; }'
+  });
+  assert.equal(result.status, 0, result.stdout);
+});
+
 test('组件审计阻断业务页直接使用 antd Tree', () => {
   const modulesDir = mkdtempSync(join(tmpdir(), 'component-audit-'));
   const pagePath = join(modulesDir, 'RoleFormPage.tsx');
