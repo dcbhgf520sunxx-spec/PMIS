@@ -117,6 +117,42 @@ function collectPageTemplateViolations(files) {
     const source = readFileSync(file, 'utf8');
     const pagePath = relative(modulesDir, file);
     const violations = [];
+    const pageFileName = pagePath.split('/').at(-1) || '';
+    const isPageEntry = pageFileName.endsWith('Page.tsx')
+      || (pageFileName === 'index.tsx' && pagePath.split('/').includes('pages'));
+
+    if (isPageEntry && source.includes('<TemplateListPage')) {
+      const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+      const visitListTemplate = (node) => {
+        if ((ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node))
+          && jsxTagName(node, sourceFile) === 'TemplateListPage') {
+          if (attribute(node, 'embedded')) {
+            violations.push(finding(
+              file,
+              sourceFile,
+              node,
+              '主页面不得通过 embedded 降级使用 TemplateListPage；主列表必须由完整页面模板承接'
+            ));
+          }
+
+          let parent = node.parent;
+          while (parent && parent !== sourceFile) {
+            if (ts.isJsxElement(parent) && ['PageShell', 'AdminCard'].includes(jsxTagName(parent, sourceFile))) {
+              violations.push(finding(
+                file,
+                sourceFile,
+                node,
+                '主列表必须直接使用完整 TemplateListPage，不得在外层重复拼 PageShell 或 AdminCard'
+              ));
+              break;
+            }
+            parent = parent.parent;
+          }
+        }
+        ts.forEachChild(node, visitListTemplate);
+      };
+      visitListTemplate(sourceFile);
+    }
 
     if (pagePath.endsWith('FormPage.tsx') && !source.includes('<TemplateFormPage')) {
       violations.push({

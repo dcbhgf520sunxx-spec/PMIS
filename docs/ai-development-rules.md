@@ -89,7 +89,7 @@ API 接入保持统一：
 
 ### 列表页
 
-列表页统一使用 `TemplateListPage`；本地数据使用 `useTemplateListPageData`，服务端分页数据使用 `useTemplateServerListData`。
+列表页统一直接使用完整的 `TemplateListPage`；本地数据使用 `useTemplateListPageData`，服务端分页数据使用 `useTemplateServerListData`。主页面不得在外层重复拼 `PageShell`、`AdminCard`，也不得传入 `embedded` 把页面模板降级成内嵌表格。`embedded` 只供 `TemplateDrawerTable` 和页面内部组合组件承接局部列表，不是业务主列表绕过页面模板的开关。
 
 必须保持以下规则：
 
