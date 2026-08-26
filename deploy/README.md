@@ -171,6 +171,8 @@ sudo chown -R pmis:pmis /opt/pmis/shared/uploads /opt/pmis/shared/private-upload
 sudo bash /opt/pmis/releases/<release>/deploy/retain-previous-frontend-assets.sh \
   /opt/pmis/current/frontend/dist \
   /opt/pmis/releases/<release>/frontend/dist
+# 发布目录必须允许 Nginx 逐级进入；否则前端入口和静态资源会返回 403。
+sudo chmod 755 /opt/pmis/releases/<release>
 sudo ln -sfn /opt/pmis/releases/<release> /opt/pmis/current
 ```
 
@@ -185,6 +187,7 @@ Nginx 必须对 `index.html` 使用 `no-store`，对 `/assets/` 下的 Vite 哈�
 ```bash
 systemctl status pmis-backend postgresql-16
 journalctl -u pmis-backend -n 100 --no-pager
+namei -l /opt/pmis/current/frontend/dist/index.html
 ```
 
 ## 7. 配置 Nginx
