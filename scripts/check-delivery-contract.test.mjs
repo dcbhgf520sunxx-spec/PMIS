@@ -255,3 +255,24 @@ test('requires the AI delivery flow to state the API permission rule', () => {
 
   assert.ok(checkDeliveryContract(root).includes('AI 交付流程未声明业务接口双重鉴权规则'));
 });
+
+test('requires release notes when product runtime files change', () => {
+  const root = createProject();
+  const errors = checkDeliveryContract(root, {
+    changedFiles: ['frontend/src/modules/orders/pages/OrderListPage.tsx']
+  });
+
+  assert.ok(errors.includes('产品代码已变更，但未同步更新版本发布记录'));
+});
+
+test('accepts product runtime changes when release notes are updated together', () => {
+  const root = createProject();
+  const errors = checkDeliveryContract(root, {
+    changedFiles: [
+      'backend/src/routes/orders.js',
+      'frontend/src/modules/release-notes/release-notes.json'
+    ]
+  });
+
+  assert.ok(!errors.includes('产品代码已变更，但未同步更新版本发布记录'));
+});

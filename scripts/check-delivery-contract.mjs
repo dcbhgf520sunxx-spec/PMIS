@@ -11,6 +11,8 @@ const AUTHENTICATED_ONLY_API_PATHS = new Set([
 const MCP_API_PATHS = new Set(['/api/mcp']);
 const AUTHENTICATED_ONLY_PAGE_PATHS = new Set(['/release-notes']);
 const DATABASE_STRUCTURE_SQL = /\b(?:CREATE\s+(?:UNIQUE\s+)?INDEX|CREATE\s+TABLE|ALTER\s+TABLE|DROP\s+(?:TABLE|INDEX))\b/i;
+const RELEASE_NOTES_PATH = 'frontend/src/modules/release-notes/release-notes.json';
+const RELEASE_RELEVANT_FILE = /^(?:backend\/src\/|backend\/db\/(?:init\/|migrations\/)|frontend\/src\/|deploy\/nginx\.conf$)/;
 
 function stripSqlComments(source) {
   return source
@@ -37,6 +39,13 @@ export function checkDeliveryContract(rootDir, { changedFiles = [], changedRoute
   const schema = read(rootDir, 'backend/db/init/001_schema.sql');
   const deployReadme = read(rootDir, 'deploy/README.md');
   const nginx = read(rootDir, 'deploy/nginx.conf');
+
+  const hasProductRuntimeChange = changedFiles.some((file) => (
+    file !== RELEASE_NOTES_PATH && RELEASE_RELEVANT_FILE.test(file)
+  ));
+  if (hasProductRuntimeChange && !changedFiles.includes(RELEASE_NOTES_PATH)) {
+    errors.push('产品代码已变更，但未同步更新版本发布记录');
+  }
 
   if (!flow) errors.push('缺少 docs/ai-delivery-flow.md');
   if (!agents.includes('docs/ai-delivery-flow.md')) errors.push('AGENTS.md 未声明 AI 交付流程入口');
