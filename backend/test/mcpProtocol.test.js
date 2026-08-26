@@ -285,7 +285,7 @@ test('global business search tools can be called without filters', () => {
 
 test('business attachment search is read-only and exposes governed filters', () => {
   const catalog = require('../src/mcp/catalog')
-  const context = { endpointType: 'query', allowedMenuPaths: new Set(['/projects']) }
+  const context = { endpointType: 'query', allowedMenuPaths: new Set(['/projects', '/tasks']) }
   const definition = catalog.getToolDefinition('business_attachment_search', 'query')
 
   assert.equal(filterToolsForContext(context).some((tool) => tool.name === 'business_attachment_search'), true)
@@ -293,7 +293,7 @@ test('business attachment search is read-only and exposes governed filters', () 
   assert.deepEqual(
     filterToolsForContext(context).find((tool) => tool.name === 'business_attachment_search')
       .inputSchema.properties.attachment_type.enum,
-    ['stage_delivery', 'project_contract']
+    ['stage_delivery', 'project_contract', 'project_attachment', 'task_attachment']
   )
   assert.doesNotThrow(() => validateToolArguments(definition, {
     keyword: '验收', attachment_type: 'stage_delivery', project_id: 12, page: 1, page_size: 20,

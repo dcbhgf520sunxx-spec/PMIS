@@ -11,6 +11,7 @@ import { ProjectStatusChangeAction, renderProjectStatus } from '../components/Pr
 import { getFollowUpRecords, type FollowUpRecord } from '../../../api/followUpRecordApi';
 import { FollowUpRecordSection } from '../../follow-up/FollowUpRecordSection';
 import { refreshFollowUpDetail } from '../../follow-up/refreshFollowUpDetail';
+import { BusinessAttachmentField } from '../../../components/business/BusinessAttachmentField';
 
 const dateValue = (value: unknown) => value && typeof value === 'object' && 'format' in value && typeof value.format === 'function' ? value.format('YYYY-MM-DD') : undefined;
 
@@ -124,6 +125,7 @@ export function ProjectDetailPage() {
               { label: '启动时间', value: row.startDate }, { label: '预计完成时间', value: row.expectedEndDate },
               { label: '实际完成时间', value: row.actualEndDate }, { label: '暂停时间', value: row.suspendDate },
               { label: '项目描述', value: row.description, wide: true, longText: true },
+              { label: '附件', value: <BusinessAttachmentField readOnly apiPath="/projects" businessId={row.id} />, wide: true },
             ]} />
           </TemplateDetailSection>
           <TemplateDetailSection title="进展与风险" sectionKey="project-progress">

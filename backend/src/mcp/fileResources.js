@@ -2,6 +2,14 @@ const db = require('../db')
 const { resolveOssFile } = require('../services/projectContractOssService')
 const { createOssAccessUrl } = require('../services/ossFileUrlService')
 
+const BUSINESS_RESOURCE_CONFIG = Object.freeze({
+  requirements: { businessType: 'requirement', table: 'pms_requirement', menuPath: '/requirements', label: '需求附件' },
+  projects: { businessType: 'project', table: 'pms_project', menuPath: '/projects', label: '项目附件' },
+  tasks: { businessType: 'task', table: 'pms_task', menuPath: '/tasks', label: '任务附件' },
+  bugs: { businessType: 'bug', table: 'pms_bug', menuPath: '/bugs', label: 'BUG附件' },
+  'work-orders': { businessType: 'work_order', table: 'pms_work_order', menuPath: '/work-orders', label: '运维工单附件' },
+})
+
 function parsePmisResourceUri(uri) {
   let match = /^pmis:\/\/projects\/(\d+)\/contract\/attachments\/(\d+)$/.exec(uri)
   if (match) return { type: 'contract', projectId: Number(match[1]), attachmentId: Number(match[2]) }
@@ -9,6 +17,8 @@ function parsePmisResourceUri(uri) {
   if (match) return { type: 'stage', projectId: Number(match[1]), itemId: Number(match[2]), fileId: Number(match[3]) }
   match = /^pmis:\/\/products\/(\d+)\/maintenance-contracts\/(\d+)\/attachments\/(\d+)$/.exec(uri)
   if (match) return { type: 'maintenance', productId: Number(match[1]), contractId: Number(match[2]), attachmentId: Number(match[3]) }
+  match = /^pmis:\/\/(requirements|projects|tasks|bugs|work-orders)\/(\d+)\/attachments\/(\d+)$/.exec(uri)
+  if (match) return { type: 'business', businessType: BUSINESS_RESOURCE_CONFIG[match[1]].businessType, businessId: Number(match[2]), attachmentId: Number(match[3]) }
   throw new Error('MCP资源地址不合法')
 }
 
@@ -81,6 +91,18 @@ async function readMaintenanceResource(parsed, uri, dependencies) {
   return toDescriptor(row, uri, dependencies)
 }
 
+async function readBusinessResource(parsed, uri, dependencies) {
+  const config = Object.values(BUSINESS_RESOURCE_CONFIG).find((item) => item.businessType === parsed.businessType)
+  const row = await dependencies.database.prepare(`
+    SELECT a.original_name, a.storage_key, a.oss_response, a.mime_type, a.file_size
+    FROM pms_business_attachment a
+    JOIN ${config.table} b ON b.id = a.business_id AND b.is_deleted = 0
+    WHERE a.business_type = ? AND a.business_id = ? AND a.id = ? AND a.is_deleted = 0
+  `).get(parsed.businessType, parsed.businessId, parsed.attachmentId)
+  if (!row) throw new Error(`${config.label}不存在或归属关系不正确`)
+  return toDescriptor(row, uri, dependencies)
+}
+
 async function listResourceTemplates(context) {
   const templates = []
   if (context.allowedMenuPaths.has('/projects')) templates.push({
@@ -100,18 +122,31 @@ async function listResourceTemplates(context) {
     description: '返回指定产品运维合同附件的文件名、大小和OSS URL，不内联文件内容',
     mimeType: 'application/json',
   })
+  for (const [path, config] of Object.entries(BUSINESS_RESOURCE_CONFIG)) {
+    if (!context.allowedMenuPaths.has(config.menuPath)) continue
+    templates.push({
+      uriTemplate: `pmis://${path}/{businessId}/attachments/{attachmentId}`,
+      name: config.label,
+      description: `返回指定${config.label}的文件名、大小和OSS URL，不内联文件内容`,
+      mimeType: 'application/json',
+    })
+  }
   return templates
 }
 
 async function loadResourceDescriptor(uri, context, dependencies = {}) {
   const parsed = parsePmisResourceUri(uri)
-  const requiredPermission = parsed.type === 'maintenance' ? '/products' : '/projects'
+  const businessConfig = parsed.type === 'business'
+    ? Object.values(BUSINESS_RESOURCE_CONFIG).find((item) => item.businessType === parsed.businessType)
+    : null
+  const requiredPermission = businessConfig?.menuPath || (parsed.type === 'maintenance' ? '/products' : '/projects')
   if (!context.allowedMenuPaths.has(requiredPermission)) {
     throw new Error(parsed.type === 'maintenance' ? '没有产品管理权限' : '没有项目管理权限')
   }
   const resolved = descriptorDependencies(dependencies)
   if (parsed.type === 'contract') return readContractResource(parsed, uri, resolved)
   if (parsed.type === 'stage') return readStageResource(parsed, uri, resolved)
+  if (parsed.type === 'business') return readBusinessResource(parsed, uri, resolved)
   return readMaintenanceResource(parsed, uri, resolved)
 }
 

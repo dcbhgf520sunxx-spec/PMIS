@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { App } from 'antd';
 import { ProForm } from '@ant-design/pro-components';
 import { useParams } from 'react-router-dom';
@@ -7,6 +7,7 @@ import { createProject, getProject, getProjectRequirementOptions, updateProject 
 import { getProductOptions } from '../../../api/productApi';
 import { getUserOptions } from '../../../api/userApi';
 import type { ProjectFormValues } from '../types';
+import { BusinessAttachmentField, type BusinessAttachmentFieldHandle } from '../../../components/business/BusinessAttachmentField';
 
 type RequirementOption = { label: string; value: string; productId: string };
 
@@ -24,6 +25,7 @@ export function ProjectFormPage({ mode }: { mode: 'create' | 'edit' }) {
   const [error, setError] = useState('');
   const [notFound, setNotFound] = useState(false);
   const [rev, setRev] = useState(0);
+  const attachmentRef = useRef<BusinessAttachmentFieldHandle>(null);
   const requirementOptions = useMemo(
     () => productId ? requirements.filter((requirement) => requirement.productId === productId) : requirements,
     [requirements, productId]
@@ -84,7 +86,9 @@ export function ProjectFormPage({ mode }: { mode: 'create' | 'edit' }) {
     onRetry={() => setRev((value) => value + 1)}
     onCancel={returnToSource}
     onSubmit={async (values) => {
-      if (mode === 'create') await createProject(values); else if (params.id) await updateProject(params.id, values);
+      let savedId = params.id;
+      if (mode === 'create') savedId = String((await createProject(values)).id); else if (params.id) await updateProject(params.id, values);
+      if (savedId) await attachmentRef.current?.commit(savedId);
       message.success(mode === 'create' ? '新增成功' : '保存成功');
       returnToSource();
     }}
@@ -100,6 +104,7 @@ export function ProjectFormPage({ mode }: { mode: 'create' | 'edit' }) {
         <AdminProFormDatePicker name="expectedEndDate" label="预计完成时间" rules={[{ required: true, message: '请选择预计完成时间' }]} />
         <AdminProFormSelect name="memberIds" label="项目成员" mode="multiple" options={users} />
         <AdminProFormTextArea name="description" label="项目描述" fieldProps={{ rows: 4 }} formItemProps={{ className: 'admin-template-form-page__field is-full' }} />
+        <BusinessAttachmentField ref={attachmentRef} apiPath="/projects" businessId={mode === 'edit' ? params.id : undefined} />
       </div>
     </TemplateFormSection>
     <TemplateFormSection title="进展与风险">

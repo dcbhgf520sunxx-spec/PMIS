@@ -29,6 +29,7 @@ const ACTION_TOOLS = [
   ['contract_attachment_upload', '/projects'], ['contract_attachment_delete', '/projects'],
   ['stage_delivery_upload', '/projects'], ['stage_delivery_delete', '/projects'],
   ['follow_up_record_create', null], ['follow_up_record_update', null], ['follow_up_record_delete', null],
+  ['business_attachment_upload', null], ['business_attachment_delete', null],
 ]
 const SOURCE_TARGET_ACTIONS = new Set(['task_create', 'task_update', 'bug_create', 'bug_update'])
 const UPDATE_ACTIONS = new Set(ACTION_TOOLS.map(([name]) => name).filter((name) => name.endsWith('_update')))
@@ -158,8 +159,8 @@ const querySchemas = {
     keyword: withDescription('keyword', { type: 'string' }),
     attachment_type: described({
       type: 'string',
-      enum: ['stage_delivery', 'project_contract', 'product_maintenance_contract'],
-    }, '附件类型：stage_delivery=阶段交付文件，project_contract=项目合同附件，product_maintenance_contract=产品运维合同附件'),
+      enum: ['stage_delivery', 'project_contract', 'product_maintenance_contract', 'requirement_attachment', 'project_attachment', 'task_attachment', 'bug_attachment', 'work_order_attachment'],
+    }, '附件类型：阶段交付文件、项目合同附件、产品运维合同附件，或需求、项目、任务、BUG、运维工单附件'),
     project_id: withDescription('project_id', idField),
     product_id: withDescription('product_id', idField),
     business_id: described(idField, '所属关键事项或合同标识'),
@@ -270,6 +271,8 @@ const actionFields = {
   follow_up_record_create: ['target_type', 'target_id', 'content'],
   follow_up_record_update: ['target_type', 'target_id', 'follow_up_id', 'content'],
   follow_up_record_delete: ['target_type', 'target_id', 'follow_up_id'],
+  business_attachment_upload: ['business_type', 'business_id', 'file_name', 'mime_type', 'file_url'],
+  business_attachment_delete: ['business_type', 'business_id', 'attachment_id'],
 }
 
 const actionRequired = {
@@ -316,6 +319,8 @@ const actionRequired = {
   follow_up_record_create: ['target_type', 'target_id', 'content', 'idempotency_key'],
   follow_up_record_update: ['target_type', 'target_id', 'follow_up_id', 'content'],
   follow_up_record_delete: ['target_type', 'target_id', 'follow_up_id'],
+  business_attachment_upload: ['business_type', 'business_id', 'file_name', 'file_url', 'idempotency_key'],
+  business_attachment_delete: ['business_type', 'business_id', 'attachment_id'],
 }
 
 const statusActionSchemas = {
@@ -552,6 +557,10 @@ function actionInputSchema(name) {
   }
   if (properties.target_type) properties.target_type = described({ type: 'string', enum: ['project', 'requirement', 'task'] }, FIELD_DESCRIPTIONS.target_type)
   if (properties.content) properties.content = described({ type: ['string', 'null'], maxLength: 200 }, FIELD_DESCRIPTIONS.content)
+  if ('business_type' in properties) properties.business_type = described({
+    type: 'string', enum: ['requirement', 'project', 'task', 'bug', 'work_order'],
+  }, '业务类型：requirement=需求，project=项目，task=任务，bug=BUG，work_order=运维工单')
+  if ('business_id' in properties) properties.business_id = withDescription('business_id', idField)
   for (const key of ['id', 'parent_id', 'project_id', 'requirement_id', 'stage_id', 'item_id', 'payment_id', 'attachment_id', 'file_id', 'owner_id', 'product_id', 'supplier_id', 'handler_id', 'assignee_id', 'follower_id', 'problem_type', 'task_type', 'bug_type_id', 'resolution_id', 'moved_id', 'target_id', 'follow_up_id']) {
     if (key in properties) properties[key] = withDescription(key, idField)
   }
@@ -679,6 +688,8 @@ function actionTitle(name) {
     follow_up_record_create: '新增跟进记录',
     follow_up_record_update: '编辑跟进记录',
     follow_up_record_delete: '删除跟进记录',
+    business_attachment_upload: '上传业务附件',
+    business_attachment_delete: '删除业务附件',
   }
   return special[name] || titleFromName(name)
 }
@@ -1085,6 +1096,9 @@ const PUBLIC_ACTION_GROUPS = [
   ['follow_up_record_manage', '跟进记录新增、编辑或删除', {
     create: 'follow_up_record_create', update: 'follow_up_record_update', delete: 'follow_up_record_delete',
   }],
+  ['business_attachment_manage', '需求、项目、任务、BUG或运维工单附件上传或删除', {
+    upload: 'business_attachment_upload', delete: 'business_attachment_delete',
+  }],
 ]
 
 function commandDefinition(name, endpointType) {
@@ -1330,6 +1344,11 @@ function scopeBusinessAttachmentSearch(tool, allowedMenuPaths) {
   const allowed = new Set([
     ...(allowedMenuPaths.has('/projects') ? ['stage_delivery', 'project_contract'] : []),
     ...(allowedMenuPaths.has('/products') ? ['product_maintenance_contract'] : []),
+    ...(allowedMenuPaths.has('/requirements') ? ['requirement_attachment'] : []),
+    ...(allowedMenuPaths.has('/projects') ? ['project_attachment'] : []),
+    ...(allowedMenuPaths.has('/tasks') ? ['task_attachment'] : []),
+    ...(allowedMenuPaths.has('/bugs') ? ['bug_attachment'] : []),
+    ...(allowedMenuPaths.has('/work-orders') ? ['work_order_attachment'] : []),
   ])
   return {
     ...tool,
@@ -1346,6 +1365,37 @@ function scopeBusinessAttachmentSearch(tool, allowedMenuPaths) {
   }
 }
 
+function scopeBusinessAttachmentAction(tool, allowedMenuPaths) {
+  if (!['business_attachment_manage', 'business_attachment_upload', 'business_attachment_delete'].includes(tool.name)) return tool
+  const menuByType = {
+    requirement: '/requirements', project: '/projects', task: '/tasks', bug: '/bugs', work_order: '/work-orders',
+  }
+  const scopeProperties = (properties) => {
+    const businessType = properties?.business_type
+    if (!businessType) return properties
+    return {
+      ...properties,
+      business_type: {
+        ...businessType,
+        enum: businessType.enum.filter((type) => allowedMenuPaths.has(menuByType[type])),
+      },
+    }
+  }
+  return {
+    ...tool,
+    inputSchema: {
+      ...tool.inputSchema,
+      properties: scopeProperties(tool.inputSchema.properties),
+      ...(tool.inputSchema.oneOf ? {
+        oneOf: tool.inputSchema.oneOf.map((branch) => ({
+          ...branch,
+          properties: scopeProperties(branch.properties),
+        })),
+      } : {}),
+    },
+  }
+}
+
 function filterToolsForContext(context) {
   return publicToolCatalog.filter((tool) => {
     if (tool._meta.endpointType !== context.endpointType) return false
@@ -1353,7 +1403,12 @@ function filterToolsForContext(context) {
       && !(context.allowedPermissionCodes instanceof Set
         && context.allowedPermissionCodes.has(tool._meta.permissionCode))) return false
     if (tool.name === 'business_attachment_search') {
-      return context.allowedMenuPaths.has('/projects') || context.allowedMenuPaths.has('/products')
+      return ['/projects', '/products', '/requirements', '/tasks', '/bugs', '/work-orders']
+        .some((path) => context.allowedMenuPaths.has(path))
+    }
+    if (['business_attachment_manage', 'business_attachment_upload', 'business_attachment_delete'].includes(tool.name)) {
+      return ['/requirements', '/projects', '/tasks', '/bugs', '/work-orders']
+        .some((path) => context.allowedMenuPaths.has(path))
     }
     if (['follow_up_record_list', 'follow_up_record_manage'].includes(tool.name)) {
       return ['/projects', '/requirements', '/tasks'].some((path) => context.allowedMenuPaths.has(path))
@@ -1365,6 +1420,7 @@ function filterToolsForContext(context) {
   }).map((tool) => scopeGenericQueryDomains(tool, context.allowedMenuPaths))
     .map((tool) => scopeFollowUpRecordTargets(tool, context.allowedMenuPaths))
     .map((tool) => scopeBusinessAttachmentSearch(tool, context.allowedMenuPaths))
+    .map((tool) => scopeBusinessAttachmentAction(tool, context.allowedMenuPaths))
     .map((tool) => scopeBusinessOptions(tool, context.allowedMenuPaths))
     .map((tool) => scopeBusinessAnalysis(tool, context.allowedMenuPaths))
     .filter((tool) => !['business_get', 'business_history', 'business_options', 'business_analyze'].includes(tool.name)

@@ -39,7 +39,12 @@ const frontendTests = readdirSync(join(rootDir, 'frontend/test'))
   .sort()
   .map((name) => `test/${name}`);
 const commands = [
-  { cwd: '.', command: 'node', args: ['--test', 'scripts/check-delivery-contract.test.mjs'] },
+  {
+    cwd: '.',
+    command: 'node',
+    args: ['--test', 'scripts/check-delivery-contract.test.mjs', 'scripts/check-release-notes.test.mjs', 'scripts/frontend-release-cache.test.mjs']
+  },
+  { cwd: '.', command: 'node', args: ['scripts/check-release-notes.mjs'] },
   { cwd: '.', command: 'node', args: ['--test', 'scripts/delivery-change-context.test.mjs'] },
   { cwd: '.', command: 'node', args: ['--test', 'scripts/backend-runtime-freshness.test.mjs'] },
   { cwd: 'frontend', command: 'node', args: ['--experimental-strip-types', '--test', ...frontendTests] },

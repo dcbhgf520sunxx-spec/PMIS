@@ -25,6 +25,15 @@ test('项目增加优先级字段且需求任务默认值调整为低', () => {
   assert.equal(fs.existsSync(path.join(root, 'db/migrations/20260817_01_add_priority_adjustment.sql')), true, '缺少优先级迁移')
 })
 
+test('历史需求、项目和任务优先级一次性回填为中且不改变新增默认值', () => {
+  const migration = read('db/migrations/20260818_02_backfill_existing_priorities_to_medium.sql')
+  for (const table of ['pms_requirement', 'pms_project', 'pms_task']) {
+    assert.match(migration, new RegExp(`UPDATE ${table}\\s+SET priority = 1\\s+WHERE priority IS DISTINCT FROM 1`, 'i'))
+  }
+  assert.doesNotMatch(migration, /ALTER\s+TABLE/i)
+  assert.doesNotMatch(migration, /SET\s+DEFAULT/i)
+})
+
 test('新增强制低优先级且普通编辑不更新优先级', () => {
   for (const name of ['project', 'requirement', 'task']) {
     const source = read(`src/controllers/${name}Controller.js`)

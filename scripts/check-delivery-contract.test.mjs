@@ -24,12 +24,35 @@ function createProject({ sidebar = true } = {}) {
   ].join('\n'));
   write(root, 'backend/db/init/001_schema.sql', "INSERT INTO pms_menu (path) VALUES ('/orders');");
   write(root, 'deploy/README.md', 'PostgreSQL 16\nReact/Vite');
-  write(root, 'deploy/nginx.conf', 'try_files $uri $uri/ /index.html;');
+  write(root, 'deploy/nginx.conf', [
+    'location = /index.html {',
+    '  add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0" always;',
+    '}',
+    'location / {',
+    '  try_files $uri $uri/ /index.html;',
+    '}',
+    'location ^~ /assets/ {',
+    '  expires 1y;',
+    '  add_header Cache-Control "public, max-age=31536000, immutable" always;',
+    '}'
+  ].join('\n'));
   return root;
 }
 
 test('accepts a documented business route with matching menu and permission path', () => {
   assert.deepEqual(checkDeliveryContract(createProject()), []);
+});
+
+test('requires production cache rules that keep the SPA entry fresh and hashed assets immutable', () => {
+  const root = createProject();
+  write(root, 'deploy/nginx.conf', [
+    'location / { try_files $uri $uri/ /index.html; }',
+    'location ~* \\.(js|css)$ { add_header Cache-Control "public, immutable"; }'
+  ].join('\n'));
+
+  const errors = checkDeliveryContract(root);
+  assert.ok(errors.includes('Nginx 未禁止缓存前端入口 index.html'));
+  assert.ok(errors.includes('Nginx 未为哈希静态资源配置一年 immutable 缓存'));
 });
 
 test('reports a business route that has no sidebar menu', () => {
@@ -46,6 +69,16 @@ test('uses the list route menu for nested create and detail routes', () => {
   ].join('\n'));
 
   assert.deepEqual(checkDeliveryContract(root), []);
+});
+
+test('allows the shared authenticated release-notes page without a business menu or migration', () => {
+  const root = createProject();
+  write(root, 'frontend/src/app/routes.tsx', [
+    "{ path: 'orders', element: <Orders /> },",
+    "{ path: 'release-notes', element: <ReleaseNotes /> }"
+  ].join('\n'));
+
+  assert.deepEqual(checkDeliveryContract(root, { changedRouteRoots: ['/release-notes'] }), []);
 });
 
 test('allows deployment text that explicitly says MySQL is not used', () => {

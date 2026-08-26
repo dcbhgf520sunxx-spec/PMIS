@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS pms_project (
   product_id BIGINT NOT NULL REFERENCES pms_product(id) ON DELETE RESTRICT,
   requirement_id BIGINT,
   owner_id BIGINT NOT NULL REFERENCES pms_user(id) ON DELETE RESTRICT,
-  priority SMALLINT NOT NULL DEFAULT 0 CHECK (priority IN (0, 1, 2)),
+  priority SMALLINT NOT NULL DEFAULT 0 CHECK (priority IN (0, 1, 2)), -- 新建默认低；历史数据由增量迁移回填为中
   status SMALLINT NOT NULL DEFAULT 0 CHECK (status IN (0, 1, 2, 3)),
   is_overdue SMALLINT NOT NULL DEFAULT 0 CHECK (is_overdue IN (0, 1)),
   start_date DATE,
@@ -284,6 +284,23 @@ CREATE TABLE IF NOT EXISTS pms_project_contract_attachment (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS pms_business_attachment (
+  id BIGSERIAL PRIMARY KEY,
+  business_type VARCHAR(30) NOT NULL CHECK (business_type IN ('requirement','project','task','bug','work_order')),
+  business_id BIGINT NOT NULL,
+  original_name VARCHAR(255) NOT NULL,
+  mime_type VARCHAR(150) NOT NULL,
+  file_size BIGINT NOT NULL CHECK (file_size > 0 AND file_size <= 20971520),
+  storage_key VARCHAR(255) NOT NULL,
+  oss_response JSONB NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  creator_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  updater_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  is_deleted SMALLINT NOT NULL DEFAULT 0 CHECK (is_deleted IN (0,1)),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS pms_project_payment_stage (
   id BIGSERIAL PRIMARY KEY,
   contract_id BIGINT NOT NULL REFERENCES pms_project_contract(id) ON DELETE RESTRICT,
@@ -319,7 +336,7 @@ CREATE TABLE IF NOT EXISTS pms_requirement (
   requirement_type SMALLINT NOT NULL CHECK (requirement_type IN (1,2,3,4)),
   product_id BIGINT NOT NULL REFERENCES pms_product(id) ON DELETE RESTRICT,
   owner_id BIGINT NOT NULL REFERENCES pms_user(id) ON DELETE RESTRICT,
-  priority SMALLINT NOT NULL DEFAULT 0 CHECK (priority IN (0,1,2)),
+  priority SMALLINT NOT NULL DEFAULT 0 CHECK (priority IN (0,1,2)), -- 新建默认低；历史数据由增量迁移回填为中
   status SMALLINT NOT NULL,
   is_overdue SMALLINT CHECK (is_overdue IN (0,1)),
   submitter_name VARCHAR(50) NOT NULL,
@@ -446,7 +463,7 @@ CREATE TABLE IF NOT EXISTS pms_task (
   project_id BIGINT REFERENCES pms_project(id) ON DELETE RESTRICT,
   requirement_id BIGINT REFERENCES pms_requirement(id) ON DELETE RESTRICT,
   task_type BIGINT NOT NULL REFERENCES pms_archive(id) ON DELETE RESTRICT,
-  priority SMALLINT NOT NULL DEFAULT 0 CHECK (priority IN (0,1,2)),
+  priority SMALLINT NOT NULL DEFAULT 0 CHECK (priority IN (0,1,2)), -- 新建默认低；历史数据由增量迁移回填为中
   status SMALLINT NOT NULL DEFAULT 0 CHECK (status IN (0,1,2,3)),
   is_overdue SMALLINT NOT NULL DEFAULT 0 CHECK (is_overdue IN (0,1)),
   start_date DATE, expected_end_date DATE, actual_end_date DATE, suspend_date DATE,
@@ -708,6 +725,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_project_contract_code_active ON pms_project
 CREATE INDEX IF NOT EXISTS idx_project_contract_supplier_active ON pms_project_contract(supplier_id) WHERE is_deleted = 0;
 CREATE UNIQUE INDEX IF NOT EXISTS uk_project_contract_attachment_storage_name ON pms_project_contract_attachment(storage_name);
 CREATE INDEX IF NOT EXISTS idx_project_contract_attachment_contract_active ON pms_project_contract_attachment(contract_id, sort_order, id) WHERE is_deleted = 0;
+CREATE INDEX IF NOT EXISTS idx_business_attachment_active ON pms_business_attachment(business_type,business_id,sort_order,id) WHERE is_deleted=0;
+CREATE UNIQUE INDEX IF NOT EXISTS uk_business_attachment_storage_key ON pms_business_attachment(storage_key);
 CREATE UNIQUE INDEX IF NOT EXISTS uk_project_payment_stage_name_active ON pms_project_payment_stage(contract_id, stage_name) WHERE is_deleted = 0;
 CREATE INDEX IF NOT EXISTS idx_project_payment_stage_contract ON pms_project_payment_stage(contract_id, sort_order, id) WHERE is_deleted = 0;
 CREATE INDEX IF NOT EXISTS idx_project_payment_record_stage ON pms_project_payment_record(stage_id, payment_month, id) WHERE is_deleted = 0;

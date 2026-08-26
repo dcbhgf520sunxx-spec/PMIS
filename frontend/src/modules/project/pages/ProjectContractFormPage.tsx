@@ -31,16 +31,17 @@ import {
 import { getArchiveOptionsByTypeName } from '../../../api/archiveApi';
 import type { ProjectContractFormValues } from '../types';
 import {
+  COMMON_ATTACHMENT_ACCEPT,
+  COMMON_ATTACHMENT_MAX_SIZE,
+  COMMON_ATTACHMENT_TYPE_HINT,
+} from '../../../components/business/businessAttachmentRules';
+import {
   calculateStagePlannedAmounts,
   deriveStagePaymentRatios,
   isPaymentRatioTotalValid,
 } from '../projectContractCalculations';
 
 const amountPattern = /^\d+(?:\.\d{1,2})?$/;
-const attachmentExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.zip'];
-const attachmentAccept = attachmentExtensions.join(',');
-const maxAttachmentSize = 20 * 1024 * 1024;
-
 const pendingAttachmentPrefix = 'pending-';
 const isPendingAttachment = (attachment: AdminAttachment) => attachment.id.startsWith(pendingAttachmentPrefix);
 const toAdminAttachment = (attachment: { id: string; originalName: string; fileSize: number; mimeType: string }): AdminAttachment => ({
@@ -243,10 +244,10 @@ export function ProjectContractFormPage() {
           />
           <AdminFormItem label="合同附件" className="admin-template-form-page__field is-full">
             <AdminAttachmentUpload
-              accept={attachmentAccept}
+              accept={COMMON_ATTACHMENT_ACCEPT}
               multiple
               maxCount={10}
-              maxSize={maxAttachmentSize}
+              maxSize={COMMON_ATTACHMENT_MAX_SIZE}
               value={attachmentFiles}
               onChange={setAttachmentFiles}
               onUpload={async (file, { onProgress }) => {
@@ -279,7 +280,7 @@ export function ProjectContractFormPage() {
                   return downloadProjectContractAttachment(params.id, attachment.id, attachment.name);
                 }
               }}
-              hint="支持图片、PDF、Word、Excel 和 ZIP，单个文件不超过 20MB，最多 10 个；选择后随合同保存上传。"
+              hint={`${COMMON_ATTACHMENT_TYPE_HINT}，单个文件不超过 20MB，最多 10 个；选择后随合同保存上传。`}
             />
           </AdminFormItem>
         </div>

@@ -7,6 +7,7 @@ const task = require('../controllers/taskController')
 const bug = require('../controllers/bugController')
 const workOrder = require('../controllers/workOrderController')
 const followUpRecord = require('../controllers/followUpRecordController')
+const { createBusinessAttachmentController } = require('../controllers/businessAttachmentController')
 const db = require('../db')
 const ticketService = require('../services/mcpActionTicketService')
 const { redactAuditInput } = require('../services/mcpAuditService')
@@ -39,7 +40,7 @@ function validateActionActualDates(args) {
     if (message) throw businessValidationError(field, message)
   }
 }
-const FILE_LIMIT = Number(process.env.MCP_FILE_INLINE_LIMIT || 5 * 1024 * 1024)
+const FILE_LIMIT = Number(process.env.MCP_FILE_INLINE_LIMIT || 20 * 1024 * 1024)
 const MAIN_TARGETS = {
   product: {
     table: 'pms_product',
@@ -87,6 +88,7 @@ const TARGET_LABELS = {
   payment: '付款记录',
   contract_attachment: '合同附件',
   stage_delivery: '交付文件',
+  business_attachment: '业务附件',
   payment_stage: '付款阶段',
   follow_up_record: '跟进记录',
 }
@@ -113,6 +115,14 @@ function cleanBody(args) {
     'attachment_id', 'file_id', 'file_name', 'mime_type', 'file_url', 'files',
   ]) delete body[key]
   return body
+}
+
+async function uploadBusinessAttachmentFromMcp(req, res) {
+  return createBusinessAttachmentController(req.body.business_type).upload(req, res)
+}
+
+async function deleteBusinessAttachmentFromMcp(req, res) {
+  return createBusinessAttachmentController(req.body.business_type).remove(req, res)
 }
 
 function buildPreviewChanges(args) {
@@ -560,6 +570,19 @@ async function loadActionTargetSnapshot(name, args, database = db) {
       current: { target_type: args.target_type, target_id: target.id, content: row.content },
     }
   }
+  if (name === 'business_attachment_upload' || name === 'business_attachment_delete') {
+    if (!MAIN_TARGETS[args.business_type]) throw businessValidationError('business_type', '不支持该业务附件类型')
+    const target = await loadMainTargetSnapshot(`${args.business_type}_update`, { id: args.business_id }, database)
+    if (name === 'business_attachment_delete') {
+      const attachment = await database.prepare(`SELECT id, original_name
+        FROM pms_business_attachment
+        WHERE id = ? AND business_type = ? AND business_id = ? AND is_deleted = 0`)
+        .get(args.attachment_id, args.business_type, args.business_id)
+      if (!attachment) throw businessValidationError('attachment_id', '附件不存在或不属于该业务数据')
+      target.attachment = { id: attachment.id, name: attachment.original_name }
+    }
+    return target
+  }
   const main = await loadMainTargetSnapshot(name, args, database)
   if (main) return main
   const reorder = await loadReorderTargetSnapshot(name, args, database)
@@ -802,6 +825,12 @@ const actions = {
     (req, res) => followUpRecord.forTarget(req.params.targetType).remove(req, res),
     (a) => ({ params: { targetType: a.target_type, id: a.target_id, followUpId: a.follow_up_id } }),
   ],
+  business_attachment_upload: [uploadBusinessAttachmentFromMcp, async (a) => ({
+    params: { id: id(a, 'business_id') }, body: { business_type: a.business_type }, file: await buildFileFromUrl(a),
+  })],
+  business_attachment_delete: [deleteBusinessAttachmentFromMcp, (a) => ({
+    params: { id: id(a, 'business_id'), attachmentId: id(a, 'attachment_id') }, body: { business_type: a.business_type },
+  })],
 }
 
 function configuredFileOrigins() {
@@ -1150,6 +1179,17 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
   }
   const mode = args.mode
   if (!['preview', 'execute'].includes(mode)) throw businessValidationError('mode', 'mode必须是preview或execute')
+  if (name === 'business_attachment_upload' || name === 'business_attachment_delete') {
+    const menuByType = {
+      requirement: '/requirements', project: '/projects', task: '/tasks', bug: '/bugs', work_order: '/work-orders',
+    }
+    const menuPath = menuByType[args.business_type]
+    if (!menuPath || !context.allowedMenuPaths.has(menuPath)) {
+      const error = new Error('当前账号没有该业务模块权限')
+      error.code = 'MCP_PERMISSION_DENIED'
+      throw error
+    }
+  }
   validateActionActualDates(args)
   const preparedArgs = await mergeArguments(name, args, database)
   await validateStatus(name, preparedArgs, database)

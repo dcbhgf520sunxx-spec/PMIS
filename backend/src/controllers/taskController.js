@@ -5,6 +5,7 @@ const { formatHistoryChanges, groupOperationLogs } = require('../utils/operation
 const { normalizeFollowUpHistoryAction } = require('../services/followUpRecordRules')
 const { allowedTaskStatuses, validateTaskStatusChange, resolveTaskStatusFields, calculateTaskOverdue, canCompleteParent, canLeaveCompletedSubtask } = require('../services/taskRules')
 const { DEFAULT_PRIORITY, parsePriority } = require('../services/priorityRules')
+const { softDeleteBusinessAttachments } = require('../services/businessAttachmentService')
 
 const DETAIL_FIELD_ORDER = ['name', 'description', 'parent_task_id', 'source_type', 'project_id', 'requirement_id', 'owner_id', 'owner_ids', 'task_type', 'priority', 'status', 'is_overdue', 'start_date', 'expected_end_date', 'actual_end_date', 'suspend_date', 'follow_up_content']
 const HISTORY_FIELD_LABELS = {
@@ -445,6 +446,7 @@ exports.remove = async (req, res) => {
     const childCount = Number((await db.prepare('SELECT COUNT(*) count FROM pms_task WHERE parent_task_id=? AND is_deleted=0').get(req.params.id))?.count || 0)
     if (childCount > 0) return fail(res, 400, 400, `该主任务下还有 ${childCount} 个子任务，不能删除`)
     await db.prepare('UPDATE pms_task SET is_deleted=1,updater_id=?,updated_at=NOW()WHERE id=?').run(req.user.id, req.params.id)
+    await softDeleteBusinessAttachments(db, 'task', req.params.id, req.user.id)
     await db.writeLog(req.user.id, '删除', '任务', req.params.id, 'is_deleted', 0, 1, req.ip, row.name)
     ok(res, null)
   } catch (error) {
