@@ -20,6 +20,12 @@ const ANALYSIS_DOMAIN_MENU_PATHS = {
   payment: '/projects',
 }
 
+const FOLLOW_UP_TARGET_MENU_PATHS = {
+  project: '/projects',
+  requirement: '/requirements',
+  task: '/tasks',
+}
+
 const AUDIT_MODULES = {
   product: '产品',
   project: '项目',
@@ -33,6 +39,7 @@ const AUDIT_MODULES = {
   contract: '项目合同',
   payment: '付款记录',
   stage_delivery: '交付文件',
+  follow_up_record: '跟进记录',
 }
 
 function auditModule(commandName) {
@@ -354,6 +361,8 @@ function validateToolPermission(definition, args, context) {
     ? ANALYSIS_DOMAIN_MENU_PATHS[args.domain]
     : definition.name === 'business_options'
       ? OPTION_MENU_PATHS[args.option_type]
+      : definition.name.startsWith('follow_up_record_')
+        ? FOLLOW_UP_TARGET_MENU_PATHS[args.target_type]
       : definition._meta.menuPath
   if (menuPath && !context.allowedMenuPaths.has(menuPath)) {
     const error = new Error('当前账号没有该业务模块权限')

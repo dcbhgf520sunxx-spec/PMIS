@@ -7,6 +7,7 @@ const QUERY_TOOLS = [
   ['contract_search', '/projects'], ['contract_get', '/projects'], ['payment_search', '/projects'],
   ['requirement_search', '/requirements'], ['requirement_get', '/requirements'], ['requirement_history', '/requirements'],
   ['task_search', '/tasks'], ['task_get', '/tasks'], ['task_history', '/tasks'],
+  ['follow_up_record_list', null],
   ['bug_search', '/bugs'], ['bug_get', '/bugs'], ['bug_history', '/bugs'],
   ['work_order_search', '/work-orders'], ['work_order_get', '/work-orders'], ['work_order_history', '/work-orders'],
   ['business_options', null],
@@ -27,6 +28,7 @@ const ACTION_TOOLS = [
   ['work_order_create', '/work-orders'], ['work_order_update', '/work-orders'], ['work_order_assign', '/work-orders'], ['work_order_change_status', '/work-orders'], ['work_order_delete', '/work-orders'],
   ['contract_attachment_upload', '/projects'], ['contract_attachment_delete', '/projects'],
   ['stage_delivery_upload', '/projects'], ['stage_delivery_delete', '/projects'],
+  ['follow_up_record_create', null], ['follow_up_record_update', null], ['follow_up_record_delete', null],
   ['business_attachment_upload', null], ['business_attachment_delete', null],
 ]
 const SOURCE_TARGET_ACTIONS = new Set(['task_create', 'task_update', 'bug_create', 'bug_update'])
@@ -137,6 +139,10 @@ const FIELD_DESCRIPTIONS = {
   reason: '调整原因',
   file_url: '已上传到受信任 OSS 的文件URL；PMIS只通过URL读取文件，不接受Base64文件内容',
   id: '业务记录标识；先用对应查询工具定位，不要猜测',
+  target_type: '跟进对象类型：project=项目，requirement=需求，task=任务',
+  target_id: '跟进对象标识；先用对应项目、需求或任务查询工具定位',
+  follow_up_id: '跟进记录标识；先用 follow_up_record_list 定位',
+  content: '跟进内容，必填且不能超过200字',
 }
 
 function withDescription(name, schema) {
@@ -168,6 +174,7 @@ const querySchemas = {
   payment_search: fields(['keyword', 'project_id', 'stage_id', 'handler_id', 'payment_month_from', 'payment_month_to', 'sort_field', 'sort_order', 'page', 'page_size']),
   requirement_search: fields(['title', 'product_id', 'owner_id', 'requirement_type', 'priority', 'status', 'is_overdue', 'submitter_name', 'submit_date_from', 'submit_date_to', 'expected_end_date_from', 'expected_end_date_to', 'creator_id', 'created_at_from', 'created_at_to', 'view', 'sort_field', 'sort_order', 'page', 'page_size']),
   task_search: fields(['name', 'source_type', 'project_id', 'requirement_id', 'task_type', 'priority', 'status', 'is_overdue', 'owner_id', 'expected_end_date_from', 'expected_end_date_to', 'creator_id', 'created_at_from', 'created_at_to', 'view', 'sort_field', 'sort_order', 'page', 'page_size']),
+  follow_up_record_list: fields(['target_type', 'target_id']),
   bug_search: fields(['title', 'source_type', 'project_id', 'requirement_id', 'bug_type_id', 'severity', 'status', 'assignee_id', 'creator_id', 'created_at_from', 'created_at_to', 'view', 'sort_field', 'sort_order', 'page', 'page_size']),
   work_order_search: fields(['problem_desc', 'product_id', 'problem_type', 'urgency', 'status', 'is_overdue', 'follower_id', 'submitter_name', 'submit_time_from', 'submit_time_to', 'expected_resolve_date_from', 'expected_resolve_date_to', 'creator_id', 'created_at_from', 'created_at_to', 'sort_field', 'sort_order', 'page', 'page_size']),
   business_options: {
@@ -261,6 +268,9 @@ const actionFields = {
   contract_attachment_delete: ['project_id', 'attachment_id'],
   stage_delivery_upload: ['project_id', 'item_id', 'file_name', 'mime_type', 'file_url'],
   stage_delivery_delete: ['project_id', 'item_id', 'file_id'],
+  follow_up_record_create: ['target_type', 'target_id', 'content'],
+  follow_up_record_update: ['target_type', 'target_id', 'follow_up_id', 'content'],
+  follow_up_record_delete: ['target_type', 'target_id', 'follow_up_id'],
   business_attachment_upload: ['business_type', 'business_id', 'file_name', 'mime_type', 'file_url'],
   business_attachment_delete: ['business_type', 'business_id', 'attachment_id'],
 }
@@ -306,6 +316,9 @@ const actionRequired = {
   contract_attachment_delete: ['project_id', 'attachment_id'],
   stage_delivery_upload: ['project_id', 'item_id', 'file_name', 'file_url', 'idempotency_key'],
   stage_delivery_delete: ['project_id', 'item_id', 'file_id'],
+  follow_up_record_create: ['target_type', 'target_id', 'content', 'idempotency_key'],
+  follow_up_record_update: ['target_type', 'target_id', 'follow_up_id', 'content'],
+  follow_up_record_delete: ['target_type', 'target_id', 'follow_up_id'],
   business_attachment_upload: ['business_type', 'business_id', 'file_name', 'file_url', 'idempotency_key'],
   business_attachment_delete: ['business_type', 'business_id', 'attachment_id'],
 }
@@ -364,6 +377,8 @@ function queryInputSchema(name) {
       ? ['domain', 'metric']
       : name === 'business_options'
         ? ['option_type']
+        : name === 'follow_up_record_list'
+          ? ['target_type', 'target_id']
         : undefined,
     additionalProperties: false,
   }
@@ -389,6 +404,7 @@ function queryFieldSchema(toolName, field, fallback) {
     return described({ ...idField }, '合同付款阶段标识；先调用 business_get(domain=contract,target_id=项目ID)，从返回的 stages 中选择 id')
   }
   if (field === 'priority') return enumField(ENUMS.priority, '优先级')
+  if (field === 'target_type') return described({ type: 'string', enum: ['project', 'requirement', 'task'] }, FIELD_DESCRIPTIONS.target_type)
   if (field === 'source_type') return enumField(ENUMS.sourceType, '关联类型')
   if (field === 'requirement_type') return enumField(ENUMS.requirementType, '需求类型')
   if (field === 'severity') return enumField(ENUMS.severity, '严重程度')
@@ -539,11 +555,13 @@ function actionInputSchema(name) {
   if ('requires_delivery_file' in properties) {
     properties.requires_delivery_file = described({ type: 'integer', enum: [0, 1] }, '是否要求交付文件：0=不要求，1=要求')
   }
+  if (properties.target_type) properties.target_type = described({ type: 'string', enum: ['project', 'requirement', 'task'] }, FIELD_DESCRIPTIONS.target_type)
+  if (properties.content) properties.content = described({ type: ['string', 'null'], maxLength: 200 }, FIELD_DESCRIPTIONS.content)
   if ('business_type' in properties) properties.business_type = described({
     type: 'string', enum: ['requirement', 'project', 'task', 'bug', 'work_order'],
   }, '业务类型：requirement=需求，project=项目，task=任务，bug=BUG，work_order=运维工单')
   if ('business_id' in properties) properties.business_id = withDescription('business_id', idField)
-  for (const key of ['id', 'parent_id', 'project_id', 'requirement_id', 'stage_id', 'item_id', 'payment_id', 'attachment_id', 'file_id', 'owner_id', 'product_id', 'supplier_id', 'handler_id', 'assignee_id', 'follower_id', 'problem_type', 'task_type', 'bug_type_id', 'resolution_id', 'moved_id']) {
+  for (const key of ['id', 'parent_id', 'project_id', 'requirement_id', 'stage_id', 'item_id', 'payment_id', 'attachment_id', 'file_id', 'owner_id', 'product_id', 'supplier_id', 'handler_id', 'assignee_id', 'follower_id', 'problem_type', 'task_type', 'bug_type_id', 'resolution_id', 'moved_id', 'target_id', 'follow_up_id']) {
     if (key in properties) properties[key] = withDescription(key, idField)
   }
   if (name === 'payment_create' && properties.stage_id) {
@@ -667,6 +685,9 @@ function actionTitle(name) {
     contract_attachment_delete: '删除合同附件',
     stage_delivery_upload: '上传关键事项交付文件',
     stage_delivery_delete: '删除关键事项交付文件',
+    follow_up_record_create: '新增跟进记录',
+    follow_up_record_update: '编辑跟进记录',
+    follow_up_record_delete: '删除跟进记录',
     business_attachment_upload: '上传业务附件',
     business_attachment_delete: '删除业务附件',
   }
@@ -682,6 +703,7 @@ const queryDescriptions = {
   stage_plan_search: '全局搜索所有项目的阶段主计划事项；可不传任何参数',
   contract_search: '全局搜索所有项目合同；可不传任何参数',
   payment_search: '全局搜索所有项目付款记录；可不传任何参数',
+  follow_up_record_list: '查询指定项目、需求或任务的跟进记录，按创建时间倒序返回',
   business_options: '查询新增、编辑和状态操作所需的有效业务选项；返回可用标识和名称，不返回账号、工号、联系方式或凭据',
   business_analyze: '统计PMIS业务数据；domain 和 metric 必填，二者必须使用当前业务领域支持的组合；可按日期和状态进一步筛选',
 }
@@ -690,6 +712,7 @@ const queryTitles = {
   business_attachment_search: '查询业务附件',
   business_options: '查询业务选项',
   business_analyze: '统计业务数据',
+  follow_up_record_list: '查询跟进记录',
 }
 
 const outputField = (description, type = ['string', 'number', 'integer', 'boolean', 'null']) => ({
@@ -1011,6 +1034,7 @@ const PUBLIC_QUERY_NAMES = [
   'bug_search',
   'work_order_search',
   'business_options',
+  'follow_up_record_list',
 ]
 
 const PUBLIC_ACTION_GROUPS = [
@@ -1068,6 +1092,9 @@ const PUBLIC_ACTION_GROUPS = [
   }],
   ['stage_delivery_manage', '关键事项交付文件上传或删除', {
     upload: 'stage_delivery_upload', delete: 'stage_delivery_delete',
+  }],
+  ['follow_up_record_manage', '跟进记录新增、编辑或删除', {
+    create: 'follow_up_record_create', update: 'follow_up_record_update', delete: 'follow_up_record_delete',
   }],
   ['business_attachment_manage', '需求、项目、任务、BUG或运维工单附件上传或删除', {
     upload: 'business_attachment_upload', delete: 'business_attachment_delete',
@@ -1238,6 +1265,32 @@ function scopeGenericQueryDomains(tool, allowedMenuPaths) {
   }
 }
 
+function scopeFollowUpRecordTargets(tool, allowedMenuPaths) {
+  if (!['follow_up_record_list', 'follow_up_record_manage'].includes(tool.name)) return tool
+  const schema = tool.inputSchema
+  const targetType = schema.properties.target_type
+  const allowedTypes = targetType.enum.filter((item) => allowedMenuPaths.has(DOMAIN_MENU_PATHS[item]))
+  return {
+    ...tool,
+    inputSchema: {
+      ...schema,
+      properties: {
+        ...schema.properties,
+        target_type: { ...targetType, enum: allowedTypes },
+      },
+      ...(schema.oneOf ? {
+        oneOf: schema.oneOf.map((branch) => ({
+          ...branch,
+          properties: {
+            ...branch.properties,
+            target_type: { ...branch.properties.target_type, enum: allowedTypes },
+          },
+        })),
+      } : {}),
+    },
+  }
+}
+
 function scopeBusinessOptions(tool, allowedMenuPaths) {
   if (tool.name !== 'business_options') return tool
   const optionType = tool.inputSchema.properties.option_type
@@ -1357,11 +1410,15 @@ function filterToolsForContext(context) {
       return ['/requirements', '/projects', '/tasks', '/bugs', '/work-orders']
         .some((path) => context.allowedMenuPaths.has(path))
     }
+    if (['follow_up_record_list', 'follow_up_record_manage'].includes(tool.name)) {
+      return ['/projects', '/requirements', '/tasks'].some((path) => context.allowedMenuPaths.has(path))
+    }
     if (!tool._meta.menuPath) {
       return context.endpointType === 'query' && context.allowedMenuPaths.size > 0
     }
     return context.allowedMenuPaths.has(tool._meta.menuPath)
   }).map((tool) => scopeGenericQueryDomains(tool, context.allowedMenuPaths))
+    .map((tool) => scopeFollowUpRecordTargets(tool, context.allowedMenuPaths))
     .map((tool) => scopeBusinessAttachmentSearch(tool, context.allowedMenuPaths))
     .map((tool) => scopeBusinessAttachmentAction(tool, context.allowedMenuPaths))
     .map((tool) => scopeBusinessOptions(tool, context.allowedMenuPaths))

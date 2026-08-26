@@ -8,6 +8,9 @@ import type { ProjectHistoryItem } from '../../../api/projectApi';
 import type { ProjectRecord } from '../types';
 import { renderProjectOverdue, renderProjectPriority } from '../helpers';
 import { ProjectStatusChangeAction, renderProjectStatus } from '../components/ProjectStatusChangeAction';
+import { getFollowUpRecords, type FollowUpRecord } from '../../../api/followUpRecordApi';
+import { FollowUpRecordSection } from '../../follow-up/FollowUpRecordSection';
+import { refreshFollowUpDetail } from '../../follow-up/refreshFollowUpDetail';
 import { BusinessAttachmentField } from '../../../components/business/BusinessAttachmentField';
 
 const dateValue = (value: unknown) => value && typeof value === 'object' && 'format' in value && typeof value.format === 'function' ? value.format('YYYY-MM-DD') : undefined;
@@ -37,6 +40,7 @@ export function ProjectDetailPage() {
   const { message } = App.useApp();
   const [row, setRow] = useState<ProjectRecord>();
   const [history, setHistory] = useState<HistoryTimelineItem[]>([]);
+  const [followUps, setFollowUps] = useState<FollowUpRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notFound, setNotFound] = useState(false);
@@ -49,6 +53,7 @@ export function ProjectDetailPage() {
     Promise.all([
       getProject(params.id).then(setRow),
       getProjectHistory(params.id).then((items) => setHistory(items.map(mapProjectHistoryItem))),
+      getFollowUpRecords('project', params.id).then(setFollowUps),
     ]).catch((loadError) => {
       const text = loadError instanceof Error ? loadError.message : '加载失败';
       if (text.includes('不存在')) setNotFound(true); else setError(text);
@@ -56,6 +61,18 @@ export function ProjectDetailPage() {
   };
 
   useEffect(load, [params.id, revision]);
+
+  const refreshFollowUpSections = () => {
+    if (!row) return Promise.resolve();
+    return refreshFollowUpDetail({
+      loadFollowUps: () => getFollowUpRecords('project', row.id),
+      loadHistory: async () => (await getProjectHistory(row.id)).map(mapProjectHistoryItem),
+      apply: (nextFollowUps, nextHistory) => {
+        setFollowUps(nextFollowUps);
+        setHistory(nextHistory);
+      },
+    });
+  };
 
   return (
     <TemplateDetailPage
@@ -117,6 +134,11 @@ export function ProjectDetailPage() {
               { label: '风险记录', value: row.riskText, wide: true, longText: true },
             ]} />
           </TemplateDetailSection>
+          <FollowUpRecordSection
+            target={{ type: 'project', id: row.id, name: row.name }}
+            records={followUps}
+            onChanged={refreshFollowUpSections}
+          />
           <HistoryTimelineSection items={history} />
         </>
       ) : null}

@@ -481,6 +481,20 @@ CREATE TABLE IF NOT EXISTS pms_task_owner (
   PRIMARY KEY (task_id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS pms_follow_up_record (
+  id BIGSERIAL PRIMARY KEY,
+  project_id BIGINT REFERENCES pms_project(id) ON DELETE CASCADE,
+  requirement_id BIGINT REFERENCES pms_requirement(id) ON DELETE CASCADE,
+  task_id BIGINT REFERENCES pms_task(id) ON DELETE CASCADE,
+  content TEXT NOT NULL CHECK (btrim(content) <> '' AND char_length(content) <= 200),
+  creator_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  updater_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  is_deleted SMALLINT NOT NULL DEFAULT 0 CHECK (is_deleted IN (0,1)),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (num_nonnulls(project_id, requirement_id, task_id) = 1)
+);
+
 CREATE TABLE IF NOT EXISTS pms_bug (
   id BIGSERIAL PRIMARY KEY,
   source_type SMALLINT NOT NULL CHECK (source_type IN (1,2)),
@@ -638,6 +652,53 @@ CREATE TABLE IF NOT EXISTS pms_scheduled_task_execution (
   UNIQUE (task_code, target_type, target_id, execution_key)
 );
 
+CREATE TABLE IF NOT EXISTS pms_integration_config (
+  id BIGSERIAL PRIMARY KEY,
+  code VARCHAR(50) NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL,
+  adapter_code VARCHAR(60) NOT NULL,
+  endpoint_url VARCHAR(500) NOT NULL,
+  request_method VARCHAR(10) NOT NULL DEFAULT 'POST',
+  enabled SMALLINT NOT NULL DEFAULT 0 CHECK (enabled IN (0, 1)),
+  auto_enabled SMALLINT NOT NULL DEFAULT 0 CHECK (auto_enabled IN (0, 1)),
+  sync_interval_hours INTEGER NOT NULL DEFAULT 3 CHECK (sync_interval_hours > 0),
+  auto_start_at TIMESTAMPTZ,
+  initial_sync_date DATE NOT NULL DEFAULT DATE '2026-08-24',
+  config_json JSONB NOT NULL DEFAULT '{}'::JSONB,
+  last_cursor_at TIMESTAMPTZ,
+  last_started_at TIMESTAMPTZ,
+  last_finished_at TIMESTAMPTZ,
+  last_status VARCHAR(20) NOT NULL DEFAULT 'idle' CHECK (last_status IN ('idle', 'running', 'success', 'failed')),
+  last_total_count INTEGER NOT NULL DEFAULT 0 CHECK (last_total_count >= 0),
+  last_success_count INTEGER NOT NULL DEFAULT 0 CHECK (last_success_count >= 0),
+  last_failure_count INTEGER NOT NULL DEFAULT 0 CHECK (last_failure_count >= 0),
+  last_warning_count INTEGER NOT NULL DEFAULT 0 CHECK (last_warning_count >= 0),
+  last_error VARCHAR(1000),
+  creator_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  updater_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS pms_integration_sync_record (
+  id BIGSERIAL PRIMARY KEY,
+  integration_config_id BIGINT NOT NULL REFERENCES pms_integration_config(id) ON DELETE RESTRICT,
+  batch_execution_id BIGINT REFERENCES pms_scheduled_task_execution(id) ON DELETE SET NULL,
+  source_key VARCHAR(100) NOT NULL,
+  source_type VARCHAR(50) NOT NULL,
+  target_type VARCHAR(30) CHECK (target_type IN ('requirement', 'work_order')),
+  target_id BIGINT,
+  source_updated_at TIMESTAMPTZ,
+  payload_hash VARCHAR(64) NOT NULL,
+  payload_summary JSONB,
+  sync_status VARCHAR(20) NOT NULL CHECK (sync_status IN ('success', 'failed', 'skipped')),
+  warning_message VARCHAR(1000),
+  error_message VARCHAR(1000),
+  synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS idx_user_status_deleted ON pms_user(status, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_role_deleted ON pms_role(is_deleted);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_pms_role_code_active ON pms_role(code) WHERE is_deleted = 0;
@@ -682,6 +743,9 @@ CREATE INDEX IF NOT EXISTS idx_task_parent ON pms_task(parent_task_id, is_delete
 CREATE INDEX IF NOT EXISTS idx_task_owner_user ON pms_task_owner(user_id, task_id);
 CREATE INDEX IF NOT EXISTS idx_task_type_status ON pms_task(task_type, status, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_task_expected_end ON pms_task(expected_end_date, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_follow_up_project ON pms_follow_up_record(project_id, created_at DESC, id DESC) WHERE is_deleted = 0;
+CREATE INDEX IF NOT EXISTS idx_follow_up_requirement ON pms_follow_up_record(requirement_id, created_at DESC, id DESC) WHERE is_deleted = 0;
+CREATE INDEX IF NOT EXISTS idx_follow_up_task ON pms_follow_up_record(task_id, created_at DESC, id DESC) WHERE is_deleted = 0;
 CREATE UNIQUE INDEX IF NOT EXISTS uk_bug_title_active ON pms_bug(title) WHERE is_deleted = 0;
 CREATE INDEX IF NOT EXISTS idx_bug_project ON pms_bug(project_id, is_deleted);
 CREATE INDEX IF NOT EXISTS idx_bug_requirement ON pms_bug(requirement_id, is_deleted);
@@ -712,6 +776,9 @@ CREATE INDEX IF NOT EXISTS idx_project_plan_template_enabled ON pms_project_plan
 CREATE INDEX IF NOT EXISTS idx_project_plan_template_stage_sort ON pms_project_plan_template_stage(template_id, sort_order, id);
 CREATE INDEX IF NOT EXISTS idx_project_plan_template_item_sort ON pms_project_plan_template_item(template_stage_id, sort_order, id);
 CREATE INDEX IF NOT EXISTS idx_scheduled_task_execution_status ON pms_scheduled_task_execution(task_code, status, updated_at);
+CREATE INDEX IF NOT EXISTS idx_integration_sync_record_status ON pms_integration_sync_record(integration_config_id, sync_status, synced_at DESC);
+CREATE INDEX IF NOT EXISTS idx_integration_sync_record_source ON pms_integration_sync_record(integration_config_id, source_key, synced_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_integration_sync_record_target ON pms_integration_sync_record(target_type, target_id);
 CREATE UNIQUE INDEX IF NOT EXISTS uk_project_plan_stage_name_active ON pms_project_plan_stage(project_id, name) WHERE is_deleted = 0;
 CREATE INDEX IF NOT EXISTS idx_project_plan_stage_project_active ON pms_project_plan_stage(project_id, sort_order, id) WHERE is_deleted = 0;
 CREATE UNIQUE INDEX IF NOT EXISTS uk_project_plan_item_name_active ON pms_project_plan_item(stage_id, name) WHERE is_deleted = 0;
@@ -742,7 +809,7 @@ VALUES
   (4, 0, '用户权限', 'user_auth', 1, NULL, 'UserOutlined', 30, 1, 1),
   (5, 4, '角色管理', 'role', 2, '/roles', NULL, 32, 1, 1),
   (6, 4, '用户管理', 'user', 2, '/users', NULL, 31, 1, 1),
-  (7, 2, '访问日志', 'access_log', 2, '/access-logs', NULL, 22, 1, 1),
+  (7, 2, '访问日志', 'access_log', 2, '/access-logs', NULL, 23, 1, 1),
   (9, 0, '组件工作台', 'design_system', 1, NULL, 'ExperimentOutlined', 40, 1, 1),
   (10, 9, '总览', 'design_system_overview', 2, '/system/design-system?category=overview', NULL, 41, 1, 1),
   (11, 9, '页面样板', 'design_system_samples', 2, '/samples/work-order', NULL, 42, 1, 1),
@@ -761,6 +828,7 @@ VALUES
   (24, 20, '调整优先级', 'requirement_priority_adjust', 3, NULL, NULL, 701, 1, 1),
   (25, 19, '调整优先级', 'project_priority_adjust', 3, NULL, NULL, 801, 1, 1),
   (26, 21, '调整优先级', 'task_priority_adjust', 3, NULL, NULL, 901, 1, 1)
+  ,(27, 2, '接口管理', 'integration', 2, '/integrations', NULL, 22, 1, 1)
 ON CONFLICT (code) DO UPDATE SET
   parent_id = EXCLUDED.parent_id,
   name = EXCLUDED.name,

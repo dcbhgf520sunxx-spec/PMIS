@@ -2,15 +2,16 @@ const db = require('../db')
 const { parsePagination, getSortDirection } = require('../utils/pagination')
 const { ok, fail, failField } = require('../utils/response')
 const { formatHistoryChanges, groupOperationLogs } = require('../utils/operationHistory')
+const { normalizeFollowUpHistoryAction } = require('../services/followUpRecordRules')
 const { allowedTaskStatuses, validateTaskStatusChange, resolveTaskStatusFields, calculateTaskOverdue, canCompleteParent, canLeaveCompletedSubtask } = require('../services/taskRules')
 const { DEFAULT_PRIORITY, parsePriority } = require('../services/priorityRules')
 const { softDeleteBusinessAttachments } = require('../services/businessAttachmentService')
 
-const DETAIL_FIELD_ORDER = ['name', 'description', 'parent_task_id', 'source_type', 'project_id', 'requirement_id', 'owner_id', 'owner_ids', 'task_type', 'priority', 'status', 'is_overdue', 'start_date', 'expected_end_date', 'actual_end_date', 'suspend_date']
+const DETAIL_FIELD_ORDER = ['name', 'description', 'parent_task_id', 'source_type', 'project_id', 'requirement_id', 'owner_id', 'owner_ids', 'task_type', 'priority', 'status', 'is_overdue', 'start_date', 'expected_end_date', 'actual_end_date', 'suspend_date', 'follow_up_content']
 const HISTORY_FIELD_LABELS = {
   name: '任务名称', description: '任务描述', parent_task_id: '所属主任务', source_type: '关联类型', project_id: '关联项目', requirement_id: '关联需求',
   owner_id: '负责人', owner_ids: '负责人', task_type: '任务类型', priority: '优先级', status: '任务状态', is_overdue: '逾期状态',
-  start_date: '启动时间', expected_end_date: '预计完成时间', actual_end_date: '实际完成时间', suspend_date: '暂停时间'
+  start_date: '启动时间', expected_end_date: '预计完成时间', actual_end_date: '实际完成时间', suspend_date: '暂停时间', follow_up_content: '跟进内容'
 }
 const HISTORY_DATE_FIELDS = new Set(['start_date', 'expected_end_date', 'actual_end_date', 'suspend_date'])
 const ownerNamesSql = `(SELECT STRING_AGG(owner_user.real_name,'、' ORDER BY task_owner.sort_order,task_owner.user_id) FROM pms_task_owner task_owner JOIN pms_user owner_user ON owner_user.id=task_owner.user_id WHERE task_owner.task_id=t.id)`
@@ -479,6 +480,7 @@ exports.history = async (req, res) => {
     }
     ok(res, groupOperationLogs(logs, DETAIL_FIELD_ORDER).map((group) => ({
       ...group,
+      action: normalizeFollowUpHistoryAction(group.action),
       changes: group.action === '新增' ? [] : formatHistoryChanges(group.changes, { fieldLabels: HISTORY_FIELD_LABELS, dateFields: HISTORY_DATE_FIELDS, valueLookups })
     })))
   } catch (error) {

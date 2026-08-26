@@ -624,6 +624,105 @@ test('action execute returns an unambiguous success envelope even when the busin
   assert.equal(result.businessResult.allSubtasksCompleted, false)
 })
 
+test('business attachment delete verifies the attachment is no longer active before reporting success', async () => {
+  const queries = []
+  const result = await dispatchActionTool('business_attachment_delete', {
+    business_type: 'task',
+    business_id: 80,
+    attachment_id: 12,
+    mode: 'execute',
+    confirmation_id: '00000000-0000-4000-8000-000000000012',
+  }, {
+    client: { id: 3 },
+    user: { id: 8, employeeNo: '005829', realName: '孙鑫鑫' },
+    allowedMenuPaths: new Set(['/tasks']),
+  }, {
+    actions: {
+      business_attachment_delete: [
+        async (_req, res) => res.json({ code: 0, data: null }),
+        () => ({ body: {} }),
+      ],
+    },
+    ticketService: {
+      consumeTicket: async () => {},
+      markTicketFailed: async () => {},
+    },
+    database: {
+      prepare(sql) {
+        queries.push(sql)
+        return { async get() { return { is_deleted: 1 } } }
+      },
+    },
+    mergeArguments: async (_name, value) => value,
+    validateStatus: async () => {},
+    validateBusinessRules: async () => {},
+    loadTarget: async () => ({
+      type: 'task',
+      id: 80,
+      name: '测试MCP文件上传新增',
+      current: { owner_ids: [8] },
+      attachment: { id: 12, name: '狗子.webp' },
+    }),
+  })
+
+  assert.match(queries.at(-1), /FROM pms_business_attachment/)
+  assert.equal(result.message, '操作已成功执行并通过结果校验')
+  assert.deepEqual(result.verification, {
+    verified: true,
+    type: 'attachment_deleted',
+    businessType: 'task',
+    businessId: 80,
+    attachmentId: 12,
+    active: false,
+  })
+})
+
+test('business attachment delete fails clearly when the attachment remains active', async () => {
+  let failureMarked = false
+  await assert.rejects(
+    dispatchActionTool('business_attachment_delete', {
+      business_type: 'task',
+      business_id: 80,
+      attachment_id: 12,
+      mode: 'execute',
+      confirmation_id: '00000000-0000-4000-8000-000000000013',
+    }, {
+      client: { id: 3 },
+      user: { id: 8, employeeNo: '005829', realName: '孙鑫鑫' },
+      allowedMenuPaths: new Set(['/tasks']),
+    }, {
+      actions: {
+        business_attachment_delete: [
+          async (_req, res) => res.json({ code: 0, data: null }),
+          () => ({ body: {} }),
+        ],
+      },
+      ticketService: {
+        consumeTicket: async () => {},
+        markTicketFailed: async () => { failureMarked = true },
+      },
+      database: {
+        prepare() {
+          return { async get() { return { is_deleted: 0 } } }
+        },
+      },
+      mergeArguments: async (_name, value) => value,
+      validateStatus: async () => {},
+      validateBusinessRules: async () => {},
+      loadTarget: async () => ({
+        type: 'task',
+        id: 80,
+        name: '测试MCP文件上传新增',
+        current: { owner_ids: [8] },
+        attachment: { id: 12, name: '狗子.webp' },
+      }),
+    }),
+    (error) => error.code === 'MCP_RESULT_VERIFICATION_FAILED'
+      && error.message === '附件删除后校验失败，附件仍然存在'
+  )
+  assert.equal(failureMarked, true)
+})
+
 test('edit arguments preserve omitted optional scalar fields from the current record', async () => {
   const rows = {
     pms_product: { description: '产品说明' },

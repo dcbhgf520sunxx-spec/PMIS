@@ -20,6 +20,7 @@ const archiveRoutes = require('./routes/archive')
 const archiveController = require('./controllers/archiveController')
 const workOrderRoutes = require('./routes/workOrder')
 const accessLogRoutes = require('./routes/accessLog')
+const integrationRoutes = require('./routes/integration')
 const messageRoutes = require('./routes/message')
 const productRoutes = require('./routes/product')
 const projectRoutes = require('./routes/project')
@@ -73,6 +74,7 @@ app.use('/api/requirements', verifyToken, checkPermission('/requirements'), requ
 app.use('/api/tasks', verifyToken, checkPermission('/tasks'), taskRoutes)
 app.use('/api/bugs', verifyToken, checkPermission('/bugs'), bugRoutes)
 app.use('/api/access-logs', verifyToken, checkPermission('/access-logs'), accessLogRoutes)
+app.use('/api/integrations', verifyToken, checkPermission('/integrations'), integrationRoutes)
 app.use('/api/mcp', mcpRoutes)
 
 app.use((err, req, res, _next) => {

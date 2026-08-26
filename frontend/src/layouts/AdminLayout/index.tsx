@@ -91,6 +91,10 @@ const businessMenuItems: AdminMenuItems = [
         label: '基础档案'
       },
       {
+        key: '/integrations',
+        label: '接口管理'
+      },
+      {
         key: '/access-logs',
         label: '访问日志'
       }

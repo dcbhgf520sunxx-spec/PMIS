@@ -7,7 +7,7 @@ const { normalizeToolError } = require('../src/mcp/createServer')
 const { decorateQueryResult } = require('../src/mcp/queryTools')
 
 test('every MCP tool publishes described input fields and an output schema', () => {
-  assert.equal(toolCatalog.length, 82)
+  assert.equal(toolCatalog.length, 86)
   for (const tool of toolCatalog) {
     assert.ok(tool.description, `${tool.name}缺少工具说明`)
     assert.ok(tool.outputSchema, `${tool.name}缺少输出Schema`)

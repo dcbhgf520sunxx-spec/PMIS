@@ -4,11 +4,14 @@ import type { ProColumns } from '@ant-design/pro-components';
 import {
   AdminAvatar,
   AdminAvatarGroup,
+  ActivityTimeline,
   AdminBadge,
   AdminButton,
   AdminCard,
   AdminCollapse,
   AdminEmptyState,
+  AdminDeleteIconAction,
+  AdminEditIconAction,
   AdminList,
   AdminListItem,
   AdminListItemMeta,
@@ -384,6 +387,32 @@ export function DisplaySection() {
                     <p>用于记录数据产生、流转和变更过程。字段名和值必须是最终中文展示文本，不接收数据库字段名、关联 ID 或枚举编码。</p>
                   </div>
                   <HistoryTimeline items={mockWorkOrderHistory} />
+                </section>
+
+                <section className="design-system-page__input-panel">
+                  <div className="design-system-page__input-panel-head">
+                    <h3>始终展开的活动时间线</h3>
+                    <ComponentEntry name="ActivityTimeline" />
+                    <p>用于跟进、备注等需要完整展示正文的过程记录；沿用时间线层级，但不提供展开或收起。</p>
+                  </div>
+                  <ActivityTimeline
+                    items={[
+                      {
+                        id: 'activity-1',
+                        title: '张三',
+                        time: '2026-08-25 13:46',
+                        description: '已完成接口联调，等待业务确认最终数据口径。',
+                        meta: '由李四修改于 2026-08-25 14:10',
+                        extra: <><AdminEditIconAction /><AdminDeleteIconAction preview onConfirm={async () => undefined} /></>
+                      },
+                      {
+                        id: 'activity-2',
+                        title: '李四',
+                        time: '2026-08-24 17:30',
+                        description: '已确认本周计划，下一步处理遗留问题。'
+                      }
+                    ]}
+                  />
                 </section>
 
                 <section className="design-system-page__input-panel">
