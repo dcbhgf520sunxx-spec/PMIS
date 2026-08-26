@@ -10,3 +10,11 @@ export function buildWorkOrderCreateInitialValues(
     submitTime: today
   };
 }
+
+export function parseOptionalWorkOrderDate(value?: string | null) {
+  const normalized = value?.trim();
+  if (!normalized || normalized === '-') return undefined;
+
+  const parsed = dayjs(normalized);
+  return parsed.isValid() ? parsed : undefined;
+}

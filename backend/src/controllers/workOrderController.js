@@ -602,11 +602,12 @@ exports.getHistory = async (req, res) => {
         }
       }).map((change) => ({ field: change.field_name, oldVal: change.old_value, newVal: change.new_value }))
 
-      if (g.action === '新增') {
+      if (g.action === '新增' || g.action === 'i8同步新增') {
         title = '创建'
+        if (g.action === 'i8同步新增') title = 'i8同步新增'
       } else if (g.action === '删除') {
         title = '删除'
-      } else if (g.action === '编辑' || g.action === '批量指派') {
+      } else if (g.action === '编辑' || g.action === '批量指派' || g.action === 'i8同步更新') {
         title = g.action
         details.push(...formatDetails(g.changes))
       } else if (g.action === '状态变更') {

@@ -20,7 +20,7 @@ import { createWorkOrder, getWorkOrder, updateWorkOrder, type WorkOrderFormPaylo
 import { useAuthStore } from '../../../stores/authStore';
 import type { WorkOrderRecord } from '../types';
 import { urgencyOptions } from '../helpers';
-import { buildWorkOrderCreateInitialValues } from './workOrderFormDefaults';
+import { buildWorkOrderCreateInitialValues, parseOptionalWorkOrderDate } from './workOrderFormDefaults';
 import { createRichTextImageUploader } from '../../../api/richTextImageApi';
 import { BusinessAttachmentField, type BusinessAttachmentFieldHandle } from '../../../components/business/BusinessAttachmentField';
 
@@ -55,7 +55,7 @@ function toInitialValues(source: WorkOrderRecord): Partial<WorkOrderFormValues> 
     submitterName: source.submitterName,
     submitterDept: source.submitterDept,
     submitTime: dayjs(source.submitTime),
-    expectedResolveDate: dayjs(source.expectedResolveDate)
+    expectedResolveDate: parseOptionalWorkOrderDate(source.expectedResolveDate)
   };
 }
 

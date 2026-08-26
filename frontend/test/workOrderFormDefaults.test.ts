@@ -53,3 +53,24 @@ test('没有登录用户时不伪造新增工单跟进人', async () => {
   assert.equal(initialValues.followerId, undefined);
   assert.equal(initialValues.submitTime.format('YYYY-MM-DD'), '2026-07-27');
 });
+
+test('编辑工单时空的预计完成时间保持为空', async () => {
+  const { parseOptionalWorkOrderDate } = await import(
+    '../src/modules/work-order/pages/workOrderFormDefaults.ts'
+  );
+
+  assert.equal(parseOptionalWorkOrderDate(''), undefined);
+  assert.equal(parseOptionalWorkOrderDate('-'), undefined);
+  assert.equal(parseOptionalWorkOrderDate(undefined), undefined);
+});
+
+test('编辑工单时有效的预计完成时间正常回显', async () => {
+  const { parseOptionalWorkOrderDate } = await import(
+    '../src/modules/work-order/pages/workOrderFormDefaults.ts'
+  );
+
+  assert.equal(
+    parseOptionalWorkOrderDate('2026-08-26')?.format('YYYY-MM-DD'),
+    '2026-08-26'
+  );
+});

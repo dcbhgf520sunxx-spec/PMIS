@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mapPageResult } from '../src/api/pageResult.ts';
 import { buildWorkOrderQueryParams } from '../src/api/workOrderQueryParams.ts';
+import { normalizeOptionalWorkOrderDateText } from '../src/api/workOrderDate.ts';
 
 test('工单列表适配分页响应中的 records', () => {
   const result = mapPageResult({
@@ -88,4 +89,10 @@ test('工单 neighbors 复用列表查询参数口径', () => {
     sort_field: 'submit_time',
     sort_order: 'ascend'
   });
+});
+
+test('工单接口的空预计完成时间不转换为展示占位符', () => {
+  assert.equal(normalizeOptionalWorkOrderDateText(undefined), '');
+  assert.equal(normalizeOptionalWorkOrderDateText(''), '');
+  assert.equal(normalizeOptionalWorkOrderDateText('2026-08-26T12:30:00'), '2026-08-26');
 });
