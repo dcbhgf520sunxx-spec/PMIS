@@ -105,6 +105,7 @@ const AccessLogListPage = lazy(() =>
     default: module.AccessLogListPage
   }))
 );
+const IntegrationPage = lazy(() => import('../modules/integration/pages/IntegrationPage').then((module) => ({ default: module.IntegrationPage })));
 const ProductListPage = lazy(() => import('../modules/product/pages/ProductListPage').then((module) => ({ default: module.ProductListPage })));
 const ProductFormPage = lazy(() => import('../modules/product/pages/ProductFormPage').then((module) => ({ default: module.ProductFormPage })));
 const ProductDetailPage = lazy(() => import('../modules/product/pages/ProductDetailPage').then((module) => ({ default: module.ProductDetailPage })));
@@ -175,6 +176,7 @@ export const routes: RouteObject[] = [
       { path: 'roles/:id/edit', element: withRouteSuspense(<RoleFormPage mode="edit" />) },
       { path: 'roles/:id', element: withRouteSuspense(<RoleDetailPage />) },
       { path: 'archive', element: withRouteSuspense(<ArchivePage />) },
+      { path: 'integrations', element: withRouteSuspense(<IntegrationPage />) },
       { path: 'access-logs', element: withRouteSuspense(<AccessLogListPage />) },
       { path: 'work-orders', element: withRouteSuspense(<WorkOrderListPage />) },
       { path: 'work-orders/new', element: withRouteSuspense(<WorkOrderFormPage mode="create" />) },

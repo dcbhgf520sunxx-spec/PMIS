@@ -11,12 +11,12 @@ const { buildExecutePayload } = require('../src/mcp/dispatcher')
 
 const allMenus = new Set(['/products', '/projects', '/requirements', '/tasks', '/bugs', '/work-orders'])
 
-test('public MCP catalog exposes 15 query tools and 19 action tools', () => {
+test('public MCP catalog exposes 16 query tools and 20 action tools', () => {
   const query = filterToolsForContext({ endpointType: 'query', allowedMenuPaths: allMenus })
   const action = filterToolsForContext({ endpointType: 'action', allowedMenuPaths: allMenus })
 
-  assert.equal(query.length, 15)
-  assert.equal(action.length, 19)
+  assert.equal(query.length, 16)
+  assert.equal(action.length, 20)
   assert.deepEqual(query.map((tool) => tool.name), [
     'global_search',
     'business_attachment_search',
@@ -30,6 +30,7 @@ test('public MCP catalog exposes 15 query tools and 19 action tools', () => {
     'bug_search',
     'work_order_search',
     'business_options',
+    'follow_up_record_list',
     'business_get',
     'business_history',
     'business_analyze',
@@ -54,9 +55,79 @@ test('public MCP catalog exposes 15 query tools and 19 action tools', () => {
     'payment_manage',
     'contract_attachment_manage',
     'stage_delivery_manage',
+    'follow_up_record_manage',
   ])
   assert.equal(query.some((tool) => tool.name === 'task_get'), false)
   assert.equal(action.some((tool) => tool.name === 'task_update'), false)
+})
+
+test('跟进记录通过一个查询工具和一个管理工具覆盖项目、需求和任务', () => {
+  const query = getToolDefinition('follow_up_record_list', 'query')
+  assert.deepEqual(query.inputSchema.properties.target_type.enum, ['project', 'requirement', 'task'])
+  assert.deepEqual(query.inputSchema.required, ['target_type', 'target_id'])
+
+  const action = getToolDefinition('follow_up_record_manage', 'action')
+  assert.deepEqual(action.inputSchema.properties.operation.enum, ['create', 'update', 'delete'])
+  assert.ok(action.inputSchema.oneOf.some((branch) => branch.properties.operation.const === 'create'
+    && branch.required.includes('content')
+    && branch.required.includes('idempotency_key')))
+  assert.ok(action.inputSchema.oneOf.some((branch) => branch.properties.operation.const === 'update'
+    && branch.required.includes('follow_up_id')
+    && branch.required.includes('content')))
+  assert.ok(action.inputSchema.oneOf.some((branch) => branch.properties.operation.const === 'delete'
+    && branch.required.includes('follow_up_id')))
+  assert.equal(action.inputSchema.properties.content.maxLength, 200)
+})
+
+test('跟进记录公共管理工具解析到对应内部操作且不泄漏 operation', () => {
+  assert.deepEqual(resolvePublicTool('follow_up_record_manage', {
+    operation: 'create',
+    target_type: 'requirement',
+    target_id: 12,
+    content: '已完成本周方案评审',
+    idempotency_key: 'follow-up-12-week-35',
+    mode: 'preview',
+  }, 'action'), {
+    name: 'follow_up_record_create',
+    args: {
+      target_type: 'requirement',
+      target_id: 12,
+      content: '已完成本周方案评审',
+      idempotency_key: 'follow-up-12-week-35',
+      mode: 'preview',
+    },
+  })
+})
+
+test('跟进记录工具只暴露并允许当前账号可见的对象类型', () => {
+  const queryTools = filterToolsForContext({
+    endpointType: 'query',
+    allowedMenuPaths: new Set(['/requirements']),
+  })
+  const actionTools = filterToolsForContext({
+    endpointType: 'action',
+    allowedMenuPaths: new Set(['/requirements']),
+  })
+  assert.deepEqual(
+    queryTools.find((tool) => tool.name === 'follow_up_record_list').inputSchema.properties.target_type.enum,
+    ['requirement']
+  )
+  assert.deepEqual(
+    actionTools.find((tool) => tool.name === 'follow_up_record_manage').inputSchema.properties.target_type.enum,
+    ['requirement']
+  )
+
+  const { validateToolPermission } = require('../src/mcp/dispatcher')
+  const definition = getToolDefinition('follow_up_record_create', 'action')
+  assert.throws(
+    () => validateToolPermission(definition, { target_type: 'task' }, {
+      allowedMenuPaths: new Set(['/requirements']),
+    }),
+    (error) => error.code === 'MCP_PERMISSION_DENIED'
+  )
+  assert.doesNotThrow(() => validateToolPermission(definition, { target_type: 'requirement' }, {
+    allowedMenuPaths: new Set(['/requirements']),
+  }))
 })
 
 test('public task action resolves to the existing internal command without operation leakage', () => {
@@ -189,7 +260,7 @@ test('public action metadata describes operation branches and status-specific fi
 })
 
 test('every public tool and operation branch has complete metadata', () => {
-  assert.equal(publicToolCatalog.length, 37)
+  assert.equal(publicToolCatalog.length, 39)
   for (const tool of publicToolCatalog) {
     assert.ok(tool.title, `${tool.name}缺少标题`)
     assert.ok(tool.description, `${tool.name}缺少说明`)

@@ -7,6 +7,11 @@ import { deleteTask, getSubtasks, getTask, getTaskHistory, getTaskNeighbors, upd
 import type { TaskRecord } from '../types';
 import { TaskStatusChangeAction } from '../components/TaskStatusChangeAction';
 import { renderTaskLevel, renderTaskOverdue, renderTaskPriority, renderTaskStatus } from '../helpers';
+import { getFollowUpRecords, type FollowUpRecord } from '../../../api/followUpRecordApi';
+import { FollowUpRecordSection } from '../../follow-up/FollowUpRecordSection';
+import { refreshFollowUpDetail } from '../../follow-up/refreshFollowUpDetail';
+
+const mapTaskHistoryItem = (item: any) => ({ id: String(item.id), operator: item.operator, action: item.action, time: String(item.created_at).slice(0, 19).replace('T', ' '), changes: (item.changes || []).map((change: any) => ({ field: change.field_name || '-', before: change.old_value, after: change.new_value })) });
 
 export function TaskDetailPage() {
   const { navigateWithReturn, returnTarget, returnToSource } = usePageReturnNavigation('/tasks');
@@ -16,6 +21,7 @@ export function TaskDetailPage() {
   const [row, setRow] = useState<TaskRecord>();
   const [subtasks, setSubtasks] = useState<TaskRecord[]>([]);
   const [history, setHistory] = useState<any[]>([]);
+  const [followUps, setFollowUps] = useState<FollowUpRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notFound, setNotFound] = useState(false);
@@ -31,17 +37,20 @@ export function TaskDetailPage() {
     setRow(undefined);
     setSubtasks([]);
     setHistory([]);
+    setFollowUps([]);
     void (async () => {
       try {
         const task = await getTask(params.id!);
-        const [items, children] = await Promise.all([
+        const [items, children, followUpItems] = await Promise.all([
           getTaskHistory(params.id!),
-          task.parentTaskId ? Promise.resolve([]) : getSubtasks(task.id)
+          task.parentTaskId ? Promise.resolve([]) : getSubtasks(task.id),
+          getFollowUpRecords('task', task.id),
         ]);
         if (cancelled) return;
         setRow(task);
         setSubtasks(children);
-        setHistory(items.map((item: any) => ({ id: String(item.id), operator: item.operator, action: item.action, time: String(item.created_at).slice(0, 19).replace('T', ' '), changes: (item.changes || []).map((change: any) => ({ field: change.field_name || '-', before: change.old_value, after: change.new_value })) })));
+        setFollowUps(followUpItems);
+        setHistory(items.map(mapTaskHistoryItem));
       } catch (cause) {
         if (cancelled) return;
         const text = cause instanceof Error ? cause.message : '加载失败';
@@ -52,6 +61,15 @@ export function TaskDetailPage() {
     })();
     return () => { cancelled = true; };
   }, [params.id, revision]);
+
+  const refreshFollowUpSections = () => row ? refreshFollowUpDetail({
+    loadFollowUps: () => getFollowUpRecords('task', row.id),
+    loadHistory: async () => (await getTaskHistory(row.id)).map(mapTaskHistoryItem),
+    apply: (nextFollowUps, nextHistory) => {
+      setFollowUps(nextFollowUps);
+      setHistory(nextHistory);
+    },
+  }) : Promise.resolve();
 
   const date = (value: any) => value?.format?.('YYYY-MM-DD');
   const promptParentCompletion = (parentTaskId: string) => modal.confirm({
@@ -97,6 +115,7 @@ export function TaskDetailPage() {
       <TemplateDetailSection title="基本信息"><DetailMetaList items={[{ label: '任务名称', value: row.name, wide: true }, { label: '任务描述', value: <RichTextViewer value={row.description} />, wide: true }, ...(row.parentTaskId ? [{ label: '所属主任务', value: <span className="task-parent-link">{renderTaskLevel()}<DetailLinkCell title={row.parentTaskName} onClick={() => navigateWithReturn(`/tasks/${row.parentTaskId}`)}>{row.parentTaskName}</DetailLinkCell></span> }] : []), { label: '关联类型', value: row.sourceType === 1 ? '项目' : '需求' }, { label: '关联对象', value: row.sourceType === 1 ? row.projectName : row.requirementName }, { label: '任务类型', value: row.taskTypeName }]} /></TemplateDetailSection>
       <TemplateDetailSection title="处理信息"><DetailMetaList items={[{ label: '负责人', value: row.ownerNames }, { label: '启动时间', value: row.startTime || '-' }, { label: '预计完成时间', value: row.expectedEndTime || '-' }, { label: '实际完成时间', value: row.actualEndTime || '-' }, { label: '暂停时间', value: row.suspendTime || '-' }]} /></TemplateDetailSection>
       {!row.parentTaskId ? <TemplateDetailTableSection<TaskRecord> title="子任务" summary={`已完成 ${row.completedChildCount} / 共 ${row.childCount}`} extra={<PermissionButton permission="task" size="small" type="primary" onClick={() => navigateWithReturn(`/tasks/${row.id}/subtasks/new`)}>新增子任务</PermissionButton>} table={{ rowKey: 'id', columns: subtaskColumns, dataSource: subtasks, scroll: { x: 1100 } }} /> : null}
+      <FollowUpRecordSection target={{ type: 'task', id: row.id, name: row.name }} records={followUps} onChanged={refreshFollowUpSections} />
       <HistoryTimelineSection items={history} />
     </> : null}
   </TemplateDetailPage>;

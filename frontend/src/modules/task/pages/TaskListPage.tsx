@@ -11,6 +11,7 @@ import { taskStatusLabels } from '../statusTransitions';
 import { TaskStatusChangeAction } from '../components/TaskStatusChangeAction';
 import { renderTaskLevel, renderTaskOverdue, renderTaskPriority, renderTaskSourceType, renderTaskStatus } from '../helpers';
 import { useTaskBatchActions } from './useTaskBatchActions';
+import { FollowUpRecordModal, type FollowUpTarget } from '../../follow-up/FollowUpRecordAction';
 import './TaskListPage.css';
 
 type Option = { label: string; value: string };
@@ -35,6 +36,7 @@ export function TaskListPage() {
   const { message, modal } = App.useApp();
   const [view, setView] = useListViewState<'all' | 'mine'>('mine', ['all', 'mine'], true);
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
+  const [followUpTarget, setFollowUpTarget] = useState<FollowUpTarget>();
   const [expandedParentIds, setExpandedParentIds] = useState<Set<string>>(() => new Set());
   const [projects, setProjects] = useState<Option[]>([]);
   const [requirements, setRequirements] = useState<Option[]>([]);
@@ -150,7 +152,7 @@ export function TaskListPage() {
     { title: '预计完成时间', dataIndex: 'expectedEndTime', width: 140, sorter: true, sortOrder: sortOrder('expectedEndTime'), render: (_, row) => row.expectedEndTime || '-' },
     { title: '创建人', dataIndex: 'creatorName', width: 100, sorter: true, sortOrder: sortOrder('creatorName') },
     { title: '创建时间', dataIndex: 'createdAt', width: 170, sorter: true, sortOrder: sortOrder('createdAt') },
-    { title: '操作', valueType: 'option', width: 190, fixed: 'right', render: (_, row) => <OperationColumnActions><AdminTextAction onClick={() => navigate(`/tasks/${row.id}/edit`)}>编辑</AdminTextAction><TaskStatusChangeAction variant="text" task={row} onConfirm={async (status, values) => { const result = await updateTaskStatus(row.id, status, status === 2 ? { actual_end_date: date(values.actualEndTime) } : status === 3 ? { suspend_date: date(values.suspendTime) } : {}); message.success('状态更新成功'); await load(); if (result.allSubtasksCompleted) promptParentCompletion(result.parentTaskId); }}>状态变更</TaskStatusChangeAction>{!row.parentTaskId ? <AdminTextAction onClick={() => navigate(`/tasks/${row.id}/subtasks/new`)}>新增子任务</AdminTextAction> : null}<PriorityChangeAction variant="text" permission="task_priority_adjust" current={row.priority} onConfirm={async (priority) => { await updateTaskPriority(row.id, priority); message.success('优先级调整成功'); await load(); }} /><AdminTextAction onClick={() => navigate(`/tasks/${row.id}/copy`)}>复制</AdminTextAction><DeleteConfirmAction variant="text" entityName="任务" targetName={row.name} onConfirm={async () => { await deleteTask(row.id); await load(); }}>删除</DeleteConfirmAction></OperationColumnActions> }
+    { title: '操作', valueType: 'option', width: 190, fixed: 'right', render: (_, row) => <OperationColumnActions><AdminTextAction onClick={() => navigate(`/tasks/${row.id}/edit`)}>编辑</AdminTextAction><TaskStatusChangeAction variant="text" task={row} onConfirm={async (status, values) => { const result = await updateTaskStatus(row.id, status, status === 2 ? { actual_end_date: date(values.actualEndTime) } : status === 3 ? { suspend_date: date(values.suspendTime) } : {}); message.success('状态更新成功'); await load(); if (result.allSubtasksCompleted) promptParentCompletion(result.parentTaskId); }}>状态变更</TaskStatusChangeAction>{!row.parentTaskId ? <AdminTextAction onClick={() => navigate(`/tasks/${row.id}/subtasks/new`)}>新增子任务</AdminTextAction> : null}<PriorityChangeAction variant="text" permission="task_priority_adjust" current={row.priority} onConfirm={async (priority) => { await updateTaskPriority(row.id, priority); message.success('优先级调整成功'); await load(); }} /><AdminTextAction onClick={() => setFollowUpTarget({ type: 'task', id: row.id, name: row.name })}>跟进记录</AdminTextAction><AdminTextAction onClick={() => navigate(`/tasks/${row.id}/copy`)}>复制</AdminTextAction><DeleteConfirmAction variant="text" entityName="任务" targetName={row.name} onConfirm={async () => { await deleteTask(row.id); await load(); }}>删除</DeleteConfirmAction></OperationColumnActions> }
   ];
 
   const items = createListFilterItems([
@@ -195,5 +197,6 @@ export function TaskListPage() {
       pagination={list.pagination}
     />
     {batch.assignModal}
+    {followUpTarget ? <FollowUpRecordModal key={`${followUpTarget.type}-${followUpTarget.id}`} target={followUpTarget} open onClose={() => setFollowUpTarget(undefined)} /> : null}
   </>;
 }

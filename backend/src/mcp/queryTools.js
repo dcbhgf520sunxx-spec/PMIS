@@ -6,6 +6,7 @@ const requirement = require('../controllers/requirementController')
 const task = require('../controllers/taskController')
 const bug = require('../controllers/bugController')
 const workOrder = require('../controllers/workOrderController')
+const followUpRecord = require('../controllers/followUpRecordController')
 const db = require('../db')
 const { invokeController } = require('./controllerAdapter')
 const { analyzeBusinessData } = require('../services/mcpAnalysisService')
@@ -594,6 +595,13 @@ async function dispatchQueryTool(name, args, context, dependencies = {}) {
   if (name === 'contract_search') return normalizeMcpQueryContent(decorateQueryResult(name, normalizeSearchResult(await searchContracts(args, dependencies.database))), { summary: true })
   if (name === 'payment_search') return normalizeMcpQueryContent(decorateQueryResult(name, normalizeSearchResult(await searchPayments(args, dependencies.database))), { summary: true })
   if (name === 'business_options') return searchBusinessOptions(args, dependencies.database)
+  if (name === 'follow_up_record_list') {
+    const handler = followUpRecord.forTarget(args.target_type, dependencies.database).list
+    const value = unwrapEnvelope(await invokeController(handler, context, {
+      params: { id: args.target_id },
+    }))
+    return normalizeMcpQueryContent(value, { summary: true })
+  }
   const definition = handlers[name]
   if (!definition) throw new Error('查询工具不存在或无权限')
   const [handler, buildInput] = definition

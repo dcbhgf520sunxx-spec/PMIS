@@ -1,6 +1,7 @@
 const app = require('./app')
 const { start: startOverdueCron } = require('./services/overdueCron')
 const { start: startMaintenanceContractReminder } = require('./services/productMaintenanceContractReminderService')
+const { start: startIntegrationScheduler } = require('./services/integrationService')
 
 const PORT = process.env.PORT || 3103
 const server = app.listen(PORT, () => {
@@ -8,6 +9,7 @@ const server = app.listen(PORT, () => {
   if (process.send) process.send('ready')
   startOverdueCron()
   startMaintenanceContractReminder()
+  startIntegrationScheduler()
 })
 
 module.exports = server

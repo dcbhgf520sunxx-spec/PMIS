@@ -24,6 +24,7 @@ export * from './MilestoneEditor';
 export * from './MilestoneTimeline';
 export * from './StatusChangeAction';
 export * from './HistoryTimeline';
+export * from './ActivityTimeline';
 export * from './DetailMetaList';
 export * from './selectors/DictSelect';
 export * from './selectors/UserSelect';

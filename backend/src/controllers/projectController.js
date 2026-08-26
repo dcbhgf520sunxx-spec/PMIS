@@ -6,9 +6,10 @@ const { normalizeMemberIds, validateProjectStatusChange, calculateProjectOverdue
 const { groupOperationLogs } = require('../utils/operationHistory')
 const { formatHistoryChanges, serializeMemberIds } = require('../utils/productProjectHistory')
 const { DEFAULT_PRIORITY, parsePriority } = require('../services/priorityRules')
+const { normalizeFollowUpHistoryAction } = require('../services/followUpRecordRules')
 
-const DETAIL_FIELD_ORDER = ['name', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'priority', 'description', 'start_date', 'expected_end_date', 'progress_text', 'risk_text', 'status', 'is_overdue', 'actual_end_date', 'suspend_date', 'contract', 'contract_code', 'contract_name', 'contract_supplier', 'contract_signed_date', 'contract_amount', 'contract_remark', 'contract_stages', 'contract_attachment', 'payment', 'payment_stage', 'payment_amount', 'payment_month', 'payment_handler', 'payment_remark']
-const HISTORY_FIELD_LABELS = { name: '项目名称', product_id: '所属产品', requirement_id: '所属需求', owner_id: '负责人', member_ids: '项目成员', priority: '优先级', description: '项目描述', start_date: '启动日期', expected_end_date: '预计完成日期', progress_text: '进度记录', risk_text: '风险记录', status: '状态', is_overdue: '逾期状态', actual_end_date: '实际完成日期', suspend_date: '暂停日期', contract: '合同信息', contract_code: '合同编码', contract_name: '合同名称', contract_supplier: '供应商', contract_signed_date: '签订时间', contract_amount: '合同金额（元）', contract_remark: '备注', contract_stages: '付款阶段', contract_attachment: '合同附件', payment: '付款记录', payment_stage: '付款阶段', payment_amount: '本次付款金额（元）', payment_month: '付款时间', payment_handler: '经办人', payment_remark: '备注', is_deleted: '删除状态' }
+const DETAIL_FIELD_ORDER = ['name', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'priority', 'description', 'start_date', 'expected_end_date', 'progress_text', 'risk_text', 'status', 'is_overdue', 'actual_end_date', 'suspend_date', 'follow_up_content', 'contract', 'contract_code', 'contract_name', 'contract_supplier', 'contract_signed_date', 'contract_amount', 'contract_remark', 'contract_stages', 'contract_attachment', 'payment', 'payment_stage', 'payment_amount', 'payment_month', 'payment_handler', 'payment_remark']
+const HISTORY_FIELD_LABELS = { name: '项目名称', product_id: '所属产品', requirement_id: '所属需求', owner_id: '负责人', member_ids: '项目成员', priority: '优先级', description: '项目描述', start_date: '启动日期', expected_end_date: '预计完成日期', progress_text: '进度记录', risk_text: '风险记录', status: '状态', is_overdue: '逾期状态', actual_end_date: '实际完成日期', suspend_date: '暂停日期', follow_up_content: '跟进内容', contract: '合同信息', contract_code: '合同编码', contract_name: '合同名称', contract_supplier: '供应商', contract_signed_date: '签订时间', contract_amount: '合同金额（元）', contract_remark: '备注', contract_stages: '付款阶段', contract_attachment: '合同附件', payment: '付款记录', payment_stage: '付款阶段', payment_amount: '本次付款金额（元）', payment_month: '付款时间', payment_handler: '经办人', payment_remark: '备注', is_deleted: '删除状态' }
 const HISTORY_DATE_FIELDS = new Set(['start_date', 'expected_end_date', 'actual_end_date', 'suspend_date', 'contract_signed_date'])
 
 const schema = {
@@ -279,7 +280,7 @@ exports.history = async (req, res) => {
     }
     ok(res, groupOperationLogs(logs, DETAIL_FIELD_ORDER).map((group) => ({
       id: group.id,
-      action: group.action,
+      action: normalizeFollowUpHistoryAction(group.action),
       created_at: group.created_at,
       operator: group.operator,
       changes: group.action === '删除合同'

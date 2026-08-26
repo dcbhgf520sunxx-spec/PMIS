@@ -6,6 +6,7 @@ const requirement = require('../controllers/requirementController')
 const task = require('../controllers/taskController')
 const bug = require('../controllers/bugController')
 const workOrder = require('../controllers/workOrderController')
+const followUpRecord = require('../controllers/followUpRecordController')
 const db = require('../db')
 const ticketService = require('../services/mcpActionTicketService')
 const { redactAuditInput } = require('../services/mcpAuditService')
@@ -19,6 +20,7 @@ const { normalizePaymentMonth, validateContractStages, validatePaymentAmount } =
 const { validateAttachmentFile } = require('../services/projectContractAttachmentService')
 const { OSS_FILE_ORIGIN } = require('../services/projectContractOssService')
 const { validateActualBusinessDate } = require('../services/actualBusinessDateRules')
+const { normalizeFollowUpContent, resolveFollowUpTarget } = require('../services/followUpRecordRules')
 const { invokeController } = require('./controllerAdapter')
 const { unwrapEnvelope } = require('./queryTools')
 
@@ -86,6 +88,7 @@ const TARGET_LABELS = {
   contract_attachment: '合同附件',
   stage_delivery: '交付文件',
   payment_stage: '付款阶段',
+  follow_up_record: '跟进记录',
 }
 const STATUS_LABELS = {
   product: { 0: '停用', 1: '启用' },
@@ -530,6 +533,33 @@ async function loadReorderTargetSnapshot(name, args, database) {
 }
 
 async function loadActionTargetSnapshot(name, args, database = db) {
+  if (name.startsWith('follow_up_record_')) {
+    const target = resolveFollowUpTarget(args.target_type, args.target_id)
+    const nameColumn = { project: 'name', requirement: 'title', task: 'name' }[args.target_type]
+    if (name === 'follow_up_record_create') {
+      const row = await database.prepare(`SELECT id, ${nameColumn} name FROM ${target.table}
+        WHERE id = ? AND is_deleted = 0`).get(target.id)
+      if (!row) throw businessValidationError('target_id', `${target.module}不存在`)
+      return {
+        type: 'follow_up_record',
+        id: null,
+        name: row.name,
+        current: { target_type: args.target_type, target_id: target.id, content: null },
+      }
+    }
+    const row = await database.prepare(`SELECT f.id, f.content, target.${nameColumn} name
+      FROM pms_follow_up_record f
+      JOIN ${target.table} target ON target.id = f.${target.column} AND target.is_deleted = 0
+      WHERE f.id = ? AND f.${target.column} = ? AND f.is_deleted = 0`)
+      .get(args.follow_up_id, target.id)
+    if (!row) throw businessValidationError('follow_up_id', '跟进记录不存在')
+    return {
+      type: 'follow_up_record',
+      id: row.id,
+      name: row.name,
+      current: { target_type: args.target_type, target_id: target.id, content: row.content },
+    }
+  }
   const main = await loadMainTargetSnapshot(name, args, database)
   if (main) return main
   const reorder = await loadReorderTargetSnapshot(name, args, database)
@@ -687,6 +717,7 @@ function ownershipError(message) {
 }
 
 function assertActionTargetOwnership(target, context, mode) {
+  if (target.type === 'follow_up_record') return
   if (target.current === null) return
   const rows = target.type === 'stage_item_order' && Array.isArray(target.current?.order)
     ? target.current.order
@@ -759,6 +790,18 @@ const actions = {
   contract_attachment_delete: [contract.deleteAttachment, (a) => ({ params: { id: id(a, 'project_id'), attachmentId: id(a, 'attachment_id') } })],
   stage_delivery_upload: [stage.uploadFile, async (a) => ({ params: { projectId: id(a, 'project_id'), itemId: id(a, 'item_id') }, file: await buildFileFromUrl(a) })],
   stage_delivery_delete: [stage.deleteFile, (a) => ({ params: { projectId: id(a, 'project_id'), itemId: id(a, 'item_id'), fileId: id(a, 'file_id') } })],
+  follow_up_record_create: [
+    (req, res) => followUpRecord.forTarget(req.params.targetType).create(req, res),
+    (a) => ({ params: { targetType: a.target_type, id: a.target_id }, body: { content: a.content } }),
+  ],
+  follow_up_record_update: [
+    (req, res) => followUpRecord.forTarget(req.params.targetType).update(req, res),
+    (a) => ({ params: { targetType: a.target_type, id: a.target_id, followUpId: a.follow_up_id }, body: { content: a.content } }),
+  ],
+  follow_up_record_delete: [
+    (req, res) => followUpRecord.forTarget(req.params.targetType).remove(req, res),
+    (a) => ({ params: { targetType: a.target_type, id: a.target_id, followUpId: a.follow_up_id } }),
+  ],
 }
 
 function configuredFileOrigins() {
@@ -994,6 +1037,13 @@ async function validateFileActionLimits(name, args, database) {
 }
 
 async function validateActionBusinessRules(name, args, database = db) {
+  if (['follow_up_record_create', 'follow_up_record_update'].includes(name)) {
+    try {
+      normalizeFollowUpContent(args.content)
+    } catch (error) {
+      throw businessValidationError('content', error.message)
+    }
+  }
   await validateFileActionLimits(name, args, database)
   if (name.endsWith('_upload')) {
     try {
@@ -1139,10 +1189,11 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
   try {
     const [handler, buildInput] = definition
     const data = unwrapEnvelope(await invokeController(handler, context, await buildInput(preparedArgs)))
+    const verification = await verifyActionResult(name, preparedArgs, database)
     return {
       success: true,
       outcome: 'executed',
-      message: '操作已成功执行',
+      message: verification ? '操作已成功执行并通过结果校验' : '操作已成功执行',
       tool: name,
       riskLevel,
       riskReason,
@@ -1154,10 +1205,40 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
       resultStatus: 'success',
       businessResult: data,
       data,
+      ...(verification ? { verification } : {}),
     }
   } catch (error) {
     await actionTicketService.markTicketFailed(args.confirmation_id).catch(() => {})
     throw error
+  }
+}
+
+async function verifyActionResult(name, args, database = db) {
+  if (name !== 'business_attachment_delete') return null
+
+  const attachmentId = Number(args.attachment_id)
+  const businessId = Number(args.business_id)
+  const businessType = args.business_type
+  const row = await database.prepare(`
+    SELECT is_deleted
+    FROM pms_business_attachment
+    WHERE id = ? AND business_type = ? AND business_id = ?
+  `).get(attachmentId, businessType, businessId)
+  const active = Boolean(row && Number(row.is_deleted) === 0)
+
+  if (active) {
+    const error = new Error('附件删除后校验失败，附件仍然存在')
+    error.code = 'MCP_RESULT_VERIFICATION_FAILED'
+    throw error
+  }
+
+  return {
+    verified: true,
+    type: 'attachment_deleted',
+    businessType,
+    businessId,
+    attachmentId,
+    active: false,
   }
 }
 
