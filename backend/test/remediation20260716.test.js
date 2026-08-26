@@ -55,13 +55,13 @@ test('本地、部署和远程检查使用兼容 TypeScript 测试的 Node 版�
   assert.match(nginx, /client_max_body_size\s+25m;/)
 })
 
-test('生产 CSP 允许嵌入正式 Agent 页面', () => {
+test('生产 CSP 同时允许附件 blob 预览和正式 Agent 页面', () => {
   const nginx = read('deploy/nginx.conf')
   const policies = nginx.match(/add_header Content-Security-Policy "[^"]+" always;/g) || []
 
   assert.ok(policies.length > 0)
   for (const policy of policies) {
-    assert.match(policy, /frame-src 'self' https:\/\/ai\.znjs\.com:3100;/)
+    assert.match(policy, /frame-src 'self' blob: https:\/\/ai\.znjs\.com:3100;/)
   }
 })
 
