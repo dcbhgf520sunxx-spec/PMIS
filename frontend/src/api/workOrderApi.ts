@@ -4,6 +4,7 @@ import type { PageResult } from '../types/api';
 import type { WorkOrderHistoryItem, WorkOrderRecord, WorkOrderStatus } from '../modules/work-order/types';
 import { mapPageResult, type PageResponse } from './pageResult';
 import { buildWorkOrderQueryParams, type WorkOrderListParams } from './workOrderQueryParams';
+import { normalizeOptionalWorkOrderDateText } from './workOrderDate';
 
 type WorkOrderResponse = {
   id: number;
@@ -96,7 +97,7 @@ export function toWorkOrderRecord(row: WorkOrderResponse): WorkOrderRecord {
     urgency: row.urgency as WorkOrderRecord['urgency'],
     status: row.status as WorkOrderStatus,
     isOverdue: Boolean(Number(row.is_overdue)),
-    expectedResolveDate: dateText(row.expected_resolve_date).slice(0, 10),
+    expectedResolveDate: normalizeOptionalWorkOrderDateText(row.expected_resolve_date),
     submitterName: row.submitter_name,
     submitterDept: row.submitter_dept,
     submitTime: dateText(row.submit_time).slice(0, 10),
