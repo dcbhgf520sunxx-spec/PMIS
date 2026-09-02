@@ -11,11 +11,11 @@ const { buildExecutePayload } = require('../src/mcp/dispatcher')
 
 const allMenus = new Set(['/products', '/projects', '/requirements', '/tasks', '/bugs', '/work-orders'])
 
-test('public MCP catalog exposes 16 query tools and 21 action tools', () => {
+test('public MCP catalog exposes 17 query tools and 21 action tools', () => {
   const query = filterToolsForContext({ endpointType: 'query', allowedMenuPaths: allMenus })
   const action = filterToolsForContext({ endpointType: 'action', allowedMenuPaths: allMenus })
 
-  assert.equal(query.length, 16)
+  assert.equal(query.length, 17)
   assert.equal(action.length, 21)
   assert.deepEqual(query.map((tool) => tool.name), [
     'global_search',
@@ -34,6 +34,7 @@ test('public MCP catalog exposes 16 query tools and 21 action tools', () => {
     'business_get',
     'business_history',
     'business_analyze',
+    'business_period_analysis',
   ])
   assert.deepEqual(action.map((tool) => tool.name), [
     'product_manage',
@@ -292,7 +293,7 @@ test('public action metadata describes operation branches and status-specific fi
 })
 
 test('every public tool and operation branch has complete metadata', () => {
-  assert.equal(publicToolCatalog.length, 40)
+  assert.equal(publicToolCatalog.length, 41)
   for (const tool of publicToolCatalog) {
     assert.ok(tool.title, `${tool.name}缺少标题`)
     assert.ok(tool.description, `${tool.name}缺少说明`)
@@ -416,6 +417,37 @@ test('business analysis metadata publishes exact domain and metric compatibility
     getToolDefinition('business_analyze', 'query'),
     { domain: 'requirement', metric: 'count', status: 35 }
   ))
+})
+
+test('period analysis publishes a closed arbitrary-period contract and stable output fields', () => {
+  const definition = getToolDefinition('business_period_analysis', 'query')
+  const schema = definition.inputSchema
+
+  assert.deepEqual(schema.required, ['analysis_period'])
+  assert.equal(schema.additionalProperties, false)
+  assert.deepEqual(schema.properties.analysis_period.properties.preset.enum, [
+    'day', 'workday', 'week', 'month', 'quarter', 'year', 'custom',
+  ])
+  assert.deepEqual(schema.properties.business_types.items.enum, [
+    'project', 'requirement', 'stage_plan', 'task', 'bug', 'work_order',
+  ])
+  assert.equal(schema.properties.filters.additionalProperties, false)
+  assert.deepEqual(Object.keys(definition.outputSchema.properties), [
+    'resolved_periods', 'data_cutoff', 'period_flows', 'current_stock', 'plan_outlook',
+    'comparison', 'trend', 'groupings', 'quality_and_delivery', 'financials',
+    'risk_candidates', 'coverage',
+  ])
+})
+
+test('period analysis business types are reduced to current employee menu permissions', () => {
+  const [tool] = filterToolsForContext({
+    endpointType: 'query',
+    allowedMenuPaths: new Set(['/projects', '/tasks']),
+  }).filter((item) => item.name === 'business_period_analysis')
+
+  assert.deepEqual(tool.inputSchema.properties.business_types.items.enum, [
+    'project', 'stage_plan', 'task',
+  ])
 })
 
 test('business option permission is enforced even when a hidden option type is called directly', () => {

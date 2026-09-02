@@ -146,7 +146,7 @@ Action 工具采用两步确认：
 
 1. 先选择业务域工具，再通过 `operation` 选择具体动作，例如 `task_manage` 的 `create`、`create_subtask`、`update`、`delete`，或 `task_flow` 的 `assign`、`change_status`。
 2. 首次调用传 `mode: "preview"`、`operation` 和本次实际需要的业务参数。新增操作必须提供 Schema 标记的全部必填字段；编辑操作只传目标标识和用户明确要求修改的字段，服务端会读取并保留其他当前值。服务会在生成确认号前完成参数、枚举、日期顺序、关联记录、重复值、状态流转、删除依赖、合同回款和文件限制等业务校验，并读取当前业务目标；校验失败或目标不存在时不会生成确认号。成功后返回 `confirmationId`、有效期、风险等级、风险原因、操作人、当前目标和变更摘要，同时明确 `resultStatus="preview"`、`requiresConfirmation=true`、`executed=false`。
-3. 用户确认后，在 5 分钟内使用完全相同的 `operation` 和业务参数调用 `mode: "execute"`，并传回 `confirmation_id`。
+3. 用户确认后，在 30 分钟内使用完全相同的 `operation` 和业务参数调用 `mode: "execute"`，并传回 `confirmation_id`。
 
 业务参数、员工、智能体、工具或确认号任一变化，服务都会拒绝执行。确认号只能使用一次。建议每次业务操作同时传入唯一的 `idempotency_key`。
 
@@ -283,6 +283,70 @@ Query MCP 用来查找目标、读取当前值和确认可选业务数据；Acti
 ```
 
 `option_type` 支持 `user`、`task_type`、`bug_type`、`bug_resolution`、`work_order_problem_type`、`supplier`，实际可选范围会按当前员工菜单权限裁剪。返回值包含有效选项的 `id`、`name` 和 `displayName`；人员的 `displayName` 使用已公开的用户 ID 安全消歧，不返回工号、账号、手机号或登录凭据。结果存在重名时，智能体必须展示 `displayName` 请用户确认，不得自行选择。
+
+## 任意周期业务统计分析
+
+日报、周报、月报、季报、年报和明确日期区间统一调用只读工具 `business_period_analysis`。该工具在服务端对授权范围内的项目、需求、阶段关键事项、任务与子任务、BUG、运维工单进行完整聚合，不依赖明细分页。
+
+查询 2026 年 8 月的实际变化，并查看 9 月计划：
+
+```json
+{
+  "name": "business_period_analysis",
+  "arguments": {
+    "analysis_period": {
+      "preset": "month",
+      "anchor_date": "2026-08-15"
+    },
+    "plan_period": {
+      "preset": "month",
+      "anchor_date": "2026-09-01"
+    },
+    "trend_granularity": "week",
+    "group_by": ["business_type", "person"],
+    "detail_limit": 20
+  }
+}
+```
+
+查询任意明确日期区间并与前一区间比较：
+
+```json
+{
+  "name": "business_period_analysis",
+  "arguments": {
+    "analysis_period": {
+      "preset": "custom",
+      "start_date": "2026-01-01",
+      "end_date": "2026-06-30"
+    },
+    "comparison_period": {
+      "preset": "custom",
+      "start_date": "2025-07-01",
+      "end_date": "2025-12-31"
+    },
+    "business_types": ["project", "requirement", "task", "bug"],
+    "metrics": ["created", "completed", "important_adjustments", "became_overdue"],
+    "trend_granularity": "month"
+  }
+}
+```
+
+周期类型支持 `day`、`workday`、`week`、`month`、`quarter`、`year` 和 `custom`。非自定义周期可使用 `anchor_date` 和 `offset`，例如周一查询上一工作日应使用 `workday`、`offset: -1`，服务端会自动回退到上周五。
+
+返回结果的固定分工如下：
+
+- `period_flows`：期间新增、完成、重要调整、暂停、恢复、修复、关闭、激活及进入逾期等流量。
+- `current_stock`：`data_cutoff` 时点的当前未完成、进行中、暂停和逾期存量。
+- `plan_outlook`：按当前有效计划日期落入计划区间的计划数、当前已完成数和待完成数。
+- `comparison`、`trend`、`groupings`：期间流量的对比、趋势和归并统计；不生成历史存量趋势。
+- `quality_and_delivery`、`financials`：交付质量、BUG/工单过程及合同付款辅助统计；合同付款不进入六类工作数量合计。
+- `risk_candidates`：代表性风险明细，每类同时返回 `total` 和 `has_more`；限量不影响完整聚合。
+- `coverage`：实际授权覆盖、统计完整性、候选截断和不支持范围。`statistics_complete=false` 时不得把结果当作完整全局统计。
+
+聚合工具负责回答“有多少、趋势怎样、风险集中在哪里”。需要完整清单时继续调用对应 `*_search` 分页查询；需要核验单条当前详情或变化依据时分别调用 `business_get`、`business_history`；需要交付文件时调用 `business_attachment_search`。禁止用搜索第一页反推全局数量，也不能把风险候选当作完整明细。
+
+当前存量和风险始终以本次执行时点为准。过去计划区间按当前有效计划日期统计，系统不会还原历史月末存量或历史计划版本。当前数据模型不支持正式组织层级、回款、预算、成本、ROI 和业务收益分析，智能体不得据此补造结论。
 
 ## 审计
 

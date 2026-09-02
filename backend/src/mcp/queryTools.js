@@ -10,6 +10,7 @@ const followUpRecord = require('../controllers/followUpRecordController')
 const db = require('../db')
 const { invokeController } = require('./controllerAdapter')
 const { analyzeBusinessData } = require('../services/mcpAnalysisService')
+const { analyzeBusinessPeriod } = require('../services/mcpPeriodAnalysisService')
 const { allowedProjectStatuses } = require('../services/productProjectRules')
 const { allowedRequirementStatuses } = require('../services/requirementRules')
 const { allowedTaskStatuses } = require('../services/taskRules')
@@ -597,6 +598,9 @@ function unwrapEnvelope(envelope) {
 }
 
 async function dispatchQueryTool(name, args, context, dependencies = {}) {
+  if (name === 'business_period_analysis') {
+    return analyzeBusinessPeriod(args, context, dependencies.database, dependencies.now)
+  }
   if (name === 'business_analyze') {
     return decorateQueryResult(`${args.domain}_analyze`, await analyzeBusinessData(args, dependencies.database))
   }

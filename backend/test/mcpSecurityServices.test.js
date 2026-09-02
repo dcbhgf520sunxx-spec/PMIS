@@ -208,6 +208,32 @@ test('action argument hashing is stable and excludes protocol control fields', (
   assert.equal(hashActionArguments(left), hashActionArguments(right))
 })
 
+test('action ticket stays valid for thirty minutes after preview', async () => {
+  let storedExpiresAt
+  const service = createMcpActionTicketService({
+    db: {
+      prepare: () => ({
+        run: async (...values) => {
+          storedExpiresAt = values.at(-1)
+          return { changes: 1 }
+        },
+      }),
+    },
+    now: () => new Date('2026-09-02T00:00:00.000Z'),
+    randomUUID: () => '00000000-0000-4000-8000-000000000030',
+  })
+
+  const ticket = await service.createTicket(
+    { client: { id: 3 }, user: { id: 8, employeeNo: 'JS001' } },
+    'task_update',
+    { id: 9, name: '新名称' },
+    { tool: 'task_update' },
+  )
+
+  assert.equal(ticket.expiresAt, '2026-09-02T00:30:00.000Z')
+  assert.equal(storedExpiresAt, '2026-09-02T00:30:00.000Z')
+})
+
 test('action ticket rejects changed user, tool, arguments, expiry and replay', async () => {
   const baseRow = {
     id: 'ticket-1',

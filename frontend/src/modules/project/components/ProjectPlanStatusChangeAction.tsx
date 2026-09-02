@@ -3,10 +3,10 @@ import { AdminAttachmentUpload, AdminDatePicker, AdminFormItem, AdminTextArea, S
 import { COMMON_ATTACHMENT_ACCEPT, COMMON_ATTACHMENT_MAX_SIZE } from '../../../components/business/businessAttachmentRules';
 import type { ProjectPlanItem, ProjectPlanItemStatus } from '../types';
 
-const labels:Record<ProjectPlanItemStatus,string>={0:'未开始',1:'进行中',2:'已完成',3:'暂停'};
+const labels:Record<ProjectPlanItemStatus,string>={0:'未开始',1:'进行中',2:'已完成',3:'已暂停'};
 const options:Record<ProjectPlanItemStatus,Array<{label:string;value:ProjectPlanItemStatus;tone:'normal'|'success'|'danger'}>>={
-  0:[{label:'进行中',value:1,tone:'normal'},{label:'暂停',value:3,tone:'danger'}],
-  1:[{label:'已完成',value:2,tone:'success'},{label:'暂停',value:3,tone:'danger'}],
+  0:[{label:'进行中',value:1,tone:'normal'},{label:'已暂停',value:3,tone:'danger'}],
+  1:[{label:'已完成',value:2,tone:'success'},{label:'已暂停',value:3,tone:'danger'}],
   2:[{label:'进行中',value:1,tone:'normal'}],
   3:[{label:'未开始',value:0,tone:'normal'},{label:'进行中',value:1,tone:'normal'}],
 };
