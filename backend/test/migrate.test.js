@@ -198,6 +198,43 @@ test('baselines all migration records in one transaction', async () => {
   assert.equal(queries.at(-1).sql, 'COMMIT')
 })
 
+test('baseline does not treat growing reference seed catalogs as business data', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'migrations-'))
+  fs.writeFileSync(path.join(directory, '20260716_01_pending.sql'), 'SELECT 42;')
+  const referenceCounts = {
+    pms_menu: 23,
+    pms_role_menu: 23,
+    pms_archive_type: 7,
+    pms_archive: 27
+  }
+  const client = {
+    async query(sql) {
+      if (sql.includes('to_regclass') && sql.includes('has_user')) {
+        const fixedCountChecks = [...sql.matchAll(
+          /\(SELECT COUNT\(\*\) FROM (pms_(?:menu|role_menu|archive_type|archive))\) <> (\d+)/g
+        )]
+        return { rows: [{
+          has_user: true,
+          has_work_order: true,
+          has_role_index: true,
+          has_work_order_fk: true,
+          has_business_data: fixedCountChecks.some(([, table, expected]) => (
+            referenceCounts[table] !== Number(expected)
+          ))
+        }] }
+      }
+      return { rows: [], rowCount: sql.includes('INSERT INTO pms_migrations') ? 1 : 0 }
+    },
+    release() {}
+  }
+  const connectionPool = {
+    async connect() { return client },
+    async end() {}
+  }
+
+  await runMigrationCommand({ args: ['--baseline'], directory, connectionPool, log() {} })
+})
+
 test('rolls back the complete baseline when recording any migration fails', async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'migrations-'))
   fs.writeFileSync(path.join(directory, '20260716_01_pending.sql'), 'SELECT 42;')
