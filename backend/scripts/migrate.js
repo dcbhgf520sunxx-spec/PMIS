@@ -90,10 +90,6 @@ async function assertBaselineReady(client) {
         OR EXISTS (SELECT 1 FROM pms_user WHERE id <> 1 OR employee_no <> 'admin')
         OR EXISTS (SELECT 1 FROM pms_role WHERE id <> 1 OR code <> 'admin')
         OR (SELECT COUNT(*) FROM pms_user_role) <> 1
-        OR (SELECT COUNT(*) FROM pms_menu) <> 22
-        OR (SELECT COUNT(*) FROM pms_role_menu) <> 22
-        OR (SELECT COUNT(*) FROM pms_archive_type) <> 6
-        OR (SELECT COUNT(*) FROM pms_archive) <> 26
         AS has_business_data
   `)
   const state = result.rows[0]

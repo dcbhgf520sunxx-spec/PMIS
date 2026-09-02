@@ -38,7 +38,7 @@ function createMcpActionTicketService({
   async function createTicket(context, toolName, args, preview, riskLevel = 'medium') {
     const id = randomUUID()
     const createdAt = now()
-    const expiresAt = new Date(createdAt.getTime() + 5 * 60 * 1000)
+    const expiresAt = new Date(createdAt.getTime() + 30 * 60 * 1000)
     const idempotencyKey = args?.idempotency_key || null
     try {
       await database.prepare(`

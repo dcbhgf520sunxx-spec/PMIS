@@ -12,6 +12,7 @@ const QUERY_TOOLS = [
   ['work_order_search', '/work-orders'], ['work_order_get', '/work-orders'], ['work_order_history', '/work-orders'],
   ['business_options', null],
   ['business_analyze', null],
+  ['business_period_analysis', null],
 ]
 
 const ACTION_TOOLS = [
@@ -192,6 +193,72 @@ const querySchemas = {
     date_from: described({ type: 'string', format: 'date' }, '创建日期开始，格式 YYYY-MM-DD'),
     date_to: described({ type: 'string', format: 'date' }, '创建日期结束，格式 YYYY-MM-DD'),
     status: described({ type: 'integer' }, '业务状态；可选值由业务领域决定'),
+  },
+  business_period_analysis: {
+    analysis_period: described({
+      type: 'object',
+      properties: {
+        preset: described({ type: 'string', enum: ['day', 'workday', 'week', 'month', 'quarter', 'year', 'custom'] }, '周期类型'),
+        anchor_date: described({ type: 'string', format: 'date' }, '非自定义周期的锚点日期；不传时使用上海时区当天'),
+        offset: described({ type: 'integer', minimum: -1000, maximum: 1000 }, '相对锚点的周期偏移；0为当前周期，-1为上一周期'),
+        start_date: described({ type: 'string', format: 'date' }, '自定义周期开始日期'),
+        end_date: described({ type: 'string', format: 'date' }, '自定义周期结束日期'),
+      },
+      required: ['preset'],
+      additionalProperties: false,
+    }, '实际变化统计区间；custom 必须同时提供 start_date 和 end_date'),
+    plan_period: described({
+      type: 'object',
+      properties: {
+        preset: described({ type: 'string', enum: ['day', 'workday', 'week', 'month', 'quarter', 'year', 'custom'] }, '周期类型'),
+        anchor_date: described({ type: 'string', format: 'date' }, '非自定义周期的锚点日期'),
+        offset: described({ type: 'integer', minimum: -1000, maximum: 1000 }, '相对锚点的周期偏移'),
+        start_date: described({ type: 'string', format: 'date' }, '自定义周期开始日期'),
+        end_date: described({ type: 'string', format: 'date' }, '自定义周期结束日期'),
+      },
+      required: ['preset'],
+      additionalProperties: false,
+    }, '可选计划区间；按当前有效计划日期统计'),
+    comparison_period: described({
+      type: 'object',
+      properties: {
+        preset: described({ type: 'string', enum: ['day', 'workday', 'week', 'month', 'quarter', 'year', 'custom'] }, '周期类型'),
+        anchor_date: described({ type: 'string', format: 'date' }, '非自定义周期的锚点日期'),
+        offset: described({ type: 'integer', minimum: -1000, maximum: 1000 }, '相对锚点的周期偏移'),
+        start_date: described({ type: 'string', format: 'date' }, '自定义周期开始日期'),
+        end_date: described({ type: 'string', format: 'date' }, '自定义周期结束日期'),
+      },
+      required: ['preset'],
+      additionalProperties: false,
+    }, '可选对比区间；只比较期间流量'),
+    business_types: described({
+      type: 'array', minItems: 1, maxItems: 6,
+      items: { type: 'string', enum: ['project', 'requirement', 'stage_plan', 'task', 'bug', 'work_order'] },
+    }, '业务类型；不传时统计当前账号有权限的全部六类工作'),
+    filters: described({
+      type: 'object',
+      properties: {
+        product_ids: described({ type: 'array', maxItems: 100, items: { type: 'integer', minimum: 1 } }, '产品标识列表'),
+        project_ids: described({ type: 'array', maxItems: 100, items: { type: 'integer', minimum: 1 } }, '项目标识列表'),
+        requirement_ids: described({ type: 'array', maxItems: 100, items: { type: 'integer', minimum: 1 } }, '需求标识列表'),
+        person_ids: described({ type: 'array', maxItems: 100, items: { type: 'integer', minimum: 1 } }, '负责人、协作人、指派人、跟进人或经办人标识列表'),
+        statuses: described({ type: 'array', maxItems: 50, items: { type: 'integer' } }, '业务状态代码列表'),
+        priorities: described({ type: 'array', maxItems: 10, items: { type: 'integer' } }, '优先级、严重程度或紧急程度代码列表'),
+        only_overdue: described({ type: 'boolean' }, '是否只统计当前逾期记录'),
+        only_paused: described({ type: 'boolean' }, '是否只统计当前暂停记录'),
+      },
+      additionalProperties: false,
+    }, '结构化筛选；不接受任意字段或表达式'),
+    group_by: described({
+      type: 'array', maxItems: 3,
+      items: { type: 'string', enum: ['business_type', 'product', 'project', 'requirement', 'person', 'status', 'priority', 'plan_date'] },
+    }, '归并维度，最多三个'),
+    metrics: described({
+      type: 'array', maxItems: 10,
+      items: { type: 'string', enum: ['created', 'completed', 'important_adjustments', 'became_overdue', 'new_overdue_unresolved', 'paused', 'resumed', 'fixed', 'activated', 'reopened'] },
+    }, '期间流量指标；不传时返回全部默认指标'),
+    trend_granularity: described({ type: 'string', enum: ['day', 'week', 'month', 'quarter', 'year'] }, '趋势时间粒度'),
+    detail_limit: described({ type: 'integer', minimum: 0, maximum: 100 }, '每类代表性风险候选最多返回条数；0表示只返回总数'),
   },
 }
 
@@ -375,6 +442,8 @@ function queryInputSchema(name) {
     properties,
     required: name === 'business_analyze'
       ? ['domain', 'metric']
+      : name === 'business_period_analysis'
+        ? ['analysis_period']
       : name === 'business_options'
         ? ['option_type']
         : name === 'follow_up_record_list'
@@ -706,12 +775,14 @@ const queryDescriptions = {
   follow_up_record_list: '查询指定项目、需求或任务的跟进记录，按创建时间倒序返回',
   business_options: '查询新增、编辑和状态操作所需的有效业务选项；返回可用标识和名称，不返回账号、工号、联系方式或凭据',
   business_analyze: '统计PMIS业务数据；domain 和 metric 必填，二者必须使用当前业务领域支持的组合；可按日期和状态进一步筛选',
+  business_period_analysis: '按任意日期区间统计授权范围内六类工作的期间变化、当前存量、计划、趋势、对比和风险；完整聚合不依赖明细分页',
 }
 
 const queryTitles = {
   business_attachment_search: '查询业务附件',
   business_options: '查询业务选项',
   business_analyze: '统计业务数据',
+  business_period_analysis: '任意周期业务统计分析',
   follow_up_record_list: '查询跟进记录',
 }
 
@@ -888,6 +959,30 @@ function queryOutputSchema(name) {
         },
       },
       required: ['domain', 'metric', 'scope', 'definition', 'results'],
+      additionalProperties: false,
+    }
+  }
+  if (name === 'business_period_analysis') {
+    const objectField = (description) => ({ type: ['object', 'null'], additionalProperties: true, description })
+    return {
+      type: 'object',
+      description: '任意周期业务统计分析结果；当前存量以 data_cutoff 为准',
+      properties: {
+        resolved_periods: objectField('服务端解析后的分析、计划和对比日期区间'),
+        data_cutoff: { type: 'string', description: '上海时区实际数据截止时间，ISO 8601格式' },
+        period_flows: objectField('期间新增、完成、重要调整和逾期等流量统计'),
+        current_stock: objectField('执行时点当前存量统计，不代表历史期末存量'),
+        plan_outlook: objectField('按当前有效计划日期计算的计划完成、已完成和待完成统计'),
+        comparison: objectField('对比区间的期间流量差异；分母为零时不返回变化比例'),
+        trend: objectField('期间流量的时间分桶趋势'),
+        groupings: objectField('按请求维度归并的流量、存量和计划统计'),
+        quality_and_delivery: objectField('按期、延期、计划调整、交付文件、BUG和工单质量事实'),
+        financials: objectField('合同与付款辅助统计；不计入六类工作合计'),
+        risk_candidates: objectField('代表性风险候选；每类同时返回总数和是否还有更多'),
+        coverage: objectField('授权覆盖、统计完整性、候选截断及不支持范围'),
+      },
+      required: ['resolved_periods', 'data_cutoff', 'period_flows', 'current_stock', 'plan_outlook',
+        'comparison', 'trend', 'groupings', 'quality_and_delivery', 'financials', 'risk_candidates', 'coverage'],
       additionalProperties: false,
     }
   }
@@ -1224,6 +1319,7 @@ const publicToolCatalog = [
     '按业务领域和目标标识读取变更历史；阶段主计划传项目标识'
   ),
   commandDefinition('business_analyze', 'query'),
+  commandDefinition('business_period_analysis', 'query'),
   ...PUBLIC_ACTION_GROUPS.map(publicActionDefinition),
 ]
 
@@ -1338,6 +1434,31 @@ function scopeBusinessAnalysis(tool, allowedMenuPaths) {
   }
 }
 
+function scopeBusinessPeriodAnalysis(tool, allowedMenuPaths) {
+  if (tool.name !== 'business_period_analysis') return tool
+  const businessTypes = tool.inputSchema.properties.business_types
+  const menuByType = {
+    project: '/projects', requirement: '/requirements', stage_plan: '/projects',
+    task: '/tasks', bug: '/bugs', work_order: '/work-orders',
+  }
+  return {
+    ...tool,
+    inputSchema: {
+      ...tool.inputSchema,
+      properties: {
+        ...tool.inputSchema.properties,
+        business_types: {
+          ...businessTypes,
+          items: {
+            ...businessTypes.items,
+            enum: businessTypes.items.enum.filter((type) => allowedMenuPaths.has(menuByType[type])),
+          },
+        },
+      },
+    },
+  }
+}
+
 function scopeBusinessAttachmentSearch(tool, allowedMenuPaths) {
   if (tool.name !== 'business_attachment_search') return tool
   const attachmentType = tool.inputSchema.properties.attachment_type
@@ -1423,10 +1544,13 @@ function filterToolsForContext(context) {
     .map((tool) => scopeBusinessAttachmentAction(tool, context.allowedMenuPaths))
     .map((tool) => scopeBusinessOptions(tool, context.allowedMenuPaths))
     .map((tool) => scopeBusinessAnalysis(tool, context.allowedMenuPaths))
+    .map((tool) => scopeBusinessPeriodAnalysis(tool, context.allowedMenuPaths))
     .filter((tool) => !['business_get', 'business_history', 'business_options', 'business_analyze'].includes(tool.name)
       || Object.values(tool.inputSchema.properties)
         .filter((property) => Array.isArray(property.enum))
         .every((property) => property.enum.length > 0))
+    .filter((tool) => tool.name !== 'business_period_analysis'
+      || tool.inputSchema.properties.business_types.items.enum.length > 0)
     .map(({ _meta, ...tool }) => tool)
 }
 

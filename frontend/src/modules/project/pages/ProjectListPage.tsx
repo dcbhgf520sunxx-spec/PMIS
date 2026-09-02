@@ -9,11 +9,11 @@ import { useAuthStore } from '../../../stores/authStore';
 import type { ProjectRecord, ProjectStatus } from '../types';
 import { renderProjectOverdue, renderProjectPriority } from '../helpers';
 import { ProjectStatusChangeAction, renderProjectStatus } from '../components/ProjectStatusChangeAction';
+import { projectStatusLabels } from '../statusTransitions';
 import { FollowUpRecordModal, type FollowUpTarget } from '../../follow-up/FollowUpRecordAction';
 import './ProjectListPage.css';
 
-const statusText = (status: ProjectStatus) => ['未启动', '进行中', '已完成', '暂停'][status];
-const statusOptions = ([0, 1, 2, 3] as ProjectStatus[]).map((value) => ({ label: statusText(value), value }));
+const statusOptions = ([0, 1, 2, 3] as ProjectStatus[]).map((value) => ({ label: projectStatusLabels[value], value }));
 const dateValue = (value: unknown) => value && typeof value === 'object' && 'format' in value && typeof value.format === 'function' ? value.format('YYYY-MM-DD') : undefined;
 const defaults = { name: '', productId: undefined as string | undefined, requirementId: undefined as string | undefined, ownerId: undefined as string | undefined, memberIds: [] as string[], priority: undefined as number | undefined, status: undefined as number | undefined, isOverdue: undefined as number | undefined, expectedEndDateRange: [] as unknown[], creatorId: undefined as string | undefined, createdAtRange: [] as unknown[] };
 

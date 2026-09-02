@@ -30,7 +30,6 @@ test('项目删除保护合同引用且合同接口继续复用项目菜单权�
 
 test('项目合同供应商关联供应商基础档案并迁移历史名称', () => {
   const schema = read('db/init/001_schema.sql')
-  const migrate = read('scripts/migrate.js')
   const migrationPath = path.join(root, 'db/migrations/20260721_01_link_contract_supplier_archive.sql')
   assert.ok(fs.existsSync(migrationPath), '缺少项目合同供应商基础档案迁移')
   const migration = fs.readFileSync(migrationPath, 'utf8')
@@ -38,7 +37,6 @@ test('项目合同供应商关联供应商基础档案并迁移历史名称', ()
   assert.match(schema, /supplier_id BIGINT NOT NULL/)
   assert.doesNotMatch(schema, /supplier_name VARCHAR\(200\) NOT NULL/)
   assert.match(schema, /\(6, 'supplier', 'SUP', '供应商'/)
-  assert.match(migrate, /COUNT\(\*\) FROM pms_archive_type\) <> 6/)
   assert.match(schema, /idx_project_contract_supplier_active/)
   assert.match(schema, /fk_project_contract_supplier/)
 

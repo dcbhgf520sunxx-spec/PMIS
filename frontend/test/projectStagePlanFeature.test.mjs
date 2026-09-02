@@ -60,6 +60,8 @@ test('关键事项只保留四状态并在暂停时填写原因', () => {
   assert.match(page, /pause_reason:values\.pauseReason/);
   assert.match(page, /pauseReason/);
   assert.match(action, /<Tooltip title=\{pauseReason\}><span>[\s\S]*\{tag\}[\s\S]*<\/span><\/Tooltip>/);
+  assert.match(action, /3:'已暂停'/);
+  assert.match(action, /label:'已暂停',value:3/);
 });
 
 test('关键事项固定为两行信息并把进度和调整信息放回对应列', () => {
