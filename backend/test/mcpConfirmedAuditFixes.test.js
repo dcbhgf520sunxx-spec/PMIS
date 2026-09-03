@@ -361,6 +361,173 @@ test('preview rejects duplicate task names before issuing a confirmation', async
   )
 })
 
+test('stage preview rejects an active same-name stage in the same project', async () => {
+  const database = {
+    prepare(sql) {
+      if (/FROM pms_project_plan_stage/.test(sql)) return { get: async () => ({ id: 43 }) }
+      throw new Error(`unexpected SQL: ${sql}`)
+    },
+  }
+  await assert.rejects(
+    () => validateActionBusinessRules('stage_create', {
+      project_id: 38,
+      name: '项目启动',
+    }, database),
+    (error) => error.code === 'MCP_BUSINESS_VALIDATION'
+      && error.fieldErrors.name === '阶段名称已存在'
+  )
+  await assert.rejects(
+    () => validateActionBusinessRules('stage_update', {
+      project_id: 38,
+      stage_id: 44,
+      name: '项目启动',
+    }, database),
+    (error) => error.code === 'MCP_BUSINESS_VALIDATION'
+      && error.fieldErrors.name === '阶段名称已存在'
+  )
+})
+
+test('stage item preview rejects existing and in-batch duplicate names', async () => {
+  const database = {
+    prepare(sql) {
+      if (/FROM pms_project_plan_item/.test(sql)) return { get: async () => ({ id: 142 }) }
+      throw new Error(`unexpected SQL: ${sql}`)
+    },
+  }
+  await assert.rejects(
+    () => validateActionBusinessRules('stage_item_create', {
+      stage_id: 43,
+      name: '项目启动会',
+    }, database),
+    (error) => error.code === 'MCP_BUSINESS_VALIDATION'
+      && error.fieldErrors.name === '当前阶段已存在同名关键事项'
+  )
+  await assert.rejects(
+    () => validateActionBusinessRules('stage_item_update', {
+      stage_id: 43,
+      item_id: 143,
+      name: '项目启动会',
+    }, database),
+    (error) => error.code === 'MCP_BUSINESS_VALIDATION'
+      && error.fieldErrors.name === '当前阶段已存在同名关键事项'
+  )
+  await assert.rejects(
+    () => validateActionBusinessRules('stage_item_batch_create', {
+      stage_id: 43,
+      items: [{ name: '项目启动会' }, { name: ' 项目启动会 ' }],
+    }, { prepare: () => { throw new Error('duplicate batch should fail before querying') } }),
+    (error) => error.code === 'MCP_BUSINESS_VALIDATION'
+      && error.fieldErrors.items === '本次新增存在同名关键事项'
+  )
+})
+
+test('batch stage item preview validates nested owners and collaborators', async () => {
+  await assert.rejects(
+    () => validateActionBusinessRules('stage_item_batch_create', {
+      stage_id: 43,
+      items: [{
+        name: '项目启动会',
+        owner_id: 404,
+        collaborator_ids: [],
+      }],
+    }, {
+      prepare(sql) {
+        if (/FROM pms_user/.test(sql)) return { get: async () => ({ count: 0 }) }
+        throw new Error(`unexpected SQL: ${sql}`)
+      },
+    }),
+    (error) => error.code === 'MCP_BUSINESS_VALIDATION'
+      && error.fieldErrors.items === '第1项：负责人不存在或已停用'
+  )
+  await assert.rejects(
+    () => validateActionBusinessRules('stage_item_batch_create', {
+      stage_id: 43,
+      items: [{
+        name: '项目启动会',
+        owner_id: 8,
+        collaborator_ids: [8],
+      }],
+    }, {
+      prepare(sql) {
+        if (/FROM pms_user/.test(sql)) return { get: async () => ({ count: 1 }) }
+        throw new Error(`unexpected SQL: ${sql}`)
+      },
+    }),
+    (error) => error.code === 'MCP_BUSINESS_VALIDATION'
+      && error.fieldErrors.items === '第1项：协作人不能包含主负责人'
+  )
+})
+
+test('contract preview rejects duplicate codes and a second contract for one project', async () => {
+  const validContract = {
+    project_id: 38,
+    contract_code: 'HT-2026-001',
+    contract_amount: 100,
+    stages: [{ stage_name: '验收款', planned_amount: 100 }],
+  }
+  await assert.rejects(
+    () => validateActionBusinessRules('contract_create', validContract, {
+      prepare(sql) {
+        if (/contract_code/.test(sql)) return { get: async () => ({ id: 9 }) }
+        throw new Error(`unexpected SQL: ${sql}`)
+      },
+    }),
+    (error) => error.code === 'MCP_BUSINESS_VALIDATION'
+      && error.fieldErrors.contract_code === '合同编码已存在'
+  )
+  await assert.rejects(
+    () => validateActionBusinessRules('contract_create', validContract, {
+      prepare(sql) {
+        if (/contract_code/.test(sql)) return { get: async () => null }
+        if (/project_id/.test(sql)) return { get: async () => ({ id: 10 }) }
+        throw new Error(`unexpected SQL: ${sql}`)
+      },
+    }),
+    (error) => error.code === 'MCP_BUSINESS_VALIDATION'
+      && error.fieldErrors.project_id === '该项目已存在合同'
+  )
+  await assert.rejects(
+    () => validateActionBusinessRules('contract_update', validContract, {
+      prepare(sql) {
+        if (/COALESCE\(SUM\(r\.payment_amount\)/.test(sql)) {
+          return { all: async () => [{ contract_id: 10, id: null }] }
+        }
+        if (/contract_code/.test(sql)) return { get: async () => ({ id: 9 }) }
+        throw new Error(`unexpected SQL: ${sql}`)
+      },
+    }),
+    (error) => error.code === 'MCP_BUSINESS_VALIDATION'
+      && error.fieldErrors.contract_code === '合同编码已存在'
+  )
+})
+
+test('project preview rejects a requirement outside the product or linked to another project', async () => {
+  const database = {
+    prepare(sql) {
+      if (/FROM pms_product/.test(sql)) return { get: async () => ({ id: 7 }) }
+      if (/FROM pms_requirement/.test(sql)) return { get: async () => null }
+      throw new Error(`unexpected SQL: ${sql}`)
+    },
+  }
+  await assert.rejects(
+    () => validateActionBusinessRules('project_create', {
+      product_id: 7,
+      requirement_id: 88,
+    }, database),
+    (error) => error.code === 'MCP_BUSINESS_VALIDATION'
+      && error.fieldErrors.requirement_id === '所属需求不存在、不属于所选产品或已关联其他项目'
+  )
+  await assert.rejects(
+    () => validateActionBusinessRules('project_update', {
+      id: 39,
+      product_id: 7,
+      requirement_id: 88,
+    }, database),
+    (error) => error.code === 'MCP_BUSINESS_VALIDATION'
+      && error.fieldErrors.requirement_id === '所属需求不存在、不属于所选产品或已关联其他项目'
+  )
+})
+
 test('preview rejects deleting a referenced product before issuing a confirmation', async () => {
   const database = {
     prepare(sql) {
