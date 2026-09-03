@@ -970,6 +970,97 @@ async function validateDuplicate(name, args, database) {
   if (await database.prepare(sql).get(...params)) throw businessValidationError(field, message)
 }
 
+async function validateProjectRequirement(name, args, database) {
+  if (!['project_create', 'project_update'].includes(name)) return
+  const requirement = await database.prepare(`SELECT r.id FROM pms_requirement r
+    WHERE r.id = ? AND r.product_id = ? AND r.is_deleted = 0
+      AND NOT EXISTS (
+        SELECT 1 FROM pms_project p
+        WHERE p.requirement_id = r.id AND p.is_deleted = 0 AND p.id <> ?
+      )`).get(Number(args.requirement_id), Number(args.product_id), Number(args.id) || 0)
+  if (!requirement) {
+    throw businessValidationError('requirement_id', '所属需求不存在、不属于所选产品或已关联其他项目')
+  }
+}
+
+async function validateStageDuplicates(name, args, database) {
+  if (name === 'stage_create' || name === 'stage_update') {
+    const stageName = String(args.name || '').trim()
+    if (!stageName) return
+    const params = [Number(args.project_id), stageName]
+    let sql = 'SELECT id FROM pms_project_plan_stage WHERE project_id = ? AND name = ? AND is_deleted = 0'
+    if (name === 'stage_update') {
+      sql += ' AND id <> ?'
+      params.push(Number(args.stage_id))
+    }
+    if (await database.prepare(sql).get(...params)) {
+      throw businessValidationError('name', '阶段名称已存在')
+    }
+    return
+  }
+
+  if (!['stage_item_create', 'stage_item_update', 'stage_item_batch_create'].includes(name)) return
+  const items = name === 'stage_item_batch_create' ? args.items || [] : [args]
+  const names = new Set()
+  for (const item of items) {
+    const itemName = String(item.name || '').trim()
+    if (names.has(itemName)) {
+      throw businessValidationError('items', '本次新增存在同名关键事项')
+    }
+    names.add(itemName)
+  }
+  for (const [index, item] of items.entries()) {
+    if (name === 'stage_item_batch_create') {
+      try {
+        await validateRelatedUsers(item, database)
+      } catch (error) {
+        if (error.code !== 'MCP_BUSINESS_VALIDATION') throw error
+        throw businessValidationError('items', `第${index + 1}项：${Object.values(error.fieldErrors)[0]}`)
+      }
+    }
+    const collaboratorIds = new Set((item.collaborator_ids || []).map(Number))
+    if (item.owner_id && collaboratorIds.has(Number(item.owner_id))) {
+      const field = name === 'stage_item_batch_create' ? 'items' : 'collaborator_ids'
+      throw businessValidationError(field, name === 'stage_item_batch_create'
+        ? `第${index + 1}项：协作人不能包含主负责人`
+        : '协作人不能包含主负责人')
+    }
+    const itemName = String(item.name || '').trim()
+    if (!itemName) continue
+    const params = [Number(args.stage_id), itemName]
+    let sql = 'SELECT id FROM pms_project_plan_item WHERE stage_id = ? AND name = ? AND is_deleted = 0'
+    if (name === 'stage_item_update') {
+      sql += ' AND id <> ?'
+      params.push(Number(args.item_id))
+    }
+    if (await database.prepare(sql).get(...params)) {
+      throw businessValidationError('name', '当前阶段已存在同名关键事项')
+    }
+  }
+}
+
+async function validateContractDuplicates(name, args, database) {
+  if (!['contract_create', 'contract_update'].includes(name)) return
+  const contractCode = String(args.contract_code || '').trim()
+  if (contractCode) {
+    const params = [contractCode]
+    let sql = 'SELECT id FROM pms_project_contract WHERE contract_code = ? AND is_deleted = 0'
+    if (name === 'contract_update') {
+      sql += ' AND project_id <> ?'
+      params.push(Number(args.project_id))
+    }
+    if (await database.prepare(sql).get(...params)) {
+      throw businessValidationError('contract_code', '合同编码已存在')
+    }
+  }
+  if (name === 'contract_create') {
+    const existing = await database.prepare(
+      'SELECT id FROM pms_project_contract WHERE project_id = ? AND is_deleted = 0'
+    ).get(Number(args.project_id))
+    if (existing) throw businessValidationError('project_id', '该项目已存在合同')
+  }
+}
+
 async function validateDeleteBlockers(name, args, database) {
   if (name === 'product_delete') {
     const counts = await database.prepare(`SELECT
@@ -1102,6 +1193,7 @@ async function validateActionBusinessRules(name, args, database = db) {
     ).get(Number(args.product_id))
     if (!product) throw businessValidationError('product_id', '所属产品不存在或已停用')
   }
+  await validateProjectRequirement(name, args, database)
   if (['task_create', 'task_update', 'bug_create', 'bug_update'].includes(name)) {
     if (Number(args.source_type) === 1) {
       const project = await database.prepare(
@@ -1156,6 +1248,8 @@ async function validateActionBusinessRules(name, args, database = db) {
       if (amountError) throw businessValidationError('payment_amount', amountError)
     }
   }
+  await validateStageDuplicates(name, args, database)
+  await validateContractDuplicates(name, args, database)
   await validateDuplicate(name, args, database)
   await validateDeleteBlockers(name, args, database)
 }
