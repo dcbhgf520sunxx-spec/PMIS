@@ -219,6 +219,18 @@ const querySchemas = {
       required: ['preset'],
       additionalProperties: false,
     }, '可选计划区间；按当前有效计划日期统计'),
+    risk_period: described({
+      type: 'object',
+      properties: {
+        preset: described({ type: 'string', enum: ['day', 'workday', 'week', 'month', 'quarter', 'year', 'custom'] }, '周期类型'),
+        anchor_date: described({ type: 'string', format: 'date' }, '非自定义周期的锚点日期'),
+        offset: described({ type: 'integer', minimum: -1000, maximum: 1000 }, '相对锚点的周期偏移'),
+        start_date: described({ type: 'string', format: 'date' }, '自定义周期开始日期'),
+        end_date: described({ type: 'string', format: 'date' }, '自定义周期结束日期'),
+      },
+      required: ['preset'],
+      additionalProperties: false,
+    }, '可选风险候选日期区间；不传时默认查询数据截止日起七天内到期事项'),
     comparison_period: described({
       type: 'object',
       properties: {
@@ -258,7 +270,7 @@ const querySchemas = {
       items: { type: 'string', enum: ['created', 'completed', 'important_adjustments', 'became_overdue', 'new_overdue_unresolved', 'paused', 'resumed', 'fixed', 'activated', 'reopened'] },
     }, '期间流量指标；不传时返回全部默认指标'),
     trend_granularity: described({ type: 'string', enum: ['day', 'week', 'month', 'quarter', 'year'] }, '趋势时间粒度'),
-    detail_limit: described({ type: 'integer', minimum: 0, maximum: 100 }, '每类代表性风险候选最多返回条数；0表示只返回总数'),
+    detail_limit: described({ type: 'integer', minimum: 0, maximum: 100 }, '每类变化和风险候选最多返回条数；0表示只返回总数'),
   },
 }
 
@@ -978,11 +990,13 @@ function queryOutputSchema(name) {
         groupings: objectField('按请求维度归并的流量、存量和计划统计'),
         quality_and_delivery: objectField('按期、延期、计划调整、交付文件、BUG和工单质量事实'),
         financials: objectField('合同与付款辅助统计；不计入六类工作合计'),
+        flow_candidates: objectField('期间变化候选；各指标按业务记录去重并同时返回总数和是否还有更多'),
         risk_candidates: objectField('代表性风险候选；每类同时返回总数和是否还有更多'),
         coverage: objectField('授权覆盖、统计完整性、候选截断及不支持范围'),
       },
       required: ['resolved_periods', 'data_cutoff', 'period_flows', 'current_stock', 'plan_outlook',
-        'comparison', 'trend', 'groupings', 'quality_and_delivery', 'financials', 'risk_candidates', 'coverage'],
+        'comparison', 'trend', 'groupings', 'quality_and_delivery', 'financials', 'flow_candidates',
+        'risk_candidates', 'coverage'],
       additionalProperties: false,
     }
   }

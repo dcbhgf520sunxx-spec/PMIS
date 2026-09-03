@@ -133,7 +133,7 @@ test('任意周期分析汇总真实流量、当前存量、计划、趋势和�
   assert.equal(result.quality_and_delivery.delayed_completed, 0)
   assert.equal(result.current_stock.total.unfinished, 1)
   assert.equal(result.current_stock.total.overdue, 1)
-  assert.deepEqual(result.plan_outlook.total, { planned: 2, completed: 1, pending: 1 })
+  assert.deepEqual(result.plan_outlook.total, { planned: 2, completed: 0, pending: 2 })
   assert.equal(result.trend.buckets.length, 2)
   assert.equal(result.trend.buckets.reduce((sum, bucket) => sum + bucket.period_flows.created, 0), 2)
   assert.deepEqual(result.comparison.metrics.created, {
@@ -144,6 +144,119 @@ test('任意周期分析汇总真实流量、当前存量、计划、趋势和�
   assert.equal(result.financials.contract_amount, 100000)
   assert.equal(result.coverage.statistics_complete, true)
   assert.equal(result.coverage.historical_stock_supported, false)
+})
+
+test('计划统计排除区间开始前已完成事项并只统计区间内完成', async () => {
+  const records = [
+    {
+      business_type: 'task', id: 41, name: '提前完成', status: 2, priority: 1,
+      owner_id: 8, owner_name: '孙鑫鑫', owner_ids: [8], plan_date: '2026-09-03',
+      actual_date: '2026-09-02', created_at: '2026-09-01 09:00:00+08', is_overdue: 0,
+      is_paused: false, is_completed: true, parent_project_paused: false,
+      required_delivery: false, delivery_count: 0,
+    },
+    {
+      business_type: 'task', id: 42, name: '当日完成', status: 2, priority: 1,
+      owner_id: 8, owner_name: '孙鑫鑫', owner_ids: [8], plan_date: '2026-09-03',
+      actual_date: '2026-09-03', created_at: '2026-09-01 09:00:00+08', is_overdue: 0,
+      is_paused: false, is_completed: true, parent_project_paused: false,
+      required_delivery: false, delivery_count: 0,
+    },
+    {
+      business_type: 'task', id: 43, name: '仍待完成', status: 1, priority: 1,
+      owner_id: 8, owner_name: '孙鑫鑫', owner_ids: [8], plan_date: '2026-09-03',
+      actual_date: null, created_at: '2026-09-01 09:00:00+08', is_overdue: 0,
+      is_paused: false, is_completed: false, parent_project_paused: false,
+      required_delivery: false, delivery_count: 0,
+    },
+  ]
+  const database = {
+    prepare(sql) {
+      if (/period_analysis:records:task/.test(sql)) return { all: async () => records }
+      if (/period_analysis:logs/.test(sql)) return { all: async () => [] }
+      throw new Error(`unexpected SQL: ${sql}`)
+    },
+  }
+
+  const result = await analyzeBusinessPeriod({
+    analysis_period: { preset: 'day', anchor_date: '2026-09-03' },
+    plan_period: { preset: 'day', anchor_date: '2026-09-03' },
+    business_types: ['task'],
+  }, { allowedMenuPaths: new Set(['/tasks']) }, database, new Date('2026-09-03T04:00:00Z'))
+
+  assert.deepEqual(result.plan_outlook.total, { planned: 2, completed: 1, pending: 1 })
+})
+
+test('风险候选使用独立日期区间而不是固定未来七天', async () => {
+  const records = [
+    {
+      business_type: 'task', id: 51, name: '三天内到期', status: 1, priority: 1,
+      owner_id: 8, owner_name: '孙鑫鑫', owner_ids: [8], plan_date: '2026-09-05',
+      actual_date: null, created_at: '2026-09-01 09:00:00+08', is_overdue: 0,
+      is_paused: false, is_completed: false, parent_project_paused: false,
+      required_delivery: false, delivery_count: 0,
+    },
+    {
+      business_type: 'task', id: 52, name: '三天外到期', status: 1, priority: 1,
+      owner_id: 8, owner_name: '孙鑫鑫', owner_ids: [8], plan_date: '2026-09-08',
+      actual_date: null, created_at: '2026-09-01 09:00:00+08', is_overdue: 0,
+      is_paused: false, is_completed: false, parent_project_paused: false,
+      required_delivery: false, delivery_count: 0,
+    },
+  ]
+  const database = {
+    prepare(sql) {
+      if (/period_analysis:records:task/.test(sql)) return { all: async () => records }
+      if (/period_analysis:logs/.test(sql)) return { all: async () => [] }
+      throw new Error(`unexpected SQL: ${sql}`)
+    },
+  }
+
+  const result = await analyzeBusinessPeriod({
+    analysis_period: { preset: 'day', anchor_date: '2026-09-03' },
+    risk_period: { preset: 'custom', start_date: '2026-09-03', end_date: '2026-09-06' },
+    business_types: ['task'],
+  }, { allowedMenuPaths: new Set(['/tasks']) }, database, new Date('2026-09-03T04:00:00Z'))
+
+  assert.deepEqual(result.resolved_periods.risk_period, {
+    preset: 'custom', start_date: '2026-09-03', end_date: '2026-09-06',
+  })
+  assert.equal(result.risk_candidates.due_soon.total, 1)
+  assert.equal(result.risk_candidates.due_soon.items[0].target_id, 51)
+})
+
+test('同一事项的多次重要调整只统计一次并返回变化候选', async () => {
+  const record = {
+    business_type: 'task', id: 61, name: '调整任务', status: 1, priority: 2,
+    owner_id: 8, owner_name: '孙鑫鑫', owner_ids: [8], plan_date: '2026-09-10',
+    actual_date: null, created_at: '2026-09-01 09:00:00+08', is_overdue: 0,
+    is_paused: false, is_completed: false, parent_project_paused: false,
+    required_delivery: false, delivery_count: 0,
+  }
+  const database = {
+    prepare(sql) {
+      if (/period_analysis:records:task/.test(sql)) return { all: async () => [record] }
+      if (/period_analysis:logs/.test(sql)) return { all: async () => [
+        { business_type: 'task', target_id: 61, operation_id: 'adjust-owner', field_name: 'owner_ids', old_value: '8', new_value: '9', created_at: '2026-09-03 09:00:00+08' },
+        { business_type: 'task', target_id: 61, operation_id: 'adjust-date', field_name: 'expected_end_date', old_value: '2026-09-08', new_value: '2026-09-10', created_at: '2026-09-03 10:00:00+08' },
+        { business_type: 'task', target_id: 61, operation_id: 'adjust-date', field_name: 'priority', old_value: '1', new_value: '2', created_at: '2026-09-03 10:00:00+08' },
+      ] }
+      throw new Error(`unexpected SQL: ${sql}`)
+    },
+  }
+
+  const result = await analyzeBusinessPeriod({
+    analysis_period: { preset: 'day', anchor_date: '2026-09-03' },
+    business_types: ['task'],
+    detail_limit: 10,
+  }, { allowedMenuPaths: new Set(['/tasks']) }, database, new Date('2026-09-03T04:00:00Z'))
+
+  assert.equal(result.period_flows.total.important_adjustments, 1)
+  assert.equal(result.flow_candidates.important_adjustments.total, 1)
+  assert.equal(result.flow_candidates.important_adjustments.has_more, false)
+  assert.equal(result.flow_candidates.important_adjustments.items[0].target_id, 61)
+  assert.equal(result.flow_candidates.important_adjustments.items[0].event_date, '2026-09-03')
+  assert.equal(result.flow_candidates.important_adjustments.items[0].changes.length, 3)
 })
 
 test('统计只查询授权业务类型且候选限量不影响聚合总数', async () => {
@@ -261,12 +374,14 @@ test('暂停项目下的阶段关键事项不进入逾期和临期风险', async
   }
   const result = await analyzeBusinessPeriod({
     analysis_period: { preset: 'day', anchor_date: '2026-09-02' },
+    plan_period: { preset: 'day', anchor_date: '2026-09-03' },
     business_types: ['stage_plan'],
   }, { allowedMenuPaths: new Set(['/projects']) }, database, new Date('2026-09-02T09:00:00Z'))
 
   assert.equal(result.risk_candidates.overdue.total, 0)
   assert.equal(result.risk_candidates.due_soon.total, 0)
   assert.equal(result.risk_candidates.missing_delivery.total, 0)
+  assert.equal(result.plan_outlook.total.planned, 0)
 })
 
 test('人员筛选和归并覆盖多人负责人、协作人及创建人', async () => {
