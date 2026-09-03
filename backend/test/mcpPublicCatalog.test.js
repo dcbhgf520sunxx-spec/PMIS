@@ -428,6 +428,9 @@ test('period analysis publishes a closed arbitrary-period contract and stable ou
   assert.deepEqual(schema.properties.analysis_period.properties.preset.enum, [
     'day', 'workday', 'week', 'month', 'quarter', 'year', 'custom',
   ])
+  assert.deepEqual(schema.properties.risk_period.properties.preset.enum, [
+    'day', 'workday', 'week', 'month', 'quarter', 'year', 'custom',
+  ])
   assert.deepEqual(schema.properties.business_types.items.enum, [
     'project', 'requirement', 'stage_plan', 'task', 'bug', 'work_order',
   ])
@@ -435,8 +438,9 @@ test('period analysis publishes a closed arbitrary-period contract and stable ou
   assert.deepEqual(Object.keys(definition.outputSchema.properties), [
     'resolved_periods', 'data_cutoff', 'period_flows', 'current_stock', 'plan_outlook',
     'comparison', 'trend', 'groupings', 'quality_and_delivery', 'financials',
-    'risk_candidates', 'coverage',
+    'flow_candidates', 'risk_candidates', 'coverage',
   ])
+  assert.ok(definition.outputSchema.required.includes('flow_candidates'))
 })
 
 test('period analysis business types are reduced to current employee menu permissions', () => {

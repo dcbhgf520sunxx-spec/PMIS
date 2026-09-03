@@ -302,6 +302,11 @@ Query MCP 用来查找目标、读取当前值和确认可选业务数据；Acti
       "preset": "month",
       "anchor_date": "2026-09-01"
     },
+    "risk_period": {
+      "preset": "custom",
+      "start_date": "2026-09-01",
+      "end_date": "2026-09-03"
+    },
     "trend_granularity": "week",
     "group_by": ["business_type", "person"],
     "detail_limit": 20
@@ -332,19 +337,20 @@ Query MCP 用来查找目标、读取当前值和确认可选业务数据；Acti
 }
 ```
 
-周期类型支持 `day`、`workday`、`week`、`month`、`quarter`、`year` 和 `custom`。非自定义周期可使用 `anchor_date` 和 `offset`，例如周一查询上一工作日应使用 `workday`、`offset: -1`，服务端会自动回退到上周五。
+周期类型支持 `day`、`workday`、`week`、`month`、`quarter`、`year` 和 `custom`。非自定义周期可使用 `anchor_date` 和 `offset`，例如周一查询上一工作日应使用 `workday`、`offset: -1`，服务端会自动回退到上周五。`risk_period` 使用同一套日期结构控制临期候选范围；不传时保持默认的数据截止日起七天范围，不需要为日报、周报分别增加专用工具。
 
 返回结果的固定分工如下：
 
 - `period_flows`：期间新增、完成、重要调整、暂停、恢复、修复、关闭、激活及进入逾期等流量。
 - `current_stock`：`data_cutoff` 时点的当前未完成、进行中、暂停和逾期存量。
-- `plan_outlook`：按当前有效计划日期落入计划区间的计划数、当前已完成数和待完成数。
+- `plan_outlook`：按当前有效计划日期统计计划区间；区间开始前已经提前完成的记录不计入计划数，`completed` 只统计区间内实际完成，`pending = planned - completed`，暂停事项及暂停项目下的阶段关键事项不计入。
 - `comparison`、`trend`、`groupings`：期间流量的对比、趋势和归并统计；不生成历史存量趋势。
 - `quality_and_delivery`、`financials`：交付质量、BUG/工单过程及合同付款辅助统计；合同付款不进入六类工作数量合计。
-- `risk_candidates`：代表性风险明细，每类同时返回 `total` 和 `has_more`；限量不影响完整聚合。
+- `flow_candidates`：期间新增、完成、重要调整、暂停、恢复、修复、激活和进入逾期等变化候选；同一记录在同一指标中只统计一次，重要调整保留本次涉及的字段变化。
+- `risk_candidates`：代表性风险明细，`due_soon` 按 `risk_period` 返回；每类同时返回 `total` 和 `has_more`，限量不影响完整聚合。
 - `coverage`：实际授权覆盖、统计完整性、候选截断和不支持范围。`statistics_complete=false` 时不得把结果当作完整全局统计。
 
-聚合工具负责回答“有多少、趋势怎样、风险集中在哪里”。需要完整清单时继续调用对应 `*_search` 分页查询；需要核验单条当前详情或变化依据时分别调用 `business_get`、`business_history`；需要交付文件时调用 `business_attachment_search`。禁止用搜索第一页反推全局数量，也不能把风险候选当作完整明细。
+聚合工具负责回答“有多少、趋势怎样、风险集中在哪里”，并通过 `flow_candidates` 和 `risk_candidates` 提供有限的代表性明细。`detail_limit` 同时控制每类变化候选和风险候选的返回条数，`total` 始终保持完整统计。需要超过候选上限的完整清单时继续调用对应 `*_search` 分页查询；需要核验单条当前详情或变化依据时分别调用 `business_get`、`business_history`；需要交付文件时调用 `business_attachment_search`。禁止用搜索第一页反推全局数量，也不能把候选明细当作完整清单。
 
 当前存量和风险始终以本次执行时点为准。过去计划区间按当前有效计划日期统计，系统不会还原历史月末存量或历史计划版本。当前数据模型不支持正式组织层级、回款、预算、成本、ROI 和业务收益分析，智能体不得据此补造结论。
 

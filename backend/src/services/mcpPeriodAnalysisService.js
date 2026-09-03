@@ -405,6 +405,10 @@ function createEvents(records, logs, cutoffDate) {
 
   const dedupe = new Set()
   const operationFields = new Map()
+  const importantFields = new Set([
+    'owner_id', 'owner_ids', 'member_ids', 'assignee_id', 'follower_id', 'collaborator_ids',
+    'expected_end_date', 'expected_resolve_date', 'current_due_date', 'priority', 'severity', 'urgency',
+  ])
   for (const log of logs) {
     if (!log.operation_id) continue
     const key = `${log.business_type}:${Number(log.target_id)}:${log.operation_id}`
@@ -433,19 +437,20 @@ function createEvents(records, logs, cutoffDate) {
         const key = `important_adjustments:${record.business_type}:${record.id}:${log.operation_id || `${date}:status:${log.new_value}`}`
         if (!dedupe.has(key)) {
           dedupe.add(key)
-          events.push({ type: 'important_adjustments', date, record, log })
+          events.push({ type: 'important_adjustments', date, record, log, changes: [log] })
         }
       }
     }
-    const importantFields = new Set([
-      'owner_id', 'owner_ids', 'member_ids', 'assignee_id', 'follower_id', 'collaborator_ids',
-      'expected_end_date', 'expected_resolve_date', 'current_due_date', 'priority', 'severity', 'urgency',
-    ])
     if (importantFields.has(log.field_name)) {
       const key = `important_adjustments:${record.business_type}:${record.id}:${log.operation_id || `${date}:${log.field_name}`}`
       if (!dedupe.has(key)) {
         dedupe.add(key)
-        events.push({ type: 'important_adjustments', date, record, log })
+        const changes = log.operation_id
+          ? [...(operationFields.get(`${record.business_type}:${record.id}:${log.operation_id}`)?.values() || [])]
+            .filter((item) => importantFields.has(item.field_name)
+              && String(item.old_value ?? '') !== String(item.new_value ?? ''))
+          : [log]
+        events.push({ type: 'important_adjustments', date, record, log, changes })
       }
     }
   }
@@ -486,9 +491,7 @@ function uniquePeriodEvents(events, period) {
   const seen = new Set()
   return events.filter((event) => {
     if (!dateInPeriod(event.date, period)) return false
-    const key = event.type === 'important_adjustments'
-      ? `${event.type}:${event.record.business_type}:${event.record.id}:${event.log?.operation_id || `${event.date}:${event.log?.field_name || ''}`}`
-      : `${event.type}:${event.record.business_type}:${event.record.id}`
+    const key = `${event.type}:${event.record.business_type}:${event.record.id}`
     if (seen.has(key)) return false
     seen.add(key)
     return true
@@ -518,8 +521,11 @@ function summarizeStock(types, records, cutoffDate) {
 function summarizePlan(types, records, planPeriod) {
   if (!planPeriod) return null
   const summarize = (items) => {
-    const planned = items.filter((record) => dateInPeriod(record.plan_date, planPeriod))
-    const completed = planned.filter((record) => record.is_completed).length
+    const planned = items.filter((record) => !record.is_paused && !record.parent_project_paused
+      && dateInPeriod(record.plan_date, planPeriod)
+      && (!record.actual_date || record.actual_date >= planPeriod.start_date))
+    const completed = planned.filter((record) => record.actual_date
+      && dateInPeriod(record.actual_date, planPeriod)).length
     return { planned: planned.length, completed, pending: planned.length - completed }
   }
   return {
@@ -686,12 +692,52 @@ function limitedCandidates(items, limit, cutoffDate) {
   }
 }
 
-function buildRisks(records, cutoffDate, limit) {
-  const soonEnd = formatDate(addDays(parseDate(cutoffDate), 7))
+function flowCandidate(group, cutoffDate) {
+  const event = [...group].sort((a, b) => String(b.date).localeCompare(String(a.date)))[0]
+  const changes = group.flatMap((item) => item.changes || (item.log ? [item.log] : [])).map((change) => ({
+    event_date: dateOnly(change.created_at) || event.date,
+    field_name: change.field_name,
+    old_value: change.old_value ?? null,
+    new_value: change.new_value ?? null,
+  }))
+  return {
+    ...candidate(event.record, cutoffDate),
+    event_date: event.date,
+    actual_date: event.actual_date || event.record.actual_date || null,
+    changes,
+  }
+}
+
+function buildFlowCandidates(events, period, metrics, limit, cutoffDate) {
+  const selected = Array.isArray(metrics) && metrics.length ? metrics : Object.keys(emptyFlow())
+  const periodEvents = events.filter((event) => dateInPeriod(event.date, period))
+  return Object.fromEntries(selected.map((type) => {
+    const groups = new Map()
+    for (const event of periodEvents.filter((item) => item.type === type)) {
+      const key = `${event.record.business_type}:${event.record.id}`
+      if (!groups.has(key)) groups.set(key, [])
+      groups.get(key).push(event)
+    }
+    const items = [...groups.values()].map((group) => flowCandidate(group, cutoffDate))
+      .sort((a, b) => String(b.event_date).localeCompare(String(a.event_date))
+        || Number(b.priority || 0) - Number(a.priority || 0))
+    return [type, {
+      items: items.slice(0, limit),
+      total: items.length,
+      has_more: items.length > limit,
+    }]
+  }))
+}
+
+function buildRisks(records, cutoffDate, riskPeriod, limit) {
+  const period = riskPeriod || {
+    start_date: cutoffDate,
+    end_date: formatDate(addDays(parseDate(cutoffDate), 7)),
+  }
   const overdue = records.filter((record) => currentOverdue(record, cutoffDate))
   const dueSoon = records.filter((record) => !record.is_completed && !record.is_paused
     && !record.parent_project_paused
-    && record.plan_date >= cutoffDate && record.plan_date <= soonEnd)
+    && dateInPeriod(record.plan_date, period))
   const paused = records.filter((record) => record.is_paused)
   const missingDelivery = records.filter((record) => record.business_type === 'stage_plan'
     && record.required_delivery && record.delivery_count === 0 && !record.parent_project_paused)
@@ -796,6 +842,7 @@ function dataCutoff(now) {
 async function analyzeBusinessPeriod(args, context, database = db, now = new Date()) {
   const analysisPeriod = resolvePeriod(args.analysis_period, now, 'analysis_period')
   const planPeriod = args.plan_period ? resolvePeriod(args.plan_period, now, 'plan_period') : null
+  const riskPeriod = args.risk_period ? resolvePeriod(args.risk_period, now, 'risk_period') : null
   const comparisonPeriod = args.comparison_period ? resolvePeriod(args.comparison_period, now, 'comparison_period') : null
   const types = authorizedTypes(args, context)
   const detailLimit = Math.min(MAX_DETAIL_LIMIT, Math.max(0, Number(args.detail_limit ?? DEFAULT_DETAIL_LIMIT)))
@@ -817,6 +864,8 @@ async function analyzeBusinessPeriod(args, context, database = db, now = new Dat
   const periodFlows = summarizeFlow(types.authorized, events, analysisPeriod)
   const currentStock = summarizeStock(types.authorized, records, cutoffDate)
   const planOutlook = summarizePlan(types.authorized, records, planPeriod)
+  const flowCandidates = buildFlowCandidates(events, analysisPeriod, args.metrics, detailLimit, cutoffDate)
+  const riskCandidates = buildRisks(records, cutoffDate, riskPeriod, detailLimit)
   let financials = { available: false }
   if (context?.allowedMenuPaths?.has('/projects')) {
     try {
@@ -830,6 +879,7 @@ async function analyzeBusinessPeriod(args, context, database = db, now = new Dat
     resolved_periods: {
       analysis_period: analysisPeriod,
       plan_period: planPeriod,
+      risk_period: riskPeriod,
       comparison_period: comparisonPeriod,
     },
     data_cutoff: dataCutoff(now),
@@ -843,13 +893,14 @@ async function analyzeBusinessPeriod(args, context, database = db, now = new Dat
     groupings: buildGroupings(args.group_by || [], records, events, analysisPeriod, planPeriod, cutoffDate),
     quality_and_delivery: qualitySummary(records, events, analysisPeriod),
     financials,
-    risk_candidates: buildRisks(records, cutoffDate, detailLimit),
+    flow_candidates: flowCandidates,
+    risk_candidates: riskCandidates,
     coverage: {
       requested_business_types: types.requested,
       authorized_business_types: types.authorized,
       excluded_business_types: types.excluded,
       statistics_complete: errors.length === 0,
-      candidate_details_truncated: Object.values(buildRisks(records, cutoffDate, detailLimit))
+      candidate_details_truncated: [...Object.values(flowCandidates), ...Object.values(riskCandidates)]
         .some((value) => value.has_more),
       historical_stock_supported: false,
       historical_plan_versions_supported: false,
