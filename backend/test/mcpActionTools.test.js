@@ -411,7 +411,7 @@ test('batch and other high-impact actions are labeled high risk in preview', asy
   await dispatchActionTool('stage_item_batch_create', {
     project_id: 1,
     stage_id: 2,
-    items: [{ name: '上线', owner_id: 8, original_due_date: '2026-08-01' }],
+    items: [{ name: '上线', owner_id: 1, original_due_date: '2026-08-01' }],
     idempotency_key: 'stage-items-1',
     mode: 'preview',
   }, {
