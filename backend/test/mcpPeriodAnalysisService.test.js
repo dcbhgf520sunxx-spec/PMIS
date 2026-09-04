@@ -96,6 +96,11 @@ function analysisDatabase() {
       const recordMatch = /period_analysis:records:([a-z_]+)/.exec(sql)
       if (recordMatch) return { all: async () => records[recordMatch[1]] || [] }
       if (/period_analysis:logs/.test(sql)) return { all: async () => logs }
+      if (/period_analysis:report_people/.test(sql)) return { all: async () => [
+        { id: 8, name: '孙鑫鑫', status: 1, is_deleted: 0 },
+        { id: 9, name: '李东', status: 1, is_deleted: 0 },
+        { id: 10, name: '李佳龙', status: 1, is_deleted: 0 },
+      ] }
       if (/period_analysis:financials/.test(sql)) {
         return {
           get: async () => ({
@@ -394,6 +399,51 @@ test('人员筛选和归并覆盖多人负责人、协作人及创建人', async
 
   assert.equal(result.current_stock.total.total, 1)
   assert.deepEqual(result.groupings.person.map((item) => item.label), ['李东', '创建人'])
+})
+
+test('报告人员范围合并创建人、更新人、实际操作人和业务角色并排除停用用户', async () => {
+  const database = {
+    prepare(sql) {
+      if (/period_analysis:records:task/.test(sql)) return { all: async () => [{
+        business_type: 'task', id: 71, name: '人员范围任务', status: 1, priority: 1,
+        owner_id: 12, owner_name: '负责人', owner_ids: [12], business_role_ids: [12],
+        person_ids: [12, 10], person_names: ['负责人', '创建人'], creator_id: 10, updater_id: 11,
+        plan_date: '2026-09-10', actual_date: null, created_at: '2026-09-01 09:00:00+08',
+        is_overdue: 0, is_paused: false, is_completed: false,
+        parent_project_paused: false, required_delivery: false, delivery_count: 0,
+      }] }
+      if (/period_analysis:logs/.test(sql)) return { all: async () => [
+        {
+          business_type: 'task', target_id: 71, operation_id: 'operation-1', operator_id: 13,
+          field_name: 'priority', old_value: '1', new_value: '2', created_at: '2026-09-03 10:00:00+08',
+        },
+        {
+          business_type: 'task', target_id: 71, operation_id: 'operation-2', operator_id: 14,
+          field_name: 'status', old_value: '0', new_value: '1', created_at: '2026-09-03 11:00:00+08',
+        },
+      ] }
+      if (/period_analysis:report_people/.test(sql)) return { all: async () => [
+        { id: 10, name: '创建人', status: 1, is_deleted: 0 },
+        { id: 11, name: '更新人', status: 1, is_deleted: 0 },
+        { id: 12, name: '负责人', status: 1, is_deleted: 0 },
+        { id: 13, name: '操作人', status: 1, is_deleted: 0 },
+        { id: 14, name: '停用操作人', status: 0, is_deleted: 0 },
+      ] }
+      throw new Error(`unexpected SQL: ${sql}`)
+    },
+  }
+
+  const result = await analyzeBusinessPeriod({
+    analysis_period: { preset: 'week', anchor_date: '2026-09-03' },
+    business_types: ['task'],
+  }, { allowedMenuPaths: new Set(['/tasks']) }, database, new Date('2026-09-03T04:00:00Z'))
+
+  assert.deepEqual(result.report_people, [
+    { user_id: 10, name: '创建人', sources: ['creator'], related_record_count: 1, period_operation_count: 0 },
+    { user_id: 11, name: '更新人', sources: ['updater'], related_record_count: 1, period_operation_count: 0 },
+    { user_id: 12, name: '负责人', sources: ['business_role'], related_record_count: 1, period_operation_count: 0 },
+    { user_id: 13, name: '操作人', sources: ['operator'], related_record_count: 1, period_operation_count: 1 },
+  ])
 })
 
 test('按期完成后重新打开的事项按重新打开日再次进入逾期', async () => {

@@ -992,11 +992,31 @@ function queryOutputSchema(name) {
         financials: objectField('合同与付款辅助统计；不计入六类工作合计'),
         flow_candidates: objectField('期间变化候选；各指标按业务记录去重并同时返回总数和是否还有更多'),
         risk_candidates: objectField('代表性风险候选；每类同时返回总数和是否还有更多'),
+        report_people: {
+          type: 'array',
+          description: '报告相关人员；合并业务角色、创建人、更新人和分析期实际操作人，仅返回当前启用账号',
+          items: {
+            type: 'object',
+            properties: {
+              user_id: { type: 'integer', description: '用户标识' },
+              name: { type: 'string', description: '人员姓名' },
+              sources: {
+                type: 'array',
+                description: '进入报告范围的依据',
+                items: { type: 'string', enum: ['business_role', 'creator', 'updater', 'operator'] },
+              },
+              related_record_count: { type: 'integer', description: '关联业务事项去重数量' },
+              period_operation_count: { type: 'integer', description: '分析期实际操作去重数量' },
+            },
+            required: ['user_id', 'name', 'sources', 'related_record_count', 'period_operation_count'],
+            additionalProperties: false,
+          },
+        },
         coverage: objectField('授权覆盖、统计完整性、候选截断及不支持范围'),
       },
       required: ['resolved_periods', 'data_cutoff', 'period_flows', 'current_stock', 'plan_outlook',
         'comparison', 'trend', 'groupings', 'quality_and_delivery', 'financials', 'flow_candidates',
-        'risk_candidates', 'coverage'],
+        'risk_candidates', 'report_people', 'coverage'],
       additionalProperties: false,
     }
   }
