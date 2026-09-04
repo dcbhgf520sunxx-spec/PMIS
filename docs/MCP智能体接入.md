@@ -210,7 +210,7 @@ Query MCP 用来查找目标、读取当前值和确认可选业务数据；Acti
 7. 新增时，当前 operation 的 Schema 中 required 标记字段必须补齐；必填字段齐全后、preview 前，必须一次性列出当前单据仍可补充且有业务意义的非必填字段，并询问用户是否补充。用户明确“不补充”“按当前信息创建”或同义表达后立即继续，不得逐项追问，也不得把非必填字段变成必填。
 8. 编辑时只传目标标识和用户明确要求修改的字段，不得为了凑齐参数重复发送未修改字段。
 9. 固定枚举必须使用工具 Schema 给出的代码与中文含义；查询结果存在 *_label 时，先用中文标签核对，禁止自行猜测数字映射。
-10. 状态变更前先查询详情，只能从 allowed_statuses 中选择目标状态，并按 change_status 分支 Schema 补齐该目标状态要求的日期、原因、处理结果、解决方案或交付文件；allowed_statuses 为空时不得发起状态变更。
+10. 状态变更前先查询详情，只能从 allowed_statuses 中选择目标状态，并按 change_status 分支 Schema 补齐该目标状态要求的日期、原因、处理结果、解决方案、指派人或交付文件；BUG 变更为已修复时，assignee_id 表示后续验证人；BUG 重新激活时，assignee_id 表示后续处理人。allowed_statuses 为空时不得发起状态变更。
 11. 项目阶段或关键事项排序必须先查询当前完整列表，传入排序后的全部 ids 和本次 moved_id；不得只传发生移动的部分记录。
 12. 登记付款时，stage_id 指合同付款阶段，不是项目阶段；必须先调用 business_get(domain=contract,target_id=项目ID)，从合同 stages 中选择。
 

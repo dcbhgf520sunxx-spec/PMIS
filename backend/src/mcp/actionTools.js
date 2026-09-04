@@ -352,8 +352,8 @@ async function validateStatusAction(name, args, database = db) {
     const message = validateBugStatusChange(target, args)
     if (message) {
       const field = target === 1
-        ? (!args.resolved_date ? 'resolved_date' : 'resolution_id')
-        : target === 2 ? 'closed_date' : 'activation_reason'
+        ? (!args.resolved_date ? 'resolved_date' : !args.resolution_id ? 'resolution_id' : 'assignee_id')
+        : target === 2 ? 'closed_date' : (!String(args.activation_reason || '').trim() ? 'activation_reason' : 'assignee_id')
       throw businessValidationError(field, message)
     }
     if (target === 1) {

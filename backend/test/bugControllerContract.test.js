@@ -51,9 +51,13 @@ test('BUG 变更历史统一转换中文字段和业务值', () => {
   assert.ok(source.indexOf("'status', 'activation_reason'") >= 0)
 })
 
-test('BUG 状态接口持久化并记录激活原因', () => {
+test('BUG 状态接口持久化处理信息并校验修复验证人或重新激活处理人', () => {
   const source = read('controllers/bugController.js')
   assert.match(source, /activation_reason/)
   assert.match(source, /next\.activationReason/)
   assert.match(source, /addChange\('activation_reason'/)
+  assert.match(source, /SELECT id,real_name FROM pms_user WHERE id=\? AND is_deleted=0 AND status=1/)
+  assert.match(source, /next\.assigneeId/)
+  assert.match(source, /addChange\('assignee_id'/)
+  assert.match(source, /target === 1 \|\| target === 3/)
 })

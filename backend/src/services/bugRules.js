@@ -7,9 +7,11 @@ function allowedBugStatuses(status) {
 function validateBugStatusChange(target, body = {}, today) {
   if (Number(target) === 1 && !body.resolved_date) return '请填写修复时间'
   if (Number(target) === 1 && !body.resolution_id) return '请选择解决方案'
+  if (Number(target) === 1 && !body.assignee_id) return '请选择指派人'
   if (Number(target) === 2 && !body.closed_date) return '请填写关闭时间'
   if (Number(target) === 3 && !String(body.activation_reason || '').trim()) return '请填写激活原因'
   if (Number(target) === 3 && String(body.activation_reason).trim().length > 100) return '激活原因不能超过100字'
+  if (Number(target) === 3 && !body.assignee_id) return '请选择指派人'
   if (Number(target) === 1) return validateActualBusinessDate(body.resolved_date, '修复时间', today)
   if (Number(target) === 2) return validateActualBusinessDate(body.closed_date, '关闭时间', today)
   return null
@@ -23,6 +25,7 @@ function resolveBugStatusFields(old, target, body = {}) {
       closedDate: null,
       resolutionId: Number(body.resolution_id),
       activationReason: old.activation_reason || null,
+      assigneeId: Number(body.assignee_id),
     }
   }
   if (status === 2) {
@@ -31,6 +34,7 @@ function resolveBugStatusFields(old, target, body = {}) {
       closedDate: body.closed_date,
       resolutionId: old.resolution_id || null,
       activationReason: old.activation_reason || null,
+      assigneeId: Number(old.assignee_id),
     }
   }
   return {
@@ -38,6 +42,7 @@ function resolveBugStatusFields(old, target, body = {}) {
     closedDate: null,
     resolutionId: status === 3 ? old.resolution_id || null : null,
     activationReason: status === 3 ? String(body.activation_reason).trim() : null,
+    assigneeId: status === 3 ? Number(body.assignee_id) : Number(old.assignee_id),
   }
 }
 

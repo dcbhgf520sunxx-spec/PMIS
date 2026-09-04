@@ -967,6 +967,23 @@ test('status validation checks secondary required fields and accepts complete le
     (error) => error.code === 'MCP_BUSINESS_VALIDATION' && Boolean(error.fieldErrors.resolution_id)
   )
   await assert.rejects(
+    validateStatusAction('bug_change_status', {
+      id: 5,
+      status: 1,
+      resolved_date: '2026-07-28',
+      resolution_id: 9,
+    }, databaseFor('bug_change_status')),
+    (error) => error.code === 'MCP_BUSINESS_VALIDATION' && Boolean(error.fieldErrors.assignee_id)
+  )
+  await assert.rejects(
+    validateStatusAction('bug_change_status', {
+      id: 5,
+      status: 3,
+      activation_reason: '问题再次复现',
+    }, { prepare() { return { async get() { return { status: 2 } } } } }),
+    (error) => error.code === 'MCP_BUSINESS_VALIDATION' && Boolean(error.fieldErrors.assignee_id)
+  )
+  await assert.rejects(
     validateStatusAction('work_order_change_status', {
       id: 6,
       status: 2,
@@ -986,7 +1003,14 @@ test('status validation checks secondary required fields and accepts complete le
     status: 1,
     resolved_date: '2026-07-28',
     resolution_id: 9,
+    assignee_id: 8,
   }, databaseFor('bug_change_status')))
+  await assert.doesNotReject(validateStatusAction('bug_change_status', {
+    id: 5,
+    status: 3,
+    activation_reason: '问题再次复现',
+    assignee_id: 8,
+  }, { prepare() { return { async get() { return { status: 2 } } } } }))
   await assert.doesNotReject(validateStatusAction('work_order_change_status', {
     id: 6,
     status: 2,
