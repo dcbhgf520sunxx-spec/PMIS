@@ -172,18 +172,20 @@ exports.batchAssign = async (req, res) => {
 
 exports.toggleStatus = async (req, res) => {
   try {
-    const old = await db.prepare('SELECT id,title,status,resolved_date,closed_date,resolution_id,activation_reason FROM pms_bug WHERE id=? AND is_deleted=0').get(req.params.id)
+    const old = await db.prepare('SELECT id,title,status,assignee_id,resolved_date,closed_date,resolution_id,activation_reason FROM pms_bug WHERE id=? AND is_deleted=0').get(req.params.id)
     if (!old) return fail(res, 404, 404, 'BUG不存在')
     const target = Number(req.body.status)
     if (!allowedBugStatuses(old.status).includes(target)) return fail(res, 400, 400, '不允许执行该状态流转')
     const validationError = validateBugStatusChange(target, req.body)
     if (validationError) return fail(res, 400, 400, validationError)
     if (target === 1 && !(await validArchive(req.body.resolution_id, 'Bug解决方案'))) return failField(res, 'resolution_id', 'Bug解决方案不存在或已停用')
+    if ((target === 1 || target === 3) && !(await db.prepare('SELECT id,real_name FROM pms_user WHERE id=? AND is_deleted=0 AND status=1').get(req.body.assignee_id))) return failField(res, 'assignee_id', '指派人不存在或已停用')
     const next = resolveBugStatusFields(old, target, req.body)
-    await db.prepare('UPDATE pms_bug SET status=?,resolved_date=?,closed_date=?,resolution_id=?,activation_reason=?,updater_id=?,updated_at=NOW()WHERE id=?').run(target, next.resolvedDate, next.closedDate, next.resolutionId, next.activationReason, req.user.id, req.params.id)
+    await db.prepare('UPDATE pms_bug SET status=?,assignee_id=?,resolved_date=?,closed_date=?,resolution_id=?,activation_reason=?,updater_id=?,updated_at=NOW()WHERE id=?').run(target, next.assigneeId, next.resolvedDate, next.closedDate, next.resolutionId, next.activationReason, req.user.id, req.params.id)
     const changes = []
     function addChange(field, oldVal, newVal) { if (String(oldVal ?? '') !== String(newVal ?? '')) changes.push({ field, oldVal, newVal }) }
     addChange('status', old.status, target)
+    addChange('assignee_id', old.assignee_id, next.assigneeId)
     addChange('activation_reason', old.activation_reason, next.activationReason)
     addChange('resolved_date', old.resolved_date, next.resolvedDate)
     addChange('closed_date', old.closed_date, next.closedDate)

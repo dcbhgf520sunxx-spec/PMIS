@@ -319,7 +319,7 @@ const actionFields = {
   bug_create: ['title', 'description', 'source_type', 'project_id', 'requirement_id', 'bug_type_id', 'severity', 'assignee_id'],
   bug_update: ['id', 'title', 'description', 'source_type', 'project_id', 'requirement_id', 'bug_type_id', 'severity', 'assignee_id'],
   bug_assign: ['ids', 'assignee_id'],
-  bug_change_status: ['id', 'status', 'resolution_id', 'resolved_date', 'closed_date', 'activation_reason'],
+  bug_change_status: ['id', 'status', 'resolution_id', 'resolved_date', 'closed_date', 'activation_reason', 'assignee_id'],
   bug_delete: ['id'],
   work_order_create: ['product_id', 'problem_type', 'problem_desc', 'result_desc', 'follower_id', 'urgency', 'expected_resolve_date', 'resolve_date', 'submitter_name', 'submitter_dept', 'submit_time'],
   work_order_update: ['id', 'product_id', 'problem_type', 'problem_desc', 'result_desc', 'follower_id', 'urgency', 'expected_resolve_date', 'resolve_date', 'submitter_name', 'submitter_dept', 'submit_time'],
@@ -426,7 +426,7 @@ const statusActionSchemas = {
   bug_change_status: {
     type: 'integer',
     enum: [0, 1, 2, 3],
-    description: '目标状态：0 新建，1 已修复，2 已关闭，3 被激活；修复需 resolved_date、resolution_id，关闭需 closed_date，激活需 activation_reason',
+    description: '目标状态：0 新建，1 已修复，2 已关闭，3 被激活；修复需 resolved_date、resolution_id、assignee_id（指派验证人），关闭需 closed_date，激活需 activation_reason、assignee_id（指派处理人）',
   },
   work_order_change_status: {
     type: 'integer',
@@ -677,7 +677,7 @@ function actionInputSchema(name) {
     project_change_status: { 2: ['actual_end_date'], 3: ['suspend_date'] },
     requirement_change_status: { 33: ['actual_end_date', 'completion_status'], 34: ['actual_end_date', 'completion_status'], 35: ['pause_date'] },
     task_change_status: { 2: ['actual_end_date'], 3: ['suspend_date'] },
-    bug_change_status: { 1: ['resolved_date', 'resolution_id'], 2: ['closed_date'], 3: ['activation_reason'] },
+    bug_change_status: { 1: ['resolved_date', 'resolution_id', 'assignee_id'], 2: ['closed_date'], 3: ['activation_reason', 'assignee_id'] },
     work_order_change_status: { 2: ['resolve_date', 'result_desc'], 4: ['suspend_date'], 5: ['activation_reason'] },
     stage_item_change_status: { 2: ['actual_end_date'], 3: ['pause_reason'] },
   }

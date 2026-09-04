@@ -97,7 +97,8 @@ test('status schemas publish fields required by each target status', () => {
     ['task_change_status', 2, ['actual_end_date']],
     ['task_change_status', 3, ['suspend_date']],
     ['requirement_change_status', 33, ['actual_end_date', 'completion_status']],
-    ['bug_change_status', 1, ['resolved_date', 'resolution_id']],
+    ['bug_change_status', 1, ['resolved_date', 'resolution_id', 'assignee_id']],
+    ['bug_change_status', 3, ['activation_reason', 'assignee_id']],
     ['work_order_change_status', 2, ['resolve_date', 'result_desc']],
     ['stage_item_change_status', 3, ['pause_reason']],
   ]

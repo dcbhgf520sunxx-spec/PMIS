@@ -19,9 +19,14 @@ test('BUG 状态操作复用公共组件并要求处理字段', () => {
   assert.match(source, /关闭时间/);
   assert.match(source, /解决方案/);
   assert.match(source, /resolutionOptions/);
+  assert.match(source, /userOptions/);
+  assert.match(source, /defaultAssigneeId/);
+  assert.match(source, /name="assigneeId"/);
+  assert.match(source, /label="指派人"/);
   assert.match(source, /target === 3/);
   assert.match(source, /name="activationReason"/);
   assert.match(source, /label="激活原因"/);
+  assert.match(source, /target === 3[^\n]+name="assigneeId"[^\n]+label="指派人"/);
   assert.match(source, /required:\s*true/);
   assert.match(source, /maxLength[=:]\s*\{?100\}?/);
   assert.match(source, /AdminTextArea/);
@@ -37,8 +42,20 @@ test('BUG 状态变更的附加字段全部不回填旧值', () => {
   assert.doesNotMatch(source, /\sformValues=/);
 });
 
-test('BUG API 读写激活原因', () => {
+test('BUG API 读写激活原因、创建人和修复后指派人', () => {
   const source = read('src/api/bugApi.ts');
   assert.match(source, /activation_reason/);
   assert.match(source, /activationReason/);
+  assert.match(source, /creator_id/);
+  assert.match(source, /creatorId/);
+  assert.match(source, /assignee_id:\s*extra\.assigneeId/);
+});
+
+test('BUG 单条修复默认指派创建人，批量修复不自动套用首条创建人', () => {
+  const list = read('src/modules/bug/pages/BugListPage.tsx');
+  const detail = read('src/modules/bug/pages/BugDetailPage.tsx');
+  assert.match(list, /defaultAssigneeId=\{row\.creatorId\}/);
+  assert.match(detail, /defaultAssigneeId=\{row\.creatorId\}/);
+  const batch = list.slice(list.indexOf('batch={{'));
+  assert.doesNotMatch(batch, /defaultAssigneeId=/);
 });

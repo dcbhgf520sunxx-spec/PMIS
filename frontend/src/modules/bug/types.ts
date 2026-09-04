@@ -21,6 +21,7 @@ export type BugRecord = {
   resolvedTime: string;
   closedTime: string;
   activationReason: string;
+  creatorId: string;
   creatorName: string;
   updaterName: string;
   createdAt: string;
