@@ -31,7 +31,10 @@ const RECORD_QUERIES = {
     SELECT 'project' business_type,p.id,p.name,p.status,p.priority,
       product.id product_id,product.name product_name,p.id project_id,p.name project_name,
       p.requirement_id,requirement.title requirement_name,p.owner_id,owner.real_name owner_name,
+      p.creator_id,p.updater_id,
       ARRAY[p.owner_id] owner_ids,
+      ARRAY_REMOVE(ARRAY[p.owner_id] || COALESCE((SELECT ARRAY_AGG(member.user_id ORDER BY member.user_id)
+        FROM pms_project_member member WHERE member.project_id=p.id),'{}'::BIGINT[]),NULL) business_role_ids,
       ARRAY_REMOVE(ARRAY[p.owner_id,p.creator_id] || COALESCE((SELECT ARRAY_AGG(member.user_id ORDER BY member.user_id)
         FROM pms_project_member member WHERE member.project_id=p.id),'{}'::BIGINT[]),NULL) person_ids,
       p.expected_end_date plan_date,p.actual_end_date actual_date,
@@ -46,7 +49,9 @@ const RECORD_QUERIES = {
     SELECT 'requirement' business_type,r.id,r.title name,r.status,r.priority,
       product.id product_id,product.name product_name,NULL::BIGINT project_id,NULL::TEXT project_name,
       r.id requirement_id,r.title requirement_name,r.owner_id,owner.real_name owner_name,
-      ARRAY[r.owner_id] owner_ids,ARRAY_REMOVE(ARRAY[r.owner_id,r.creator_id],NULL) person_ids,
+      r.creator_id,r.updater_id,ARRAY[r.owner_id] owner_ids,
+      ARRAY_REMOVE(ARRAY[r.owner_id],NULL) business_role_ids,
+      ARRAY_REMOVE(ARRAY[r.owner_id,r.creator_id],NULL) person_ids,
       r.expected_end_date plan_date,r.actual_end_date actual_date,
       r.created_at,COALESCE(r.is_overdue,0) is_overdue,(r.status=35) is_paused,
       (r.status IN (33,34)) is_completed,FALSE parent_project_paused,FALSE required_delivery,0 delivery_count
@@ -58,8 +63,11 @@ const RECORD_QUERIES = {
     SELECT 'stage_plan' business_type,item.id,item.name,item.status,project.priority,
       product.id product_id,product.name product_name,project.id project_id,project.name project_name,
       project.requirement_id,requirement.title requirement_name,item.owner_id,owner.real_name owner_name,
+      item.creator_id,item.updater_id,
       ARRAY[item.owner_id] || COALESCE((SELECT ARRAY_AGG(c.user_id ORDER BY c.sort_order,c.user_id)
         FROM pms_project_plan_item_collaborator c WHERE c.plan_item_id=item.id),'{}'::BIGINT[]) owner_ids,
+      ARRAY_REMOVE(ARRAY[item.owner_id] || COALESCE((SELECT ARRAY_AGG(c.user_id ORDER BY c.sort_order,c.user_id)
+        FROM pms_project_plan_item_collaborator c WHERE c.plan_item_id=item.id),'{}'::BIGINT[]),NULL) business_role_ids,
       ARRAY_REMOVE(ARRAY[item.owner_id,item.creator_id] || COALESCE((SELECT ARRAY_AGG(c.user_id ORDER BY c.sort_order,c.user_id)
         FROM pms_project_plan_item_collaborator c WHERE c.plan_item_id=item.id),'{}'::BIGINT[]),NULL) person_ids,
       item.current_due_date plan_date,item.actual_end_date actual_date,item.created_at,
@@ -79,7 +87,9 @@ const RECORD_QUERIES = {
     SELECT 'task' business_type,t.id,t.name,t.status,t.priority,
       COALESCE(project.product_id,requirement.product_id) product_id,product.name product_name,
       t.project_id,project.name project_name,t.requirement_id,requirement.title requirement_name,
+      t.creator_id,t.updater_id,
       owners.owner_id,owners.owner_name,COALESCE(owners.owner_ids,'{}'::BIGINT[]) owner_ids,
+      COALESCE(owners.owner_ids,'{}'::BIGINT[]) business_role_ids,
       ARRAY_REMOVE(COALESCE(owners.owner_ids,'{}'::BIGINT[]) || ARRAY[t.creator_id],NULL) person_ids,
       t.expected_end_date plan_date,t.actual_end_date actual_date,t.created_at,t.is_overdue,
       (t.status=3) is_paused,(t.status=2) is_completed,FALSE parent_project_paused,
@@ -97,7 +107,8 @@ const RECORD_QUERIES = {
     SELECT 'bug' business_type,b.id,b.title name,b.status,b.severity priority,
       COALESCE(project.product_id,requirement.product_id) product_id,product.name product_name,
       b.project_id,project.name project_name,b.requirement_id,requirement.title requirement_name,
-      b.assignee_id owner_id,owner.real_name owner_name,ARRAY[b.assignee_id] owner_ids,
+      b.creator_id,b.updater_id,b.assignee_id owner_id,owner.real_name owner_name,ARRAY[b.assignee_id] owner_ids,
+      ARRAY_REMOVE(ARRAY[b.assignee_id],NULL) business_role_ids,
       ARRAY_REMOVE(ARRAY[b.assignee_id,b.creator_id],NULL) person_ids,
       NULL::DATE plan_date,b.closed_date actual_date,b.created_at,0 is_overdue,FALSE is_paused,
       (b.status=2) is_completed,FALSE parent_project_paused,FALSE required_delivery,0 delivery_count
@@ -111,7 +122,8 @@ const RECORD_QUERIES = {
     SELECT 'work_order' business_type,w.id,w.problem_desc name,w.status,w.urgency priority,
       product.id product_id,product.name product_name,NULL::BIGINT project_id,NULL::TEXT project_name,
       NULL::BIGINT requirement_id,NULL::TEXT requirement_name,w.follower_id owner_id,
-      owner.real_name owner_name,ARRAY[w.follower_id] owner_ids,
+      w.creator_id,w.updater_id,owner.real_name owner_name,ARRAY[w.follower_id] owner_ids,
+      ARRAY_REMOVE(ARRAY[w.follower_id],NULL) business_role_ids,
       ARRAY_REMOVE(ARRAY[w.follower_id,w.creator_id],NULL) person_ids,w.expected_resolve_date::DATE plan_date,
       w.resolve_date::DATE actual_date,w.created_at,w.is_overdue,(w.status=4) is_paused,
       (w.status=2) is_completed,FALSE parent_project_paused,FALSE required_delivery,0 delivery_count
@@ -252,6 +264,8 @@ function number(value) {
 
 function normalizeRecord(row) {
   const ownerIds = Array.isArray(row.owner_ids) ? row.owner_ids.map(Number) : row.owner_id ? [Number(row.owner_id)] : []
+  const businessRoleIds = [...new Set((Array.isArray(row.business_role_ids) ? row.business_role_ids : ownerIds)
+    .map(Number).filter((id) => Number.isFinite(id) && id > 0))]
   const personIds = [...new Set((Array.isArray(row.person_ids) ? row.person_ids : ownerIds)
     .map(Number).filter(Number.isFinite))]
   const providedNames = Array.isArray(row.person_names) ? row.person_names : []
@@ -268,7 +282,10 @@ function normalizeRecord(row) {
     project_id: row.project_id === null || row.project_id === undefined ? null : Number(row.project_id),
     requirement_id: row.requirement_id === null || row.requirement_id === undefined ? null : Number(row.requirement_id),
     owner_id: row.owner_id === null || row.owner_id === undefined ? null : Number(row.owner_id),
+    creator_id: row.creator_id === null || row.creator_id === undefined ? null : Number(row.creator_id),
+    updater_id: row.updater_id === null || row.updater_id === undefined ? null : Number(row.updater_id),
     owner_ids: ownerIds,
+    business_role_ids: businessRoleIds,
     person_ids: personIds,
     person_names: personNames,
     plan_date: dateOnly(row.plan_date),
@@ -340,13 +357,64 @@ async function loadLogs(types, analysisPeriod, comparisonPeriod, database) {
   const endDate = [analysisPeriod.end_date, comparisonPeriod?.end_date].filter(Boolean).sort().at(-1)
   const placeholders = modules.map(() => '?').join(',')
   const sql = `/* period_analysis:logs */
-    SELECT CASE module ${moduleCases} END business_type,target_id,operation_id,action,
+    SELECT id log_id,CASE module ${moduleCases} END business_type,target_id,operation_id,user_id operator_id,action,
       field_name,old_value,new_value,created_at
     FROM pms_op_log
     WHERE module IN (${placeholders})
       AND created_at>=?::DATE AND created_at<?::DATE+INTERVAL '1 day'
     ORDER BY created_at,id`
   return database.prepare(sql).all(...modules, startDate, endDate)
+}
+
+async function buildReportPeople(records, logs, analysisPeriod, database) {
+  const people = new Map()
+  const recordsByKey = new Map(records.map((record) => [`${record.business_type}:${record.id}`, record]))
+  const sourceOrder = ['business_role', 'creator', 'updater', 'operator']
+  const addPerson = (userId, source, recordKey, operationKey = null) => {
+    const id = Number(userId)
+    if (!Number.isFinite(id) || id <= 0) return
+    if (!people.has(id)) people.set(id, { sources: new Set(), records: new Set(), operations: new Set() })
+    const person = people.get(id)
+    person.sources.add(source)
+    if (recordKey) person.records.add(recordKey)
+    if (operationKey) person.operations.add(operationKey)
+  }
+
+  for (const record of records) {
+    const recordKey = `${record.business_type}:${record.id}`
+    for (const userId of record.business_role_ids) addPerson(userId, 'business_role', recordKey)
+    addPerson(record.creator_id, 'creator', recordKey)
+    addPerson(record.updater_id, 'updater', recordKey)
+  }
+  for (const log of logs) {
+    if (!dateInPeriod(log.created_at, analysisPeriod)) continue
+    const recordKey = `${log.business_type}:${Number(log.target_id)}`
+    if (!recordsByKey.has(recordKey)) continue
+    const operationKey = log.operation_id
+      || `${recordKey}:log:${log.log_id || `${log.operator_id}:${log.created_at}:${log.field_name || ''}`}`
+    addPerson(log.operator_id, 'operator', recordKey, operationKey)
+  }
+
+  const userIds = [...people.keys()]
+  if (!userIds.length) return []
+  const rows = await database.prepare(`/* period_analysis:report_people */
+    SELECT id,real_name name,status,is_deleted
+    FROM pms_user
+    WHERE id IN (${userIds.map(() => '?').join(',')}) AND status=1 AND is_deleted=0`).all(...userIds)
+  return rows
+    .filter((row) => Number(row.status ?? 1) === 1 && Number(row.is_deleted ?? 0) === 0)
+    .map((row) => {
+      const userId = Number(row.id)
+      const person = people.get(userId)
+      return {
+        user_id: userId,
+        name: row.name || `用户ID ${userId}`,
+        sources: sourceOrder.filter((source) => person.sources.has(source)),
+        related_record_count: person.records.size,
+        period_operation_count: person.operations.size,
+      }
+    })
+    .sort((left, right) => left.user_id - right.user_id)
 }
 
 function emptyFlow() {
@@ -866,6 +934,12 @@ async function analyzeBusinessPeriod(args, context, database = db, now = new Dat
   const planOutlook = summarizePlan(types.authorized, records, planPeriod)
   const flowCandidates = buildFlowCandidates(events, analysisPeriod, args.metrics, detailLimit, cutoffDate)
   const riskCandidates = buildRisks(records, cutoffDate, riskPeriod, detailLimit)
+  let reportPeople = []
+  try {
+    reportPeople = await buildReportPeople(records, logs, analysisPeriod, database)
+  } catch (error) {
+    errors.push(`报告人员统计失败：${error.message}`)
+  }
   let financials = { available: false }
   if (context?.allowedMenuPaths?.has('/projects')) {
     try {
@@ -895,6 +969,7 @@ async function analyzeBusinessPeriod(args, context, database = db, now = new Dat
     financials,
     flow_candidates: flowCandidates,
     risk_candidates: riskCandidates,
+    report_people: reportPeople,
     coverage: {
       requested_business_types: types.requested,
       authorized_business_types: types.authorized,

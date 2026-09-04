@@ -1,6 +1,30 @@
 {
   "releases": [
     {
+      "version": "v2026.09.04.5",
+      "releasedAt": "2026-09-04",
+      "summary": "完善周期分析的管理周报人员范围。",
+      "features": [],
+      "improvements": [
+        "周期分析新增报告相关人员清单，合并业务角色、创建人、更新人和分析期实际操作人"
+      ],
+      "fixes": [
+        "修复管理周报人员仅按负责人等单一口径归集时可能遗漏相关人员的问题"
+      ],
+      "security": []
+    },
+    {
+      "version": "v2026.09.04.4",
+      "releasedAt": "2026-09-04",
+      "summary": "优化 BUG 状态变更字段顺序。",
+      "features": [],
+      "improvements": [
+        "BUG 状态变更中的指派人统一紧跟目标状态展示"
+      ],
+      "fixes": [],
+      "security": []
+    },
+    {
       "version": "v2026.09.04.1",
       "releasedAt": "2026-09-04",
       "summary": "完善 BUG 修复与重新激活后的指派流转。",

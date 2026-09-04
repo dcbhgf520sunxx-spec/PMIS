@@ -438,9 +438,14 @@ test('period analysis publishes a closed arbitrary-period contract and stable ou
   assert.deepEqual(Object.keys(definition.outputSchema.properties), [
     'resolved_periods', 'data_cutoff', 'period_flows', 'current_stock', 'plan_outlook',
     'comparison', 'trend', 'groupings', 'quality_and_delivery', 'financials',
-    'flow_candidates', 'risk_candidates', 'coverage',
+    'flow_candidates', 'risk_candidates', 'report_people', 'coverage',
   ])
   assert.ok(definition.outputSchema.required.includes('flow_candidates'))
+  assert.ok(definition.outputSchema.required.includes('report_people'))
+  assert.deepEqual(definition.outputSchema.properties.report_people.items.required, [
+    'user_id', 'name', 'sources', 'related_record_count', 'period_operation_count',
+  ])
+  assert.equal(definition.outputSchema.properties.report_people.items.additionalProperties, false)
 })
 
 test('period analysis business types are reduced to current employee menu permissions', () => {

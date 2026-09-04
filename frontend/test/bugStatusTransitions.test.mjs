@@ -59,3 +59,13 @@ test('BUG 单条修复默认指派创建人，批量修复不自动套用首条�
   const batch = list.slice(list.indexOf('batch={{'));
   assert.doesNotMatch(batch, /defaultAssigneeId=/);
 });
+
+test('BUG 状态变更把指派人放在其他附加字段之前', () => {
+  const source = read('src/modules/bug/components/BugStatusChangeAction.tsx');
+  const fixedAssignee = source.indexOf('target === 1 ? <AdminFormItem name="assigneeId"');
+  const resolvedTime = source.indexOf('target === 1 ? <AdminFormItem name="resolvedTime"');
+  const activatedAssignee = source.indexOf('target === 3 ? <AdminFormItem name="assigneeId"');
+  const activationReason = source.indexOf('target === 3 ? <AdminFormItem name="activationReason"');
+  assert.ok(fixedAssignee >= 0 && fixedAssignee < resolvedTime);
+  assert.ok(activatedAssignee >= 0 && activatedAssignee < activationReason);
+});
