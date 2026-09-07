@@ -1,6 +1,38 @@
-# PMIS 部署说明
+# SIDM 部署说明
 
 本文档用于部署项目管理系统基建模板。
+
+## Linux 一键构建并启动
+
+当前正式服务器在拉取最新代码后，直接执行：
+
+```bash
+cd /home/project-manage-system
+git pull
+bash deploy/release.sh
+```
+
+`release.sh` 自动使用服务器 `/opt/node-v22.23.1` 下的 Node.js 22，并保留现有 HTTPS、端口和 Nginx 配置。旧服务不需要手工停止；脚本会在新版本构建和数据库备份完成后切换发布目录，再重启同一个 `pmis-backend` 服务。
+
+服务器已安装 Node.js 22、PostgreSQL 16、Nginx 和 systemd，并已创建数据库及访问账号后，先按下方环境变量说明准备 `backend/.env`，然后在项目根目录执行：
+
+```bash
+sudo bash deploy/install-and-start.sh
+```
+
+首次部署也可以明确指定环境文件和域名：
+
+```bash
+sudo bash deploy/install-and-start.sh --env-file /secure/path/backend.env --server-name sidm.example.com
+```
+
+脚本自动完成环境检查、独立发布目录准备、锁定依赖安装、前端构建、数据库初始化或备份与迁移、systemd 配置、Nginx 配置、服务启动和健康检查。已有数据库不会重复初始化；已有版本会在迁移前备份，启动或 Nginx 检查失败时自动恢复上一版本。
+
+服务器已经单独维护 HTTPS、端口或反向代理配置时，使用 `--skip-nginx`，脚本不会改动 Nginx：
+
+```bash
+sudo bash deploy/install-and-start.sh --skip-nginx
+```
 
 ## 1. 环境要求
 

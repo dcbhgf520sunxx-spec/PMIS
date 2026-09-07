@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { createServer } from 'vite';
 
@@ -19,4 +20,19 @@ test('共享手册匿名直达独立 HTML，且目录锚点均可定位', async 
   } finally {
     await server.close();
   }
+});
+
+test('接口手册明确列出查询返回的创建和更新信息', () => {
+  const html = readFileSync('public/docs/sidm-open-api.html', 'utf8');
+  const markdown = readFileSync('../docs/SIDM开放接口接入.md', 'utf8');
+  for (const [field, label] of [
+    ['creator', '创建人'],
+    ['updater', '更新人'],
+    ['createdAt', '创建时间'],
+    ['updatedAt', '更新时间']
+  ]) {
+    assert.match(html, new RegExp(`<td>${field}</td><td>${label}</td>`));
+    assert.match(markdown, new RegExp(`\\| ${field} \\| ${label} \\|`));
+  }
+  assert.match(html, /"creator": \{"employeeNo":"EMP001","name":"示例人员"\}/);
 });

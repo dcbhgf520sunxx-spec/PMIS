@@ -200,7 +200,35 @@ Content-Type: application/json</pre>
   "operation": "QUERY", "sourceRecordId": "REQ-001", "operatorEmployeeNo": "EMP001"
 }</pre>
 <p>QUERY 的 data 返回 operation、result、sourceRecordId、targetId，以及相应业务字段（见需求/工单字段表）、status、statusLabel、allowedStatuses、状态附加字段。需求另含 priority。</p>
-<p>creator、updater 为 <code>{"employeeNo":"EMP001","name":"示例人员"}</code> 或 null；createdAt、updatedAt 为带时区时间。可选空值为 null，日期字段格式为 YYYY-MM-DD。</p>
+<h3>通用返回字段</h3>
+<div class="table"><table><thead><tr><th>字段</th><th>中文名</th><th>类型</th><th>说明</th></tr></thead><tbody>
+<tr><td>creator</td><td>创建人</td><td>object / null</td><td>首次创建记录的实际操作人，包含 employeeNo（工号）和 name（姓名）</td></tr>
+<tr><td>updater</td><td>更新人</td><td>object / null</td><td>最近一次修改记录的实际操作人，包含 employeeNo（工号）和 name（姓名）</td></tr>
+<tr><td>createdAt</td><td>创建时间</td><td>string</td><td>记录在 SIDM 的创建时间，返回带时区的时间</td></tr>
+<tr><td>updatedAt</td><td>更新时间</td><td>string</td><td>记录在 SIDM 的最近更新时间，返回带时区的时间</td></tr>
+</tbody></table></div>
+<p>创建人和更新人由请求中的 operatorEmployeeNo 自动记录，调用方不能传入或覆盖。新建时两者通常相同；后续修改后更新人会变化。历史记录无法解析人员时返回 null。</p>
+<h3>完整查询响应示例</h3>
+<pre>{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "operation": "QUERY",
+    "result": "FOUND",
+    "sourceRecordId": "REQ-001",
+    "targetId": 101,
+    "title": "示例需求",
+    "status": 31,
+    "statusLabel": "实施中",
+    "allowedStatuses": [{"value":32,"label":"试运行"},{"value":35,"label":"暂停"}],
+    "creator": {"employeeNo":"EMP001","name":"示例人员"},
+    "updater": {"employeeNo":"EMP002","name":"更新人员"},
+    "createdAt": "2026-09-07T09:00:00+08:00",
+    "updatedAt": "2026-09-07T10:30:00+08:00"
+  },
+  "requestId": "本次追踪号"
+}</pre>
+<p>可选空值为 null，业务日期格式为 YYYY-MM-DD，创建时间和更新时间为带时区时间。</p>
 <p>allowedStatuses 示例：<code>[{"value":31,"label":"实施中"},{"value":35,"label":"暂停"}]</code>。它不是全部状态清单，而是该记录当前允许变更的目标。</p>
 <h3>只修改一个字段</h3>
 <pre data-resource="requirement">{

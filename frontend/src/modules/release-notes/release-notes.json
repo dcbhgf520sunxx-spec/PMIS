@@ -1,6 +1,42 @@
 {
   "releases": [
     {
+      "version": "v2026.09.07.5",
+      "releasedAt": "2026-09-07",
+      "summary": "完善开放接口查询返回说明。",
+      "features": [],
+      "improvements": ["接口手册明确展示创建人、更新人、创建时间和更新时间字段及完整查询响应示例"],
+      "fixes": [],
+      "security": []
+    },
+    {
+      "version": "v2026.09.07.4",
+      "releasedAt": "2026-09-07",
+      "summary": "优化后台顶部欢迎语。",
+      "features": [],
+      "improvements": ["顶部欢迎语使用感叹号，语气更加自然"],
+      "fixes": [],
+      "security": []
+    },
+    {
+      "version": "v2026.09.07.3",
+      "releasedAt": "2026-09-07",
+      "summary": "简化正式环境脚本发布操作。",
+      "features": [],
+      "improvements": ["正式服务器拉取代码后可直接执行统一发布脚本"],
+      "fixes": [],
+      "security": []
+    },
+    {
+      "version": "v2026.09.07.2",
+      "releasedAt": "2026-09-07",
+      "summary": "新增 Linux 一键构建与启动能力。",
+      "features": ["提供一条命令完成 SIDM 构建、数据库迁移、服务配置和启动"],
+      "improvements": ["自动备份已有数据库，使用独立发布目录并保留上一版本静态资源"],
+      "fixes": [],
+      "security": ["环境文件统一保存到共享目录并限制为仅 root 可读"]
+    },
+    {
       "version": "v2026.09.07.1",
       "releasedAt": "2026-09-07",
       "summary": "新增需求与运维工单开放接口，支持外部系统按业务流程对接。",
