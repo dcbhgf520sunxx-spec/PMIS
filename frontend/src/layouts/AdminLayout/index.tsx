@@ -36,7 +36,7 @@ const SESSION_IDLE_TIMEOUT_MS = 2 * 60 * 60 * 1000;
 const SESSION_IDLE_CHECK_MS = 30 * 1000;
 const SESSION_HEARTBEAT_THROTTLE_MS = 60 * 1000;
 const SESSION_ACTIVITY_EVENTS = ['mousedown', 'keydown', 'scroll', 'touchstart'] as const;
-const DEFAULT_HEADER_SUBTITLE = '欢迎回来，今天也请从容处理每一项工作。';
+const DEFAULT_HEADER_SUBTITLE = '欢迎回来，今天也请从容处理每一项工作！';
 
 type AdminMenuItems = NonNullable<MenuProps['items']>;
 

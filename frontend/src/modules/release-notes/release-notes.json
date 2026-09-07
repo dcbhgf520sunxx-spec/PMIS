@@ -1,6 +1,15 @@
 {
   "releases": [
     {
+      "version": "v2026.09.07.4",
+      "releasedAt": "2026-09-07",
+      "summary": "优化后台顶部欢迎语。",
+      "features": [],
+      "improvements": ["顶部欢迎语使用感叹号，语气更加自然"],
+      "fixes": [],
+      "security": []
+    },
+    {
       "version": "v2026.09.07.3",
       "releasedAt": "2026-09-07",
       "summary": "简化正式环境脚本发布操作。",
