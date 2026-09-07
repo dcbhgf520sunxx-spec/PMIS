@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>SIDM 接口手册</title>
+  <style>
+    :root{color-scheme:light;font-family:system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#172b4d;background:#f5f7fb;line-height:1.75}
+    *{box-sizing:border-box}body{margin:0}main{max-width:1060px;margin:32px auto;padding:36px;background:white;border:1px solid #e2e8f0;border-radius:12px}
+    h1{margin:0;font-size:30px}h2{margin:40px 0 16px;padding-bottom:8px;border-bottom:1px solid #dbe3ee;font-size:22px;scroll-margin-top:16px}h3{font-size:17px;margin-top:24px}
+    a{color:#165dce}nav{display:flex;flex-wrap:wrap;gap:8px 22px;padding:18px 0;border-block:1px solid #dbe3ee}p{margin:12px 0}.note{padding:14px 18px;background:#f0f6ff;border-left:3px solid #246bdf}.muted{color:#52657e}
+    code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.92em;overflow-wrap:anywhere}pre{background:#f5f7fb;padding:16px;border:1px solid #e2e8f0;border-radius:6px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55}
+    .table{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:10px 12px;border:1px solid #dbe3ee;text-align:left;vertical-align:top}th{background:#f4f7fc;white-space:nowrap}td:first-child{min-width:80px;overflow-wrap:anywhere}ul{padding-left:24px}
+    @media(max-width:640px){main{margin:0;padding:20px 16px;border:0;border-radius:0}h1{font-size:26px}table{min-width:620px}}
+    @media print{main{margin:0;max-width:none;padding:0;border:0}nav{display:none}pre{break-inside:avoid}h2,h3{break-after:avoid}.table{overflow:visible}table{min-width:0}}
+  </style>
+</head>
+<body><main>
+<h1>SIDM 接口手册</h1>
+<p class="muted">需求与运维工单 · 面向外部系统开发人员</p>
+<p>本手册适用于所有接入系统，可直接分享本页链接。接入凭证由管理员单独安全交付，不包含在手册中。</p>
+<nav aria-label="手册目录">
+<a href="#access">接入准备</a><a href="#contract">通用约定</a><a href="#reference">连接与基础数据</a><a href="#requirements">需求</a><a href="#work-orders">运维工单</a><a href="#query">查询结果</a><a href="#attachments">附件</a><a href="#errors">错误处理</a>
+</nav>
+
+<h2 id="access">1. 接入准备</h2>
+<p>接口根地址：<code>https://gcglsys.znjs.com:9088/api/open/v1</code>。测试环境请使用 SIDM 管理员提供的测试地址；下文路径均拼接在接口根地址之后。</p>
+<h3>地址、请求头和凭证分别放在哪里？</h3>
+<p><strong>完整请求由三部分组成：接口地址 + 请求头 + 请求正文。不是把这三部分拼成一个网址。</strong></p>
+<ul>
+<li><strong>接口地址</strong> = 根地址 + 业务路径。根地址末尾不加斜杠，业务路径以一个斜杠开头；不要重复拼接 /api/open/v1。POST、GET 是请求方法，不是地址的一部分。</li>
+<li><strong>请求头</strong>是随请求发送的键值对。Authorization 是键，<code>Bearer 实际凭证</code> 是值；Bearer 后是一个英文空格，再接完整凭证，不带尖括号或额外引号。</li>
+<li><strong>请求正文</strong>是业务参数 JSON，例如要查询哪条需求、由谁操作。它不放在请求头中。GET 读取的参数按手册要求放在 URL 的问号后。</li>
+</ul>
+<pre>根地址：https://gcglsys.znjs.com:9088/api/open/v1
+业务路径：/requirements/operate
+完整地址：https://gcglsys.znjs.com:9088/api/open/v1/requirements/operate
+请求方法：POST</pre>
+<p>假设管理员给你的凭证为 <code>EXAMPLE_TOKEN_NOT_VALID</code>（仅演示，不可调用），在接口工具中这样填写：</p>
+<div class="table"><table><thead><tr><th>填写位置</th><th>名称</th><th>填写内容</th></tr></thead><tbody>
+<tr><td>方法</td><td>Method</td><td>POST</td></tr>
+<tr><td>地址</td><td>URL</td><td>https://gcglsys.znjs.com:9088/api/open/v1/requirements/operate</td></tr>
+<tr><td>请求头</td><td>Authorization</td><td>Bearer EXAMPLE_TOKEN_NOT_VALID</td></tr>
+<tr><td>请求头</td><td>Content-Type</td><td>application/json</td></tr>
+<tr><td>正文</td><td>Body（JSON）</td><td>使用下面的查询示例</td></tr>
+</tbody></table></div>
+<pre data-resource="requirement">{
+  "operation": "QUERY",
+  "sourceRecordId": "REQ-001",
+  "operatorEmployeeNo": "EMP001"
+}</pre>
+<p>REQ-001 替换为该接入系统已创建的需求来源编号，EMP001 替换为真实操作人工号。查询不传 idempotencyKey；新增、编辑等写入才需要。若工具使用“Bearer Token”鉴权选项，只填凭证本身，工具会自动加 Bearer，不要再重复添加。</p>
+<h3>先用连接测试确认配置</h3>
+<p>连接测试不需要正文和操作人工号，只需正确地址及凭证请求头。命令示例（把演示凭证替换为实际凭证）：</p>
+<pre>curl 'https://gcglsys.znjs.com:9088/api/open/v1/health' \
+  -H 'Authorization: Bearer EXAMPLE_TOKEN_NOT_VALID'</pre>
+<p>在浏览器地址栏直接打开接口不会自动带上凭证，不能用它代替上述测试。手册链接则不需要凭证，可从新页签的地址栏直接复制给对接人员。</p>
+<h3>请求头格式</h3>
+<pre>Authorization: Bearer &lt;接入凭证&gt;
+Content-Type: application/json</pre>
+<ul>
+<li>所有接口均需要启用且未过期的系统凭证。JSON 请求携带上述两个请求头；附件上传采用 multipart/form-data。</li>
+<li>凭证识别接入系统，<code>operatorEmployeeNo</code> 识别实际操作人。业务操作在正文中传工号，基础数据及附件读取在同名查询参数中传工号，连接测试不需要工号。</li>
+<li>操作人须为 SIDM 有效用户，并具备相应菜单、按钮及业务权限。有效系统凭证不等于具备任意业务操作权限。</li>
+<li>创建人、更新人由实际操作人工号确定，不能直接传 creator/updater 或内部人员 ID。提出人、提出组织属于业务信息，不要求是 SIDM 用户。</li>
+<li>每个系统只能通过自己的来源编号操作对应记录。系统编码不是凭证，不需要作为业务请求参数。</li>
+</ul>
+<p class="note">凭证仅保存在受信任服务端；接入系统负责可信地传递实际操作人身份。不要把凭证交给浏览器或普通用户，也不要写入 URL、日志或共享材料。凭证重置后须及时更新调用配置。</p>
+
+<h2 id="contract">2. 通用约定</h2>
+<div class="table"><table><thead><tr><th>业务</th><th>方法与路径</th><th>支持动作</th></tr></thead><tbody>
+<tr><td>需求</td><td><code>POST /requirements/operate</code></td><td>QUERY、CREATE、UPDATE、CHANGE_STATUS、CHANGE_PRIORITY、DELETE</td></tr>
+<tr><td>运维工单</td><td><code>POST /work-orders/operate</code></td><td>QUERY、CREATE、UPDATE、CHANGE_STATUS、DELETE</td></tr>
+</tbody></table></div>
+<div class="table"><table><thead><tr><th>请求字段</th><th>中文名</th><th>必填</th><th>说明</th></tr></thead><tbody>
+<tr><td>operation</td><td>操作类型</td><td>是</td><td>动作，必须使用表中大写值</td></tr>
+<tr><td>sourceRecordId</td><td>来源记录编号</td><td>是</td><td>外部系统业务编号，1–100 字符；同一系统、同一业务类型内唯一</td></tr>
+<tr><td>operatorEmployeeNo</td><td>实际操作人工号</td><td>是</td><td>实际操作人的 SIDM 工号，1–50 字符</td></tr>
+<tr><td>idempotencyKey</td><td>幂等请求号</td><td>写入必填</td><td>逻辑请求唯一编号，1–100 字符；QUERY 不允许传</td></tr>
+<tr><td>data</td><td>业务数据</td><td>随动作</td><td>新增、编辑、状态或优先级变更时传；查询和删除不传或传空对象</td></tr>
+</tbody></table></div>
+<p>不接受未声明字段。枚举使用 JSON 数字，不用数字字符串。所有业务日期使用 <code>YYYY-MM-DD</code>，并按上海时区解释。</p>
+<h3>成功回执</h3>
+<pre>{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "operation": "CREATE", "result": "CREATED",
+    "sourceRecordId": "REQ-001", "targetId": 126
+  },
+  "requestId": "本次追踪号"
+}</pre>
+<p>HTTP 200 且 code 为 0 表示成功。写入回执表示事务已提交，需要完整记录时再 QUERY。targetId 为 SIDM 内部记录 ID，后续业务请求仍使用 sourceRecordId。</p>
+<div class="table"><table><thead><tr><th>result</th><th>含义</th></tr></thead><tbody>
+<tr><td>CREATED / UPDATED</td><td>新增成功 / 更新成功</td></tr><tr><td>STATUS_CHANGED / PRIORITY_CHANGED</td><td>状态变更成功 / 优先级变更成功</td></tr><tr><td>DELETED / ALREADY_DELETED</td><td>删除成功 / 已删除，无须重复处理</td></tr><tr><td>SKIPPED / FOUND</td><td>无变化 / 查询成功</td></tr>
+</tbody></table></div>
+<h3>幂等与重试</h3>
+<ul>
+<li>同一逻辑写入重试使用原 idempotencyKey、原操作人及原业务参数；成功请求再次发送返回原业务回执，附加 <code>replayed: true</code>，本次 requestId 不同。</li>
+<li>不同逻辑写入使用不同请求号；不能把业务编号当作所有操作共用的请求号。同请求号但内容不同返回 409。成功幂等记录长期保留，请求号不可循环复用。</li>
+<li>网络断开或 5xx 时使用原请求号重试；参数修正后使用新请求号。附件请求指纹包含文件内容、名称及类型。</li>
+<li>同一记录按业务顺序发送，等待前一请求返回后再发下一请求。并发排队不保证外部事件顺序。不支持批量或 UPSERT。</li>
+<li>删除为软删除，来源映射保留；不能以已删除记录的相同来源编号重新 CREATE。</li>
+</ul>
+
+<h2 id="reference">3. 连接与基础数据</h2>
+<p><code>GET /health</code>：携带系统凭证，返回 <code>data.status = "healthy"</code>、<code>message = "连接成功"</code>。它只验证凭证和服务连通性，不代表业务写入权限。</p>
+<pre>GET /reference-data?types=products,users,workOrderProblemTypes&amp;operatorEmployeeNo=EMP001</pre>
+<pre>{
+  "code": 0, "message": "success",
+  "data": {
+    "products": [{"name": "示例产品"}],
+    "users": [{"employeeNo": "EMP001", "name": "示例人员"}],
+    "workOrderProblemTypes": [{"code": "PT001", "name": "日常操作"}]
+  },
+  "requestId": "本次追踪号"
+}</pre>
+<p>按需传入 types，多个类型用逗号分隔。名称、工号、问题类型编码以接口实际返回为准。产品名称须精确匹配，改名后请更新映射；调用方须明确传入产品和负责人，不使用来源系统专属兜底规则。手册中的数据均为示例。</p>
+
+<h2 id="requirements">4. 需求</h2>
+<h3>CREATE / UPDATE 的 data 字段</h3>
+<div class="table"><table><thead><tr><th>字段</th><th>中文名</th><th>类型</th><th>新增必填</th><th>说明</th></tr></thead><tbody>
+<tr><td>title</td><td>需求标题</td><td>string</td><td>是</td><td>1–200 字符，不换行，不与未删除需求重名</td></tr>
+<tr><td>description</td><td>需求描述</td><td>string/null</td><td>否</td><td>基础富文本，危险标签会清理；与页面业务规则一致，受单次 JSON 请求体8MB上限约束</td></tr>
+<tr><td>requirementType</td><td>需求路径</td><td>integer</td><td>是</td><td>1 上会立项、2 需求提报、3 预研、4 直接实施</td></tr>
+<tr><td>productName</td><td>产品名称</td><td>string</td><td>是</td><td>有效产品名称，最长 100 字符</td></tr>
+<tr><td>ownerEmployeeNo</td><td>负责人工号</td><td>string</td><td>是</td><td>有效负责人 SIDM 工号，最长 50 字符</td></tr>
+<tr><td>submitterName</td><td>提出人</td><td>string</td><td>是</td><td>提出人，最长 50 字符</td></tr>
+<tr><td>submitterDept</td><td>提出组织</td><td>string/null</td><td>否</td><td>提出组织，最长 100 字符，允许空字符串</td></tr>
+<tr><td>submitDate</td><td>提出日期</td><td>string</td><td>是</td><td>提出日期</td></tr>
+<tr><td>startDate</td><td>启动日期</td><td>string/null</td><td>否</td><td>启动日期</td></tr>
+<tr><td>expectedEndDate</td><td>预计完成日期</td><td>string/null</td><td>否</td><td>预计完成日期</td></tr>
+</tbody></table></div>
+<p>初始优先级为低（0）；初始状态由 requirementType 决定：1→0、2→10、3→20、4→30。新增不能指定 status 或 priority。</p>
+<p>UPDATE 允许上表字段，至少传一项，只修改传入字段；未传保持不变，仅标注 null 的字段可清空。进入实施路径状态 30–35 后不允许修改需求路径，其他状态修改路径会重置到对应初始状态。状态和优先级使用专门动作。</p>
+<h3>新增示例</h3>
+<pre data-resource="requirement">{
+  "operation": "CREATE", "sourceRecordId": "REQ-001",
+  "operatorEmployeeNo": "EMP001", "idempotencyKey": "REQ-001-CREATE-001",
+  "data": {
+    "title": "采购审批流程优化", "description": "&lt;p&gt;增加审批提醒。&lt;/p&gt;",
+    "requirementType": 4, "productName": "示例产品", "ownerEmployeeNo": "EMP002",
+    "submitterName": "示例提出人", "submitterDept": "示例组织", "submitDate": "2026-09-07"
+  }
+}</pre>
+<h3>状态与优先级</h3>
+<div class="table"><table><thead><tr><th>状态代码</th><th>名称（按顺序对应）</th></tr></thead><tbody>
+<tr><td>0 / 1 / 2 / 3</td><td>上会评估 / 需求上会 / 上会通过 / 过会未通过</td></tr>
+<tr><td>10 / 11 / 12 / 13</td><td>提报评估 / 需求审批 / 审批通过 / 审批未通过</td></tr>
+<tr><td>20 / 21 / 22</td><td>需求验证 / 预研通过 / 预研不通过</td></tr>
+<tr><td>30 / 31 / 32</td><td>需求整理 / 实施中 / 试运行</td></tr>
+<tr><td>33 / 34 / 35</td><td>已完成 / 已完成未使用 / 暂停</td></tr>
+</tbody></table></div>
+<p>CHANGE_STATUS 必传 data.status；先 QUERY 查看 allowedStatuses，只能选择当前允许的目标。</p>
+<ul><li>目标 33、34：还须传 actualEndDate（实际完成日期，不晚于今天）和 completionStatus（完成情况，1–200 字符）。</li><li>目标 35：还须传 pauseDate（暂停日期）。</li><li>其他目标只传 status，不接受与该状态无关的附加字段。</li></ul>
+<pre data-resource="requirement">{
+  "operation": "CHANGE_STATUS", "sourceRecordId": "REQ-001",
+  "operatorEmployeeNo": "EMP001", "idempotencyKey": "REQ-001-STATUS-001",
+  "data": {"status": 35, "pauseDate": "2026-09-07"}
+}</pre>
+<p>CHANGE_PRIORITY 传 <code>data: {"priority": 0}</code>，0 低、1 中、2 高，需具备需求优先级调整权限。</p>
+<p>DELETE 不允许删除已关联项目或仍有未删除任务/Bug 的需求。</p>
+
+<h2 id="work-orders">5. 运维工单</h2>
+<h3>CREATE / UPDATE 的 data 字段</h3>
+<div class="table"><table><thead><tr><th>字段</th><th>中文名</th><th>类型</th><th>新增必填</th><th>说明</th></tr></thead><tbody>
+<tr><td>problemDescription</td><td>问题描述</td><td>string</td><td>是</td><td>问题描述，非空，基础富文本；受单次 JSON 请求体8MB上限约束</td></tr>
+<tr><td>productName</td><td>产品名称</td><td>string</td><td>是</td><td>有效产品名称，最长 100 字符</td></tr>
+<tr><td>problemTypeCode</td><td>问题类型编码</td><td>string</td><td>是</td><td>有效问题类型档案编码，最长 50 字符</td></tr>
+<tr><td>followerEmployeeNo</td><td>跟进人工号</td><td>string</td><td>是</td><td>有效跟进人 SIDM 工号，最长 50 字符</td></tr>
+<tr><td>urgency</td><td>紧急程度</td><td>integer</td><td>是</td><td>0 低、1 中、2 高；与页面新增工单一致，必须明确传入</td></tr>
+<tr><td>expectedResolveDate</td><td>预计完成日期</td><td>string</td><td>是</td><td>预计完成日期</td></tr>
+<tr><td>submitterName</td><td>提出人</td><td>string</td><td>是</td><td>提出人，最长 50 字符</td></tr>
+<tr><td>submitterDept</td><td>提出组织</td><td>string</td><td>是</td><td>提出组织，最长 100 字符</td></tr>
+<tr><td>submitTime</td><td>提出时间</td><td>string</td><td>是</td><td>提出日期，格式 YYYY-MM-DD</td></tr>
+</tbody></table></div>
+<p>初始状态固定为 0 待处理。UPDATE 可修改上表字段，至少传一项；未传保持不变，不能用 null 清空。处置结果、实际修复日期通过状态变更提交。</p>
+<pre data-resource="work_order">{
+  "operation": "CREATE", "sourceRecordId": "WO-001",
+  "operatorEmployeeNo": "EMP001", "idempotencyKey": "WO-001-CREATE-001",
+  "data": {
+    "problemDescription": "&lt;p&gt;审批通知未送达，请排查。&lt;/p&gt;", "productName": "示例产品",
+    "problemTypeCode": "PT001", "followerEmployeeNo": "EMP002", "urgency": 1,
+    "expectedResolveDate": "2026-09-08", "submitterName": "示例提出人",
+    "submitterDept": "示例组织", "submitTime": "2026-09-07"
+  }
+}</pre>
+<h3>状态变更</h3>
+<div class="table"><table><thead><tr><th>目标状态</th><th>名称</th><th>必填附加字段</th></tr></thead><tbody>
+<tr><td>0 / 1</td><td>待处理 / 处理中</td><td>无，只传 status</td></tr>
+<tr><td>2</td><td>已解决</td><td>resolveDate：实际修复日期，不晚于今天；resultDescription：非空处置结果，基础富文本，受单次 JSON 请求体8MB上限约束</td></tr>
+<tr><td>4</td><td>已暂停</td><td>suspendDate：暂停日期</td></tr>
+<tr><td>5</td><td>被激活</td><td>activationReason：激活原因，1–100 字符</td></tr>
+</tbody></table></div>
+<p>允许流转：0→1/2/4，1→2/4，2→4/5，4→0/1/2，5→2。不要传与目标状态无关的附加字段。DELETE 同时软删除关联附件；使用新请求号重复删除返回 ALREADY_DELETED。</p>
+
+<h2 id="query">6. 查询与修改示例</h2>
+<pre data-resource="requirement">{
+  "operation": "QUERY", "sourceRecordId": "REQ-001", "operatorEmployeeNo": "EMP001"
+}</pre>
+<p>QUERY 的 data 返回 operation、result、sourceRecordId、targetId，以及相应业务字段（见需求/工单字段表）、status、statusLabel、allowedStatuses、状态附加字段。需求另含 priority。</p>
+<p>creator、updater 为 <code>{"employeeNo":"EMP001","name":"示例人员"}</code> 或 null；createdAt、updatedAt 为带时区时间。可选空值为 null，日期字段格式为 YYYY-MM-DD。</p>
+<p>allowedStatuses 示例：<code>[{"value":31,"label":"实施中"},{"value":35,"label":"暂停"}]</code>。它不是全部状态清单，而是该记录当前允许变更的目标。</p>
+<h3>只修改一个字段</h3>
+<pre data-resource="requirement">{
+  "operation": "UPDATE", "sourceRecordId": "REQ-001",
+  "operatorEmployeeNo": "EMP001", "idempotencyKey": "REQ-001-UPDATE-001",
+  "data": {"expectedEndDate": "2026-09-30"}
+}</pre>
+<h3>删除</h3>
+<pre data-resource="work_order">{
+  "operation": "DELETE", "sourceRecordId": "WO-001",
+  "operatorEmployeeNo": "EMP001", "idempotencyKey": "WO-001-DELETE-001"
+}</pre>
+
+<h2 id="attachments">7. 附件</h2>
+<p>须先创建业务记录。下列 <code>{resource}</code> 为 <code>requirements</code> 或 <code>work-orders</code>；路径中的来源编号须 URL 编码。</p>
+<div class="table"><table><thead><tr><th>动作</th><th>方法与路径</th><th>参数</th></tr></thead><tbody>
+<tr><td>列表</td><td>GET /{resource}/{sourceRecordId}/attachments</td><td>查询参数 operatorEmployeeNo</td></tr>
+<tr><td>上传</td><td>POST /{resource}/{sourceRecordId}/attachments</td><td>multipart/form-data：file、operatorEmployeeNo、idempotencyKey</td></tr>
+<tr><td>下载</td><td>GET /{resource}/{sourceRecordId}/attachments/{attachmentId}/download</td><td>查询参数 operatorEmployeeNo；返回文件流</td></tr>
+<tr><td>删除</td><td>POST /{resource}/{sourceRecordId}/attachments/delete</td><td>JSON：attachmentId（正整数）、operatorEmployeeNo、idempotencyKey</td></tr>
+</tbody></table></div>
+<p>上传需要文件本体，不传下载 URL 或 Base64；multipart 的 Content-Type 和 boundary 由 HTTP 客户端生成，不要沿用 application/json 或手写 boundary。</p>
+<pre>curl -X POST 'https://gcglsys.znjs.com:9088/api/open/v1/requirements/REQ-001/attachments' \
+  -H 'Authorization: Bearer &lt;接入凭证&gt;' \
+  -F 'operatorEmployeeNo=EMP001' \
+  -F 'idempotencyKey=REQ-001-FILE-001' \
+  -F 'file=@说明.pdf;type=application/pdf'</pre>
+<p>上传成功回执增加 <code>attachment: {"id":218,"name":"说明.pdf","size":1024}</code>，使用该 ID 下载或删除。列表返回 data.attachments，字段为 id、original_name、mime_type、file_size、sort_order、creator_id、updater_id、created_at、updated_at、business_type、business_id，不返回内部存储回执；ID 字段仅供识别，不能用于冒充操作人。</p>
+<p>单文件不超过 20MB，每条业务最多 10 个附件，文件名最长 255 字符。支持 JPG/JPEG/PNG/WEBP/PDF/DOC/DOCX/XLS/XLSX/PPT/PPTX/TXT/MD/ZIP，文件内容须与类型匹配。</p>
+<p>上传失败或结果不确定时，使用同一请求号和相同文件重试，避免重复附件。下载失败按错误码重试，勿将下载接口当作永久公开附件链接。</p>
+
+<h2 id="errors">8. 错误处理</h2>
+<pre>{
+  "code": 400, "message": "业务字段不正确", "data": null,
+  "fieldErrors": {"title": ["标题不能换行"]},
+  "requestId": "本次追踪号"
+}</pre>
+<p>fieldErrors 仅在可定位到字段时返回；鉴权、路由参数和上传解析失败也会返回 requestId。保留实际收到的 HTTP 状态、message 和 requestId 供排查，不记录凭证或文件正文。</p>
+<div class="table"><table><thead><tr><th>HTTP</th><th>含义与处理</th></tr></thead><tbody>
+<tr><td>400</td><td>参数、字段、状态或文件类型错误；检查 message、fieldErrors，修正后用新请求号</td></tr>
+<tr><td>401</td><td>凭证无效或过期，联系管理员</td></tr>
+<tr><td>403</td><td>系统停用或操作无权限，联系管理员</td></tr>
+<tr><td>404</td><td>本系统来源编号或附件不存在，检查目标</td></tr>
+<tr><td>409</td><td>来源编号重复、幂等内容冲突或并发数据冲突，查询后处理</td></tr>
+<tr><td>413</td><td>附件超过 20MB</td></tr>
+<tr><td>500</td><td>处理失败，保留追踪号；原请求号重试或联系管理员</td></tr>
+<tr><td>502</td><td>附件存储暂不可用，可重试读取</td></tr>
+</tbody></table></div>
+<p>调用方应设置合理超时和有限次数重试，持续失败时联系 SIDM 管理员，不要无限重复调用。业务写入失败后不得仅凭发送成功判定业务完成。</p>
+</main></body></html>

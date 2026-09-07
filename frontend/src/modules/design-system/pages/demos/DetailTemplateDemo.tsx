@@ -257,10 +257,10 @@ export function DetailTemplateDemo() {
           documentSection={{
             items: [
               { label: '创建人', value: '系统管理员' },
-              { label: '创建时间', value: '2026-06-30 10:12', wide: true },
+              { label: '创建时间', value: '2026-06-30 10:12' },
               { label: '更新人', value: '业务管理员' },
-              { label: '更新时间', value: '2026-07-04 09:00', wide: true },
-              { label: '最近登录', value: '2026-07-04 09:30', wide: true }
+              { label: '更新时间', value: '2026-07-04 09:00' },
+              { label: '最近登录', value: '2026-07-04 09:30' }
             ]
           }}
         >

@@ -27,6 +27,12 @@ test('completion and pause require their business fields', () => {
   assert.equal(validateRequirementStatusChange(34, { actual_end_date: '2026-07-12', completion_status: '未投入使用' }, '2026-07-12'), null)
 })
 
+test('完成情况允许200字符，拒绝201字符', () => {
+  for (const status of [33,34]) {
+    assert.equal(validateRequirementStatusChange(status,{actual_end_date:'2026-07-12',completion_status:'好'.repeat(200)},'2026-07-12'),null)
+    assert.equal(validateRequirementStatusChange(status,{actual_end_date:'2026-07-12',completion_status:'好'.repeat(201)},'2026-07-12'),'完成情况最多200字符')
+  }
+})
 test('pause preserves completion fields and restoring follows project field rules', () => {
   const completed = { status: 33, actual_end_date: '2026-07-12', completion_status: '已交付', pause_date: null }
   assert.deepEqual(resolveRequirementStatusFields(completed, 35, { pause_date: '2026-07-13' }), {

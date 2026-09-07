@@ -1,4 +1,5 @@
 const { validateActualBusinessDate } = require('./actualBusinessDateRules')
+const { BUSINESS_FIELD_LIMITS } = require('./businessFieldRules')
 
 const TERMINAL = new Set([3, 13, 22, 33, 34, 35])
 const TRANSITIONS = {
@@ -26,6 +27,7 @@ function allowedRequirementStatuses(type, current, _previous) {
 function validateRequirementStatusChange(status, values = {}, today) {
   if ([33, 34].includes(Number(status)) && !values.actual_end_date) return '请选择实际完成时间'
   if ([33, 34].includes(Number(status)) && !String(values.completion_status || '').trim()) return '请输入完成情况'
+  if ([33, 34].includes(Number(status)) && String(values.completion_status || '').trim().length > BUSINESS_FIELD_LIMITS.requirementCompletionStatus) return `完成情况最多${BUSINESS_FIELD_LIMITS.requirementCompletionStatus}字符`
   if (Number(status) === 35 && !values.pause_date) return '请选择暂停时间'
   return [33, 34].includes(Number(status))
     ? validateActualBusinessDate(values.actual_end_date, '实际完成时间', today)

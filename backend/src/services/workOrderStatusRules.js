@@ -1,4 +1,5 @@
 const { validateActualBusinessDate } = require('./actualBusinessDateRules')
+const { BUSINESS_FIELD_LIMITS } = require('./businessFieldRules')
 
 const WORK_ORDER_STATUS_TRANSITIONS = {
   0: [1, 2, 4],
@@ -50,7 +51,7 @@ function resolveWorkOrderResultFields(status, body = {}, old = {}) {
 function validateWorkOrderResultFields(status, values, today) {
   const target = Number(status)
   if (target === 5 && !values.activationReason) return '激活工单时必须填写激活原因'
-  if (target === 5 && values.activationReason.length > 100) return '激活原因不能超过100字'
+  if (target === 5 && values.activationReason.length > BUSINESS_FIELD_LIMITS.activationReason) return `激活原因不能超过${BUSINESS_FIELD_LIMITS.activationReason}字`
   if (target === 2 && (!values.resolveDate || !values.resultDesc)) {
     return '标记为已解决时必须填写实际修复时间和处置结果'
   }

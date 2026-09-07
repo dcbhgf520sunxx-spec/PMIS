@@ -44,3 +44,9 @@ test('validateBody validates array item objects', () => {
   assert.deepEqual(validateBody({ items: [{ id: 1, sort_order: 2 }] }, schema), { ok: true })
   assert.deepEqual(validateBody({ items: [{ id: 1 }] }, schema), { ok: false, message: '排序数据第1项的排序值不能为空' })
 })
+
+test('validateBody enforces shared business text lengths', () => {
+  const schema = { title: { required: true, maxLength: 3, label: '标题' } }
+  assert.deepEqual(validateBody({ title: '三个字' }, schema), { ok: true })
+  assert.deepEqual(validateBody({ title: '四个字了' }, schema), { ok: false, message: '标题不能超过3字符' })
+})
