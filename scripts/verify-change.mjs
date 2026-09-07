@@ -43,7 +43,7 @@ const commands = [
   {
     cwd: '.',
     command: nodeExecutable,
-    args: ['--test', 'scripts/check-delivery-contract.test.mjs', 'scripts/check-release-notes.test.mjs', 'scripts/frontend-release-cache.test.mjs']
+    args: ['--test', 'scripts/check-delivery-contract.test.mjs', 'scripts/check-release-notes.test.mjs', 'scripts/frontend-release-cache.test.mjs', 'scripts/install-and-start.test.mjs']
   },
   { cwd: '.', command: nodeExecutable, args: ['scripts/check-release-notes.mjs'] },
   { cwd: '.', command: nodeExecutable, args: ['--test', 'scripts/delivery-change-context.test.mjs'] },
