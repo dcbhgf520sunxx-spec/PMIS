@@ -4,6 +4,16 @@
 
 ## Linux 一键构建并启动
 
+当前正式服务器在拉取最新代码后，直接执行：
+
+```bash
+cd /home/project-manage-system
+git pull
+bash deploy/release.sh
+```
+
+`release.sh` 自动使用服务器 `/opt/node-v22.23.1` 下的 Node.js 22，并保留现有 HTTPS、端口和 Nginx 配置。旧服务不需要手工停止；脚本会在新版本构建和数据库备份完成后切换发布目录，再重启同一个 `pmis-backend` 服务。
+
 服务器已安装 Node.js 22、PostgreSQL 16、Nginx 和 systemd，并已创建数据库及访问账号后，先按下方环境变量说明准备 `backend/.env`，然后在项目根目录执行：
 
 ```bash

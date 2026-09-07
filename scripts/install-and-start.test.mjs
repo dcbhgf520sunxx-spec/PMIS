@@ -3,6 +3,13 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import test from 'node:test';
 
 const script = new URL('../deploy/install-and-start.sh', import.meta.url).pathname;
+const releaseScript = new URL('../deploy/release.sh', import.meta.url).pathname;
+
+test('生产发布入口可直接调用并保留现有 Nginx', () => {
+  execFileSync('bash', ['-n', releaseScript]);
+  const help = execFileSync('bash', [releaseScript, '--help'], { encoding: 'utf8' });
+  assert.match(help, /SIDM Linux 一键构建与启动/);
+});
 
 test('Linux 一键部署脚本具备可执行的帮助入口和合法语法', () => {
   execFileSync('bash', ['-n', script]);

@@ -1,6 +1,15 @@
 {
   "releases": [
     {
+      "version": "v2026.09.07.3",
+      "releasedAt": "2026-09-07",
+      "summary": "简化正式环境脚本发布操作。",
+      "features": [],
+      "improvements": ["正式服务器拉取代码后可直接执行统一发布脚本"],
+      "fixes": [],
+      "security": []
+    },
+    {
       "version": "v2026.09.07.2",
       "releasedAt": "2026-09-07",
       "summary": "新增 Linux 一键构建与启动能力。",
