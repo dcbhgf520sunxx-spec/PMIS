@@ -151,11 +151,48 @@ DELETE 为软删除，关联附件同时标记删除。新请求重复删除返�
 
 ## 6. 查询完整记录
 
-QUERY 不传 idempotencyKey，返回 data 包含：operation、result、sourceRecordId、targetId、本业务新增字段、status、statusLabel、allowedStatuses、状态附加字段，以及 creator/updater（employeeNo、name）、createdAt、updatedAt。需求另含 priority。不存在的可选值为 null；日期字段为 YYYY-MM-DD，创建/更新时间为带时区时间。allowedStatuses 示例：`[{"value":31,"label":"实施中"},{"value":35,"label":"暂停"}]`，以实际返回为准。
+QUERY 不传 idempotencyKey，返回 data 包含：operation、result、sourceRecordId、targetId、本业务新增字段、status、statusLabel、allowedStatuses 和状态附加字段。需求另含 priority。
 
 ```json
 {"operation":"QUERY","sourceRecordId":"REQ-001","operatorEmployeeNo":"005058"}
 ```
+
+### 通用返回字段
+
+| 字段 | 中文名 | 类型 | 说明 |
+|---|---|---|---|
+| creator | 创建人 | object / null | 首次创建记录的实际操作人，包含 employeeNo（工号）和 name（姓名） |
+| updater | 更新人 | object / null | 最近一次修改记录的实际操作人，包含 employeeNo（工号）和 name（姓名） |
+| createdAt | 创建时间 | string | 记录在 SIDM 的创建时间，返回带时区的时间 |
+| updatedAt | 更新时间 | string | 记录在 SIDM 的最近更新时间，返回带时区的时间 |
+
+创建人和更新人由请求中的 operatorEmployeeNo 自动记录，调用方不能传入或覆盖。新建时两者通常相同；后续修改后更新人会变化。历史记录无法解析人员时返回 null。
+
+### 完整查询响应示例
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "operation": "QUERY",
+    "result": "FOUND",
+    "sourceRecordId": "REQ-001",
+    "targetId": 101,
+    "title": "示例需求",
+    "status": 31,
+    "statusLabel": "实施中",
+    "allowedStatuses": [{"value":32,"label":"试运行"},{"value":35,"label":"暂停"}],
+    "creator": {"employeeNo":"EMP001","name":"示例人员"},
+    "updater": {"employeeNo":"EMP002","name":"更新人员"},
+    "createdAt": "2026-09-07T09:00:00+08:00",
+    "updatedAt": "2026-09-07T10:30:00+08:00"
+  },
+  "requestId": "本次追踪号"
+}
+```
+
+不存在的可选值为 null；业务日期格式为 YYYY-MM-DD，创建时间和更新时间为带时区时间。allowedStatuses 只返回当前记录允许变更的目标，以实际响应为准。
 
 ## 7. 附件
 
