@@ -33,6 +33,7 @@ if (shouldUseArm64Node({
 const npmNodeExecutable = process.platform === 'darwin' && existsSync(macosUniversalNode)
   ? macosUniversalNode
   : process.execPath;
+const nodeExecutable = process.execPath;
 const npmCommandEnv = getNpmCommandEnv(process.env, npmNodeExecutable);
 const frontendTests = readdirSync(join(rootDir, 'frontend/test'))
   .filter((name) => /\.test\.(mjs|ts)$/.test(name))
@@ -41,13 +42,13 @@ const frontendTests = readdirSync(join(rootDir, 'frontend/test'))
 const commands = [
   {
     cwd: '.',
-    command: 'node',
+    command: nodeExecutable,
     args: ['--test', 'scripts/check-delivery-contract.test.mjs', 'scripts/check-release-notes.test.mjs', 'scripts/frontend-release-cache.test.mjs']
   },
-  { cwd: '.', command: 'node', args: ['scripts/check-release-notes.mjs'] },
-  { cwd: '.', command: 'node', args: ['--test', 'scripts/delivery-change-context.test.mjs'] },
-  { cwd: '.', command: 'node', args: ['--test', 'scripts/backend-runtime-freshness.test.mjs'] },
-  { cwd: 'frontend', command: 'node', args: ['--experimental-strip-types', '--test', ...frontendTests] },
+  { cwd: '.', command: nodeExecutable, args: ['scripts/check-release-notes.mjs'] },
+  { cwd: '.', command: nodeExecutable, args: ['--test', 'scripts/delivery-change-context.test.mjs'] },
+  { cwd: '.', command: nodeExecutable, args: ['--test', 'scripts/backend-runtime-freshness.test.mjs'] },
+  { cwd: 'frontend', command: nodeExecutable, args: ['--experimental-strip-types', '--test', ...frontendTests] },
   { cwd: 'frontend', command: 'npm', args: ['run', 'lint'] },
   { cwd: 'frontend', command: 'npm', args: ['run', 'audit:components'] },
   { cwd: 'frontend', command: 'npm', args: ['run', 'audit:components:strict'] },

@@ -1,4 +1,6 @@
-const db = require('../db')
+const defaultDb = require('../db')
+function createWorkOrderController(db = defaultDb) {
+const exports = {}
 const { calcOverdue } = require('../utils/calcOverdue')
 const { refreshOverdueStatus } = require('../services/overdueCron')
 const { getSortDirection, parsePagination } = require('../utils/pagination')
@@ -8,6 +10,7 @@ const { buildViewQuery, calculateViewCounts } = require('../utils/viewCounts')
 const { formatHistoryChanges, groupOperationLogs } = require('../utils/operationHistory')
 const { sanitizeRichText } = require('../services/richTextSanitizer')
 const { softDeleteBusinessAttachments } = require('../services/businessAttachmentService')
+const { BUSINESS_FIELD_LIMITS } = require('../services/businessFieldRules')
 const {
   allowedWorkOrderStatuses,
   resolveWorkOrderResultFields,
@@ -24,8 +27,8 @@ const workOrderFormSchema = {
   urgency: { required: true, type: 'enum', values: [0, 1, 2], label: '紧急程度' },
   status: { type: 'enum', values: [0, 1, 2, 4, 5], label: '状态' },
   expected_resolve_date: { required: true, label: '预计完成时间' },
-  submitter_name: { required: true, label: '提出人' },
-  submitter_dept: { required: true, label: '提出组织' },
+  submitter_name: { required: true, maxLength: BUSINESS_FIELD_LIMITS.submitterName, label: '提出人' },
+  submitter_dept: { required: true, maxLength: BUSINESS_FIELD_LIMITS.submitterDept, label: '提出组织' },
   submit_time: { required: true, label: '提出时间' }
 }
 
@@ -636,3 +639,6 @@ exports.getHistory = async (req, res) => {
     res.status(500).json({ code: 500, message: '查询失败', data: null })
   }
 }
+return exports
+}
+module.exports = { ...createWorkOrderController(), createWorkOrderController }

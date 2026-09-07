@@ -25,6 +25,7 @@ function validateValue(value, rule, label, prefix = '') {
 
   if (rule.type === 'number' && !isValidNumber(value)) return fail(`${name}必须是数字`)
   if (rule.type === 'enum' && !rule.values.includes(normalizeForEnum(value))) return fail(`${name}取值无效`)
+  if (rule.maxLength && String(value).trim().length > rule.maxLength) return fail(`${name}不能超过${rule.maxLength}字符`)
   if (rule.type === 'array') {
     if (!Array.isArray(value)) return fail(`${name}必须是数组`)
     if (rule.required && value.length === 0) return fail(`${name}不能为空`)

@@ -97,6 +97,10 @@ export function checkDeliveryContract(rootDir, { changedFiles = [], changedRoute
       if (!line.includes('mcpRoutes')) errors.push(`MCP接口 ${apiPath} 必须挂载独立MCP鉴权路由`);
       continue;
     }
+    if (apiPath === '/api/open/v1') {
+      if (!line.includes('openApiRoutes')) errors.push('开放接口必须挂载独立凭证鉴权 openApiRoutes');
+      continue;
+    }
 
     const verifyIndex = line.indexOf('verifyToken');
     if (verifyIndex === -1) {

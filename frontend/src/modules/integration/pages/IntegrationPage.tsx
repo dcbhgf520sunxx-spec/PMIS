@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   AdminAlert, AdminDatePicker, AdminFormItem, AdminInput, AdminModal, AdminNumberInput, AdminSpace,
   AdminSwitch, AdminTextAction, OperationColumnActions, StatusConfirmAction, StatusTag,
-  TemplateDrawerTable, TemplateListPage, useTemplateListPageData,
+  TemplateDrawerTable, TemplateListPage, useTemplateListPageData, AdminButton, usePageReturnNavigation,
 } from '../../../components/admin';
 import {
   changeIntegrationStatus, listIntegrations, listIntegrationExecutions, listIntegrationRecords, runIntegrationSync,
@@ -23,6 +23,7 @@ const formatAutoExecution = (row: IntegrationConfig) => !row.auto_enabled
 const getErrorMessage = (error: unknown, fallback: string) => (error instanceof Error ? error.message : fallback);
 
 export function IntegrationPage() {
+  const { returnToSource } = usePageReturnNavigation('/integrations');
   const { message, modal } = App.useApp();
   const [form] = Form.useForm();
   const [configs, setConfigs] = useState<IntegrationConfig[]>([]);
@@ -213,7 +214,8 @@ export function IntegrationPage() {
 
   return <>
     <TemplateListPage<IntegrationConfig>
-      title="接口管理"
+      title="旧同步管理"
+      actions={<AdminButton onClick={returnToSource}>返回接口管理</AdminButton>}
       error={configError}
       onRetry={reload}
       table={{ rowKey: 'id', columns: configColumns, dataSource: configList.pagedRows, loading: configLoading, preferenceKey: 'integration:config-list', pagination: false, search: false, tableAlertRender: false, onChange: configList.handleTableChange }}

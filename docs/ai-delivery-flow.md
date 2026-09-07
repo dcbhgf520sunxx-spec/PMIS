@@ -61,6 +61,7 @@ Git 和发布边界固定如下：
 - `/api/files/oss` 使用带 HMAC 签名和有效期的文件 URL 鉴权，不使用网页端 JWT；只允许读取 `pmis/` 路径下的 OSS 文件。
 - `/api/user-options`、`/api/role-options`、`/api/archive-options/by-type-name`、`/api/messages` 是所有登录用户共用的下拉选项或个人消息接口，只要求登录。
 - `/api/mcp` 使用独立的智能体凭据、平台员工号和员工现有菜单权限鉴权，不使用网页端 JWT；门禁要求固定挂载 `mcpRoutes`。
+- `/api/open/v1` 使用独立系统凭证；有效凭证默认允许全部已开放接口，不另设动作和人员白名单。业务调用仍校验实际操作人工号、有效性及其现有菜单/按钮和业务权限，不使用网页端 JWT；固定挂载 `openApiRoutes`。系统连接测试只检查凭证和服务连通性，不代表有业务写入权限。
 - 其他 `/api` 业务接口必须同时挂载 `verifyToken` 和 `checkPermission`。如确需新增例外，必须先说明用途和影响，再同步修改门禁白名单与本文档。
 
 ## 状态

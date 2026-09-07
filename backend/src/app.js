@@ -28,6 +28,8 @@ const requirementRoutes = require('./routes/requirement')
 const taskRoutes = require('./routes/task')
 const bugRoutes = require('./routes/bug')
 const mcpRoutes = require('./routes/mcp')
+const openApiRoutes = require('./routes/openApi')
+const openClientAdminRoutes = require('./routes/openClientAdmin')
 const ossFileController = require('./controllers/ossFileController')
 
 const app = express()
@@ -75,7 +77,9 @@ app.use('/api/tasks', verifyToken, checkPermission('/tasks'), taskRoutes)
 app.use('/api/bugs', verifyToken, checkPermission('/bugs'), bugRoutes)
 app.use('/api/access-logs', verifyToken, checkPermission('/access-logs'), accessLogRoutes)
 app.use('/api/integrations', verifyToken, checkPermission('/integrations'), integrationRoutes)
+app.use('/api/open-clients', verifyToken, checkPermission('/integrations'), openClientAdminRoutes)
 app.use('/api/mcp', mcpRoutes)
+app.use('/api/open/v1', openApiRoutes)
 
 app.use((err, req, res, _next) => {
   console.error(`[${req.requestId || 'unknown'}]`, err.stack)
