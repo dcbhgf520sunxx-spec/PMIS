@@ -159,7 +159,7 @@ API 接入保持统一：
 - 状态变更统一使用 `StatusChangeAction` 或以它为底层的业务封装。业务状态组件必须直接渲染公共 `StatusChangeAction`，仅使用 `*StatusChangeAction` 名称但内部自行拼按钮或弹窗仍属违规。目标状态语义固定为：普通操作蓝色、正向操作绿色、危险或反向操作红色；业务页面不得直接使用 `StatusFlowModal`，不得创建自维护开关和目标状态的重复弹窗。
 - 返回列表通过 `TemplateDetailPage.onBack` 传入，业务页不重复创建“返回列表”按钮和操作栏外壳。
 - 接口失败或记录不存在时，通过模板的 `error`、`notFound`、`onRetry` 展示统一状态，不能无限显示加载中。
-- 基础信息、单据信息、历史记录等使用详情分组和 `DetailMetaList`；使用 `HistoryTimeline` 的详情分组统一命名为“变更历史”，不得继续使用“操作历史”“操作记录”等旧名称。
+- 基础信息使用详情分组和 `DetailMetaList`；右侧单据信息统一通过 `TemplateDetailPage.documentSection` 传入，并由底座固定为单列，业务页面不得另传列数或自行拼装；使用 `HistoryTimeline` 的详情分组统一命名为“变更历史”，不得继续使用“操作历史”“操作记录”等旧名称。
 - `DetailMetaList` 对 `null`、`undefined`、空字符串和纯空格统一显示 `-`；业务页面直接传原始值，不得自行改成“暂无描述”“暂无内容”等其他空值文案，也无需逐字段编写 `|| '-'`。普通文本字段默认最多显示两行，超出显示省略号并悬浮展示完整内容；角色、权限、人员、区域等聚合字段可继续通过 `aggregate` 显式声明。通过 `AdminProFormTextArea` 录入的描述、备注、进展、风险等普通多行字段，在详情页必须直接传入原始值并声明 `longText`，组件自动保留手工回车并完整换行，不得误用 `RichTextViewer`、自行拼接换行标签或覆盖文本样式；只有通过富文本编辑器录入的 HTML 内容才使用 `RichTextViewer`。组件审计会按同一业务模块的字段名核对普通多行录入与详情展示，错误接法必须阻断。长文本和富文本的空值同样显示 `-`，有内容时不截断、不提供展开/收起。业务页面不得自行实现另一套截断和提示逻辑。
 - 详情页中的子任务、明细和关联记录等结构化数据统一使用 `TemplateDetailTableSection`，不得在 `TemplateDetailSection` 中直接放置 `SearchTable`、原生表格或复用 `TemplateListPage embedded`，也不得通过业务包装组件绕过；严格组件审计必须阻断这些直接和间接调用。组件默认只做纯数据展示，不自动增加详情链接和操作列；需要查看或管理时，由业务列显式声明 `DetailLinkCell` 和 `OperationColumnActions`。传入 `table.scroll.x` 后，组件在横向滚动时自动固定首个业务列，并为滚动条预留底部空间，业务页不重复设置相关样式。筛选、批量操作或复杂分页较多时，应进入独立列表页或 `TemplateDrawerTable`，不能把完整列表页工具栏塞进详情分组。
 - `TemplateDetailSection.inlineExtra` 只承接标题后的统计或轻量上下文，右侧主要业务动作通过 `extra` 传入；`TemplateDetailTableSection.summary` 和 `extra` 分别承接关联数据摘要与新增等操作。

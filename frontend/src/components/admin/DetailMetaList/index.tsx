@@ -13,7 +13,7 @@ export type DetailMetaItem = {
 
 type DetailMetaListProps = {
   items: DetailMetaItem[];
-  columns?: 2 | 3 | 4;
+  columns?: 1 | 2 | 3 | 4;
 };
 
 export function DetailMetaList({ items, columns = 4 }: DetailMetaListProps) {

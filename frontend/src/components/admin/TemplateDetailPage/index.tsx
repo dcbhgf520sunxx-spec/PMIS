@@ -16,7 +16,6 @@ import './index.css';
 type TemplateDetailSideSection = {
   title?: string;
   items?: DetailMetaItem[];
-  columns?: 2 | 3 | 4;
   children?: ReactNode;
 };
 
@@ -348,7 +347,7 @@ function TemplateDetailSideSection({
     <TemplateDetailSection title={section.title || defaultTitle}>
       {section.children || (
         <DetailMetaList
-          columns={section.columns || 2}
+          columns={1}
           items={section.items || []}
         />
       )}
