@@ -30,7 +30,7 @@ function createOpenApiRouter({ service = createOpenApiService(), download = (rec
   router.get('/reference-data',async (req,res) => send(res,await service.systemQuery(token(req),'REFERENCE_DATA',req.query.operatorEmployeeNo,String(req.query.types || '').split(',').filter(Boolean),req.openRequestId)))
   for (const [url,resource] of [['requirements','requirement'],['work-orders','work_order']]) {
     router.post(`/${url}/operate`,async (req,res) => {
-      if (!['QUERY','CREATE','UPDATE','DELETE','CHANGE_STATUS','CHANGE_PRIORITY'].includes(req.body?.operation)) return res.status(400).json({code:400,message:'operation 不正确',data:null,requestId:req.openRequestId})
+      if (!['QUERY','CREATE','UPDATE','DELETE','CHANGE_STATUS'].includes(req.body?.operation)) return res.status(400).json({code:400,message:'operation 不正确',data:null,requestId:req.openRequestId})
       send(res,await service.operate(token(req),resource,req.body,{ip:req.ip,requestId:req.openRequestId}))
     })
     const attachmentInput = (req,op) => ({ ...req.body,operation:op,sourceRecordId:req.params.sourceRecordId,

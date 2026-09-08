@@ -24,9 +24,11 @@ test('请求签名不受对象键顺序影响，覆盖员工、文件内容和�
   const file = {originalname:'a.txt',mimetype:'text/plain',buffer:Buffer.from('a')}
   assert.notEqual(requestHash('requirement',base,file),requestHash('requirement',base,{...file,buffer:Buffer.from('b')}))
 })
-test('未知业务类型和工单优先级动作被拒绝',() => {
+test('未知业务类型和开放接口优先级动作被拒绝',() => {
   assert.throws(() => parseInput('product',base))
-  assert.throws(() => parseInput('work_order',{...base,operation:'CHANGE_PRIORITY',data:{priority:1}}))
+  for (const resource of ['requirement','work_order']) {
+    assert.throws(() => parseInput(resource,{...base,operation:'CHANGE_PRIORITY',data:{priority:1}}))
+  }
 })
 test('运维工单新增与页面一致：提出时间使用日期，紧急程度必填',() => {
   const input={operation:'CREATE',sourceRecordId:'wo1',operatorEmployeeNo:'001',idempotencyKey:'wo-k1',data:{

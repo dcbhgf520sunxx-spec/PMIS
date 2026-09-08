@@ -70,7 +70,7 @@ Content-Type: application/json</pre>
 
 <h2 id="contract">2. 通用约定</h2>
 <div class="table"><table><thead><tr><th>业务</th><th>方法与路径</th><th>支持动作</th></tr></thead><tbody>
-<tr><td>需求</td><td><code>POST /requirements/operate</code></td><td>QUERY、CREATE、UPDATE、CHANGE_STATUS、CHANGE_PRIORITY、DELETE</td></tr>
+<tr><td>需求</td><td><code>POST /requirements/operate</code></td><td>QUERY、CREATE、UPDATE、CHANGE_STATUS、DELETE</td></tr>
 <tr><td>运维工单</td><td><code>POST /work-orders/operate</code></td><td>QUERY、CREATE、UPDATE、CHANGE_STATUS、DELETE</td></tr>
 </tbody></table></div>
 <div class="table"><table><thead><tr><th>请求字段</th><th>中文名</th><th>必填</th><th>说明</th></tr></thead><tbody>
@@ -78,7 +78,7 @@ Content-Type: application/json</pre>
 <tr><td>sourceRecordId</td><td>来源记录编号</td><td>是</td><td>外部系统业务编号，1–100 字符；同一系统、同一业务类型内唯一</td></tr>
 <tr><td>operatorEmployeeNo</td><td>实际操作人工号</td><td>是</td><td>实际操作人的 SIDM 工号，1–50 字符</td></tr>
 <tr><td>idempotencyKey</td><td>幂等请求号</td><td>写入必填</td><td>逻辑请求唯一编号，1–100 字符；QUERY 不允许传</td></tr>
-<tr><td>data</td><td>业务数据</td><td>随动作</td><td>新增、编辑、状态或优先级变更时传；查询和删除不传或传空对象</td></tr>
+<tr><td>data</td><td>业务数据</td><td>随动作</td><td>新增、编辑或状态变更时传；查询和删除不传或传空对象</td></tr>
 </tbody></table></div>
 <p>不接受未声明字段。枚举使用 JSON 数字，不用数字字符串。所有业务日期使用 <code>YYYY-MM-DD</code>，并按上海时区解释。</p>
 <h3>成功回执</h3>
@@ -93,7 +93,7 @@ Content-Type: application/json</pre>
 }</pre>
 <p>HTTP 200 且 code 为 0 表示成功。写入回执表示事务已提交，需要完整记录时再 QUERY。targetId 为 SIDM 内部记录 ID，后续业务请求仍使用 sourceRecordId。</p>
 <div class="table"><table><thead><tr><th>result</th><th>含义</th></tr></thead><tbody>
-<tr><td>CREATED / UPDATED</td><td>新增成功 / 更新成功</td></tr><tr><td>STATUS_CHANGED / PRIORITY_CHANGED</td><td>状态变更成功 / 优先级变更成功</td></tr><tr><td>DELETED / ALREADY_DELETED</td><td>删除成功 / 已删除，无须重复处理</td></tr><tr><td>SKIPPED / FOUND</td><td>无变化 / 查询成功</td></tr>
+<tr><td>CREATED / UPDATED</td><td>新增成功 / 更新成功</td></tr><tr><td>STATUS_CHANGED</td><td>状态变更成功</td></tr><tr><td>DELETED / ALREADY_DELETED</td><td>删除成功 / 已删除，无须重复处理</td></tr><tr><td>SKIPPED / FOUND</td><td>无变化 / 查询成功</td></tr>
 </tbody></table></div>
 <h3>幂等与重试</h3>
 <ul>
@@ -133,7 +133,7 @@ Content-Type: application/json</pre>
 <tr><td>expectedEndDate</td><td>预计完成日期</td><td>string/null</td><td>否</td><td>预计完成日期</td></tr>
 </tbody></table></div>
 <p>初始优先级为低（0）；初始状态由 requirementType 决定：1→0、2→10、3→20、4→30。新增不能指定 status 或 priority。</p>
-<p>UPDATE 允许上表字段，至少传一项，只修改传入字段；未传保持不变，仅标注 null 的字段可清空。进入实施路径状态 30–35 后不允许修改需求路径，其他状态修改路径会重置到对应初始状态。状态和优先级使用专门动作。</p>
+<p>UPDATE 允许上表字段，至少传一项，只修改传入字段；未传保持不变，仅标注 null 的字段可清空。进入实施路径状态 30–35 后不允许修改需求路径，其他状态修改路径会重置到对应初始状态。状态使用专门动作；开放接口不支持修改优先级。</p>
 <h3>新增示例</h3>
 <pre data-resource="requirement">{
   "operation": "CREATE", "sourceRecordId": "REQ-001",
@@ -144,7 +144,7 @@ Content-Type: application/json</pre>
     "submitterName": "示例提出人", "submitterDept": "示例组织", "submitDate": "2026-09-07"
   }
 }</pre>
-<h3>状态与优先级</h3>
+<h3>状态</h3>
 <div class="table"><table><thead><tr><th>状态代码</th><th>名称（按顺序对应）</th></tr></thead><tbody>
 <tr><td>0 / 1 / 2 / 3</td><td>上会评估 / 需求上会 / 上会通过 / 过会未通过</td></tr>
 <tr><td>10 / 11 / 12 / 13</td><td>提报评估 / 需求审批 / 审批通过 / 审批未通过</td></tr>
@@ -159,7 +159,6 @@ Content-Type: application/json</pre>
   "operatorEmployeeNo": "EMP001", "idempotencyKey": "REQ-001-STATUS-001",
   "data": {"status": 35, "pauseDate": "2026-09-07"}
 }</pre>
-<p>CHANGE_PRIORITY 传 <code>data: {"priority": 0}</code>，0 低、1 中、2 高，需具备需求优先级调整权限。</p>
 <p>DELETE 不允许删除已关联项目或仍有未删除任务/Bug 的需求。</p>
 
 <h2 id="work-orders">5. 运维工单</h2>

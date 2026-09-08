@@ -1,6 +1,15 @@
 {
   "releases": [
     {
+      "version": "v2026.09.08.1",
+      "releasedAt": "2026-09-08",
+      "summary": "收紧需求开放接口的操作范围。",
+      "features": [],
+      "improvements": ["需求优先级继续由 SIDM 内部权限受控操作，不再向外部接入系统开放变更接口"],
+      "fixes": [],
+      "security": []
+    },
+    {
       "version": "v2026.09.07.5",
       "releasedAt": "2026-09-07",
       "summary": "完善开放接口查询返回说明。",
