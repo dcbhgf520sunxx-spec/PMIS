@@ -19,7 +19,7 @@ const fields = {
   problemDescription: rich.refine((s) => !!s.trim(), '问题描述不能为空'),
   problemTypeCode: text(LIMITS.problemTypeCode), urgency: priority, expectedResolveDate: date,
   submitTime: date,
-  status: z.number().int(), priority,
+  status: z.number().int(),
   actualEndDate: date, completionStatus: text(LIMITS.requirementCompletionStatus), pauseDate: date,
   resolveDate: date, resultDescription: rich.refine((s) => !!s.trim()),
   suspendDate: date, activationReason: text(LIMITS.activationReason), attachmentId: z.number().int().positive(),
@@ -36,7 +36,7 @@ const required = {
   requirement: ['title', 'requirementType', 'productName', 'ownerEmployeeNo', 'submitterName', 'submitDate'],
   work_order: ['problemDescription', 'productName', 'problemTypeCode', 'followerEmployeeNo', 'urgency', 'expectedResolveDate', 'submitterName', 'submitterDept', 'submitTime'],
 }
-const operations = ['QUERY', 'CREATE', 'UPDATE', 'CHANGE_STATUS', 'DELETE', 'CHANGE_PRIORITY', 'ATTACHMENT_LIST', 'ATTACHMENT_UPLOAD', 'ATTACHMENT_DELETE', 'ATTACHMENT_DOWNLOAD']
+const operations = ['QUERY', 'CREATE', 'UPDATE', 'CHANGE_STATUS', 'DELETE', 'ATTACHMENT_LIST', 'ATTACHMENT_UPLOAD', 'ATTACHMENT_DELETE', 'ATTACHMENT_DOWNLOAD']
 const readOperations = new Set(['QUERY', 'ATTACHMENT_LIST', 'ATTACHMENT_DOWNLOAD', 'HEALTH', 'REFERENCE_DATA'])
 function error(message, statusCode = 400, fieldErrors) { return Object.assign(new Error(message), { statusCode, fieldErrors }) }
 function parseInput(resource, input) {
@@ -49,15 +49,13 @@ function parseInput(resource, input) {
   const b = base.data
   if (!readOperations.has(b.operation) && !b.idempotencyKey) throw error('写操作必须提供 idempotencyKey')
   if (readOperations.has(b.operation) && b.idempotencyKey) throw error('查询不接受 idempotencyKey')
-  if (b.operation === 'CHANGE_PRIORITY' && resource !== 'requirement') throw error('工单不支持该操作')
   const selected = b.operation === 'CHANGE_STATUS' ? statusMaps[resource]
     : ['CREATE', 'UPDATE'].includes(b.operation) ? maps[resource]
-      : b.operation === 'CHANGE_PRIORITY' ? { priority: 'priority' }
-        : ['ATTACHMENT_DELETE', 'ATTACHMENT_DOWNLOAD'].includes(b.operation) ? { attachmentId: 'attachmentId' } : {}
+      : ['ATTACHMENT_DELETE', 'ATTACHMENT_DOWNLOAD'].includes(b.operation) ? { attachmentId: 'attachmentId' } : {}
   const shape = Object.fromEntries(Object.keys(selected).map((key) => {
     let rule = fields[key]
     if (resource === 'requirement' && key === 'submitterDept') rule = z.string().trim().max(100).nullable()
-    const must = b.operation === 'CREATE' ? required[resource].includes(key) : ['status', 'priority', 'attachmentId'].includes(key)
+    const must = b.operation === 'CREATE' ? required[resource].includes(key) : ['status', 'attachmentId'].includes(key)
     return [key, must ? rule : rule.optional()]
   }))
   const parsed = z.strictObject(shape).safeParse(b.data || {})

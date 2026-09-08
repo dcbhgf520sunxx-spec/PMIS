@@ -4,7 +4,7 @@
 
 ## 交付范围
 
-新增 `/api/open/v1`，需求和工单各一个 `POST /{resource}/operate` 入口，支持 QUERY、CREATE、UPDATE、CHANGE_STATUS、DELETE；需求保留 CHANGE_PRIORITY。附件沿用单文件 multipart 上传方式，并提供列表、下载、删除。提供鉴权后的 health 和基础数据查询。
+新增 `/api/open/v1`，需求和工单各一个 `POST /{resource}/operate` 入口，支持 QUERY、CREATE、UPDATE、CHANGE_STATUS、DELETE。附件沿用单文件 multipart 上传方式，并提供列表、下载、删除。提供鉴权后的 health 和基础数据查询。
 
 现有页面接口、MCP、i8 自动同步保持运行。新入口不内置 i8 默认产品或兜底人员。需求新增优先级低、工单紧急程度中，状态规则沿用当前业务实现。
 

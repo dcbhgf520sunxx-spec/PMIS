@@ -31,7 +31,7 @@
 
 | 字段 | 必填 | 说明 |
 |---|---|---|
-| operation | 是 | QUERY、CREATE、UPDATE、CHANGE_STATUS、DELETE；需求另有 CHANGE_PRIORITY |
+| operation | 是 | QUERY、CREATE、UPDATE、CHANGE_STATUS、DELETE |
 | sourceRecordId | 是 | 本系统业务编号，1–100字符；同一系统、同一业务类型内唯一 |
 | operatorEmployeeNo | 是 | SIDM 中有效且已授权的工号，1–50字符 |
 | idempotencyKey | 写入是 | 1–100字符；QUERY 不传 |
@@ -45,7 +45,7 @@
 {"code":0,"message":"success","data":{"operation":"CREATE","result":"CREATED","sourceRecordId":"REQ-001","targetId":126},"requestId":"本次追踪号"}
 ```
 
-result 值：CREATED 新增、UPDATED 更新、STATUS_CHANGED 状态变更、PRIORITY_CHANGED 优先级变更、DELETED 删除、ALREADY_DELETED 已删除、SKIPPED 无变化、FOUND 查询成功。写入回执表示事务已提交，不要求每次再查询才能认定成功；需要完整记录时使用 QUERY。
+result 值：CREATED 新增、UPDATED 更新、STATUS_CHANGED 状态变更、DELETED 删除、ALREADY_DELETED 已删除、SKIPPED 无变化、FOUND 查询成功。写入回执表示事务已提交，不要求每次再查询才能认定成功；需要完整记录时使用 QUERY。
 
 同一逻辑写入重试必须使用原 idempotencyKey、操作人及原业务参数；成功后重试返回原业务回执，并增加 `replayed: true`，本次 requestId 不同。不同逻辑写入必须用不同请求号；同请求号不同内容返回 409。第一版成功幂等记录长期保留，不能循环复用请求号。业务编号不能代替请求号。附件指纹还包括文件内容、名称和类型。
 
@@ -102,9 +102,7 @@ CREATE 的 data：
 
 初始优先级固定低（0），初始状态由需求路径决定：1→0、2→10、3→20、4→30。不接受新增时指定 priority 或 status。
 
-UPDATE 允许上述所有字段，至少传一个，只修改传入字段。未传保持不变；只有标注 null 的字段可以清空。需求进入实施路径状态30–35后，不允许修改需求路径；其他状态变更路径会重置对应初始状态。状态与优先级不能通过 UPDATE 修改。
-
-CHANGE_PRIORITY：`data: {"priority": 0}`，0低、1中、2高，需要用户拥有“需求优先级调整”权限。
+UPDATE 允许上述所有字段，至少传一个，只修改传入字段。未传保持不变；只有标注 null 的字段可以清空。需求进入实施路径状态30–35后，不允许修改需求路径；其他状态变更路径会重置对应初始状态。状态不能通过 UPDATE 修改，开放接口不支持修改优先级。
 
 CHANGE_STATUS：`data.status` 必填，附加字段按目标状态填写，其余附加字段不能传。
 
@@ -236,7 +234,7 @@ multipart 的 boundary 由 HTTP 客户端生成，不要手工固定 Content-Typ
 {"name":"外部系统","expiresAt":null}
 ```
 
-创建返回生成的 code；后续 configure/rotate/enable/disable 配置需携带该 code 定位系统。业务调用仍传实际操作人工号，不再配置 scopes 或 operatorIds。CHANGE_PRIORITY 仅适用于 requirement。
+创建返回生成的 code；后续 configure/rotate/enable/disable 配置需携带该 code 定位系统。业务调用仍传实际操作人工号，不再配置 scopes 或 operatorIds。
 
 create/rotate 必须指定不存在的输出文件，权限0600；只向终端输出文件路径，不打印凭证。rotate 不改变接入系统 ID 或来源映射。expiresAt 为空表示不自动过期。
 

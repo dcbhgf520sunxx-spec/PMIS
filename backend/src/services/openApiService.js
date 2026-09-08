@@ -3,7 +3,7 @@ const defaultDb = require('../db')
 const { createRequirementController } = require('../controllers/requirementController')
 const { createWorkOrderController } = require('../controllers/workOrderController')
 const { invokeController } = require('../mcp/controllerAdapter')
-const { getAllowedMenuPaths, getAllowedPermissionCodes } = require('./mcpPermissionService')
+const { getAllowedMenuPaths } = require('./mcpPermissionService')
 const { allowedRequirementStatuses } = require('./requirementRules')
 const { allowedWorkOrderStatuses } = require('./workOrderStatusRules')
 const attachments = require('./businessAttachmentService')
@@ -33,7 +33,6 @@ function createOpenApiService({ db = defaultDb, upload = cachedOpenUpload } = {}
     if (menuFor[resource]) {
       const paths = await getAllowedMenuPaths(user.id, connection)
       if (!paths.has(menuFor[resource])) throw error('操作人没有业务访问权限', 403)
-      if (operation === 'CHANGE_PRIORITY' && !(await getAllowedPermissionCodes(user.id, connection)).has('requirement_priority_adjust')) throw error('操作人没有调整优先级权限', 403)
     }
     return { ...user, employeeNo: user.employee_no }
   }
@@ -47,8 +46,7 @@ function createOpenApiService({ db = defaultDb, upload = cachedOpenUpload } = {}
       ctx.digest || null,outcome,status,JSON.stringify(result))
   }
   async function convertData(resource, input, connection) {
-    const selected = input.operation === 'CHANGE_STATUS' ? statusMaps[resource]
-      : input.operation === 'CHANGE_PRIORITY' ? { priority: 'priority' } : maps[resource]
+    const selected = input.operation === 'CHANGE_STATUS' ? statusMaps[resource] : maps[resource]
     const result = {}
     for (const [key, value] of Object.entries(input.data)) {
       let mapped = value
@@ -143,8 +141,7 @@ function createOpenApiService({ db = defaultDb, upload = cachedOpenUpload } = {}
       if (same) return { result:'SKIPPED', targetId:row.id }
       body = { ...row, ...body }
     }
-    if (op === 'CHANGE_PRIORITY' && Number(row.priority) === body.priority) return { result:'SKIPPED',targetId:row.id }
-    const action = { CREATE:'create', UPDATE:'update', CHANGE_STATUS:'toggleStatus', CHANGE_PRIORITY:'updatePriority', DELETE:'remove' }[op]
+    const action = { CREATE:'create', UPDATE:'update', CHANGE_STATUS:'toggleStatus', DELETE:'remove' }[op]
     const receipt = await invokeController(ctrl[action],ctx,{ params:{ id:row?.id }, body })
     if (receipt.code !== 0) {
       const aliases = Object.fromEntries(Object.entries({ ...maps[resource],...statusMaps[resource] }).map(([a,b]) => [b,a]))
@@ -154,7 +151,7 @@ function createOpenApiService({ db = defaultDb, upload = cachedOpenUpload } = {}
     const id = row?.id || receipt.data?.id
     if (op === 'DELETE' && resource === 'work_order') await connection.prepare('UPDATE pms_work_order SET updated_at=NOW() WHERE id=?').run(id)
     if (op === 'CREATE') await connection.prepare('INSERT INTO pms_open_record(client_id,resource_type,source_record_id,target_id) VALUES(?,?,?,?)').run(ctx.client.id,resource,input.sourceRecordId,id)
-    return { result:{ CREATE:'CREATED', UPDATE:'UPDATED', CHANGE_STATUS:'STATUS_CHANGED', CHANGE_PRIORITY:'PRIORITY_CHANGED', DELETE:'DELETED' }[op],targetId:id }
+    return { result:{ CREATE:'CREATED', UPDATE:'UPDATED', CHANGE_STATUS:'STATUS_CHANGED', DELETE:'DELETED' }[op],targetId:id }
   }
   async function operate(token,resource,raw,{ file,ip,requestId } = {}) {
     const ctx = { requestId:requestId || crypto.randomUUID(), resource, input:raw, ip }
