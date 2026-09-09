@@ -4,7 +4,7 @@ const test = require('node:test')
 
 const { createMcpAuth, parseBearerToken } = require('../src/middleware/mcpAuth')
 const { getAllowedPermissionCodes } = require('../src/services/mcpPermissionService')
-const { redactAuditInput } = require('../src/services/mcpAuditService')
+const { recordMcpAudit, redactAuditInput } = require('../src/services/mcpAuditService')
 const {
   createEmployeeIdentityAssertion,
   encryptEmployeeIdentity,
@@ -42,6 +42,7 @@ test('MCP identity accepts only a short-lived encrypted employee header', async 
 
   assert.equal(principal.user.id, 8)
   assert.equal(principal.user.employeeNo, 'JS001')
+  assert.equal(principal.identityVersion, 'v1')
   assert.equal(principal.allowedMenuPaths.has('/projects'), true)
   assert.equal(principal.allowedPermissionCodes.has('project_priority_adjust'), true)
   assert.equal(parseBearerToken('Basic abc'), null)
@@ -105,7 +106,8 @@ test('MCP identity assertion supports one protocol flow but rejects an exact req
     ip: '127.0.0.1',
   })
 
-  await auth.resolvePrincipal(request({ jsonrpc: '2.0', id: 1, method: 'initialize' }), 'query')
+  const principal = await auth.resolvePrincipal(request({ jsonrpc: '2.0', id: 1, method: 'initialize' }), 'query')
+  assert.equal(principal.identityVersion, 'v3')
   await auth.resolvePrincipal(request({ jsonrpc: '2.0', id: 2, method: 'tools/list' }), 'query')
   await assert.rejects(
     auth.resolvePrincipal(request({ jsonrpc: '2.0', id: 2, method: 'tools/list' }), 'query'),
@@ -198,6 +200,19 @@ test('audit redaction removes credentials and file bodies while retaining useful
     content_base64: '[FILE_CONTENT]',
     nested: { client_secret: '[REDACTED]', status: 1 }
   })
+})
+
+test('identity migration audit records the verified version without trusting user input or exposing credentials', async () => {
+  let saved
+  await recordMcpAudit({ requestId: 'identity-version-fixture', endpointType: 'query', protocolMethod: 'tools/list',
+    resultStatus: 'success', identityVersion: 'v1',
+    input: { _identity_version: 'v3', token: 'secret', name: '示例' },
+  }, { prepare: () => ({ run: async (...values) => { saved = JSON.parse(values[11]) } }) })
+  assert.deepEqual(saved, { _identity_version: 'v1', token: '[REDACTED]', name: '示例' })
+  await recordMcpAudit({ requestId: 'unknown-identity-fixture', endpointType: 'query', protocolMethod: 'tools/list',
+    resultStatus: 'failed', input: { _identity_version: 'v3' },
+  }, { prepare: () => ({ run: async (...values) => { saved = JSON.parse(values[11]) } }) })
+  assert.equal(saved._identity_version, 'unknown')
 })
 
 test('action argument hashing is stable and excludes protocol control fields', () => {

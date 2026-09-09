@@ -7,7 +7,11 @@ const {
   resolvePublicTool,
 } = require('../src/mcp/catalog')
 const { buildAuditSummary, resultCount, validateToolArguments } = require('../src/mcp/dispatcher')
-const { dispatchActionTool } = require('../src/mcp/actionTools')
+const { dispatchActionTool: dispatchActionToolWithDb } = require('../src/mcp/actionTools')
+const { hashActionArguments } = require('../src/services/mcpActionTicketService')
+const dispatchActionTool = (name, args, context, dependencies) => dispatchActionToolWithDb(name, args, context, {
+  runTransaction: (callback) => callback(), runSavepoint: (callback) => callback(), ...dependencies,
+})
 const { validateActionBusinessRules } = require('../src/mcp/actionTools')
 const { buildTaskSearchInput, dispatchQueryTool } = require('../src/mcp/queryTools')
 const { redactAuditInput } = require('../src/services/mcpAuditService')
@@ -555,6 +559,7 @@ test('execute consumes the confirmation ticket exactly once', async () => {
   }, {
     user: { id: 8, employeeNo: '005829', realName: '孙鑫鑫' },
   }, {
+    lockTargets: async () => {},
     actions: {
       task_update: [
         async (_req, res) => res.json({ code: 0, data: { id: 59 } }),
@@ -566,7 +571,10 @@ test('execute consumes the confirmation ticket exactly once', async () => {
     validateBusinessRules: async () => {},
     loadTarget: async () => ({ type: 'task', id: 59, name: '任务59', current: { owner_ids: [8] } }),
     ticketService: {
-      consumeTicket: async () => { consumeCount += 1 },
+      consumeTicket: async () => {
+        consumeCount += 1
+        return { preview: { _executionState: { version: 1, fields: { name: hashActionArguments({ value: null }) } } } }
+      },
       markTicketFailed: async () => {},
     },
   })

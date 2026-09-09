@@ -47,4 +47,11 @@ function calculateRequirementOverdue(date, status, today = new Date().toISOStrin
   if (!date) return 0
   return String(date).slice(0, 10) < today ? 1 : 0
 }
-module.exports = { TERMINAL, initialRequirementStatus, resolveRequirementTypeChange, allowedRequirementStatuses, validateRequirementStatusChange, resolveRequirementStatusFields, calculateRequirementOverdue }
+function requirementDeleteBlocker(counts = {}) {
+  if (Number(counts.project_count)) return '该需求已关联项目，无法删除'
+  if (Number(counts.task_count)) return `该需求下还有 ${counts.task_count} 个任务，无法删除`
+  if (Number(counts.bug_count)) return `该需求下还有 ${counts.bug_count} 个 BUG，无法删除`
+  return null
+}
+
+module.exports = { TERMINAL, initialRequirementStatus, resolveRequirementTypeChange, allowedRequirementStatuses, validateRequirementStatusChange, resolveRequirementStatusFields, calculateRequirementOverdue, requirementDeleteBlocker }

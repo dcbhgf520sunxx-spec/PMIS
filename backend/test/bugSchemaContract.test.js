@@ -30,7 +30,8 @@ test('BUG 类型和解决方案使用基础档案种子', () => {
 
 test('项目需求和档案删除保护 BUG 引用', () => {
   assert.match(read('src/controllers/projectController.js'), /pms_bug[\s\S]*个 BUG/)
-  assert.match(read('src/controllers/requirementController.js'), /pms_bug[\s\S]*个 BUG/)
+  assert.match(read('src/controllers/requirementController.js'), /pms_bug/)
+  assert.equal(require('../src/services/requirementRules').requirementDeleteBlocker({ bug_count: 2 }), '该需求下还有 2 个 BUG，无法删除')
   const archive = read('src/controllers/archiveController.js')
   assert.match(archive, /pms_bug/)
   assert.match(archive, /bug_type_id/)

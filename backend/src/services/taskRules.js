@@ -39,4 +39,10 @@ function canLeaveCompletedSubtask(parentStatus) {
   return Number(parentStatus) !== 2
 }
 
-module.exports = { allowedTaskStatuses, validateTaskStatusChange, resolveTaskStatusFields, calculateTaskOverdue, canCompleteParent, canLeaveCompletedSubtask }
+function validateSubtaskParent(parent) {
+  if (parent?.parent_task_id) return '父任务必须是主任务'
+  if (Number(parent?.status) === 2) return '已完成的主任务不能新增子任务'
+  return null
+}
+
+module.exports = { allowedTaskStatuses, validateTaskStatusChange, resolveTaskStatusFields, calculateTaskOverdue, canCompleteParent, canLeaveCompletedSubtask, validateSubtaskParent }

@@ -154,6 +154,65 @@ function fields(names, overrides = {}) {
   return Object.fromEntries(names.map((name) => [name, withDescription(name, overrides[name] || scalarField)]))
 }
 
+const PERIOD_PRESETS = ['day', 'workday', 'week', 'month', 'quarter', 'year', 'custom']
+const PERIOD_BUSINESS_TYPES = ['project', 'requirement', 'stage_plan', 'task', 'bug', 'work_order']
+const { PERIOD_SECTIONS, PERIOD_DETAIL_METRICS } = require('../services/mcpPeriodConstants')
+const PERSON_RELATIONS = ['business_role', 'creator', 'updater', 'operator']
+
+function periodInputSchema(description) {
+  const properties = {
+    preset: described({ type: 'string', enum: PERIOD_PRESETS }, '周期类型；custom 必须提供起止日期，其他类型仅使用锚点和偏移'),
+    anchor_date: described({ type: 'string', format: 'date' }, '非自定义周期锚点；不传时使用上海时区当天'),
+    offset: described({ type: 'integer', minimum: -1000, maximum: 1000 }, '非自定义周期偏移；0为锚点周期，-1为前一周期'),
+    start_date: described({ type: 'string', format: 'date' }, '自定义区间开始日期；必须是真实的 YYYY-MM-DD 日期'),
+    end_date: described({ type: 'string', format: 'date' }, '自定义区间结束日期；不得早于开始日期，不自动交换起止日期'),
+  }
+  return {
+    type: 'object', description, properties, required: ['preset'], additionalProperties: false,
+    oneOf: [
+      {
+        properties: { preset: { const: 'custom' }, start_date: {}, end_date: {} },
+        required: ['preset', 'start_date', 'end_date'], additionalProperties: false,
+      },
+      {
+        properties: { preset: { enum: PERIOD_PRESETS.filter(preset => preset !== 'custom') }, anchor_date: {}, offset: {} },
+        required: ['preset'], additionalProperties: false,
+      },
+    ],
+  }
+}
+
+function periodDetailInputSchema() {
+  const pagination = {
+    page: described({ type: 'integer', minimum: 1, default: 1 }, '明细页码，从1开始；翻页时其他分析参数必须保持一致'),
+    page_size: described({ type: 'integer', minimum: 1, maximum: 100, default: 50 }, '明细每页条数，默认50，最多100；同一轮翻页必须保持一致，改大小须从第一页重新查询'),
+    dataset_token: described({ type: 'string', pattern: '^[a-f0-9]{64}$' }, '第一页返回details.datasetToken；第二页起必须原样携带。数据、身份、分析条件或页大小变化时返回MCP_DATA_CHANGED，须从第一页重新查询，不混合旧页'),
+  }
+  return {
+    type: 'object',
+    description: '同一分析口径的完整明细分页；提供后仅返回 resolved_periods、data_cutoff、coverage、details，不重复聚合。第二页起须携带dataset_token。plan 要求 plan_period；people 不传 metric。',
+    properties: {
+      source: described({ type: 'string', enum: [...Object.keys(PERIOD_DETAIL_METRICS), 'people'] }, '明细来源：flow=期间流量，stock=当前存量，plan=区间计划，risk=当前风险，people=业务关联人员'),
+      metric: described({ type: 'string', enum: [...new Set(Object.values(PERIOD_DETAIL_METRICS).flat())] }, '除people外必填；可用指标由source分支限定'),
+      ...pagination,
+    },
+    required: ['source'], additionalProperties: false,
+    allOf: [{
+      if: { required: ['page'], properties: { page: { type: 'integer', minimum: 2 } } },
+      then: { required: ['dataset_token'] },
+    }],
+    oneOf: [...Object.entries(PERIOD_DETAIL_METRICS), ['people', null]].map(([source, metrics]) => ({
+      type: 'object',
+      properties: {
+        source: { const: source },
+        ...(metrics ? { metric: { type: 'string', enum: metrics } } : {}),
+        ...Object.fromEntries(Object.keys(pagination).map(field => [field, {}])),
+      },
+      required: metrics ? ['source', 'metric'] : ['source'], additionalProperties: false,
+    })),
+  }
+}
+
 const querySchemas = {
   global_search: fields(['keyword', 'page_size']),
   business_attachment_search: {
@@ -170,14 +229,14 @@ const querySchemas = {
   },
   product_search: fields(['name', 'owner_ids', 'status', 'creator_id', 'created_at_from', 'created_at_to', 'sort_field', 'sort_order', 'page', 'page_size']),
   project_search: fields(['name', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'priority', 'status', 'is_overdue', 'expected_end_date_from', 'expected_end_date_to', 'creator_id', 'created_at_from', 'created_at_to', 'view', 'sort_field', 'sort_order', 'page', 'page_size']),
-  stage_plan_search: fields(['keyword', 'project_id', 'owner_id', 'status', 'is_overdue', 'sort_field', 'sort_order', 'page', 'page_size']),
+  stage_plan_search: fields(['keyword', 'project_id', 'owner_id', 'status', 'is_overdue', 'view', 'sort_field', 'sort_order', 'page', 'page_size']),
   contract_search: fields(['keyword', 'project_id', 'supplier_id', 'signed_date_from', 'signed_date_to', 'sort_field', 'sort_order', 'page', 'page_size']),
   payment_search: fields(['keyword', 'project_id', 'stage_id', 'handler_id', 'payment_month_from', 'payment_month_to', 'sort_field', 'sort_order', 'page', 'page_size']),
   requirement_search: fields(['title', 'product_id', 'owner_id', 'requirement_type', 'priority', 'status', 'is_overdue', 'submitter_name', 'submit_date_from', 'submit_date_to', 'expected_end_date_from', 'expected_end_date_to', 'creator_id', 'created_at_from', 'created_at_to', 'view', 'sort_field', 'sort_order', 'page', 'page_size']),
   task_search: fields(['name', 'source_type', 'project_id', 'requirement_id', 'task_type', 'priority', 'status', 'is_overdue', 'owner_id', 'expected_end_date_from', 'expected_end_date_to', 'creator_id', 'created_at_from', 'created_at_to', 'view', 'sort_field', 'sort_order', 'page', 'page_size']),
   follow_up_record_list: fields(['target_type', 'target_id']),
   bug_search: fields(['title', 'source_type', 'project_id', 'requirement_id', 'bug_type_id', 'severity', 'status', 'assignee_id', 'creator_id', 'created_at_from', 'created_at_to', 'view', 'sort_field', 'sort_order', 'page', 'page_size']),
-  work_order_search: fields(['problem_desc', 'product_id', 'problem_type', 'urgency', 'status', 'is_overdue', 'follower_id', 'submitter_name', 'submit_time_from', 'submit_time_to', 'expected_resolve_date_from', 'expected_resolve_date_to', 'creator_id', 'created_at_from', 'created_at_to', 'sort_field', 'sort_order', 'page', 'page_size']),
+  work_order_search: fields(['problem_desc', 'product_id', 'problem_type', 'urgency', 'status', 'is_overdue', 'follower_id', 'submitter_name', 'submit_time_from', 'submit_time_to', 'expected_resolve_date_from', 'expected_resolve_date_to', 'creator_id', 'created_at_from', 'created_at_to', 'view', 'sort_field', 'sort_order', 'page', 'page_size']),
   business_options: {
     option_type: described({
       type: 'string',
@@ -189,77 +248,44 @@ const querySchemas = {
   },
   business_analyze: {
     domain: described({ type: 'string', enum: ['product', 'project', 'requirement', 'task', 'bug', 'work_order', 'contract', 'payment'] }, '统计业务领域'),
-    metric: described({ type: 'string', enum: ['count', 'overdue_count', 'amount_sum', 'status_distribution'] }, '统计指标'),
+    metric: described({ type: 'string', enum: ['count', 'overdue_count', 'amount_sum', 'status_distribution'] }, '统计指标；overdue_count按当前业务状态、有效计划日期及上海今天计算，不依赖缓存逾期标记；日期筛选仍按创建时间，不是期间进入逾期'),
     date_from: described({ type: 'string', format: 'date' }, '创建日期开始，格式 YYYY-MM-DD'),
     date_to: described({ type: 'string', format: 'date' }, '创建日期结束，格式 YYYY-MM-DD'),
     status: described({ type: 'integer' }, '业务状态；可选值由业务领域决定'),
   },
   business_period_analysis: {
-    analysis_period: described({
-      type: 'object',
-      properties: {
-        preset: described({ type: 'string', enum: ['day', 'workday', 'week', 'month', 'quarter', 'year', 'custom'] }, '周期类型'),
-        anchor_date: described({ type: 'string', format: 'date' }, '非自定义周期的锚点日期；不传时使用上海时区当天'),
-        offset: described({ type: 'integer', minimum: -1000, maximum: 1000 }, '相对锚点的周期偏移；0为当前周期，-1为上一周期'),
-        start_date: described({ type: 'string', format: 'date' }, '自定义周期开始日期'),
-        end_date: described({ type: 'string', format: 'date' }, '自定义周期结束日期'),
-      },
-      required: ['preset'],
-      additionalProperties: false,
-    }, '实际变化统计区间；custom 必须同时提供 start_date 和 end_date'),
-    plan_period: described({
-      type: 'object',
-      properties: {
-        preset: described({ type: 'string', enum: ['day', 'workday', 'week', 'month', 'quarter', 'year', 'custom'] }, '周期类型'),
-        anchor_date: described({ type: 'string', format: 'date' }, '非自定义周期的锚点日期'),
-        offset: described({ type: 'integer', minimum: -1000, maximum: 1000 }, '相对锚点的周期偏移'),
-        start_date: described({ type: 'string', format: 'date' }, '自定义周期开始日期'),
-        end_date: described({ type: 'string', format: 'date' }, '自定义周期结束日期'),
-      },
-      required: ['preset'],
-      additionalProperties: false,
-    }, '可选计划区间；按当前有效计划日期统计'),
-    risk_period: described({
-      type: 'object',
-      properties: {
-        preset: described({ type: 'string', enum: ['day', 'workday', 'week', 'month', 'quarter', 'year', 'custom'] }, '周期类型'),
-        anchor_date: described({ type: 'string', format: 'date' }, '非自定义周期的锚点日期'),
-        offset: described({ type: 'integer', minimum: -1000, maximum: 1000 }, '相对锚点的周期偏移'),
-        start_date: described({ type: 'string', format: 'date' }, '自定义周期开始日期'),
-        end_date: described({ type: 'string', format: 'date' }, '自定义周期结束日期'),
-      },
-      required: ['preset'],
-      additionalProperties: false,
-    }, '可选风险候选日期区间；不传时默认查询数据截止日起七天内到期事项'),
-    comparison_period: described({
-      type: 'object',
-      properties: {
-        preset: described({ type: 'string', enum: ['day', 'workday', 'week', 'month', 'quarter', 'year', 'custom'] }, '周期类型'),
-        anchor_date: described({ type: 'string', format: 'date' }, '非自定义周期的锚点日期'),
-        offset: described({ type: 'integer', minimum: -1000, maximum: 1000 }, '相对锚点的周期偏移'),
-        start_date: described({ type: 'string', format: 'date' }, '自定义周期开始日期'),
-        end_date: described({ type: 'string', format: 'date' }, '自定义周期结束日期'),
-      },
-      required: ['preset'],
-      additionalProperties: false,
-    }, '可选对比区间；只比较期间流量'),
+    analysis_period: periodInputSchema('实际变化统计区间；与计划、风险、对比区间分别解析，不共享或覆盖时间范围'),
+    sections: described({ type: 'array', minItems: 1, maxItems: PERIOD_SECTIONS.length, uniqueItems: true,
+      items: { type: 'string', enum: PERIOD_SECTIONS },
+    }, '按需选择返回内容块；不传保持原完整结果。只查询数量可选择period_flows或current_stock，不必获取人员、风险和财务。report_people指业务关联人员，不是报告专用名单。detail_query存在时由明细来源决定返回，sections不影响分页口径'),
+    plan_period: periodInputSchema('可选计划区间；按当前有效计划日期统计，不还原历史计划版本'),
+    risk_period: periodInputSchema('可选临期风险区间；不传时默认查询数据截止日起七天内到期事项'),
+    comparison_period: periodInputSchema('可选对比区间；只比较期间流量'),
+    completion_cutoff: described({ type: 'string', format: 'date' }, '计划完成观察截止日，需同时提供plan_period；默认计划结束日与上海时区当天的较早者，不得晚于当天。按实际完成日期判断截至该日已完成或待完成，与流量时间口径无关。'),
+    event_time_basis: described({ type: 'string', enum: ['actual', 'recorded'], default: 'actual' }, '期间流量归属：actual=完成、修复等采用业务实际日期，recorded=采用变更登记日期；无独立实际日期的事件使用登记日期。当前存量不受此参数影响。'),
     business_types: described({
       type: 'array', minItems: 1, maxItems: 6,
-      items: { type: 'string', enum: ['project', 'requirement', 'stage_plan', 'task', 'bug', 'work_order'] },
-    }, '业务类型；不传时统计当前账号有权限的全部六类工作'),
+      items: { type: 'string', enum: PERIOD_BUSINESS_TYPES },
+    }, '业务类型；不传时统计授权六类工作；stage_plan 指阶段关键事项，不是项目阶段容器，task 包含子任务'),
     filters: described({
       type: 'object',
       properties: {
         product_ids: described({ type: 'array', maxItems: 100, items: { type: 'integer', minimum: 1 } }, '产品标识列表'),
         project_ids: described({ type: 'array', maxItems: 100, items: { type: 'integer', minimum: 1 } }, '项目标识列表'),
         requirement_ids: described({ type: 'array', maxItems: 100, items: { type: 'integer', minimum: 1 } }, '需求标识列表'),
-        person_ids: described({ type: 'array', maxItems: 100, items: { type: 'integer', minimum: 1 } }, '负责人、协作人、指派人、跟进人或经办人标识列表'),
+        person_ids: described({ type: 'array', maxItems: 100, items: { type: 'integer', minimum: 1 } }, '人员标识列表；关联含义由person_relation指定，多人按任一匹配'),
+        person_scope: described({ type: 'string', enum: ['self'] }, 'self=当前已鉴权用户；与person_ids互斥，不能传入他人身份。查询本人在办/计划时搭配person_relation=business_role；不传则沿用授权范围和显式人员筛选'),
+        person_relation: described({ type: 'string', enum: ['related', ...PERSON_RELATIONS], default: 'related' }, '人员筛选关系：related=业务角色、创建人、更新人或分析期操作人的并集；business_role=负责人/成员/协作人/指派人/跟进人；creator=创建人；updater=最后更新人；operator=分析期实际操作人。不是绩效归属。'),
         statuses: described({ type: 'array', maxItems: 50, items: { type: 'integer' } }, '业务状态代码列表'),
         priorities: described({ type: 'array', maxItems: 10, items: { type: 'integer' } }, '优先级、严重程度或紧急程度代码列表'),
         only_overdue: described({ type: 'boolean' }, '是否只统计当前逾期记录'),
         only_paused: described({ type: 'boolean' }, '是否只统计当前暂停记录'),
       },
       additionalProperties: false,
+      allOf: [{
+        if: { required: ['person_scope'], properties: { person_scope: { const: 'self' } } },
+        then: { properties: { person_ids: false } },
+      }],
     }, '结构化筛选；不接受任意字段或表达式'),
     group_by: described({
       type: 'array', maxItems: 3,
@@ -267,10 +293,11 @@ const querySchemas = {
     }, '归并维度，最多三个'),
     metrics: described({
       type: 'array', maxItems: 10,
-      items: { type: 'string', enum: ['created', 'completed', 'important_adjustments', 'became_overdue', 'new_overdue_unresolved', 'paused', 'resumed', 'fixed', 'activated', 'reopened'] },
+      items: { type: 'string', enum: PERIOD_DETAIL_METRICS.flow },
     }, '期间流量指标；不传时返回全部默认指标'),
     trend_granularity: described({ type: 'string', enum: ['day', 'week', 'month', 'quarter', 'year'] }, '趋势时间粒度'),
-    detail_limit: described({ type: 'integer', minimum: 0, maximum: 100 }, '每类变化和风险候选最多返回条数；0表示只返回总数'),
+    detail_limit: described({ type: 'integer', minimum: 0, maximum: 100 }, '正常统计模式每类变化和风险候选最多返回条数；0只返回总数。detail_query模式改由page_size控制，与此候选上限无关'),
+    detail_query: periodDetailInputSchema(),
   },
 }
 
@@ -477,6 +504,15 @@ function queryInputSchema(name) {
       additionalProperties: false,
     }))
   }
+  if (name === 'business_period_analysis') {
+    schema.allOf = [
+      { if: { required: ['completion_cutoff'] }, then: { required: ['plan_period'] } },
+      {
+        if: { required: ['detail_query'], properties: { detail_query: { required: ['source'], properties: { source: { const: 'plan' } } } } },
+        then: { required: ['plan_period'] },
+      },
+    ]
+  }
   return schema
 }
 
@@ -492,6 +528,8 @@ function queryFieldSchema(toolName, field, fallback) {
   if (field === 'urgency') return enumField(ENUMS.urgency, '紧急程度')
   if (field === 'is_overdue') return enumField(ENUMS.binary, '是否逾期')
   if (field === 'view') {
+    if (toolName === 'stage_plan_search') return described({ type: 'string', enum: ['mine'] }, '人员视角：mine=当前已鉴权用户负责或协作的关键事项，与owner_id等显式条件取交集')
+    if (toolName === 'work_order_search') return described({ type: 'string', enum: ['mine'] }, '人员视角：mine=当前已鉴权用户跟进的工单，与follower_id等显式条件取交集')
     const values = toolName === 'project_search' ? ['mine', 'joined'] : ['mine']
     return described({ type: 'string', enum: values }, values.length > 1
       ? '人员视角：mine=我负责的，joined=我参与的'
@@ -787,7 +825,7 @@ const queryDescriptions = {
   follow_up_record_list: '查询指定项目、需求或任务的跟进记录，按创建时间倒序返回',
   business_options: '查询新增、编辑和状态操作所需的有效业务选项；返回可用标识和名称，不返回账号、工号、联系方式或凭据',
   business_analyze: '统计PMIS业务数据；domain 和 metric 必填，二者必须使用当前业务领域支持的组合；可按日期和状态进一步筛选',
-  business_period_analysis: '按任意日期区间统计授权范围内六类工作的期间变化、当前存量、计划、趋势、对比和风险；完整聚合不依赖明细分页',
+  business_period_analysis: '通用日期区间业务分析：sections按需选择统计内容，独立设置流量、计划完成截止、风险和人员关联口径；完整聚合不依赖候选上限，detail_query可继续取同口径完整分页明细。不传sections保持原完整结果',
 }
 
 const queryTitles = {
@@ -851,6 +889,11 @@ const SEARCH_OUTPUT_FIELDS = {
     id: outputField('关键事项标识'), project_name: outputField('项目名称'), stage_name: outputField('阶段名称'),
     item_name: outputField('关键事项名称'), status: outputField('关键事项状态代码'),
     status_label: outputField('关键事项状态中文名称'), current_due_date: outputField('当前计划完成日期，YYYY-MM-DD'),
+    parent_project_status: outputField('所属项目状态代码；暂停项目下的关键事项不计当前逾期'),
+    parent_project_status_label: outputField('所属项目状态中文名称'),
+    collaborators: { type: 'array', items: { type: 'object', properties: {
+      id: { type: 'integer' }, name: { type: 'string' },
+    }, required: ['id', 'name'], additionalProperties: false }, description: '关键事项协作人；与负责人共同构成本人视角' },
   },
   contract_search: {
     id: outputField('合同标识'), project_name: outputField('项目名称'), contract_code: outputField('合同编码'),
@@ -902,6 +945,156 @@ function searchOutputSchema(name, description = '统一分页查询结果') {
     },
     required: ['items', 'total', 'page', 'pageSize', 'totalPages', 'hasNextPage'],
     additionalProperties: false,
+  }
+}
+
+function periodAnalysisOutputSchema() {
+  const count = { type: 'integer', minimum: 0 }
+  const text = { type: 'string' }
+  const date = { type: 'string', format: 'date' }
+  const nullableDate = { type: ['string', 'null'], format: 'date' }
+  const nullableId = { type: ['integer', 'null'], minimum: 1 }
+  const ids = { type: 'array', items: { type: 'integer', minimum: 1 } }
+  const strings = { type: 'array', items: text }
+  const object = (properties, required = Object.keys(properties), additionalProperties = false) => ({
+    type: 'object', properties, required, additionalProperties,
+  })
+  const nullable = (schema) => ({ ...schema, type: ['object', 'null'] })
+  const metricCounts = (metrics) => object(Object.fromEntries(metrics.map((metric) => [metric, count])), [])
+  const flowCounts = metricCounts(PERIOD_DETAIL_METRICS.flow)
+  const stockCounts = metricCounts(PERIOD_DETAIL_METRICS.stock)
+  const planCounts = metricCounts(PERIOD_DETAIL_METRICS.plan)
+  const summary = (counts) => object({
+    by_business_type: object(Object.fromEntries(PERIOD_BUSINESS_TYPES.map((type) => [type, counts])), []),
+    total: counts,
+  })
+  const person = object({
+    user_id: { type: 'integer', minimum: 1 }, name: text,
+    sources: { type: 'array', items: { type: 'string', enum: PERSON_RELATIONS } },
+    related_record_count: count, period_operation_count: count,
+  })
+  const candidate = object({
+    business_type: { type: 'string', enum: PERIOD_BUSINESS_TYPES }, business_type_label: text,
+    target_id: { type: 'integer', minimum: 1 }, name: text,
+    detail_target_id: described({ type: 'integer', minimum: 1 }, 'business_get/history 的target_id；stage_plan 传所属项目ID，其余传当前记录ID'),
+    project_id: nullableId, requirement_id: nullableId, parent_task_id: nullableId,
+    project_name: { type: ['string', 'null'] }, owner_name: { type: ['string', 'null'] },
+    owner_ids: ids, creator_id: nullableId, updater_id: nullableId,
+    status: { type: 'integer' }, status_label: text,
+    priority: { type: ['integer', 'null'] }, priority_label: { type: ['string', 'null'] },
+    plan_date: nullableDate, overdue_days: count, is_overdue: { type: 'boolean' },
+    people: {
+      type: 'array', items: object({
+        user_id: { type: 'integer', minimum: 1 }, name: text,
+        relations: { type: 'array', items: { type: 'string', enum: PERSON_RELATIONS } },
+      }),
+    },
+    event_date: date, actual_date: nullableDate, recorded_date: nullableDate,
+    recorded_at: { type: ['string', 'null'], format: 'date-time' },
+    operator_ids: ids, date_source: text,
+    changes: {
+      type: 'array', items: object({
+        event_date: date, field_name: text, old_value: {}, new_value: {}, operator_id: nullableId,
+      }, ['event_date', 'field_name', 'old_value', 'new_value'], true),
+    },
+  }, ['business_type', 'business_type_label', 'target_id', 'name', 'status', 'priority', 'plan_date', 'overdue_days'], true)
+  const candidateRef = { $ref: '#/$defs/analysis_candidate' }
+  const concentration = object({ owner_id: { type: 'integer', minimum: 1 }, owner_name: { type: ['string', 'null'] },
+    overdue_count: described(count, '此负责人的逾期事项数；多人共同负责分别关联，全局单据不重复计数，不能相加或解释为绩效排名') })
+  const candidates = (items) => object({ items: { type: 'array', items }, total: count, has_more: { type: 'boolean' } })
+  const period = object({ preset: { type: 'string', enum: PERIOD_PRESETS }, start_date: date, end_date: date })
+  const properties = {
+    resolved_periods: described(object({
+      analysis_period: period, plan_period: nullable(period), risk_period: nullable(period), comparison_period: nullable(period),
+      completion_cutoff: nullableDate, event_time_basis: { type: 'string', enum: ['actual', 'recorded'] },
+    }, ['analysis_period', 'plan_period', 'risk_period', 'comparison_period'], true), '各时间上下文独立解析；completion_cutoff为计划完成观察截止日'),
+    data_cutoff: described({ type: 'string', format: 'date-time' }, '上海时区实际数据截止时间；当前存量及风险的观察时点'),
+    period_flows: described(summary(flowCounts), '按event_time_basis归属的期间流量；同一业务记录在每个指标内去重'),
+    current_stock: described(summary(stockCounts), '执行时点当前存量，不代表历史期末存量'),
+    plan_outlook: described(nullable(summary(planCounts)), '当前有效计划日期落入plan_period的事项，按completion_cutoff判断完成'),
+    comparison: nullable(object({ metrics: object(Object.fromEntries(PERIOD_DETAIL_METRICS.flow.map((metric) => [metric, object({
+      current: count, comparison: count, absolute_change: { type: 'integer' }, change_ratio: { type: 'number' },
+    }, ['current', 'comparison', 'absolute_change'])])), []) })),
+    trend: nullable(object({
+      granularity: { type: 'string', enum: ['day', 'week', 'month', 'quarter', 'year'] },
+      buckets: { type: 'array', items: object({ start_date: date, end_date: date, period_flows: flowCounts }) },
+    })),
+    groupings: { type: 'object', additionalProperties: {
+      type: 'array', items: object({
+        key: { type: ['string', 'integer', 'null'] }, label: text,
+        period_flows: flowCounts, current_stock: stockCounts, plan_outlook: nullable(planCounts),
+      }),
+    } },
+    quality_and_delivery: described(metricCounts(['on_time_completed', 'delayed_completed', 'schedule_adjustments',
+      'stage_delivery_required', 'stage_delivery_missing', 'bug_fixed', 'bug_closed', 'bug_activated', 'work_order_resolved', 'work_order_activated']),
+    'schedule_adjustments为期间有计划日期调整的独立事项数；同次操作多字段、多次操作不重复计数，不受日志顺序影响'),
+    financials: described(object({
+      available: { type: 'boolean' }, error: text,
+      ...Object.fromEntries(['contract_count', 'contract_amount', 'planned_payment_amount', 'actual_payment_amount',
+        'unpaid_amount', 'period_contract_count', 'period_contract_amount', 'period_actual_payment_amount', 'plan_period_payment_amount']
+        .map((key) => [key, { type: 'number' }])),
+    }, ['available']), '有项目权限时统计筛选后业务记录关联的项目合同及付款；空集合为0，不是全库或个人金额。plan_period_payment_amount是按付款所属月份落入计划区间汇总的已登记付款额，不是未来付款承诺'),
+    flow_candidates: described(object(Object.fromEntries(PERIOD_DETAIL_METRICS.flow.map((metric) => [metric, candidates(candidateRef)])), []), '期间变化候选；total为完整统计，has_more=true时可按同一口径分页'),
+    risk_candidates: object(Object.fromEntries(PERIOD_DETAIL_METRICS.risk.map((metric) => [metric, candidates(metric === 'workload_concentration' ? concentration : candidateRef)]))),
+    report_people: described({ type: 'array', items: person }, '业务关联人员并集；保留字段名以兼容已有调用，不是报表专用。仅当前启用且未删除账号，不等同完整权限人员名册、个人绩效或工作量'),
+    coverage: described(object({
+      requested_business_types: { type: 'array', items: { type: 'string', enum: PERIOD_BUSINESS_TYPES } },
+      authorized_business_types: { type: 'array', items: { type: 'string', enum: PERIOD_BUSINESS_TYPES } },
+      excluded_business_types: { type: 'array', items: { type: 'string', enum: PERIOD_BUSINESS_TYPES } },
+      statistics_complete: { type: 'boolean' }, candidate_details_truncated: { type: 'boolean' },
+      requested_sections: described({ type: 'array', minItems: 1, maxItems: PERIOD_SECTIONS.length, uniqueItems: true,
+        items: { type: 'string', enum: PERIOD_SECTIONS } }, '仅按需统计返回；本次明确选择的内容块，不影响授权范围'),
+      section_completeness: described(object(Object.fromEntries(PERIOD_SECTIONS.map(section => [section, { type: ['boolean', 'null'] }])), []),
+        '本次请求块及其真实依赖是否完整；null表示不适用，不是零。statistics_complete按这些请求块判断'),
+      historical_stock_supported: { const: false }, historical_plan_versions_supported: { const: false },
+      unsupported_dimensions: strings, notes: strings,
+      plan_completion_unknown_count: count, plan_completion_complete: { type: 'boolean' },
+      event_history_inconsistent_count: described(count, '当前状态与已取得事件历史不一致的事项数，相关流量不能把未取得当成0'),
+      component_completeness: described(object({
+        business_records: { type: ['boolean', 'null'] }, event_history: { type: ['boolean', 'null'] },
+        period_flows: { type: ['boolean', 'null'] }, current_stock: { type: ['boolean', 'null'] },
+        plan_outlook: { type: ['boolean', 'null'] }, report_people: { type: ['boolean', 'null'] },
+        financials: { type: ['boolean', 'null'] }, risk_candidates: { type: ['boolean', 'null'] },
+      }, ['business_records', 'event_history', 'period_flows', 'current_stock', 'plan_outlook', 'report_people', 'financials']),
+      '各部分数据是否完整；null表示该部分未请求或不适用。辅助财务失败不代表核心业务统计失败，仍须分别检查所用部分'),
+    }, ['requested_business_types', 'authorized_business_types', 'excluded_business_types', 'statistics_complete',
+      'candidate_details_truncated', 'historical_stock_supported', 'historical_plan_versions_supported', 'unsupported_dimensions', 'notes'], true), '权限与完整性边界；统计失败或历史完成依据不足时不得补造结论'),
+  }
+  const normalFields = Object.keys(properties)
+  const detailPagination = {
+    total: count, page: { type: 'integer', minimum: 1 }, pageSize: { type: 'integer', minimum: 1, maximum: 100 },
+    totalPages: count, hasNextPage: { type: 'boolean' },
+    datasetToken: described({ type: 'string', pattern: '^[a-f0-9]{64}$' }, '此数据集的校验标识，翻页时传入detail_query.dataset_token；不是可重放历史快照'),
+  }
+  properties.details = {
+    type: 'object', description: '同一分析条件下的完整明细页，people来源的metric为null',
+    oneOf: [
+      ...Object.entries(PERIOD_DETAIL_METRICS).map(([source, metrics]) => object({
+        source: { const: source }, metric: { type: 'string', enum: metrics.filter((metric) => metric !== 'workload_concentration') },
+        items: { type: 'array', items: candidateRef }, ...detailPagination,
+      })),
+      object({ source: { const: 'risk' }, metric: { const: 'workload_concentration' }, items: { type: 'array', items: concentration }, ...detailPagination }),
+      object({ source: { const: 'people' }, metric: { type: 'null' }, items: { type: 'array', items: person }, ...detailPagination }),
+    ],
+  }
+  const shared = ['resolved_periods', 'data_cutoff', 'coverage']
+  return {
+    type: 'object', description: '通用周期分析：sections按需返回所选块，不传则兼容完整统计；detail_query优先，仅返回同口径明细页与时间、覆盖信息',
+    $defs: { analysis_candidate: candidate },
+    properties, required: shared, additionalProperties: false,
+    oneOf: [
+      { required: normalFields, not: { required: ['details'] }, properties: { coverage: { not: { required: ['requested_sections'] } } } },
+      {
+        required: shared, not: { required: ['details'] },
+        properties: { coverage: { required: ['requested_sections', 'section_completeness'] } },
+        allOf: PERIOD_SECTIONS.map(section => ({
+          if: { properties: { coverage: { properties: { requested_sections: { contains: { const: section } } } } } },
+          then: { required: [section], properties: { coverage: { properties: { section_completeness: { required: [section] } } } } },
+          else: { properties: { [section]: false, coverage: { properties: { section_completeness: { properties: { [section]: false } } } } } },
+        })),
+      },
+      { required: [...shared, 'details'], properties: Object.fromEntries([...shared, 'details'].map((key) => [key, {}])), additionalProperties: false },
+    ],
   }
 }
 
@@ -958,12 +1151,14 @@ function queryOutputSchema(name) {
         definition: { type: 'string', description: '统计口径说明' },
         results: {
           type: 'array',
-          description: '统计结果；普通统计只有 value，状态分布同时返回 status',
+          description: '统计结果；数量为数字，金额可为精确十进制字符串（元）；状态分布同时返回代码和中文名',
           items: {
             type: 'object',
             properties: {
               status: { type: ['integer', 'null'], description: '状态代码；仅状态分布返回' },
-              value: { type: 'number', description: '统计值；金额单位为元' },
+              status_label: { type: 'string', description: '状态中文名；仅状态分布返回' },
+              value: { type: ['number', 'string'], pattern: '^-?\\d+(?:\\.\\d+)?$',
+                description: '统计值；金额保留数据库精确十进制表示，不强制转为浮点数' },
             },
             required: ['value'],
             additionalProperties: false,
@@ -971,53 +1166,33 @@ function queryOutputSchema(name) {
         },
       },
       required: ['domain', 'metric', 'scope', 'definition', 'results'],
+      allOf: [{
+        if: { properties: { metric: { const: 'amount_sum' } }, required: ['metric'] },
+        else: { properties: { results: { items: { properties: { value: { type: 'number' } } } } } },
+      }],
       additionalProperties: false,
     }
   }
   if (name === 'business_period_analysis') {
-    const objectField = (description) => ({ type: ['object', 'null'], additionalProperties: true, description })
+    return periodAnalysisOutputSchema()
+  }
+  if (name === 'business_history' || name.endsWith('_history')) {
     return {
       type: 'object',
-      description: '任意周期业务统计分析结果；当前存量以 data_cutoff 为准',
+      description: '变更历史数组包装于data；阶段主计划历史以target_type+target_id定位业务对象，不以日志id或名称定位',
       properties: {
-        resolved_periods: objectField('服务端解析后的分析、计划和对比日期区间'),
-        data_cutoff: { type: 'string', description: '上海时区实际数据截止时间，ISO 8601格式' },
-        period_flows: objectField('期间新增、完成、重要调整和逾期等流量统计'),
-        current_stock: objectField('执行时点当前存量统计，不代表历史期末存量'),
-        plan_outlook: objectField('按当前有效计划日期计算的计划完成、已完成和待完成统计'),
-        comparison: objectField('对比区间的期间流量差异；分母为零时不返回变化比例'),
-        trend: objectField('期间流量的时间分桶趋势'),
-        groupings: objectField('按请求维度归并的流量、存量和计划统计'),
-        quality_and_delivery: objectField('按期、延期、计划调整、交付文件、BUG和工单质量事实'),
-        financials: objectField('合同与付款辅助统计；不计入六类工作合计'),
-        flow_candidates: objectField('期间变化候选；各指标按业务记录去重并同时返回总数和是否还有更多'),
-        risk_candidates: objectField('代表性风险候选；每类同时返回总数和是否还有更多'),
-        report_people: {
-          type: 'array',
-          description: '报告相关人员；合并业务角色、创建人、更新人和分析期实际操作人，仅返回当前启用账号',
-          items: {
-            type: 'object',
-            properties: {
-              user_id: { type: 'integer', description: '用户标识' },
-              name: { type: 'string', description: '人员姓名' },
-              sources: {
-                type: 'array',
-                description: '进入报告范围的依据',
-                items: { type: 'string', enum: ['business_role', 'creator', 'updater', 'operator'] },
-              },
-              related_record_count: { type: 'integer', description: '关联业务事项去重数量' },
-              period_operation_count: { type: 'integer', description: '分析期实际操作去重数量' },
-            },
-            required: ['user_id', 'name', 'sources', 'related_record_count', 'period_operation_count'],
-            additionalProperties: false,
+        data: { type: 'array', items: {
+          type: 'object',
+          properties: {
+            id: { type: ['integer', 'string'], description: '日志或操作节点ID，不是阶段或事项ID' },
+            target_type: { type: 'string', enum: ['stage', 'stage_item'], description: '阶段历史专用：stage为阶段容器，stage_item为关键事项' },
+            target_id: { type: ['integer', 'null'], minimum: 1, description: '阶段历史中的实际业务对象ID；旧记录无法定位时为null' },
+            project_id: { type: ['integer', 'null'], minimum: 1, description: '阶段历史所属项目ID' },
           },
-        },
-        coverage: objectField('授权覆盖、统计完整性、候选截断及不支持范围'),
+          additionalProperties: true,
+        } },
       },
-      required: ['resolved_periods', 'data_cutoff', 'period_flows', 'current_stock', 'plan_outlook',
-        'comparison', 'trend', 'groupings', 'quality_and_delivery', 'financials', 'flow_candidates',
-        'risk_candidates', 'report_people', 'coverage'],
-      additionalProperties: false,
+      required: ['data'], additionalProperties: false,
     }
   }
   return {
@@ -1118,6 +1293,33 @@ function actionOutputSchema() {
   }
 }
 
+function withToolErrorSchema(successSchema) {
+  const { properties = {}, additionalProperties, $defs, description, ...successConstraints } = successSchema
+  const error = {
+    type: 'object',
+    description: '调用失败时的统一错误；不可当作成功数据或零条记录',
+    properties: {
+      code: { type: 'string', pattern: '^MCP_[A-Z0-9_]+$' },
+      message: { type: 'string' },
+      fieldErrors: { type: 'object', additionalProperties: { type: 'string' } },
+      requestId: { type: 'string' }, originalCode: { type: 'string' },
+    },
+    required: ['code', 'message'], additionalProperties: false,
+  }
+  return {
+    type: 'object', description,
+    ...($defs ? { $defs } : {}),
+    properties: { ...properties, error },
+    ...(additionalProperties === undefined ? {} : { additionalProperties }),
+    // Keep success constraints intact while allowing the structured error that
+    // createMcpServer returns. SDK clients validate even when isError is true.
+    oneOf: [
+      { ...successConstraints, properties: { error: false } },
+      { properties: { error: {} }, required: ['error'], additionalProperties: false },
+    ],
+  }
+}
+
 function baseDefinition([name, menuPath], endpointType) {
   const inputSchema = endpointType === 'query' ? queryInputSchema(name) : actionInputSchema(name)
   const editableFields = endpointType === 'action' && UPDATE_ACTIONS.has(name)
@@ -1130,7 +1332,7 @@ function baseDefinition([name, menuPath], endpointType) {
       ? queryDescriptions[name] || `查询PMIS业务数据：${name}；搜索工具可不传任何参数`
       : `${actionTitle(name)}。必须先使用 preview 获取当前目标、风险和一次性确认号；仅在用户确认后，才使用完全相同的业务参数和确认号执行 execute。`,
     inputSchema,
-    outputSchema: endpointType === 'query' ? queryOutputSchema(name) : actionOutputSchema(),
+    outputSchema: withToolErrorSchema(endpointType === 'query' ? queryOutputSchema(name) : actionOutputSchema()),
     annotations: endpointType === 'query'
       ? { readOnlyHint: true, destructiveHint: false, idempotentHint: true }
       : { readOnlyHint: false, destructiveHint: name.endsWith('_delete'), idempotentHint: false },
@@ -1252,7 +1454,7 @@ function genericQueryDefinition(name, title, domains, description) {
       required: ['domain', 'target_id'],
       additionalProperties: false,
     },
-    outputSchema: queryOutputSchema(name),
+    outputSchema: withToolErrorSchema(queryOutputSchema(name)),
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
     _meta: { endpointType: 'query', menuPath: null },
   }
@@ -1301,7 +1503,7 @@ function publicActionDefinition([name, title, operations]) {
   return {
     name,
     title,
-    description: `${title}。通过 operation 选择具体操作。${operationSummary}。调用前必须一次性向用户说明可补充的非必填字段；不要逐项追问。所有操作必须先 preview，用户确认后再使用完全相同的业务参数和 confirmation_id 执行 execute。状态变更前必须先查询详情，只能从 allowed_statuses 中选择目标状态。`,
+    description: `${title}。通过 operation 选择具体操作。${operationSummary}。仅补齐必填或影响本次操作的歧义信息，不因非必填字段反复询问。所有操作必须先 preview，用户确认后再使用完全相同的业务参数和 confirmation_id 执行 execute。状态变更前必须先查询详情，只能从 allowed_statuses 中选择目标状态。`,
     inputSchema: {
       type: 'object',
       properties,
@@ -1312,7 +1514,9 @@ function publicActionDefinition([name, title, operations]) {
           title: definition.title,
           properties: {
             operation: described({ const: operation }, `当前分支固定为 ${operation}`),
-            ...definition.inputSchema.properties,
+            ...Object.fromEntries(Object.entries(definition.inputSchema.properties).map(([field, schema]) => [
+              field, { ...schema, description: schema.enum ? schema.description : String(schema.description).split(/[：；，,]/)[0] },
+            ])),
           },
           required: ['operation', ...(definition.inputSchema.required || [])],
           additionalProperties: false,
@@ -1321,7 +1525,7 @@ function publicActionDefinition([name, title, operations]) {
       }),
       additionalProperties: false,
     },
-    outputSchema: actionOutputSchema(),
+    outputSchema: withToolErrorSchema(actionOutputSchema()),
     annotations: {
       readOnlyHint: false,
       destructiveHint: entries.some(([operation]) => operation === 'delete'),
@@ -1350,7 +1554,7 @@ const publicToolCatalog = [
     'business_history',
     '读取业务变更历史',
     ['product', 'project', 'stage_plan', 'requirement', 'task', 'bug', 'work_order'],
-    '按业务领域和目标标识读取变更历史；阶段主计划传项目标识'
+    '按业务领域和目标标识读取变更历史；阶段主计划传项目标识，返回target_type+target_id区分阶段与关键事项，id仅是日志节点'
   ),
   commandDefinition('business_analyze', 'query'),
   commandDefinition('business_period_analysis', 'query'),
@@ -1521,7 +1725,7 @@ function scopeBusinessAttachmentSearch(tool, allowedMenuPaths) {
 }
 
 function scopeBusinessAttachmentAction(tool, allowedMenuPaths) {
-  if (!['business_attachment_manage', 'business_attachment_upload', 'business_attachment_delete'].includes(tool.name)) return tool
+  if (tool.name !== 'business_attachment_manage') return tool
   const menuByType = {
     requirement: '/requirements', project: '/projects', task: '/tasks', bug: '/bugs', work_order: '/work-orders',
   }
@@ -1561,7 +1765,7 @@ function filterToolsForContext(context) {
       return ['/projects', '/products', '/requirements', '/tasks', '/bugs', '/work-orders']
         .some((path) => context.allowedMenuPaths.has(path))
     }
-    if (['business_attachment_manage', 'business_attachment_upload', 'business_attachment_delete'].includes(tool.name)) {
+    if (tool.name === 'business_attachment_manage') {
       return ['/requirements', '/projects', '/tasks', '/bugs', '/work-orders']
         .some((path) => context.allowedMenuPaths.has(path))
     }

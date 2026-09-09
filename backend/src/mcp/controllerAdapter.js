@@ -1,10 +1,11 @@
 function invokeController(handler, context, input = {}) {
   return new Promise((resolve, reject) => {
-    let settled = false
+    let responded = false
+    let responseBody
     const finish = (body) => {
-      if (settled) return
-      settled = true
-      resolve(body)
+      if (responded) return
+      responded = true
+      responseBody = body
     }
     const res = {
       locals: { requestId: context.requestId },
@@ -43,7 +44,9 @@ function invokeController(handler, context, input = {}) {
     }
     Promise.resolve(handler(req, res))
       .then(() => {
-        if (!settled) reject(new Error('业务处理器未返回结果'))
+        // res.json may run inside a transaction callback, before COMMIT.
+        if (responded) resolve(responseBody)
+        else reject(new Error('业务处理器未返回结果'))
       })
       .catch(reject)
   })

@@ -1,4 +1,8 @@
 const db = require('../db')
+const { summarizeRichText } = require('../mcp/contentPolicy')
+const { validatePeriodDetailQuery, paginatePeriodDetails, createPeriodDatasetToken, assertPeriodDatasetToken } = require('./mcpPeriodDetails')
+const { calculateRequirementOverdue } = require('./requirementRules')
+const { PERIOD_SECTIONS } = require('./mcpPeriodConstants')
 
 const SHANGHAI_TIME_ZONE = 'Asia/Shanghai'
 const MAX_PERIOD_DAYS = 3660
@@ -37,7 +41,7 @@ const RECORD_QUERIES = {
         FROM pms_project_member member WHERE member.project_id=p.id),'{}'::BIGINT[]),NULL) business_role_ids,
       ARRAY_REMOVE(ARRAY[p.owner_id,p.creator_id] || COALESCE((SELECT ARRAY_AGG(member.user_id ORDER BY member.user_id)
         FROM pms_project_member member WHERE member.project_id=p.id),'{}'::BIGINT[]),NULL) person_ids,
-      p.expected_end_date plan_date,p.actual_end_date actual_date,
+      p.expected_end_date plan_date,p.actual_end_date actual_date,p.suspend_date pause_date,
       p.created_at,p.is_overdue,(p.status=3) is_paused,(p.status=2) is_completed,
       FALSE parent_project_paused,FALSE required_delivery,0 delivery_count
     FROM pms_project p
@@ -52,7 +56,7 @@ const RECORD_QUERIES = {
       r.creator_id,r.updater_id,ARRAY[r.owner_id] owner_ids,
       ARRAY_REMOVE(ARRAY[r.owner_id],NULL) business_role_ids,
       ARRAY_REMOVE(ARRAY[r.owner_id,r.creator_id],NULL) person_ids,
-      r.expected_end_date plan_date,r.actual_end_date actual_date,
+      r.expected_end_date plan_date,r.actual_end_date actual_date,r.pause_date,
       r.created_at,COALESCE(r.is_overdue,0) is_overdue,(r.status=35) is_paused,
       (r.status IN (33,34)) is_completed,FALSE parent_project_paused,FALSE required_delivery,0 delivery_count
     FROM pms_requirement r
@@ -91,7 +95,7 @@ const RECORD_QUERIES = {
       owners.owner_id,owners.owner_name,COALESCE(owners.owner_ids,'{}'::BIGINT[]) owner_ids,
       COALESCE(owners.owner_ids,'{}'::BIGINT[]) business_role_ids,
       ARRAY_REMOVE(COALESCE(owners.owner_ids,'{}'::BIGINT[]) || ARRAY[t.creator_id],NULL) person_ids,
-      t.expected_end_date plan_date,t.actual_end_date actual_date,t.created_at,t.is_overdue,
+      t.expected_end_date plan_date,t.actual_end_date actual_date,t.suspend_date pause_date,t.created_at,t.is_overdue,
       (t.status=3) is_paused,(t.status=2) is_completed,FALSE parent_project_paused,
       FALSE required_delivery,0 delivery_count,t.parent_task_id
     FROM pms_task t
@@ -110,7 +114,7 @@ const RECORD_QUERIES = {
       b.creator_id,b.updater_id,b.assignee_id owner_id,owner.real_name owner_name,ARRAY[b.assignee_id] owner_ids,
       ARRAY_REMOVE(ARRAY[b.assignee_id],NULL) business_role_ids,
       ARRAY_REMOVE(ARRAY[b.assignee_id,b.creator_id],NULL) person_ids,
-      NULL::DATE plan_date,b.closed_date actual_date,b.created_at,0 is_overdue,FALSE is_paused,
+      NULL::DATE plan_date,b.closed_date actual_date,b.resolved_date,b.created_at,0 is_overdue,FALSE is_paused,
       (b.status=2) is_completed,FALSE parent_project_paused,FALSE required_delivery,0 delivery_count
     FROM pms_bug b
     LEFT JOIN pms_project project ON project.id=b.project_id
@@ -125,7 +129,7 @@ const RECORD_QUERIES = {
       w.creator_id,w.updater_id,owner.real_name owner_name,ARRAY[w.follower_id] owner_ids,
       ARRAY_REMOVE(ARRAY[w.follower_id],NULL) business_role_ids,
       ARRAY_REMOVE(ARRAY[w.follower_id,w.creator_id],NULL) person_ids,w.expected_resolve_date::DATE plan_date,
-      w.resolve_date::DATE actual_date,w.created_at,w.is_overdue,(w.status=4) is_paused,
+      w.resolve_date::DATE actual_date,w.suspend_date::DATE pause_date,w.created_at,w.is_overdue,(w.status=4) is_paused,
       (w.status=2) is_completed,FALSE parent_project_paused,FALSE required_delivery,0 delivery_count
     FROM pms_work_order w
     JOIN pms_product product ON product.id=w.product_id
@@ -243,18 +247,24 @@ function resolvePeriod(period, now = new Date(), field = 'analysis_period') {
 
 function dateInPeriod(value, period) {
   if (!value || !period) return false
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(String(value))
-    ? String(value)
-    : shanghaiDate(new Date(value))
+  const date = dateOnly(value)
   return date >= period.start_date && date <= period.end_date
+}
+
+function parseBusinessTimestamp(value) {
+  if (value instanceof Date) return value
+  let text = String(value).trim().replace(' ', 'T')
+    .replace(/([+-]\d{2})$/, '$1:00').replace(/([+-]\d{2})(\d{2})$/, '$1:$2')
+  // PostgreSQL's timestamp-without-time-zone represents local business time,
+  // not the machine running this query. SIDM's business timezone is Shanghai.
+  if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(text)) text += '+08:00'
+  return new Date(text)
 }
 
 function dateOnly(value) {
   if (!value) return null
   const text = String(value)
-  return /^\d{4}-\d{2}-\d{2}/.test(text) && !text.includes('T')
-    ? text.slice(0, 10)
-    : shanghaiDate(new Date(value))
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : shanghaiDate(parseBusinessTimestamp(value))
 }
 
 function number(value) {
@@ -290,6 +300,8 @@ function normalizeRecord(row) {
     person_names: personNames,
     plan_date: dateOnly(row.plan_date),
     actual_date: dateOnly(row.actual_date),
+    pause_date: dateOnly(row.pause_date),
+    resolved_date: dateOnly(row.resolved_date),
     created_date: dateOnly(row.created_at),
     is_overdue: Number(row.is_overdue) === 1 || row.is_overdue === true,
     is_paused: row.is_paused === true || Number(row.is_paused) === 1,
@@ -319,8 +331,12 @@ function matchesFilters(record, filters = {}, cutoffDate) {
   if (!includes('product_ids', record.product_id)) return false
   if (!includes('project_ids', record.project_id)) return false
   if (!includes('requirement_ids', record.requirement_id)) return false
+  const relation = filters.person_relation || 'related'
+  const people = record.person_relations
+    ? Object.entries(record.person_relations).filter(([, relations]) => relation === 'related' || relations.includes(relation)).map(([id]) => Number(id))
+    : record.person_ids
   if (Array.isArray(filters.person_ids) && filters.person_ids.length
-    && !record.person_ids.some((id) => filters.person_ids.map(Number).includes(Number(id)))) return false
+    && !people.some((id) => filters.person_ids.map(Number).includes(Number(id)))) return false
   if (Array.isArray(filters.statuses) && filters.statuses.length
     && !filters.statuses.map(Number).includes(record.status)) return false
   if (Array.isArray(filters.priorities) && filters.priorities.length
@@ -330,7 +346,27 @@ function matchesFilters(record, filters = {}, cutoffDate) {
   return true
 }
 
-async function loadRecords(types, filters, database, cutoffDate) {
+function attachPersonRelations(records, logs, analysisPeriod) {
+  const recordMap = new Map(records.map(record => [`${record.business_type}:${record.id}`, record]))
+  const add = (record, id, relation) => {
+    const value = Number(id)
+    if (!Number.isInteger(value) || value < 1) return
+    const relations = record.person_relations[value] ||= []
+    if (!relations.includes(relation)) relations.push(relation)
+  }
+  for (const record of records) {
+    record.person_relations = {}
+    for (const id of record.business_role_ids) add(record, id, 'business_role')
+    add(record, record.creator_id, 'creator')
+    add(record, record.updater_id, 'updater')
+  }
+  for (const log of logs) {
+    const record = recordMap.get(`${log.business_type}:${Number(log.target_id)}`)
+    if (record && dateInPeriod(dateOnly(log.created_at), analysisPeriod)) add(record, log.operator_id, 'operator')
+  }
+}
+
+async function loadRecords(types, filters, database, cutoffDate, resolveNames = true) {
   const results = await Promise.all(types.map(async (type) => {
     const rows = await database.prepare(RECORD_QUERIES[type]).all()
     return rows.map(normalizeRecord)
@@ -338,7 +374,7 @@ async function loadRecords(types, filters, database, cutoffDate) {
   const records = results.flat()
   const missingPersonIds = [...new Set(records.flatMap((record) => record.person_ids
     .filter((id) => !record.person_names[id])))]
-  if (missingPersonIds.length) {
+  if (resolveNames && missingPersonIds.length) {
     const people = await database.prepare(`/* period_analysis:people */
       SELECT id,real_name name FROM pms_user WHERE id IN (${missingPersonIds.map(() => '?').join(',')})`).all(...missingPersonIds)
     const names = new Map(people.map((person) => [Number(person.id), person.name]))
@@ -349,24 +385,31 @@ async function loadRecords(types, filters, database, cutoffDate) {
   return records.filter((record) => matchesFilters(record, filters, cutoffDate))
 }
 
-async function loadLogs(types, analysisPeriod, comparisonPeriod, database) {
-  if (!types.length) return []
+async function loadLogs(types, records, database, identityPeriod = null) {
+  if (!types.length || !records.length) return []
   const moduleCases = types.map((type) => `WHEN '${BUSINESS_TYPES[type].module}' THEN '${type}'`).join(' ')
-  const modules = types.map((type) => BUSINESS_TYPES[type].module)
-  const startDate = [analysisPeriod.start_date, comparisonPeriod?.start_date].filter(Boolean).sort()[0]
-  const endDate = [analysisPeriod.end_date, comparisonPeriod?.end_date].filter(Boolean).sort().at(-1)
-  const placeholders = modules.map(() => '?').join(',')
+  const params = []
+  const scopes = types.map((type) => {
+    params.push(BUSINESS_TYPES[type].module, records.filter((record) => record.business_type === type).map((record) => record.id))
+    // Stage containers and stage items have independent IDs in the same log module.
+    const itemOnly = type === 'stage_plan'
+      ? " AND action NOT IN ('新增阶段','编辑阶段','调整阶段顺序','删除阶段','套用阶段模板')" : ''
+    return `(module=? AND target_id=ANY(?::BIGINT[])${itemOnly})`
+  })
+  // One target-scoped history read: an event may be backfilled after the report
+  // period, and subsequent reopen/pause entries are needed for as-of reasoning.
+  if (identityPeriod) params.push(`${identityPeriod.start_date}T00:00:00+08:00`,
+    `${formatDate(addDays(parseDate(identityPeriod.end_date), 1))}T00:00:00+08:00`)
   const sql = `/* period_analysis:logs */
     SELECT id log_id,CASE module ${moduleCases} END business_type,target_id,operation_id,user_id operator_id,action,
-      field_name,old_value,new_value,created_at
+      ${identityPeriod ? '' : 'field_name,old_value,new_value,'}created_at
     FROM pms_op_log
-    WHERE module IN (${placeholders})
-      AND created_at>=?::DATE AND created_at<?::DATE+INTERVAL '1 day'
+    WHERE (${scopes.join(' OR ')})${identityPeriod ? ' AND created_at>=?::timestamptz AND created_at<?::timestamptz' : ''}
     ORDER BY created_at,id`
-  return database.prepare(sql).all(...modules, startDate, endDate)
+  return database.prepare(sql).all(...params)
 }
 
-async function buildReportPeople(records, logs, analysisPeriod, database) {
+async function buildBusinessRelatedPeople(records, logs, analysisPeriod, database) {
   const people = new Map()
   const recordsByKey = new Map(records.map((record) => [`${record.business_type}:${record.id}`, record]))
   const sourceOrder = ['business_role', 'creator', 'updater', 'operator']
@@ -387,7 +430,7 @@ async function buildReportPeople(records, logs, analysisPeriod, database) {
     addPerson(record.updater_id, 'updater', recordKey)
   }
   for (const log of logs) {
-    if (!dateInPeriod(log.created_at, analysisPeriod)) continue
+    if (!dateInPeriod(dateOnly(log.created_at), analysisPeriod)) continue
     const recordKey = `${log.business_type}:${Number(log.target_id)}`
     if (!recordsByKey.has(recordKey)) continue
     const operationKey = log.operation_id
@@ -453,23 +496,126 @@ function statusEvent(type, oldStatus, newStatus) {
   return null
 }
 
-function overdueDate(record, completionDate, reopenedDate) {
-  if (!record.plan_date || record.business_type === 'bug') return null
-  if (record.business_type === 'stage_plan' && record.parent_project_paused) return null
-  const due = parseDate(record.plan_date)
-  const dueEntered = formatDate(addDays(due, 1))
-  let entered = record.created_date && record.created_date > dueEntered ? record.created_date : dueEntered
-  if (record.is_completed && completionDate && completionDate <= record.plan_date) return null
-  if (!record.is_completed && reopenedDate && reopenedDate > entered) entered = reopenedDate
-  return entered
+function historyKey(type, id) {
+  return `${type}:${Number(id)}`
 }
 
-function createEvents(records, logs, cutoffDate) {
+function operationKey(log) {
+  return `${historyKey(log.business_type, log.target_id)}:${log.operation_id || `legacy:${log.created_at}:${log.operator_id || ''}`}`
+}
+
+function statusDateField(type, status) {
+  if (isPausedStatus(type, status)) return type === 'requirement' ? 'pause_date' : type === 'stage_plan' ? null : 'suspend_date'
+  if (type === 'bug' && Number(status) === 1) return 'resolved_date'
+  if (isCompletedStatus(type, status)) return type === 'bug' ? 'closed_date' : type === 'work_order' ? 'resolve_date' : 'actual_end_date'
+  return null
+}
+
+function buildHistories(records, logs) {
+  const histories = new Map(records.map((record) => [historyKey(record.business_type, record.id), {
+    record, transitions: [], fields: [], inconsistent: false,
+  }]))
+  const operations = new Map()
+  const orderedLogs = [...logs].sort((a, b) => parseBusinessTimestamp(a.created_at) - parseBusinessTimestamp(b.created_at)
+    || number(a.log_id) - number(b.log_id))
+  for (const log of orderedLogs) {
+    const key = operationKey(log)
+    if (!operations.has(key)) operations.set(key, new Map())
+    operations.get(key).set(log.field_name, log)
+  }
+  for (const log of orderedLogs) {
+    const history = histories.get(historyKey(log.business_type, log.target_id))
+    if (!history || String(log.old_value ?? '') === String(log.new_value ?? '')) continue
+    history.fields.push(log)
+    if (log.field_name !== 'status') continue
+    const field = statusDateField(log.business_type, log.new_value)
+    const actualDate = field ? dateOnly(operations.get(operationKey(log))?.get(field)?.new_value) : null
+    const previous = history.transitions.at(-1)
+    if (previous && previous.status !== Number(log.old_value)) history.inconsistent = true
+    history.transitions.push({
+      status: Number(log.new_value), previous_status: Number(log.old_value),
+      date: actualDate || dateOnly(log.created_at), actual_date: actualDate,
+      date_source: actualDate ? 'operation_business_date' : 'recorded_at_fallback', log,
+    })
+  }
+  for (const history of histories.values()) {
+    const { record, transitions } = history
+    const last = transitions.at(-1)
+    // A current business date is evidence for the last matching transition only;
+    // a retained date on a reopened record must not become a new completion.
+    if (last && last.status === record.status && !last.actual_date) {
+      const currentDate = isCompletedStatus(record.business_type, last.status) ? record.actual_date
+        : isPausedStatus(record.business_type, last.status) ? record.pause_date
+          : record.business_type === 'bug' && last.status === 1 ? record.resolved_date : null
+      if (currentDate) Object.assign(last, { date: currentDate, actual_date: currentDate, date_source: 'current_business_date' })
+    }
+    if (last && last.status !== record.status) history.inconsistent = true
+  }
+  return histories
+}
+
+function completionStateAt(record, cutoff, history, today) {
+  const transitions = history?.transitions || []
+  const ordered = [...transitions].sort((a, b) => a.date.localeCompare(b.date)
+    || parseBusinessTimestamp(a.log.created_at) - parseBusinessTimestamp(b.log.created_at) || number(a.log.log_id) - number(b.log.log_id))
+  const atCutoff = ordered.filter((event) => event.date <= cutoff)
+  const latest = atCutoff.at(-1)
+  let status = latest?.status ?? ordered[0]?.previous_status ?? record.status
+  if (cutoff === today) status = record.status
+  if (history?.inconsistent && cutoff < today) return { completed: false, date: null, unknown: true }
+  const complete = isCompletedStatus(record.business_type, status)
+  if (!complete) {
+    // Absence of a retained completion date is not evidence that an old item
+    // was unfinished at a historical cutoff (completion may have been cleared).
+    // Today's status, or a record not created yet at the cutoff, is direct evidence.
+    const unknown = cutoff < today && !transitions.length
+      && (!record.created_date || record.created_date <= cutoff)
+    return { completed: false, date: null, unknown }
+  }
+  const completion = [...atCutoff].reverse().find((event) => isCompletedStatus(record.business_type, event.status))
+  const date = completion?.actual_date || completion?.date || (record.is_completed ? record.actual_date : null)
+  return { completed: Boolean(date && date <= cutoff), date, unknown: !date }
+}
+
+function historicalOverdueDates(record, history, cutoffDate) {
+  if (!record.plan_date || record.business_type === 'bug') return []
+  if (record.business_type === 'stage_plan' && record.parent_project_paused) return []
+  const dueEntered = formatDate(addDays(parseDate(record.plan_date), 1))
+  const entered = record.created_date && record.created_date > dueEntered ? record.created_date : dueEntered
+  if (entered > cutoffDate || history?.inconsistent) return []
+  let transitions = [...(history?.transitions || [])]
+  if (!transitions.length) {
+    const date = record.is_completed ? record.actual_date : record.is_paused ? record.pause_date : null
+    if (date) transitions = [{ date, status: record.status, previous_status: null }]
+    else if (record.is_completed || record.is_paused
+      || (record.business_type === 'requirement' && calculateRequirementOverdue(record.plan_date, record.status, cutoffDate) === null)) return []
+  }
+  transitions.sort((a, b) => a.date.localeCompare(b.date)
+    || number(a.log?.log_id) - number(b.log?.log_id))
+  const eligible = (status) => !isCompletedStatus(record.business_type, status) && !isPausedStatus(record.business_type, status)
+    && (record.business_type !== 'requirement' || calculateRequirementOverdue(record.plan_date, status, cutoffDate) !== null)
+  let status = transitions[0]?.previous_status ?? (transitions.length ? null : record.status)
+  // A completion/pause dated the day after the deadline does not undo that
+  // day's entry into overdue. Only a prior-day terminal state prevents entry.
+  for (const transition of transitions.filter((event) => event.date < entered)) status = transition.status
+  const dates = eligible(status) ? [entered] : []
+  for (const transition of transitions) {
+    if (transition.date < entered || transition.date > cutoffDate) continue
+    if (!eligible(status) && eligible(transition.status)) dates.push(transition.date)
+    status = transition.status
+  }
+  return dates
+}
+
+function createEvents(records, logs, cutoffDate, eventTimeBasis = 'actual', histories = buildHistories(records, logs), createdOnly = false) {
   const recordMap = new Map(records.map((record) => [`${record.business_type}:${record.id}`, record]))
+  const transitionsByLog = new Map([...histories.values()].flatMap((history) => history.transitions.map((event) => [event.log, event])))
   const events = []
   for (const record of records) {
-    if (record.created_date) events.push({ type: 'created', date: record.created_date, record })
+    if (record.created_date) events.push({ type: 'created', date: record.created_date, actual_date: record.created_date,
+      recorded_at: record.created_at, date_source: 'created_at', record })
   }
+  if (createdOnly) return events
 
   const dedupe = new Set()
   const operationFields = new Map()
@@ -477,68 +623,78 @@ function createEvents(records, logs, cutoffDate) {
     'owner_id', 'owner_ids', 'member_ids', 'assignee_id', 'follower_id', 'collaborator_ids',
     'expected_end_date', 'expected_resolve_date', 'current_due_date', 'priority', 'severity', 'urgency',
   ])
+  const isImportantChange = log => importantFields.has(log.field_name)
+    || (log.field_name === 'status' && ['paused', 'resumed'].includes(statusEvent(log.business_type, log.old_value, log.new_value)))
+  const eventDate = log => eventTimeBasis === 'actual'
+    ? transitionsByLog.get(log)?.date || dateOnly(log.created_at) : dateOnly(log.created_at)
   for (const log of logs) {
-    if (!log.operation_id) continue
-    const key = `${log.business_type}:${Number(log.target_id)}:${log.operation_id}`
+    const key = operationKey(log)
     if (!operationFields.has(key)) operationFields.set(key, new Map())
     operationFields.get(key).set(log.field_name, log)
   }
   for (const log of logs) {
     const record = recordMap.get(`${log.business_type}:${Number(log.target_id)}`)
     if (!record || String(log.old_value ?? '') === String(log.new_value ?? '')) continue
-    const date = dateOnly(log.created_at)
+    const recordedDate = dateOnly(log.created_at)
+    const transition = transitionsByLog.get(log)
+    const date = eventTimeBasis === 'actual' ? transition?.date || recordedDate : recordedDate
     if (log.field_name === 'status') {
       const eventType = statusEvent(record.business_type, log.old_value, log.new_value)
       if (eventType) {
         const key = `${eventType}:${record.business_type}:${record.id}:${date}`
         if (!dedupe.has(key)) {
           dedupe.add(key)
-          const related = operationFields.get(`${record.business_type}:${record.id}:${log.operation_id}`)
-          const completionField = record.business_type === 'bug' ? 'closed_date'
-            : record.business_type === 'work_order' ? 'resolve_date'
-              : 'actual_end_date'
-          const actualDate = dateOnly(related?.get(completionField)?.new_value) || date
-          events.push({ type: eventType, date, actual_date: actualDate, record, log })
-        }
-      }
-      if (['paused', 'resumed'].includes(eventType)) {
-        const key = `important_adjustments:${record.business_type}:${record.id}:${log.operation_id || `${date}:status:${log.new_value}`}`
-        if (!dedupe.has(key)) {
-          dedupe.add(key)
-          events.push({ type: 'important_adjustments', date, record, log, changes: [log] })
+          events.push({ type: eventType, date, actual_date: transition?.actual_date || null,
+            recorded_at: log.created_at, date_source: transition?.date_source || 'recorded_at_fallback', record, log })
         }
       }
     }
-    if (importantFields.has(log.field_name)) {
-      const key = `important_adjustments:${record.business_type}:${record.id}:${log.operation_id || `${date}:${log.field_name}`}`
+    if (isImportantChange(log)) {
+      // One operation may backfill a pause date and change today's plan.
+      // Keep their distinct event dates, while grouping all same-day changes.
+      const key = `important_adjustments:${record.business_type}:${record.id}:${log.operation_id || log.field_name}:${date}`
       if (!dedupe.has(key)) {
         dedupe.add(key)
         const changes = log.operation_id
-          ? [...(operationFields.get(`${record.business_type}:${record.id}:${log.operation_id}`)?.values() || [])]
-            .filter((item) => importantFields.has(item.field_name)
+          ? [...(operationFields.get(operationKey(log))?.values() || [])]
+            .filter(item => isImportantChange(item) && eventDate(item) === date
               && String(item.old_value ?? '') !== String(item.new_value ?? ''))
+            .sort((a, b) => String(a.field_name).localeCompare(String(b.field_name)))
           : [log]
-        events.push({ type: 'important_adjustments', date, record, log, changes })
+        const source = changes.find(item => item.field_name === 'status') || changes[0]
+        const sourceTransition = transitionsByLog.get(source)
+        events.push({ type: 'important_adjustments', date, actual_date: sourceTransition?.actual_date || null,
+          recorded_at: source.created_at, date_source: sourceTransition?.date_source || 'recorded_at_fallback', record, log: source, changes })
       }
     }
   }
+  const recordedEventKeys = new Set(events.map((event) => `${event.type}:${historyKey(event.record.business_type, event.record.id)}`))
   for (const record of records) {
-    const completionDate = events
-      .filter((event) => event.type === 'completed'
-        && event.record.business_type === record.business_type && event.record.id === record.id)
-      .map((event) => event.actual_date || event.date)
-      .sort()[0] || record.actual_date
-    const reopenedDate = events
-      .filter((event) => event.record.business_type === record.business_type && event.record.id === record.id
-        && (event.type === 'reopened'
-          || (event.type === 'activated' && isCompletedStatus(record.business_type, event.log?.old_value))))
-      .map((event) => event.date)
-      .sort().at(-1)
-    const enteredOverdue = overdueDate(record, completionDate, reopenedDate)
-    if (!enteredOverdue) continue
-    events.push({ type: 'became_overdue', date: enteredOverdue, record })
-    if (!record.is_completed && currentOverdue(record, cutoffDate)) {
-      events.push({ type: 'new_overdue_unresolved', date: enteredOverdue, record })
+    const history = histories.get(historyKey(record.business_type, record.id))
+    if (eventTimeBasis === 'actual' && !history?.inconsistent) {
+      const businessDates = [
+        ['completed', isCompletedStatus(record.business_type, record.status) ? record.actual_date : null],
+        ['fixed', record.business_type === 'bug' && [1, 2].includes(record.status) ? record.resolved_date : null],
+        ['paused', isPausedStatus(record.business_type, record.status) ? record.pause_date : null],
+      ]
+      for (const [type, date] of businessDates) {
+        if (!date || date > cutoffDate || recordedEventKeys.has(`${type}:${historyKey(record.business_type, record.id)}`)) continue
+        // Retained dates cannot prove a new completion/fix after a recorded
+        // reopening. Existing complete event histories always take precedence.
+        const superseded = history?.transitions.some((transition) => transition.date > date
+          && ['activated', 'reopened'].includes(statusEvent(record.business_type, transition.previous_status, transition.status)))
+        if (superseded) continue
+        events.push({ type, date, actual_date: date, recorded_at: null,
+          date_source: 'current_business_date_without_status_log', record })
+      }
+    }
+    for (const enteredOverdue of historicalOverdueDates(record, histories.get(historyKey(record.business_type, record.id)), cutoffDate)) {
+      events.push({ type: 'became_overdue', date: enteredOverdue, actual_date: enteredOverdue,
+        recorded_at: null, date_source: 'derived_current_plan_and_status_history', record })
+      if (!record.is_completed && currentOverdue(record, cutoffDate)) {
+        events.push({ type: 'new_overdue_unresolved', date: enteredOverdue, actual_date: enteredOverdue,
+          recorded_at: null, date_source: 'derived_current_plan_and_status_history', record })
+      }
     }
   }
   return events
@@ -569,13 +725,22 @@ function uniquePeriodEvents(events, period) {
 function currentOverdue(record, cutoffDate) {
   if (record.is_completed || record.is_paused || !record.plan_date) return false
   if (record.business_type === 'stage_plan' && record.parent_project_paused) return false
-  return record.is_overdue || record.plan_date < cutoffDate
+  if (record.business_type === 'requirement') return calculateRequirementOverdue(record.plan_date, record.status, cutoffDate) === 1
+  return record.plan_date < cutoffDate
+}
+
+function isRejectedRequirement(record) {
+  return record.business_type === 'requirement' && [3, 13, 22].includes(record.status)
+}
+
+function isUnfinished(record) {
+  return !record.is_completed && !isRejectedRequirement(record)
 }
 
 function summarizeStock(types, records, cutoffDate) {
   const summarize = (items) => ({
     total: items.length,
-    unfinished: items.filter((record) => !record.is_completed).length,
+    unfinished: items.filter(isUnfinished).length,
     in_progress: items.filter((record) => BUSINESS_TYPES[record.business_type].inProgress.includes(record.status)).length,
     paused: items.filter((record) => record.is_paused).length,
     overdue: items.filter((record) => currentOverdue(record, cutoffDate)).length,
@@ -586,15 +751,25 @@ function summarizeStock(types, records, cutoffDate) {
   }
 }
 
-function summarizePlan(types, records, planPeriod) {
+function selectPlanRecords(records, planPeriod, completionCutoff, logs = [], cutoffDate = completionCutoff, histories = buildHistories(records, logs)) {
+  const selected = { planned: [], completed: [], pending: [], unknown: [] }
+  if (!planPeriod) return selected
+  for (const record of records) {
+    if (isRejectedRequirement(record) || record.is_paused || record.parent_project_paused || !dateInPeriod(record.plan_date, planPeriod)) continue
+    const state = completionStateAt(record, completionCutoff, histories.get(historyKey(record.business_type, record.id)), cutoffDate)
+    if (state.completed && state.date < planPeriod.start_date) continue
+    selected.planned.push(record)
+    selected[state.completed ? 'completed' : 'pending'].push(record)
+    if (state.unknown) selected.unknown.push(record)
+  }
+  return selected
+}
+
+function summarizePlan(types, records, planPeriod, completionCutoff, logs = [], cutoffDate = completionCutoff, histories = buildHistories(records, logs)) {
   if (!planPeriod) return null
   const summarize = (items) => {
-    const planned = items.filter((record) => !record.is_paused && !record.parent_project_paused
-      && dateInPeriod(record.plan_date, planPeriod)
-      && (!record.actual_date || record.actual_date >= planPeriod.start_date))
-    const completed = planned.filter((record) => record.actual_date
-      && dateInPeriod(record.actual_date, planPeriod)).length
-    return { planned: planned.length, completed, pending: planned.length - completed }
+    const selected = selectPlanRecords(items, planPeriod, completionCutoff, logs, cutoffDate, histories)
+    return { planned: selected.planned.length, completed: selected.completed.length, pending: selected.pending.length }
   }
   return {
     by_business_type: Object.fromEntries(types.map((type) => [type, summarize(records.filter((record) => record.business_type === type))])),
@@ -624,9 +799,11 @@ function selectFlowMetrics(flow, metrics) {
 
 function applyMetricSelection(result, metrics) {
   if (!Array.isArray(metrics) || !metrics.length) return result
-  result.period_flows.total = selectFlowMetrics(result.period_flows.total, metrics)
-  for (const type of Object.keys(result.period_flows.by_business_type)) {
-    result.period_flows.by_business_type[type] = selectFlowMetrics(result.period_flows.by_business_type[type], metrics)
+  if (result.period_flows) {
+    result.period_flows.total = selectFlowMetrics(result.period_flows.total, metrics)
+    for (const type of Object.keys(result.period_flows.by_business_type)) {
+      result.period_flows.by_business_type[type] = selectFlowMetrics(result.period_flows.by_business_type[type], metrics)
+    }
   }
   if (result.comparison) {
     result.comparison.metrics = Object.fromEntries(metrics.map((metric) => [metric, result.comparison.metrics[metric]]))
@@ -672,8 +849,13 @@ function buildTrend(events, period, granularity) {
     const key = bucketKey(current, granularity)
     if (!buckets.has(key)) buckets.set(key, emptyFlow())
   }
-  for (const event of uniquePeriodEvents(events, period)) {
+  const seen = new Set()
+  for (const event of events) {
+    if (!dateInPeriod(event.date, period)) continue
     const key = bucketKey(event.date, granularity)
+    const eventKey = `${key}:${event.type}:${event.record.business_type}:${event.record.id}`
+    if (seen.has(eventKey)) continue
+    seen.add(eventKey)
     if (buckets.has(key)) buckets.get(key)[event.type] += 1
   }
   return {
@@ -692,14 +874,14 @@ function groupValue(record, dimension) {
     product: [record.product_id, record.product_name],
     project: [record.project_id, record.project_name],
     requirement: [record.requirement_id, record.requirement_name],
-    status: [record.status, String(record.status)],
-    priority: [record.priority, record.priority === null ? null : String(record.priority)],
+    status: [`${record.business_type}:${record.status}`, String(record.status)],
+    priority: [`${record.business_type}:${record.priority}`, record.priority === null ? null : String(record.priority)],
     plan_date: [record.plan_date, record.plan_date],
   }
   return mapping[dimension] || [null, null]
 }
 
-function buildGroupings(dimensions, records, events, analysisPeriod, planPeriod, cutoffDate) {
+function buildGroupings(dimensions, records, events, analysisPeriod, planPeriod, cutoffDate, completionCutoff, logs, histories) {
   const result = {}
   for (const dimension of dimensions || []) {
     const groups = new Map()
@@ -715,7 +897,7 @@ function buildGroupings(dimensions, records, events, analysisPeriod, planPeriod,
         groups.get(mapKey).records.push(record)
       }
     }
-    result[dimension] = [...groups.values()].map((group) => {
+    result[dimension] = [...groups.values()].sort((a, b) => String(a.key).localeCompare(String(b.key))).map((group) => {
       const ids = new Set(group.records.map((record) => `${record.business_type}:${record.id}`))
       const groupEvents = events.filter((event) => ids.has(`${event.record.business_type}:${event.record.id}`))
       return {
@@ -723,7 +905,8 @@ function buildGroupings(dimensions, records, events, analysisPeriod, planPeriod,
         label: group.label,
         period_flows: summarizeFlow([...new Set(group.records.map((record) => record.business_type))], groupEvents, analysisPeriod).total,
         current_stock: summarizeStock([...new Set(group.records.map((record) => record.business_type))], group.records, cutoffDate).total,
-        plan_outlook: summarizePlan([...new Set(group.records.map((record) => record.business_type))], group.records, planPeriod)?.total || null,
+        plan_outlook: summarizePlan([...new Set(group.records.map((record) => record.business_type))], group.records,
+          planPeriod, completionCutoff, logs, cutoffDate, histories)?.total || null,
       }
     })
   }
@@ -731,104 +914,167 @@ function buildGroupings(dimensions, records, events, analysisPeriod, planPeriod,
 }
 
 function candidate(record, cutoffDate) {
+  const name = summarizeRichText(record.name)
+  const overdue = currentOverdue(record, cutoffDate)
   return {
     business_type: record.business_type,
     business_type_label: BUSINESS_TYPES[record.business_type].label,
     target_id: record.id,
-    name: record.name,
+    name: name.length > 300 ? `${name.slice(0, 300)}…` : name,
+    name_truncated: name.length > 300,
+    product_id: record.product_id ?? null,
+    project_id: record.project_id ?? null,
+    requirement_id: record.requirement_id ?? null,
+    parent_task_id: record.parent_task_id ? Number(record.parent_task_id) : null,
+    detail_target_id: record.business_type === 'stage_plan' ? record.project_id : record.id,
     project_name: record.project_name || null,
     owner_name: record.owner_name || null,
+    owner_ids: record.owner_ids,
+    creator_id: record.creator_id,
+    updater_id: record.updater_id,
+    people: Object.entries(record.person_relations || {}).map(([id, relations]) => ({
+      user_id: Number(id), name: record.person_names[id] || `用户ID ${id}`, relations,
+    })),
     status: record.status,
     priority: record.priority,
     plan_date: record.plan_date,
-    overdue_days: record.plan_date && record.plan_date < cutoffDate
+    is_overdue: overdue,
+    overdue_days: overdue && record.plan_date && record.plan_date < cutoffDate
       ? daysInRange(parseDate(record.plan_date), parseDate(cutoffDate)) - 1
       : 0,
   }
 }
 
-function limitedCandidates(items, limit, cutoffDate) {
-  const sorted = [...items].sort((a, b) => {
-    const byPriority = number(b.priority) - number(a.priority)
-    if (byPriority) return byPriority
-    return String(a.plan_date || '9999-12-31').localeCompare(String(b.plan_date || '9999-12-31'))
-  })
-  return {
-    items: sorted.slice(0, limit).map((record) => candidate(record, cutoffDate)),
-    total: sorted.length,
-    has_more: sorted.length > limit,
+// These are inputs to the actual candidate display, not a copy of database rows.
+// Keep raw text raw here: sanitizing rich text belongs after the page slice.
+function candidateTokenFields(record, cutoffDate) {
+  return [record.business_type, record.id, record.name,
+    record.product_id, record.project_id, record.requirement_id, number(record.parent_task_id) || null,
+    record.project_name || null, record.owner_name || null, record.owner_ids,
+    record.creator_id, record.updater_id, record.status, record.priority, record.plan_date,
+    currentOverdue(record, cutoffDate), Object.entries(record.person_relations || {})
+      .map(([id, relations]) => [id, record.person_names[id] || `用户ID ${id}`, relations])]
+}
+
+function flowTokenFields(group, cutoffDate) {
+  const event = group.latest
+  const changes = []
+  const operators = new Set()
+  let changeCount = 0
+  for (const item of group.events) {
+    const operator = Number(item.log?.operator_id)
+    if (Number.isInteger(operator) && operator > 0) operators.add(operator)
+    for (const change of item.changes || (item.log ? [item.log] : [])) {
+      changeCount++
+      if (changes.length < 50) changes.push([dateOnly(change.created_at) || event.date,
+        number(change.operator_id) || null, change.field_name, change.old_value ?? null, change.new_value ?? null])
+    }
   }
+  return [candidateTokenFields(event.record, cutoffDate), event.date,
+    event.actual_date || (['created', 'became_overdue', 'new_overdue_unresolved'].includes(event.type) ? event.date : null),
+    dateOnly(event.recorded_at || event.log?.created_at || (event.type === 'created' ? event.record.created_at : null)),
+    event.date_source || (event.type === 'created' ? 'created_at' : 'derived'), [...operators], changeCount, changes]
 }
 
 function flowCandidate(group, cutoffDate) {
-  const event = [...group].sort((a, b) => String(b.date).localeCompare(String(a.date)))[0]
-  const changes = group.flatMap((item) => item.changes || (item.log ? [item.log] : [])).map((change) => ({
-    event_date: dateOnly(change.created_at) || event.date,
-    field_name: change.field_name,
-    old_value: change.old_value ?? null,
-    new_value: change.new_value ?? null,
-  }))
+  const event = group.latest
+  const rawChanges = group.events.flatMap((item) => item.changes || (item.log ? [item.log] : []))
+  const changes = rawChanges.slice(0, 50).map((change) => {
+    const oldValue = change.old_value == null ? null : summarizeRichText(change.old_value)
+    const newValue = change.new_value == null ? null : summarizeRichText(change.new_value)
+    return {
+      event_date: dateOnly(change.created_at) || event.date,
+      operator_id: change.operator_id ? Number(change.operator_id) : null,
+      field_name: change.field_name,
+      old_value: oldValue?.slice(0, 500) ?? null,
+      new_value: newValue?.slice(0, 500) ?? null,
+      value_truncated: [oldValue, newValue].some(value => value != null && value.length > 500),
+    }
+  })
   return {
     ...candidate(event.record, cutoffDate),
     event_date: event.date,
-    actual_date: event.actual_date || event.record.actual_date || null,
+    actual_date: event.actual_date || (['created', 'became_overdue', 'new_overdue_unresolved'].includes(event.type) ? event.date : null),
+    recorded_date: dateOnly(event.recorded_at || event.log?.created_at || (event.type === 'created' ? event.record.created_at : null)),
+    date_source: event.date_source || (event.type === 'created' ? 'created_at' : 'derived'),
+    operator_ids: [...new Set(group.events.map(item => Number(item.log?.operator_id)).filter(id => Number.isInteger(id) && id > 0))],
     changes,
+    changes_total: rawChanges.length,
+    changes_truncated: rawChanges.length > 50 || changes.some(change => change.value_truncated),
   }
+}
+
+function selectFlowGroups(events, period, metric) {
+  const groups = new Map()
+  for (const event of events) {
+    if (event.type !== metric || !dateInPeriod(event.date, period)) continue
+    const key = `${event.record.business_type}:${event.record.id}`
+    if (!groups.has(key)) groups.set(key, { events: [], latest: event })
+    const group = groups.get(key)
+    group.events.push(event)
+    if (event.date > group.latest.date) group.latest = event
+  }
+  return [...groups.values()].sort((a, b) => String(b.latest.date).localeCompare(String(a.latest.date))
+    || number(b.latest.record.priority) - number(a.latest.record.priority)
+    || a.latest.record.business_type.localeCompare(b.latest.record.business_type)
+    || a.latest.record.id - b.latest.record.id)
 }
 
 function buildFlowCandidates(events, period, metrics, limit, cutoffDate) {
   const selected = Array.isArray(metrics) && metrics.length ? metrics : Object.keys(emptyFlow())
-  const periodEvents = events.filter((event) => dateInPeriod(event.date, period))
   return Object.fromEntries(selected.map((type) => {
-    const groups = new Map()
-    for (const event of periodEvents.filter((item) => item.type === type)) {
-      const key = `${event.record.business_type}:${event.record.id}`
-      if (!groups.has(key)) groups.set(key, [])
-      groups.get(key).push(event)
-    }
-    const items = [...groups.values()].map((group) => flowCandidate(group, cutoffDate))
-      .sort((a, b) => String(b.event_date).localeCompare(String(a.event_date))
-        || Number(b.priority || 0) - Number(a.priority || 0))
+    const items = selectFlowGroups(events, period, type)
     return [type, {
-      items: items.slice(0, limit),
+      items: items.slice(0, limit).map(group => flowCandidate(group, cutoffDate)),
       total: items.length,
       has_more: items.length > limit,
     }]
   }))
 }
 
-function buildRisks(records, cutoffDate, riskPeriod, limit) {
+function selectRiskItems(records, cutoffDate, riskPeriod, metric) {
   const period = riskPeriod || {
     start_date: cutoffDate,
     end_date: formatDate(addDays(parseDate(cutoffDate), 7)),
   }
-  const overdue = records.filter((record) => currentOverdue(record, cutoffDate))
-  const dueSoon = records.filter((record) => !record.is_completed && !record.is_paused
-    && !record.parent_project_paused
-    && dateInPeriod(record.plan_date, period))
-  const paused = records.filter((record) => record.is_paused)
-  const missingDelivery = records.filter((record) => record.business_type === 'stage_plan'
-    && record.required_delivery && record.delivery_count === 0 && !record.parent_project_paused)
-  const missingPlanDate = records.filter((record) => !record.plan_date && !['bug'].includes(record.business_type))
-  const ownerCounts = new Map()
-  for (const record of overdue) {
-    if (!record.owner_id) continue
-    const item = ownerCounts.get(record.owner_id) || { owner_id: record.owner_id, owner_name: record.owner_name, overdue_count: 0 }
-    item.overdue_count += 1
-    ownerCounts.set(record.owner_id, item)
+  if (metric === 'workload_concentration') {
+    const ownerCounts = new Map()
+    for (const record of records.filter(record => currentOverdue(record, cutoffDate))) {
+      for (const id of new Set(record.owner_ids)) {
+        const item = ownerCounts.get(id) || {
+          owner_id: id, owner_name: record.person_names[id] || `用户ID ${id}`, overdue_count: 0,
+        }
+        item.overdue_count += 1
+        ownerCounts.set(id, item)
+      }
+    }
+    return [...ownerCounts.values()].filter(item => item.overdue_count >= 2)
+      .sort((a, b) => b.overdue_count - a.overdue_count || a.owner_id - b.owner_id)
   }
-  const concentration = [...ownerCounts.values()].filter((item) => item.overdue_count >= 2)
-    .sort((a, b) => b.overdue_count - a.overdue_count)
-  return {
-    overdue: limitedCandidates(overdue, limit, cutoffDate),
-    due_soon: limitedCandidates(dueSoon, limit, cutoffDate),
-    paused: limitedCandidates(paused, limit, cutoffDate),
-    missing_delivery: limitedCandidates(missingDelivery, limit, cutoffDate),
-    missing_plan_date: limitedCandidates(missingPlanDate, limit, cutoffDate),
-    workload_concentration: {
-      items: concentration.slice(0, limit), total: concentration.length, has_more: concentration.length > limit,
-    },
+  const selectors = {
+    overdue: record => currentOverdue(record, cutoffDate),
+    due_soon: record => !record.is_completed && !record.is_paused && !record.parent_project_paused
+      && !isRejectedRequirement(record)
+      && dateInPeriod(record.plan_date, period),
+    paused: record => record.is_paused,
+    missing_delivery: record => record.business_type === 'stage_plan'
+      && record.required_delivery && record.delivery_count === 0 && !record.parent_project_paused,
+    missing_plan_date: record => !record.plan_date && record.business_type !== 'bug',
   }
+  return records.filter(selectors[metric]).sort((a, b) => number(b.priority) - number(a.priority)
+    || String(a.plan_date || '9999-12-31').localeCompare(String(b.plan_date || '9999-12-31'))
+    || a.business_type.localeCompare(b.business_type) || a.id - b.id)
+}
+
+function buildRisks(records, cutoffDate, riskPeriod, limit) {
+  return Object.fromEntries(['overdue', 'due_soon', 'paused', 'missing_delivery', 'missing_plan_date', 'workload_concentration']
+    .map(metric => {
+      const items = selectRiskItems(records, cutoffDate, riskPeriod, metric)
+      return [metric, {
+        items: items.slice(0, limit).map(item => metric === 'workload_concentration' ? item : candidate(item, cutoffDate)),
+        total: items.length, has_more: items.length > limit,
+      }]
+    }))
 }
 
 function qualitySummary(records, events, period) {
@@ -838,9 +1084,9 @@ function qualitySummary(records, events, period) {
     && (event.actual_date || event.date) <= event.record.plan_date).length
   const delayed = completed.filter((event) => event.record.plan_date
     && (event.actual_date || event.date) > event.record.plan_date).length
-  const scheduleAdjustments = periodEvents.filter((event) => event.type === 'important_adjustments'
-    && ['expected_end_date', 'expected_resolve_date', 'current_due_date'].includes(event.log?.field_name)
-  ).length
+  const scheduleAdjustments = uniquePeriodEvents(events.filter(event => event.type === 'important_adjustments'
+    && (event.changes || [event.log]).some(change =>
+      ['expected_end_date', 'expected_resolve_date', 'current_due_date'].includes(change?.field_name))), period).length
   const stageItems = records.filter((record) => record.business_type === 'stage_plan' && record.required_delivery)
   return {
     on_time_completed: onTime,
@@ -856,34 +1102,41 @@ function qualitySummary(records, events, period) {
   }
 }
 
-async function loadFinancials(analysisPeriod, planPeriod, database) {
+async function loadFinancials(analysisPeriod, planPeriod, database, projectIds) {
   const plan = planPeriod || analysisPeriod
   const sql = `/* period_analysis:financials */
+    WITH scoped_contracts AS (
+      SELECT contract.id,contract.contract_amount,contract.signed_date
+      FROM pms_project_contract contract
+      JOIN pms_project project ON project.id=contract.project_id AND project.is_deleted=0
+      WHERE contract.is_deleted=0 AND project.id=ANY(?::BIGINT[])
+    ), scoped_stages AS (
+      SELECT stage.id,stage.planned_amount
+      FROM pms_project_payment_stage stage
+      JOIN scoped_contracts contract ON contract.id=stage.contract_id
+      WHERE stage.is_deleted=0
+    ), scoped_payments AS (
+      SELECT payment.payment_amount,payment.created_at,payment.payment_month
+      FROM pms_project_payment_record payment
+      JOIN scoped_stages stage ON stage.id=payment.stage_id
+      WHERE payment.is_deleted=0
+    )
     SELECT
       COUNT(DISTINCT contract.id)::INTEGER contract_count,
       COALESCE(SUM(contract.contract_amount),0)::NUMERIC contract_amount,
-      COALESCE((SELECT SUM(stage.planned_amount) FROM pms_project_payment_stage stage
-        JOIN pms_project_contract c ON c.id=stage.contract_id AND c.is_deleted=0
-        WHERE stage.is_deleted=0),0)::NUMERIC planned_payment_amount,
-      COALESCE((SELECT SUM(payment.payment_amount) FROM pms_project_payment_record payment
-        JOIN pms_project_payment_stage stage ON stage.id=payment.stage_id AND stage.is_deleted=0
-        JOIN pms_project_contract c ON c.id=stage.contract_id AND c.is_deleted=0
-        WHERE payment.is_deleted=0),0)::NUMERIC actual_payment_amount,
-      COALESCE((SELECT SUM(stage.planned_amount) FROM pms_project_payment_stage stage
-        JOIN pms_project_contract c ON c.id=stage.contract_id AND c.is_deleted=0
-        WHERE stage.is_deleted=0),0)::NUMERIC
-        - COALESCE((SELECT SUM(payment.payment_amount) FROM pms_project_payment_record payment
-          JOIN pms_project_payment_stage stage ON stage.id=payment.stage_id AND stage.is_deleted=0
-          JOIN pms_project_contract c ON c.id=stage.contract_id AND c.is_deleted=0
-          WHERE payment.is_deleted=0),0)::NUMERIC unpaid_amount,
+      COALESCE((SELECT SUM(stage.planned_amount) FROM scoped_stages stage),0)::NUMERIC planned_payment_amount,
+      COALESCE((SELECT SUM(payment.payment_amount) FROM scoped_payments payment),0)::NUMERIC actual_payment_amount,
+      COALESCE((SELECT SUM(stage.planned_amount) FROM scoped_stages stage),0)::NUMERIC
+        - COALESCE((SELECT SUM(payment.payment_amount) FROM scoped_payments payment),0)::NUMERIC unpaid_amount,
       COUNT(DISTINCT contract.id) FILTER (WHERE contract.signed_date BETWEEN ?::DATE AND ?::DATE)::INTEGER period_contract_count,
       COALESCE(SUM(contract.contract_amount) FILTER (WHERE contract.signed_date BETWEEN ?::DATE AND ?::DATE),0)::NUMERIC period_contract_amount,
-      COALESCE((SELECT SUM(payment.payment_amount) FROM pms_project_payment_record payment
-        WHERE payment.is_deleted=0 AND payment.created_at>=?::DATE AND payment.created_at<?::DATE+INTERVAL '1 day'),0)::NUMERIC period_actual_payment_amount,
-      COALESCE((SELECT SUM(payment.payment_amount) FROM pms_project_payment_record payment
-        WHERE payment.is_deleted=0 AND payment.payment_month BETWEEN ?::DATE AND ?::DATE),0)::NUMERIC plan_period_payment_amount
-    FROM pms_project_contract contract WHERE contract.is_deleted=0`
+      COALESCE((SELECT SUM(payment.payment_amount) FROM scoped_payments payment
+        WHERE payment.created_at>=?::DATE AND payment.created_at<?::DATE+INTERVAL '1 day'),0)::NUMERIC period_actual_payment_amount,
+      COALESCE((SELECT SUM(payment.payment_amount) FROM scoped_payments payment
+        WHERE payment.payment_month BETWEEN ?::DATE AND ?::DATE),0)::NUMERIC plan_period_payment_amount
+    FROM scoped_contracts contract`
   const row = await database.prepare(sql).get(
+    projectIds,
     analysisPeriod.start_date, analysisPeriod.end_date,
     analysisPeriod.start_date, analysisPeriod.end_date,
     analysisPeriod.start_date, analysisPeriod.end_date,
@@ -908,6 +1161,29 @@ function dataCutoff(now) {
 }
 
 async function analyzeBusinessPeriod(args, context, database = db, now = new Date()) {
+  const detailQuery = validatePeriodDetailQuery(args)
+  if (args.sections !== undefined && (!Array.isArray(args.sections) || !args.sections.length
+    || args.sections.some(section => typeof section !== 'string' || !PERIOD_SECTIONS.includes(section))
+    || new Set(args.sections).size !== args.sections.length)) {
+    throw argumentError('sections', '统计块必须为不重复且非空的有效统计块名称数组')
+  }
+  // Detail source alone determines dependencies; sections only controls summaries.
+  const selectedSections = detailQuery ? null : args.sections || null
+  const detailSection = detailQuery && { flow: 'period_flows', stock: 'current_stock', plan: 'plan_outlook',
+    risk: 'risk_candidates', people: 'report_people' }[detailQuery.source]
+  const wants = section => detailQuery ? section === detailSection : !selectedSections || selectedSections.includes(section)
+  if (args.filters?.person_scope !== undefined) {
+    if (args.filters.person_scope !== 'self') throw argumentError('filters.person_scope', '人员范围只支持 self')
+    if (Object.hasOwn(args.filters, 'person_ids')) throw argumentError('filters.person_ids', '本人范围不能同时提供人员标识')
+    const userId = Number(context?.user?.id)
+    if (!Number.isSafeInteger(userId) || userId < 1) {
+      throw Object.assign(new Error('本人范围需要已认证的员工身份'), { code: 'MCP_PERMISSION_DENIED' })
+    }
+    args = { ...args, filters: { ...args.filters, person_ids: [userId] } }
+  }
+  if (args.filters?.person_relation && !['related', 'business_role', 'creator', 'updater', 'operator'].includes(args.filters.person_relation)) {
+    throw argumentError('filters.person_relation', '人员关系必须为 related、business_role、creator、updater 或 operator')
+  }
   const analysisPeriod = resolvePeriod(args.analysis_period, now, 'analysis_period')
   const planPeriod = args.plan_period ? resolvePeriod(args.plan_period, now, 'plan_period') : null
   const riskPeriod = args.risk_period ? resolvePeriod(args.risk_period, now, 'risk_period') : null
@@ -915,78 +1191,283 @@ async function analyzeBusinessPeriod(args, context, database = db, now = new Dat
   const types = authorizedTypes(args, context)
   const detailLimit = Math.min(MAX_DETAIL_LIMIT, Math.max(0, Number(args.detail_limit ?? DEFAULT_DETAIL_LIMIT)))
   const cutoffDate = shanghaiDate(now)
+  const completionCutoff = args.completion_cutoff
+    ? formatDate(parseDate(args.completion_cutoff, 'completion_cutoff'))
+    : planPeriod && planPeriod.end_date < cutoffDate ? planPeriod.end_date : cutoffDate
+  if (completionCutoff > cutoffDate) throw argumentError('completion_cutoff', '完成截止日不能晚于上海时区今天')
+  const eventTimeBasis = args.event_time_basis || 'actual'
+  if (!['actual', 'recorded'].includes(eventTimeBasis)) throw argumentError('event_time_basis', '事件时间口径必须是 actual 或 recorded')
+  const selectedMetrics = detailQuery?.source === 'flow' ? [detailQuery.metric]
+    : args.metrics?.length ? args.metrics : Object.keys(emptyFlow())
+  const requiresHistory = selectedMetrics.some(metric => metric !== 'created')
+  const personNeedsHistory = args.filters?.person_ids?.length && ['related', 'operator'].includes(args.filters.person_relation || 'related')
+  const needsGroupings = wants('groupings') && Boolean(args.group_by?.length)
+  const needsPersonGrouping = needsGroupings && args.group_by.includes('person')
+  const needsCandidatePeople = !detailQuery && detailLimit > 0 && (wants('flow_candidates') || wants('risk_candidates'))
+  const needsDetailNames = Boolean(detailQuery && detailQuery.source !== 'people')
+  const needsDetailOperators = needsDetailNames && detailQuery.metric !== 'workload_concentration'
+  const needsPeople = wants('report_people') || needsPersonGrouping || needsCandidatePeople
+  const needsPlan = Boolean(planPeriod) && (wants('plan_outlook') || needsGroupings)
+  const needsFlows = wants('period_flows') || wants('flow_candidates')
+    || (wants('comparison') && Boolean(comparisonPeriod)) || (wants('trend') && Boolean(args.trend_granularity)) || needsGroupings
+  const needsEvents = needsFlows || wants('quality_and_delivery')
+  const needsHistory = (!detailQuery && !selectedSections) || personNeedsHistory || needsPeople || needsDetailOperators || needsPlan
+    || (needsFlows && requiresHistory) || wants('quality_and_delivery')
+  const identityHistoryOnly = Boolean(detailQuery && !needsPlan && !(needsFlows && requiresHistory))
   const errors = []
+  const componentCompleteness = {
+    business_records: true, event_history: needsHistory ? true : null,
+    period_flows: needsFlows ? true : null, current_stock: wants('current_stock') || needsGroupings ? true : null,
+    plan_outlook: needsPlan ? true : null, report_people: needsPeople ? true : null,
+    risk_candidates: wants('risk_candidates') ? true : null, financials: null,
+  }
   let records = []
   let logs = []
   try {
-    records = await loadRecords(types.authorized, args.filters || {}, database, cutoffDate)
+    const recordFilters = { ...(args.filters || {}) }
+    delete recordFilters.person_ids
+    delete recordFilters.person_relation
+    records = await loadRecords(types.authorized, recordFilters, database, cutoffDate, needsPeople && !detailQuery)
   } catch (error) {
-    errors.push(`业务记录统计失败：${error.message}`)
+    componentCompleteness.business_records = false
+    errors.push('业务记录统计失败，当前结果不完整，请稍后重试或联系管理员')
   }
-  try {
-    logs = await loadLogs(types.authorized, analysisPeriod, comparisonPeriod, database)
-  } catch (error) {
-    errors.push(`变更历史统计失败：${error.message}`)
-  }
-  const events = createEvents(records, logs, cutoffDate)
-  const periodFlows = summarizeFlow(types.authorized, events, analysisPeriod)
-  const currentStock = summarizeStock(types.authorized, records, cutoffDate)
-  const planOutlook = summarizePlan(types.authorized, records, planPeriod)
-  const flowCandidates = buildFlowCandidates(events, analysisPeriod, args.metrics, detailLimit, cutoffDate)
-  const riskCandidates = buildRisks(records, cutoffDate, riskPeriod, detailLimit)
-  let reportPeople = []
-  try {
-    reportPeople = await buildReportPeople(records, logs, analysisPeriod, database)
-  } catch (error) {
-    errors.push(`报告人员统计失败：${error.message}`)
-  }
-  let financials = { available: false }
-  if (context?.allowedMenuPaths?.has('/projects')) {
+  if (needsHistory) {
     try {
-      financials = await loadFinancials(analysisPeriod, planPeriod, database)
+      logs = await loadLogs(types.authorized, records, database, identityHistoryOnly ? analysisPeriod : null)
     } catch (error) {
-      errors.push(`合同付款统计失败：${error.message}`)
-      financials = { available: false, error: error.message }
+      componentCompleteness.event_history = false
+      errors.push('变更历史统计失败，依赖历史的统计不完整，请稍后重试或联系管理员')
     }
   }
-  return applyMetricSelection({
+  attachPersonRelations(records, logs, analysisPeriod)
+  records = records.filter(record => matchesFilters(record, args.filters || {}, cutoffDate))
+  for (const record of records) {
+    record.person_ids = Object.entries(record.person_relations)
+      .filter(([, relations]) => !args.filters?.person_relation || args.filters.person_relation === 'related'
+        || relations.includes(args.filters.person_relation))
+      .map(([id]) => Number(id))
+  }
+  const histories = needsHistory && !identityHistoryOnly ? buildHistories(records, logs) : new Map()
+  const inconsistentHistoryCount = [...histories.values()].filter(history => history.inconsistent).length
+  const historyLoaded = componentCompleteness.event_history
+  componentCompleteness.event_history = needsHistory ? historyLoaded && inconsistentHistoryCount === 0 : null
+  const events = needsEvents ? createEvents(records, logs, cutoffDate, eventTimeBasis, histories,
+    Boolean(selectedSections || detailQuery) && !requiresHistory && !wants('quality_and_delivery')) : []
+  const planSelection = selectPlanRecords(records, needsPlan ? planPeriod : null, completionCutoff, logs, cutoffDate, histories)
+  let reportPeople = []
+  if (needsPeople) {
+    try {
+      reportPeople = await buildBusinessRelatedPeople(records, logs, analysisPeriod, database)
+    } catch (error) {
+      componentCompleteness.report_people = false
+      errors.push('业务关联人员统计失败，人员范围不完整，请稍后重试或联系管理员')
+    }
+  }
+  let detailNamesComplete = true
+  if (needsDetailNames) {
+    const ids = [...new Set(records.flatMap(record => Object.keys(record.person_relations).map(Number)))]
+    try {
+      if (ids.length) {
+        const people = await database.prepare(`/* period_analysis:people */
+          SELECT id,real_name name FROM pms_user WHERE id IN (${ids.map(() => '?').join(',')})`).all(...ids)
+        const names = new Map(people.map(person => [Number(person.id), person.name]))
+        for (const record of records) {
+          for (const id of Object.keys(record.person_relations)) record.person_names[id] = names.get(Number(id)) || record.person_names[id]
+        }
+      }
+    } catch (error) {
+      detailNamesComplete = false
+      errors.push('明细关联人员姓名暂不可用，当前明细不完整，请稍后重试或联系管理员')
+    }
+  }
+  const personNames = new Map(reportPeople.map(person => [person.user_id, person.name]))
+  for (const record of records) {
+    for (const id of Object.keys(record.person_relations)) {
+      record.person_names[id] = personNames.get(Number(id)) || record.person_names[id] || `用户ID ${id}`
+    }
+  }
+  let financials = { available: false }
+  if (!detailQuery && wants('financials') && context?.allowedMenuPaths?.has('/projects')) {
+    componentCompleteness.financials = true
+    try {
+      const projectIds = [...new Set(records.map(record => record.business_type === 'project' ? record.id : record.project_id)
+        .filter(id => Number.isSafeInteger(id) && id > 0))]
+      financials = await loadFinancials(analysisPeriod, planPeriod, database, projectIds)
+    } catch (error) {
+      componentCompleteness.financials = false
+      errors.push('合同付款辅助统计暂不可用，不影响已完整取得的核心业务统计')
+      financials = { available: false, error: '合同付款辅助统计暂不可用，请稍后重试或联系管理员' }
+    }
+  } else if (selectedSections && wants('financials')) {
+    financials = { available: false, error: '当前账号无项目查询权限，合同付款统计不可用' }
+  }
+  const recordScopeComplete = componentCompleteness.business_records && (!personNeedsHistory || historyLoaded)
+  if (componentCompleteness.financials === true && !recordScopeComplete) {
+    componentCompleteness.financials = false
+    financials = { available: false, error: '关联业务范围不完整，合同付款辅助统计不可用' }
+  }
+  componentCompleteness.period_flows = needsFlows ? recordScopeComplete && (!requiresHistory || componentCompleteness.event_history) : null
+  componentCompleteness.current_stock = wants('current_stock') || needsGroupings ? recordScopeComplete : null
+  componentCompleteness.risk_candidates = wants('risk_candidates') ? recordScopeComplete : null
+  componentCompleteness.plan_outlook = needsPlan ? recordScopeComplete && historyLoaded && planSelection.unknown.length === 0 : null
+  componentCompleteness.report_people = needsPeople ? componentCompleteness.report_people && recordScopeComplete && historyLoaded : null
+  if (selectedSections && wants('risk_candidates') && needsCandidatePeople) {
+    componentCompleteness.risk_candidates = recordScopeComplete && componentCompleteness.report_people
+  }
+  if (needsDetailNames) componentCompleteness[detailSection] = componentCompleteness[detailSection]
+    && (!needsDetailOperators || historyLoaded) && detailNamesComplete
+  const requestedComponents = detailQuery ? [{ flow: 'period_flows', stock: 'current_stock', plan: 'plan_outlook',
+    risk: 'risk_candidates', people: 'report_people' }[detailQuery.source]]
+    : ['period_flows', 'current_stock', 'plan_outlook', 'report_people', 'risk_candidates']
+  const sectionCompleteness = selectedSections ? Object.fromEntries(selectedSections.map(section => {
+    const flowComplete = componentCompleteness.period_flows
+    const peopleComplete = componentCompleteness.report_people
+    const complete = {
+      ...componentCompleteness,
+      financials: financials.available ? componentCompleteness.financials : false,
+      comparison: comparisonPeriod ? flowComplete : null,
+      trend: args.trend_granularity ? flowComplete : null,
+      groupings: needsGroupings ? flowComplete && componentCompleteness.current_stock
+        && componentCompleteness.plan_outlook !== false && (!needsPersonGrouping || peopleComplete) : null,
+      quality_and_delivery: recordScopeComplete && componentCompleteness.event_history,
+      flow_candidates: flowComplete && (!needsCandidatePeople || peopleComplete),
+    }[section]
+    return [section, complete]
+  })) : null
+  const statisticsComplete = selectedSections
+    ? Object.values(sectionCompleteness).every(complete => complete !== false)
+    : requestedComponents.every(component => componentCompleteness[component] !== false)
+  const common = {
     resolved_periods: {
       analysis_period: analysisPeriod,
       plan_period: planPeriod,
       risk_period: riskPeriod,
       comparison_period: comparisonPeriod,
+      completion_cutoff: completionCutoff,
+      event_time_basis: eventTimeBasis,
     },
     data_cutoff: dataCutoff(now),
-    period_flows: periodFlows,
-    current_stock: currentStock,
-    plan_outlook: planOutlook,
-    comparison: comparisonPeriod
-      ? flowComparison(periodFlows, summarizeFlow(types.authorized, events, comparisonPeriod))
-      : null,
-    trend: buildTrend(events, analysisPeriod, args.trend_granularity),
-    groupings: buildGroupings(args.group_by || [], records, events, analysisPeriod, planPeriod, cutoffDate),
-    quality_and_delivery: qualitySummary(records, events, analysisPeriod),
-    financials,
-    flow_candidates: flowCandidates,
-    risk_candidates: riskCandidates,
-    report_people: reportPeople,
     coverage: {
       requested_business_types: types.requested,
       authorized_business_types: types.authorized,
       excluded_business_types: types.excluded,
-      statistics_complete: errors.length === 0,
-      candidate_details_truncated: [...Object.values(flowCandidates), ...Object.values(riskCandidates)]
-        .some((value) => value.has_more),
+      statistics_complete: statisticsComplete,
+      component_completeness: componentCompleteness,
+      ...(selectedSections ? { requested_sections: selectedSections, section_completeness: sectionCompleteness } : {}),
+      event_history_inconsistent_count: inconsistentHistoryCount,
+      event_time_basis: eventTimeBasis,
+      completion_cutoff: completionCutoff,
+      plan_completion_unknown_count: planSelection.unknown.length,
+      plan_completion_complete: componentCompleteness.plan_outlook !== false,
+      population_basis: 'current_non_deleted_records',
+      historical_ledger_complete: false,
+      person_relation: args.filters?.person_relation || 'related',
+      event_recorded_date_fallback_count: events.filter((event) => dateInPeriod(event.date, analysisPeriod)
+        && event.date_source === 'recorded_at_fallback').length,
+      candidate_details_truncated: false,
       historical_stock_supported: false,
       historical_plan_versions_supported: false,
-      unsupported_dimensions: ['formal_organization', 'receivables', 'budget', 'cost', 'roi', 'business_value'],
+      unsupported_dimensions: ['formal_organization', 'receivables', 'budget', 'cost', 'roi', 'business_value',
+        'bug_plan_dates', 'holiday_and_makeup_workdays', 'expected_resume_dates', 'business_dependencies', 'operation_permission_roster'],
       notes: [
+        'BUG 未维护计划日期；workday 仅按周一至周五计算，不包含节假日与调休工作日。',
+        '系统不提供统一预计恢复日期、结构化事项依赖或全量操作权限人员名册；这些能力的缺失或相关统计零值，不代表真实业务数量为零。',
         '当前存量和风险以本次执行时点为准。',
         '过去计划区间按当前有效计划日期统计，不还原历史计划版本。',
+        `计划完成情况以 ${completionCutoff} 为观察截止日；区间归属仍使用当前有效计划日期及当前暂停排除规则，不表示历史承诺快照。`,
+        '完成状态结合实际业务日期及可用状态操作顺序判断；pending 包含无法确认完成状态的记录，不确定数量单独披露。',
+        '总体仅含当前未删除且在授权范围内的业务记录，不是包含已删除记录的完整历史台账。',
+        '实际事件优先使用同次操作的业务日期；无业务日期时回退登记日期并单独计数，不用 updated_at 推断完成。',
+        '缺少状态日志但当前状态和实际业务日期可证实时，actual 口径补充相应事件并标明来源；recorded 口径不虚构登记日期，不能视为完整历史台账。',
+        ...(inconsistentHistoryCount ? [`${inconsistentHistoryCount} 个事项的状态历史不一致，相关事件流量不完整；仅请求新增指标时不依赖状态历史。`] : []),
+        '按状态或优先级分组时保留业务类型，避免不同业务的同一数字代码混为同一含义。',
+        '进入逾期按当前有效计划日和可用暂停、恢复、终态历史推导；历史计划版本、缺失暂停过程及父项目历史状态不能精确还原。',
+        '人员关系分别标明负责、创建、最后更新及分析期实际操作；关联事项统计不等于个人完成工作量，人员分组不能相加作为全局合计。',
+        '合同付款限于筛选后业务记录关联的项目；金额为这些项目的合同付款，不代表某个人的金额，也不是未筛选的全库金额。',
+        '明细与汇总使用相同筛选和集合；明细续页必须携带 datasetToken，数据或查询范围变化时拒绝继续，不提供冻结快照。',
         ...errors,
       ],
     },
-  }, args.metrics)
+  }
+  if (detailQuery) {
+    let items
+    let mapItem = item => item
+    let tokenItem = item => item
+    let membership = null
+    if (detailQuery.source === 'flow') {
+      items = selectFlowGroups(events, analysisPeriod, detailQuery.metric)
+      mapItem = group => flowCandidate(group, cutoffDate)
+      tokenItem = group => flowTokenFields(group, cutoffDate)
+    } else if (detailQuery.source === 'risk') {
+      items = selectRiskItems(records, cutoffDate, riskPeriod, detailQuery.metric)
+      if (detailQuery.metric !== 'workload_concentration') {
+        mapItem = record => candidate(record, cutoffDate)
+        tokenItem = record => candidateTokenFields(record, cutoffDate)
+      } else {
+        const owners = new Set(items.map(item => item.owner_id))
+        membership = records.filter(record => currentOverdue(record, cutoffDate))
+          .map(record => [historyKey(record.business_type, record.id), [...new Set(record.owner_ids)].filter(id => owners.has(id)).sort((a, b) => a - b)])
+          .filter(([, ids]) => ids.length).sort((a, b) => a[0].localeCompare(b[0]))
+      }
+    } else if (detailQuery.source === 'people') {
+      items = reportPeople
+      const people = new Set(items.map(item => item.user_id))
+      membership = records.map(record => [historyKey(record.business_type, record.id),
+        Object.entries(record.person_relations).filter(([id]) => people.has(Number(id)))])
+        .filter(([, relations]) => relations.length).sort((a, b) => a[0].localeCompare(b[0]))
+    } else {
+      const selectors = {
+        total: () => true,
+        unfinished: isUnfinished,
+        in_progress: record => BUSINESS_TYPES[record.business_type].inProgress.includes(record.status),
+        paused: record => record.is_paused,
+        overdue: record => currentOverdue(record, cutoffDate),
+      }
+      const selected = detailQuery.source === 'plan'
+        ? planSelection[detailQuery.metric]
+        : records.filter(selectors[detailQuery.metric])
+      const unknown = new Set(planSelection.unknown)
+      items = [...selected].sort((a, b) => a.business_type.localeCompare(b.business_type) || a.id - b.id)
+      mapItem = record => ({ ...candidate(record, cutoffDate), ...(detailQuery.source === 'plan' ? { completion_unknown: unknown.has(record) } : {}) })
+      tokenItem = record => [candidateTokenFields(record, cutoffDate), ...(detailQuery.source === 'plan'
+        ? [completionStateAt(record, completionCutoff, histories.get(historyKey(record.business_type, record.id)), cutoffDate)] : [])]
+    }
+    const datasetToken = createPeriodDatasetToken({
+      version: 2, user_id: context?.user?.id ?? null, allowed_menu_paths: [...(context?.allowedMenuPaths || [])].sort(),
+      query: { analysisPeriod, planPeriod, riskPeriod, comparisonPeriod, completionCutoff, eventTimeBasis, cutoffDate,
+        business_types: types.requested, filters: args.filters || {}, metrics: args.metrics || [],
+        source: detailQuery.source, metric: detailQuery.metric, page_size: detailQuery.pageSize },
+      complete: componentCompleteness[detailSection],
+      membership,
+    }, items, tokenItem)
+    assertPeriodDatasetToken(detailQuery, datasetToken)
+    const details = paginatePeriodDetails({ ...detailQuery, datasetToken }, items, mapItem)
+    return {
+      ...common, coverage: { ...common.coverage, candidate_details_truncated: details.items.length < details.total }, details,
+    }
+  }
+  const periodFlows = wants('period_flows') || (wants('comparison') && comparisonPeriod)
+    ? summarizeFlow(types.authorized, events, analysisPeriod) : null
+  const flowCandidates = wants('flow_candidates') ? buildFlowCandidates(events, analysisPeriod, args.metrics, detailLimit, cutoffDate) : {}
+  const riskCandidates = wants('risk_candidates') ? buildRisks(records, cutoffDate, riskPeriod, detailLimit) : {}
+  const result = {
+    ...common,
+    ...(wants('period_flows') ? { period_flows: periodFlows } : {}),
+    ...(wants('current_stock') ? { current_stock: summarizeStock(types.authorized, records, cutoffDate) } : {}),
+    ...(wants('plan_outlook') ? { plan_outlook: summarizePlan(types.authorized, records, planPeriod, completionCutoff, logs, cutoffDate, histories) } : {}),
+    ...(wants('comparison') ? { comparison: comparisonPeriod ? flowComparison(periodFlows, summarizeFlow(types.authorized, events, comparisonPeriod)) : null } : {}),
+    ...(wants('trend') ? { trend: buildTrend(events, analysisPeriod, args.trend_granularity) } : {}),
+    ...(wants('groupings') ? { groupings: buildGroupings(args.group_by || [], records, events, analysisPeriod, planPeriod, cutoffDate, completionCutoff, logs, histories) } : {}),
+    ...(wants('quality_and_delivery') ? { quality_and_delivery: qualitySummary(records, events, analysisPeriod) } : {}),
+    ...(wants('financials') ? { financials } : {}),
+    ...(wants('flow_candidates') ? { flow_candidates: flowCandidates } : {}),
+    ...(wants('risk_candidates') ? { risk_candidates: riskCandidates } : {}),
+    ...(wants('report_people') ? { report_people: reportPeople } : {}),
+    coverage: { ...common.coverage, candidate_details_truncated: [...Object.values(flowCandidates), ...Object.values(riskCandidates)]
+      .some(value => value.has_more) },
+  }
+  return applyMetricSelection(result, args.metrics)
 }
 
 module.exports = {
@@ -995,4 +1476,5 @@ module.exports = {
   SHANGHAI_TIME_ZONE,
   analyzeBusinessPeriod,
   resolvePeriod,
+  selectPlanRecords,
 }

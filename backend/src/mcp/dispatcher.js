@@ -1,3 +1,4 @@
+const { isDeepStrictEqual } = require('node:util')
 const {
   getCommandDefinition,
   getPublicToolDefinition,
@@ -8,6 +9,7 @@ const { dispatchQueryTool } = require('./queryTools')
 const { dispatchActionTool } = require('./actionTools')
 const { recordMcpAudit } = require('../services/mcpAuditService')
 const { normalizeSortField } = require('./sortFields')
+const { BUSINESS_TYPES } = require('../services/mcpPeriodAnalysisService')
 
 const ANALYSIS_DOMAIN_MENU_PATHS = {
   product: '/products',
@@ -152,6 +154,8 @@ function fieldLabel(schema, path) {
 }
 
 function validateSchemaValue(schema, value, path) {
+  if (schema === false) throw argumentError(path, `不允许的参数：${path}`)
+  if (schema === true || schema == null) return
   const types = Array.isArray(schema?.type) ? schema.type : schema?.type ? [schema.type] : []
   if (types.length && !types.some((type) => matchesJsonType(type, value))) {
     throw argumentError(path, `${path}参数类型不合法（${fieldLabel(schema, path)}类型不正确）`)
@@ -175,7 +179,8 @@ function validateSchemaValue(schema, value, path) {
   }
   if (schema?.format === 'date-or-date-time' && typeof value === 'string') {
     const dateTimePattern = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/
-    if (!isRealDate(value) && (!dateTimePattern.test(value) || Number.isNaN(Date.parse(value)))) {
+    if (!isRealDate(value) && (!dateTimePattern.test(value)
+      || !isRealDate(value.slice(0, 10)) || Number.isNaN(Date.parse(value)))) {
       throw argumentError(path, `${fieldLabel(schema, path)}必须是有效的YYYY-MM-DD日期或ISO 8601日期时间`)
     }
   }
@@ -194,6 +199,10 @@ function validateSchemaValue(schema, value, path) {
   if (schema?.maxItems && Array.isArray(value) && value.length > schema.maxItems) {
     throw argumentError(path, `${path}参数数量过多（${fieldLabel(schema, path)}最多允许${schema.maxItems}项）`)
   }
+  if (schema?.uniqueItems && Array.isArray(value)
+    && value.some((item, index) => value.slice(0, index).some(previous => isDeepStrictEqual(item, previous)))) {
+    throw argumentError(path, `${fieldLabel(schema, path)}不能包含重复项`)
+  }
   if (schema?.minimum !== undefined && typeof value === 'number' && value < schema.minimum) {
     throw argumentError(path, `${fieldLabel(schema, path)}不能小于${schema.minimum}`)
   }
@@ -209,7 +218,7 @@ function validateSchemaValue(schema, value, path) {
       throw argumentError(path, `${fieldLabel(schema, path)}最多保留两位小数`)
     }
   }
-  if (Array.isArray(value) && schema?.items) {
+  if (Array.isArray(value) && schema?.items !== undefined) {
     value.forEach((item, index) => validateSchemaValue(schema.items, item, `${path}[${index}]`))
   }
   if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
@@ -218,25 +227,52 @@ function validateSchemaValue(schema, value, path) {
     const missing = required.filter((key) => value[key] === undefined || value[key] === null || value[key] === '')
     if (missing.length) throw missingArgumentsError(schema, missing, path)
     for (const [key, childValue] of Object.entries(value)) {
-      const childSchema = properties[key] || (schema?.additionalProperties && schema.additionalProperties !== true
-        ? schema.additionalProperties
-        : null)
-      if (childSchema) validateSchemaValue(childSchema, childValue, `${path}.${key}`)
-      else if (schema?.additionalProperties === false) throw argumentError(`${path}.${key}`, `不支持的参数：${path}.${key}`)
+      const childPath = path ? `${path}.${key}` : key
+      if (Object.hasOwn(properties, key)) validateSchemaValue(properties[key], childValue, childPath)
+      else if (schema?.additionalProperties === false) throw argumentError(childPath, `不支持的参数：${childPath}`)
+      else if (schema?.additionalProperties !== undefined) validateSchemaValue(schema.additionalProperties, childValue, childPath)
     }
+  }
+  for (const rule of schema.allOf || []) validateSchemaValue(rule, value, path)
+  if (schema.if !== undefined) {
+    const branch = conditionMatches(schema.if, value) ? schema.then : schema.else
+    if (branch !== undefined) validateSchemaValue(branch, value, path)
+  }
+  if (schema.oneOf) {
+    const results = schema.oneOf.map((branch) => {
+      try {
+        validateSchemaValue(branch, value, path)
+        return null
+      } catch (error) {
+        if (error.code !== 'MCP_ARGUMENT_INVALID') throw error
+        return error
+      }
+    })
+    const matches = results.filter((error) => error === null).length
+    if (matches === 1) return
+    if (matches === 0) {
+      // Keep the selected discriminator's exact field errors; never merge sibling fields.
+      const index = schema.oneOf.findIndex((branch) => {
+        const discriminators = Object.entries(branch.properties || {}).filter(([, property]) => property?.const !== undefined)
+        if (discriminators.length) return discriminators.every(([field, property]) => value?.[field] === property.const)
+        const enumDiscriminators = Object.entries(branch.properties || {}).filter(([, property]) => Array.isArray(property?.enum))
+        return enumDiscriminators.length && enumDiscriminators.every(([field, property]) => property.enum.includes(value?.[field]))
+      })
+      if (index !== -1) throw results[index]
+    }
+    throw argumentError(path, `${fieldLabel(schema, path)}必须符合且仅符合一个参数分支`)
   }
 }
 
 function conditionMatches(condition, args) {
-  if (!condition) return false
-  if ((condition.required || []).some((field) => args[field] === undefined || args[field] === null || args[field] === '')) {
+  if (condition === undefined) return false
+  try {
+    validateSchemaValue(condition, args, '')
+    return true
+  } catch (error) {
+    if (error.code !== 'MCP_ARGUMENT_INVALID') throw error
     return false
   }
-  return Object.entries(condition.properties || {}).every(([field, schema]) => {
-    if (schema.const !== undefined) return args[field] === schema.const
-    if (schema.enum) return schema.enum.includes(args[field])
-    return true
-  })
 }
 
 function selectedInputSchema(schema, args) {
@@ -278,7 +314,7 @@ function validateToolArguments(definition, args) {
   const validationMessages = []
   for (const [key, value] of Object.entries(args)) {
     const property = schema.properties?.[key]
-    if (property) {
+    if (property !== undefined) {
       try {
         validateSchemaValue(property, value, key)
       } catch (error) {
@@ -344,6 +380,13 @@ function buildExecutePayload(publicToolName, publicArgs, result) {
 }
 
 function validateToolPermission(definition, args, context) {
+  if (definition.name === 'business_period_analysis'
+    && !Object.entries(BUSINESS_TYPES).some(([type, config]) => context.allowedMenuPaths?.has(config.menu)
+      && (!args.business_types?.length || args.business_types.includes(type)))) {
+    const error = new Error('当前账号没有所请求业务的分析权限')
+    error.code = 'MCP_PERMISSION_DENIED'
+    throw error
+  }
   const permissionCode = definition._meta?.permissionCode
   if (permissionCode && !(context.allowedPermissionCodes instanceof Set
     && context.allowedPermissionCodes.has(permissionCode))) {
@@ -411,6 +454,7 @@ async function dispatchMcpTool(name, args, context) {
       clientId: context.client.id,
       userId: context.user.id,
       employeeNo: context.user.employeeNo,
+      identityVersion: context.identityVersion,
       endpointType: context.endpointType,
       protocolMethod: 'tools/call',
       toolName: name,
@@ -433,6 +477,7 @@ async function dispatchMcpTool(name, args, context) {
     clientId: context.client.id,
     userId: context.user.id,
     employeeNo: context.user.employeeNo,
+    identityVersion: context.identityVersion,
     endpointType: context.endpointType,
     protocolMethod: 'tools/call',
     toolName: name,

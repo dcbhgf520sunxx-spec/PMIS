@@ -25,6 +25,10 @@ function where(q) {
   for (const [key, column] of Object.entries({ source_type: 'b.source_type', project_id: 'b.project_id', requirement_id: 'b.requirement_id', bug_type_id: 'b.bug_type_id', severity: 'b.severity', status: 'b.status', assignee_id: 'b.assignee_id', creator_id: 'b.creator_id' })) {
     if (q[key] !== undefined && q[key] !== '') { sql += ` AND ${column}=?`; params.push(Number(q[key])) }
   }
+  if (q.filter_assignee_id !== undefined && q.filter_assignee_id !== null && q.filter_assignee_id !== '') {
+    sql += ' AND b.assignee_id=?'
+    params.push(Number(q.filter_assignee_id))
+  }
   if (q.created_at_from) { sql += ' AND b.created_at>=?'; params.push(q.created_at_from) }
   if (q.created_at_to) { sql += " AND b.created_at<?::date+INTERVAL '1 day'"; params.push(q.created_at_to) }
   return { sql, params }
@@ -157,7 +161,7 @@ exports.batchAssign = async (req, res) => {
     if (!assignee) return fail(res, 400, 400, '指派人不存在或已停用')
     let updated = 0
     await db.transaction(async (connection) => {
-      const rows = await connection.prepare(`SELECT id,title,assignee_id FROM pms_bug WHERE id IN (${ids.map(() => '?').join(',')}) AND is_deleted=0`).all(...ids)
+      const rows = await connection.prepare(`SELECT id,title,assignee_id FROM pms_bug WHERE id IN (${ids.map(() => '?').join(',')}) AND is_deleted=0 ORDER BY id FOR UPDATE`).all(...ids)
       if (rows.length !== ids.length) throw new Error('部分 BUG 不存在或已删除，请刷新后重试')
       for (const row of rows) {
         if (Number(row.assignee_id) === assigneeId) continue

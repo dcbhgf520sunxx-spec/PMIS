@@ -138,7 +138,7 @@ test('public output schemas describe their stable top-level response fields', ()
   }
   assert.deepEqual(
     Object.keys(getToolDefinition('task_search', 'query').outputSchema.properties),
-    ['items', 'total', 'page', 'pageSize', 'totalPages', 'hasNextPage', 'viewCounts']
+    ['items', 'total', 'page', 'pageSize', 'totalPages', 'hasNextPage', 'viewCounts', 'error']
   )
 })
 

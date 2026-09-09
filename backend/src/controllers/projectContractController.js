@@ -214,57 +214,61 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    const oldContract = await findContract(req.params.id)
-    if (!oldContract) return fail(res, 404, 404, '项目合同不存在')
-    const validated = await validateContract(res, req.params.id, req.body, oldContract.id)
-    if (!validated) return
-    const oldStages = await findStages(oldContract.id)
-    const oldStageMap = new Map(oldStages.map((stage) => [String(stage.id), stage]))
-    const requestedIds = new Set()
-    for (const stage of req.body.stages) {
-      if (!stage.id) continue
-      const oldStage = oldStageMap.get(String(stage.id))
-      if (!oldStage) return fail(res, 400, 400, '付款阶段不属于当前合同')
-      requestedIds.add(String(stage.id))
-      if (toCents(stage.planned_amount) < toCents(oldStage.paid_amount)) {
-        return failField(res, 'stages', `付款阶段“${oldStage.stage_name}”的计划金额不能小于已付金额`)
-      }
-    }
-    for (const stage of oldStages) {
-      if (!requestedIds.has(String(stage.id)) && toCents(stage.paid_amount) > 0n) {
-        return failField(res, 'stages', `已有付款记录的阶段“${stage.stage_name}”不能删除`)
-      }
-    }
-    const operatorId = req.user.id
-    await db.transaction(async (tx) => {
-      await tx.prepare(`UPDATE pms_project_contract SET contract_code = ?, contract_name = ?, supplier_id = ?, signed_date = ?,
-        contract_amount = ?, remark = ?, updater_id = ?, updated_at = NOW() WHERE id = ?`)
-        .run(req.body.contract_code.trim(), req.body.contract_name.trim(), validated.supplier.id, req.body.signed_date, req.body.contract_amount, req.body.remark || null, operatorId, oldContract.id)
-      await tx.prepare("UPDATE pms_project_payment_stage SET stage_name = '__editing_' || id::text WHERE contract_id = ? AND is_deleted = 0").run(oldContract.id)
-      for (const [index, stage] of req.body.stages.entries()) {
-        if (stage.id) {
-          await tx.prepare(`UPDATE pms_project_payment_stage SET stage_name = ?, planned_amount = ?, sort_order = ?, updater_id = ?, updated_at = NOW()
-            WHERE id = ? AND contract_id = ? AND is_deleted = 0`)
-            .run(stage.stage_name.trim(), stage.planned_amount, index, operatorId, stage.id, oldContract.id)
-        } else {
-          await tx.prepare(`INSERT INTO pms_project_payment_stage
-            (contract_id, stage_name, planned_amount, sort_order, creator_id, updater_id) VALUES (?, ?, ?, ?, ?, ?)`)
-            .run(oldContract.id, stage.stage_name.trim(), stage.planned_amount, index, operatorId, operatorId)
+    const saved = await db.withTransaction(async () => {
+      await lockContractPaymentScope(req.params.id)
+      const oldContract = await findContract(req.params.id)
+      if (!oldContract) return fail(res, 404, 404, '项目合同不存在')
+      const validated = await validateContract(res, req.params.id, req.body, oldContract.id)
+      if (!validated) return
+      const oldStages = await findStages(oldContract.id)
+      const oldStageMap = new Map(oldStages.map((stage) => [String(stage.id), stage]))
+      const requestedIds = new Set()
+      for (const stage of req.body.stages) {
+        if (!stage.id) continue
+        const oldStage = oldStageMap.get(String(stage.id))
+        if (!oldStage) return fail(res, 400, 400, '付款阶段不属于当前合同')
+        requestedIds.add(String(stage.id))
+        if (toCents(stage.planned_amount) < toCents(oldStage.paid_amount)) {
+          return failField(res, 'stages', `付款阶段“${oldStage.stage_name}”的计划金额不能小于已付金额`)
         }
       }
-      const removedIds = oldStages.filter((stage) => !requestedIds.has(String(stage.id))).map((stage) => stage.id)
-      for (const stageId of removedIds) {
-        await tx.prepare('UPDATE pms_project_payment_stage SET is_deleted = 1, updater_id = ?, updated_at = NOW() WHERE id = ?').run(operatorId, stageId)
+      for (const stage of oldStages) {
+        if (!requestedIds.has(String(stage.id)) && toCents(stage.paid_amount) > 0n) {
+          return failField(res, 'stages', `已有付款记录的阶段“${stage.stage_name}”不能删除`)
+        }
       }
+      const operatorId = req.user.id
+      await db.transaction(async (tx) => {
+        await tx.prepare(`UPDATE pms_project_contract SET contract_code = ?, contract_name = ?, supplier_id = ?, signed_date = ?,
+          contract_amount = ?, remark = ?, updater_id = ?, updated_at = NOW() WHERE id = ?`)
+          .run(req.body.contract_code.trim(), req.body.contract_name.trim(), validated.supplier.id, req.body.signed_date, req.body.contract_amount, req.body.remark || null, operatorId, oldContract.id)
+        await tx.prepare("UPDATE pms_project_payment_stage SET stage_name = '__editing_' || id::text WHERE contract_id = ? AND is_deleted = 0").run(oldContract.id)
+        for (const [index, stage] of req.body.stages.entries()) {
+          if (stage.id) {
+            await tx.prepare(`UPDATE pms_project_payment_stage SET stage_name = ?, planned_amount = ?, sort_order = ?, updater_id = ?, updated_at = NOW()
+              WHERE id = ? AND contract_id = ? AND is_deleted = 0`)
+              .run(stage.stage_name.trim(), stage.planned_amount, index, operatorId, stage.id, oldContract.id)
+          } else {
+            await tx.prepare(`INSERT INTO pms_project_payment_stage
+              (contract_id, stage_name, planned_amount, sort_order, creator_id, updater_id) VALUES (?, ?, ?, ?, ?, ?)`)
+              .run(oldContract.id, stage.stage_name.trim(), stage.planned_amount, index, operatorId, operatorId)
+          }
+        }
+        const removedIds = oldStages.filter((stage) => !requestedIds.has(String(stage.id))).map((stage) => stage.id)
+        for (const stageId of removedIds) {
+          await tx.prepare('UPDATE pms_project_payment_stage SET is_deleted = 1, updater_id = ?, updated_at = NOW() WHERE id = ?').run(operatorId, stageId)
+        }
+      })
+      const changes = buildContractHistoryChanges({
+        oldContract,
+        oldStages,
+        newContract: req.body,
+        newSupplierName: validated.supplier.name,
+      })
+      const operationId = await writeContractHistory(operatorId, '编辑合同', req.params.id, changes, req.ip, validated.project.name)
+      return { complete: true, operation_id: operationId }
     })
-    const changes = buildContractHistoryChanges({
-      oldContract,
-      oldStages,
-      newContract: req.body,
-      newSupplierName: validated.supplier.name,
-    })
-    const operationId = await writeContractHistory(operatorId, '编辑合同', req.params.id, changes, req.ip, validated.project.name)
-    ok(res, { operation_id: operationId })
+    if (saved?.complete) ok(res, { operation_id: saved.operation_id })
   } catch (error) {
     console.error(error)
     fail(res, 500, 500, '更新合同失败')
@@ -273,39 +277,43 @@ exports.update = async (req, res) => {
 
 exports.remove = async (req, res) => {
   try {
-    const contract = await findContract(req.params.id)
-    if (!contract) return fail(res, 404, 404, '项目合同不存在')
-    const operatorId = req.user.id
-    const attachments = await db.transaction(async (tx) => {
-      const lockedContract = await tx.prepare('SELECT id FROM pms_project_contract WHERE id = ? AND is_deleted = 0 FOR UPDATE').get(contract.id)
-      if (!lockedContract) {
-        const error = new Error('项目合同不存在')
-        error.statusCode = 404
-        throw error
+    const completed = await db.withTransaction(async () => {
+      await lockContractPaymentScope(req.params.id)
+      const contract = await findContract(req.params.id)
+      if (!contract) return fail(res, 404, 404, '项目合同不存在')
+      const operatorId = req.user.id
+      const attachments = await db.transaction(async (tx) => {
+        const lockedContract = await tx.prepare('SELECT id FROM pms_project_contract WHERE id = ? AND is_deleted = 0 FOR UPDATE').get(contract.id)
+        if (!lockedContract) {
+          const error = new Error('项目合同不存在')
+          error.statusCode = 404
+          throw error
+        }
+        const rows = await tx.prepare(`SELECT storage_name, oss_response
+          FROM pms_project_contract_attachment
+          WHERE contract_id = ? AND is_deleted = 0`).all(contract.id)
+        await tx.prepare(`UPDATE pms_project_payment_record
+          SET is_deleted = 1, updater_id = ?, updated_at = NOW()
+          WHERE is_deleted = 0 AND stage_id IN (
+            SELECT id FROM pms_project_payment_stage WHERE contract_id = ? AND is_deleted = 0
+          )`).run(operatorId, contract.id)
+        await tx.prepare(`UPDATE pms_project_payment_stage
+          SET is_deleted = 1, updater_id = ?, updated_at = NOW()
+          WHERE contract_id = ? AND is_deleted = 0`).run(operatorId, contract.id)
+        await tx.prepare(`UPDATE pms_project_contract_attachment
+          SET is_deleted = 1, updater_id = ?, updated_at = NOW()
+          WHERE contract_id = ? AND is_deleted = 0`).run(operatorId, contract.id)
+        await tx.prepare(`UPDATE pms_project_contract SET is_deleted = 1, updater_id = ?, updated_at = NOW()
+          WHERE id = ? AND is_deleted = 0`).run(operatorId, contract.id)
+        return rows
+      })
+      for (const attachment of attachments) {
+        if (!attachment.oss_response) await removeAttachmentFile(attachment.storage_name).catch(console.error)
       }
-      const rows = await tx.prepare(`SELECT storage_name, oss_response
-        FROM pms_project_contract_attachment
-        WHERE contract_id = ? AND is_deleted = 0`).all(contract.id)
-      await tx.prepare(`UPDATE pms_project_payment_record
-        SET is_deleted = 1, updater_id = ?, updated_at = NOW()
-        WHERE is_deleted = 0 AND stage_id IN (
-          SELECT id FROM pms_project_payment_stage WHERE contract_id = ? AND is_deleted = 0
-        )`).run(operatorId, contract.id)
-      await tx.prepare(`UPDATE pms_project_payment_stage
-        SET is_deleted = 1, updater_id = ?, updated_at = NOW()
-        WHERE contract_id = ? AND is_deleted = 0`).run(operatorId, contract.id)
-      await tx.prepare(`UPDATE pms_project_contract_attachment
-        SET is_deleted = 1, updater_id = ?, updated_at = NOW()
-        WHERE contract_id = ? AND is_deleted = 0`).run(operatorId, contract.id)
-      await tx.prepare(`UPDATE pms_project_contract SET is_deleted = 1, updater_id = ?, updated_at = NOW()
-        WHERE id = ? AND is_deleted = 0`).run(operatorId, contract.id)
-      return rows
+      await writeContractHistory(operatorId, '删除合同', req.params.id, [], req.ip, contract.project_name)
+      return true
     })
-    for (const attachment of attachments) {
-      if (!attachment.oss_response) await removeAttachmentFile(attachment.storage_name).catch(console.error)
-    }
-    await writeContractHistory(operatorId, '删除合同', req.params.id, [], req.ip, contract.project_name)
-    ok(res, null)
+    if (completed === true) ok(res, null)
   } catch (error) {
     if (error.statusCode === 404) return fail(res, 404, 404, error.message)
     console.error(error)
@@ -423,6 +431,16 @@ async function findStageContext(projectId, stageId, excludePaymentId) {
     GROUP BY s.id, c.id, p.id`).get(...params)
 }
 
+async function lockContractPaymentScope(projectId, database = db) {
+  await database.prepare('SELECT id FROM pms_project WHERE id = ? AND is_deleted = 0 FOR UPDATE').get(projectId)
+  await database.prepare('SELECT id FROM pms_project_contract WHERE project_id = ? AND is_deleted = 0 ORDER BY id FOR UPDATE').all(projectId)
+  await database.prepare(`SELECT s.id FROM pms_project_payment_stage s
+    JOIN pms_project_contract c ON c.id = s.contract_id
+    WHERE c.project_id = ? AND c.is_deleted = 0 AND s.is_deleted = 0 ORDER BY s.id FOR UPDATE OF s`).all(projectId)
+}
+
+exports.lockContractPaymentScope = lockContractPaymentScope
+
 async function validatePayment(res, projectId, stageId, body, excludePaymentId) {
   if (body.payment_amount === undefined || body.payment_amount === null || String(body.payment_amount).trim() === '') {
     failField(res, 'payment_amount', '请填写本次付款金额')
@@ -475,24 +493,28 @@ exports.listPayments = async (req, res) => {
 
 exports.createPayment = async (req, res) => {
   try {
-    const validated = await validatePayment(res, req.params.id, req.params.stageId, req.body)
-    if (!validated) return
-    const operatorId = req.user.id
-    const result = await db.prepare(`INSERT INTO pms_project_payment_record
-      (stage_id, payment_amount, payment_month, handler_id, remark, creator_id, updater_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?)`)
-      .run(req.params.stageId, req.body.payment_amount, validated.paymentMonth, req.body.handler_id, req.body.remark || null, operatorId, operatorId)
-    const changes = buildPaymentCreationHistoryChanges({
-      stageName: validated.stage.stage_name,
-      payment: {
-        payment_amount: req.body.payment_amount,
-        payment_month: validated.paymentMonth,
-        handler_name: validated.handler.real_name,
-        remark: req.body.remark,
-      },
+    const saved = await db.withTransaction(async () => {
+      await lockContractPaymentScope(req.params.id)
+      const validated = await validatePayment(res, req.params.id, req.params.stageId, req.body)
+      if (!validated) return
+      const operatorId = req.user.id
+      const result = await db.prepare(`INSERT INTO pms_project_payment_record
+        (stage_id, payment_amount, payment_month, handler_id, remark, creator_id, updater_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`)
+        .run(req.params.stageId, req.body.payment_amount, validated.paymentMonth, req.body.handler_id, req.body.remark || null, operatorId, operatorId)
+      const changes = buildPaymentCreationHistoryChanges({
+        stageName: validated.stage.stage_name,
+        payment: {
+          payment_amount: req.body.payment_amount,
+          payment_month: validated.paymentMonth,
+          handler_name: validated.handler.real_name,
+          remark: req.body.remark,
+        },
+      })
+      await db.writeLogs(operatorId, '登记付款', '项目', req.params.id, changes, req.ip, validated.stage.project_name)
+      return { id: result.lastInsertRowid }
     })
-    await db.writeLogs(operatorId, '登记付款', '项目', req.params.id, changes, req.ip, validated.stage.project_name)
-    ok(res, { id: result.lastInsertRowid })
+    if (saved) ok(res, saved)
   } catch (error) {
     console.error(error)
     fail(res, 500, 500, '登记付款失败')
@@ -501,30 +523,34 @@ exports.createPayment = async (req, res) => {
 
 exports.updatePayment = async (req, res) => {
   try {
-    const payment = await db.prepare(`SELECT r.*, s.id stage_id, handler.real_name handler_name FROM pms_project_payment_record r
-      JOIN pms_project_payment_stage s ON s.id = r.stage_id AND s.is_deleted = 0
-      JOIN pms_project_contract c ON c.id = s.contract_id AND c.is_deleted = 0
-      JOIN pms_user handler ON handler.id = r.handler_id
-      WHERE r.id = ? AND c.project_id = ? AND r.is_deleted = 0`).get(req.params.paymentId, req.params.id)
-    if (!payment) return fail(res, 404, 404, '付款记录不存在')
-    const validated = await validatePayment(res, req.params.id, payment.stage_id, req.body, payment.id)
-    if (!validated) return
-    await db.prepare(`UPDATE pms_project_payment_record SET payment_amount = ?, payment_month = ?, handler_id = ?, remark = ?,
-      updater_id = ?, updated_at = NOW() WHERE id = ?`)
-      .run(req.body.payment_amount, validated.paymentMonth, req.body.handler_id, req.body.remark || null, req.user.id, payment.id)
-    const changes = buildPaymentHistoryChanges({
-      stageName: validated.stage.stage_name,
-      oldPayment: payment,
-      newPayment: {
-        payment_amount: req.body.payment_amount,
-        payment_month: validated.paymentMonth,
-        handler_id: validated.handler.id,
-        handler_name: validated.handler.real_name,
-        remark: req.body.remark,
-      },
+    const completed = await db.withTransaction(async () => {
+      await lockContractPaymentScope(req.params.id)
+      const payment = await db.prepare(`SELECT r.*, s.id stage_id, handler.real_name handler_name FROM pms_project_payment_record r
+        JOIN pms_project_payment_stage s ON s.id = r.stage_id AND s.is_deleted = 0
+        JOIN pms_project_contract c ON c.id = s.contract_id AND c.is_deleted = 0
+        JOIN pms_user handler ON handler.id = r.handler_id
+        WHERE r.id = ? AND c.project_id = ? AND r.is_deleted = 0`).get(req.params.paymentId, req.params.id)
+      if (!payment) { fail(res, 404, 404, '付款记录不存在'); return false }
+      const validated = await validatePayment(res, req.params.id, payment.stage_id, req.body, payment.id)
+      if (!validated) return
+      await db.prepare(`UPDATE pms_project_payment_record SET payment_amount = ?, payment_month = ?, handler_id = ?, remark = ?,
+        updater_id = ?, updated_at = NOW() WHERE id = ?`)
+        .run(req.body.payment_amount, validated.paymentMonth, req.body.handler_id, req.body.remark || null, req.user.id, payment.id)
+      const changes = buildPaymentHistoryChanges({
+        stageName: validated.stage.stage_name,
+        oldPayment: payment,
+        newPayment: {
+          payment_amount: req.body.payment_amount,
+          payment_month: validated.paymentMonth,
+          handler_id: validated.handler.id,
+          handler_name: validated.handler.real_name,
+          remark: req.body.remark,
+        },
+      })
+      if (changes.length) await db.writeLogs(req.user.id, '更正付款', '项目', req.params.id, changes, req.ip, validated.stage.project_name)
+      return true
     })
-    if (changes.length) await db.writeLogs(req.user.id, '更正付款', '项目', req.params.id, changes, req.ip, validated.stage.project_name)
-    ok(res, null)
+    if (completed) ok(res, null)
   } catch (error) {
     console.error(error)
     fail(res, 500, 500, '更正付款失败')
@@ -533,16 +559,20 @@ exports.updatePayment = async (req, res) => {
 
 exports.deletePayment = async (req, res) => {
   try {
-    const payment = await db.prepare(`SELECT r.id, r.payment_amount, s.stage_name, p.name project_name
-      FROM pms_project_payment_record r
-      JOIN pms_project_payment_stage s ON s.id = r.stage_id AND s.is_deleted = 0
-      JOIN pms_project_contract c ON c.id = s.contract_id AND c.is_deleted = 0
-      JOIN pms_project p ON p.id = c.project_id AND p.is_deleted = 0
-      WHERE r.id = ? AND p.id = ? AND r.is_deleted = 0`).get(req.params.paymentId, req.params.id)
-    if (!payment) return fail(res, 404, 404, '付款记录不存在')
-    await db.prepare('UPDATE pms_project_payment_record SET is_deleted = 1, updater_id = ?, updated_at = NOW() WHERE id = ?').run(req.user.id, payment.id)
-    await db.writeLog(req.user.id, '删除付款', '项目', req.params.id, 'payment', `${payment.stage_name}｜${Number(payment.payment_amount).toFixed(2)}`, null, req.ip, payment.project_name)
-    ok(res, null)
+    const completed = await db.withTransaction(async () => {
+      await lockContractPaymentScope(req.params.id)
+      const payment = await db.prepare(`SELECT r.id, r.payment_amount, s.stage_name, p.name project_name
+        FROM pms_project_payment_record r
+        JOIN pms_project_payment_stage s ON s.id = r.stage_id AND s.is_deleted = 0
+        JOIN pms_project_contract c ON c.id = s.contract_id AND c.is_deleted = 0
+        JOIN pms_project p ON p.id = c.project_id AND p.is_deleted = 0
+        WHERE r.id = ? AND p.id = ? AND r.is_deleted = 0`).get(req.params.paymentId, req.params.id)
+      if (!payment) { fail(res, 404, 404, '付款记录不存在'); return false }
+      await db.prepare('UPDATE pms_project_payment_record SET is_deleted = 1, updater_id = ?, updated_at = NOW() WHERE id = ?').run(req.user.id, payment.id)
+      await db.writeLog(req.user.id, '删除付款', '项目', req.params.id, 'payment', `${payment.stage_name}｜${Number(payment.payment_amount).toFixed(2)}`, null, req.ip, payment.project_name)
+      return true
+    })
+    if (completed) ok(res, null)
   } catch (error) {
     console.error(error)
     fail(res, 500, 500, '删除付款失败')

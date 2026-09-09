@@ -2,11 +2,18 @@ const assert = require('node:assert/strict')
 const test = require('node:test')
 
 const {
-  dispatchActionTool,
+  dispatchActionTool: dispatchActionToolWithDb,
   loadActionTargetSnapshot,
   mergeActionUpdateArguments,
   validateStatusAction,
 } = require('../src/mcp/actionTools')
+const { hashActionArguments } = require('../src/services/mcpActionTicketService')
+
+// Unit fixtures replace transaction boundaries explicitly. The pg-level atomic
+// rollback, nesting and isolation regressions live in mcpActionReliability.test.
+const dispatchActionTool = (name, args, context, dependencies) => dispatchActionToolWithDb(name, args, context, {
+  runTransaction: (callback) => callback(), runSavepoint: (callback) => callback(), lockTargets: async () => {}, ...dependencies,
+})
 
 test('action preview loads the current target without invoking a business write', async () => {
   let writeCalled = false
@@ -56,7 +63,7 @@ test('action preview loads the current target without invoking a business write'
   })
 })
 
-test('task sparse preview merges editable current fields before ticket creation', async () => {
+test('task sparse preview validates current fields but binds only the supplied edit intent', async () => {
   let ticketArgs
   const currentTask = {
     name: '原任务',
@@ -92,9 +99,7 @@ test('task sparse preview merges editable current fields before ticket creation'
   assert.deepEqual(ticketArgs, {
     id: 59,
     mode: 'preview',
-    ...currentTask,
     description: '更新说明',
-    owner_ids: [8],
   })
 })
 
@@ -324,12 +329,13 @@ test('execute rechecks ownership and rejects when responsibility changed after p
       }),
       ticketService: {
         consumeTicket: async () => { ticketConsumed = true },
+        markTicketFailed: async () => {},
       },
     }),
     (error) => error.code === 'MCP_ACTION_NOT_RESPONSIBLE'
       && /负责人已发生变化/.test(error.message)
   )
-  assert.equal(ticketConsumed, false)
+  assert.equal(ticketConsumed, true)
   assert.equal(writeCalled, false)
 })
 
@@ -418,6 +424,7 @@ test('batch and other high-impact actions are labeled high risk in preview', asy
     client: { id: 3 },
     user: { id: 8, employeeNo: 'JS001', realName: '张三' },
   }, {
+    validateBusinessRules: async () => {},
     loadTarget: async () => ({ type: 'stage', id: 2, name: '实施阶段', current: { owner_id: 8 } }),
     ticketService: {
       createTicket: async (_context, _name, _args, value) => {
@@ -430,13 +437,15 @@ test('batch and other high-impact actions are labeled high risk in preview', asy
   assert.equal(preview.riskLevel, 'high')
 })
 
-test('file action preview keeps file metadata but redacts the OSS URL and control fields', async () => {
+test('file action preview keeps file metadata but redacts the OSS URL and control fields', async (t) => {
+  const { OSS_FILE_ORIGIN } = require('../src/services/projectContractOssService')
+  t.mock.method(global, 'fetch', async () => new Response('%PDF-1.7', { headers: { 'content-type': 'application/pdf' } }))
   let preview
   await dispatchActionTool('contract_attachment_upload', {
     project_id: 1,
     file_name: '合同.pdf',
     mime_type: 'application/pdf',
-    file_url: 'https://oss.example.com/pmis/contracts/a.pdf',
+    file_url: `${OSS_FILE_ORIGIN}/pmis/contracts/a.pdf`,
     idempotency_key: 'contract-file-1',
     mode: 'preview',
   }, {
@@ -536,7 +545,12 @@ test('action execute consumes the ticket and preserves the business error when f
         ],
       },
       ticketService: {
-        consumeTicket: async () => { consumed = true },
+        consumeTicket: async () => {
+          consumed = true
+          return { preview: { _executionState: { version: 1, fields: Object.fromEntries(
+            ['name', 'source_type', 'project_id', 'task_type', 'owner_ids'].map((field) => [field, hashActionArguments({ value: null })])
+          ) } } }
+        },
         markTicketFailed: async () => {
           failureMarked = true
           throw new Error('票据状态更新失败')
@@ -547,7 +561,7 @@ test('action execute consumes the ticket and preserves the business error when f
       validateBusinessRules: async () => {},
       loadTarget: async () => ({ type: 'task', id: 9, name: '任务', current: { owner_ids: [8] } }),
     }),
-    (error) => error === businessError
+    (error) => error.code === 'MCP_EXECUTION_OUTCOME_UNKNOWN' && error.cause === businessError
   )
 
   assert.equal(consumed, true)

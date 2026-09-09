@@ -8,6 +8,52 @@ const {
   resolveMovedPlanRow,
 } = require('../src/services/projectStagePlanHistory')
 
+test('同名关键事项的历史分别保留业务标识，日志标识不充当事项标识', () => {
+  const rows = buildProjectStagePlanHistory([
+    { id: 501, operation_id: 'item-20', action: '编辑关键事项', target_id: '20', target_name: '启动会', field_name: 'remark', old_value: null, new_value: '阶段一评审', created_at: '2026-09-08 10:00:00', operator: '孙鑫鑫' },
+    { id: 502, operation_id: 'item-21', action: '编辑关键事项', target_id: '21', target_name: '启动会', field_name: 'remark', old_value: null, new_value: '阶段二评审', created_at: '2026-09-08 10:00:00', operator: '孙鑫鑫' },
+  ], { projectId: '7' })
+
+  assert.deepEqual(rows.map(({ id, target_type, target_id, project_id }) => ({ id, target_type, target_id, project_id })), [
+    { id: 501, target_type: 'stage_item', target_id: 20, project_id: 7 },
+    { id: 502, target_type: 'stage_item', target_id: 21, project_id: 7 },
+  ])
+  assert.equal(rows[0].action, '编辑关键事项 · 启动会')
+  assert.deepEqual(rows[0].changes, [{ field_name: '备注', old_value: '', new_value: '阶段一评审' }])
+})
+
+test('阶段和关键事项数字标识相同仍通过对象类型消歧', () => {
+  const rows = buildProjectStagePlanHistory([
+    { id: 510, action: '新增阶段', target_id: 20, target_name: '启动', field_name: null, new_value: '启动' },
+    { id: 511, action: '新增关键事项', target_id: 20, target_name: '启动', field_name: null, new_value: '启动' },
+  ], { projectId: 7 })
+
+  assert.deepEqual(rows.map(({ target_type, target_id }) => ({ target_type, target_id })), [
+    { target_type: 'stage', target_id: 20 },
+    { target_type: 'stage_item', target_id: 20 },
+  ])
+})
+
+test('全部阶段容器动作保留阶段标识，删除历史和模板事件不转成事项', () => {
+  for (const action of ['新增阶段', '编辑阶段', '调整阶段顺序', '删除阶段', '套用阶段模板']) {
+    const [row] = buildProjectStagePlanHistory([{ id: 520, action, target_id: 20, target_name: '阶段一' }])
+    assert.equal(row.target_type, 'stage', action)
+    assert.equal(row.target_id, 20, action)
+  }
+})
+
+test('旧历史缺少业务标识时返回 null，不使用日志或名称猜测标识', () => {
+  const rows = buildProjectStagePlanHistory([
+    { id: 530, action: '删除关键事项', target_name: '启动会', field_name: 'is_deleted', old_value: '0', new_value: '1' },
+    { id: 531, action: '删除阶段', target_id: null, target_name: '启动会' },
+  ])
+
+  assert.deepEqual(rows.map(({ target_type, target_id, project_id }) => ({ target_type, target_id, project_id })), [
+    { target_type: 'stage_item', target_id: null, project_id: null },
+    { target_type: 'stage', target_id: null, project_id: null },
+  ])
+})
+
 test('阶段主计划历史使用动作和对象名称作为标题并隐藏新增删除明细', () => {
   const rows = buildProjectStagePlanHistory([
     { id: 3, action: '删除关键事项', target_name: '启动会', field_name: 'is_deleted', old_value: '0', new_value: '1', created_at: '2026-07-26 10:00:00', operator: '孙鑫鑫' },
