@@ -23,9 +23,9 @@ function getBusinessConfig(businessType) {
   return config
 }
 
-async function assertBusinessCanAcceptAttachment(connection, businessType, businessId) {
+async function assertBusinessCanAcceptAttachment(connection, businessType, businessId, { lock = false } = {}) {
   const config = getBusinessConfig(businessType)
-  const business = await connection.prepare(`SELECT id FROM ${config.table} WHERE id=? AND is_deleted=0`).get(businessId)
+  const business = await connection.prepare(`SELECT id FROM ${config.table} WHERE id=? AND is_deleted=0${lock ? ' FOR UPDATE' : ''}`).get(businessId)
   if (!business) throw businessError(`${config.label}不存在或已删除`, 404)
   const row = await connection.prepare(`SELECT COUNT(*) total FROM pms_business_attachment
     WHERE business_type=? AND business_id=? AND is_deleted=0`).get(businessType, businessId)
@@ -49,30 +49,35 @@ async function findBusinessAttachment(connection, businessType, businessId, atta
 }
 
 async function uploadBusinessAttachment(businessType, businessId, file, operatorId, dependencies = {}) {
-  const connection = dependencies.db || db
-  await assertBusinessCanAcceptAttachment(connection, businessType, businessId)
-  if (!file) throw businessError('请选择要上传的附件')
-  file.originalname = normalizeOriginalName(file.originalname)
-  const upload = dependencies.uploadAttachmentToOss || uploadAttachmentToOss
-  const saved = await upload(file)
-  const count = await connection.prepare(`SELECT COUNT(*) total FROM pms_business_attachment
-    WHERE business_type=? AND business_id=? AND is_deleted=0`).get(businessType, businessId)
-  if (Number(count?.total || 0) >= MAX_BUSINESS_ATTACHMENTS) throw businessError('每条业务数据最多上传10个附件')
-  const result = await connection.prepare(`INSERT INTO pms_business_attachment
-    (business_type,business_id,original_name,mime_type,file_size,storage_key,oss_response,sort_order,creator_id,updater_id)
-    VALUES(?,?,?,?,?,?,?,?,?,?)`).run(
-    businessType,
-    businessId,
-    file.originalname,
-    file.mimetype,
-    file.buffer.length,
-    saved.storageName,
-    JSON.stringify(saved.ossResponse),
-    Number(count?.total || 0),
-    operatorId,
-    operatorId
-  )
-  return findBusinessAttachment(connection, businessType, businessId, result.lastInsertRowid)
+  const connection = dependencies.transactionConnection || dependencies.db || db
+  const save = async () => {
+    await assertBusinessCanAcceptAttachment(connection, businessType, businessId, { lock: true })
+    if (!file) throw businessError('请选择要上传的附件')
+    file.originalname = normalizeOriginalName(file.originalname)
+    const upload = dependencies.uploadAttachmentToOss || uploadAttachmentToOss
+    const saved = await upload(file)
+    const count = await connection.prepare(`SELECT COUNT(*) total FROM pms_business_attachment
+      WHERE business_type=? AND business_id=? AND is_deleted=0`).get(businessType, businessId)
+    if (Number(count?.total || 0) >= MAX_BUSINESS_ATTACHMENTS) throw businessError('每条业务数据最多上传10个附件')
+    const result = await connection.prepare(`INSERT INTO pms_business_attachment
+      (business_type,business_id,original_name,mime_type,file_size,storage_key,oss_response,sort_order,creator_id,updater_id)
+      VALUES(?,?,?,?,?,?,?,?,?,?)`).run(
+      businessType,
+      businessId,
+      file.originalname,
+      file.mimetype,
+      file.buffer.length,
+      saved.storageName,
+      JSON.stringify(saved.ossResponse),
+      Number(count?.total || 0),
+      operatorId,
+      operatorId
+    )
+    return findBusinessAttachment(connection, businessType, businessId, result.lastInsertRowid)
+  }
+  // Open-interface callers already hold their explicit transaction and parent
+  // lock. HTTP/MCP callers enter (or reuse) the existing scoped transaction.
+  return dependencies.transactionConnection ? save() : connection.withTransaction(save)
 }
 
 async function deleteBusinessAttachment(connection, businessType, businessId, attachmentId, operatorId) {

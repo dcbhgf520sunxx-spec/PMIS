@@ -10,7 +10,7 @@ const followUpRecord = require('../controllers/followUpRecordController')
 const db = require('../db')
 const { invokeController } = require('./controllerAdapter')
 const { analyzeBusinessData } = require('../services/mcpAnalysisService')
-const { analyzeBusinessPeriod } = require('../services/mcpPeriodAnalysisService')
+const { analyzeBusinessPeriod, BUSINESS_TYPES } = require('../services/mcpPeriodAnalysisService')
 const { allowedProjectStatuses } = require('../services/productProjectRules')
 const { allowedRequirementStatuses } = require('../services/requirementRules')
 const { allowedTaskStatuses } = require('../services/taskRules')
@@ -53,6 +53,7 @@ const RESULT_ENUMS = {
   },
   stage_plan: {
     status: { 0: '未开始', 1: '进行中', 2: '已完成', 3: '已暂停' },
+    parent_project_status: { 0: '未开始', 1: '进行中', 2: '已完成', 3: '已暂停' },
     is_overdue: { 0: '未逾期', 1: '已逾期' },
     requires_delivery_file: { 0: '不要求', 1: '要求' },
   },
@@ -122,6 +123,31 @@ function decorateQueryResult(toolName, value) {
   return decorated
 }
 
+function decoratePeriodResult(value) {
+  if (Array.isArray(value)) return value.map(decoratePeriodResult)
+  if (!value || typeof value !== 'object') return value
+  const result = Object.fromEntries(Object.entries(value).map(([key, item]) => [key, decoratePeriodResult(item)]))
+  for (const dimension of ['status', 'priority']) {
+    for (const group of result.groupings?.[dimension] || []) {
+      const [type, code] = String(group.key).split(':')
+      const enums = RESULT_ENUMS[type]
+      const labels = dimension === 'status' ? enums?.status
+        : enums?.priority || enums?.severity || enums?.urgency || RESULT_ENUMS.project.priority
+      const typeLabel = BUSINESS_TYPES[type]?.label
+      group.label = `${typeLabel || type} · ${code === 'null' ? '未设置' : labels?.[code] || '未知'}`
+    }
+  }
+  const mappings = RESULT_ENUMS[result.business_type]
+  if (mappings) {
+    if (result.status !== undefined) result.status_label = mappings.status?.[result.status] || '未知状态'
+    if (result.priority !== undefined) {
+      const priorities = mappings.priority || mappings.severity || mappings.urgency || RESULT_ENUMS.project.priority
+      result.priority_label = result.priority === null ? null : priorities[result.priority] || '未知优先级'
+    }
+  }
+  return result
+}
+
 function statusOptions(domain, values) {
   const mapping = RESULT_ENUMS[domain]?.status || {}
   return values.map((value) => ({ value, label: mapping[String(value)] || String(value) }))
@@ -151,16 +177,16 @@ const handlers = {
   stage_plan_get: [stagePlan.getPlan, (a) => ({ params: { projectId: requireProjectId(a) } })],
   stage_plan_history: [stagePlan.history, (a) => ({ params: { projectId: requireProjectId(a) } })],
   contract_get: [contract.getByProject, (a) => ({ params: { id: requireProjectId(a) } })],
-  requirement_search: [requirement.list, (a) => ({ query: normalizeQuery(a, 'requirement_search') })],
+  requirement_search: [requirement.list, buildRequirementSearchInput],
   requirement_get: [requirement.getById, (a) => ({ params: { id: requireId(a) } })],
   requirement_history: [requirement.history, (a) => ({ params: { id: requireId(a) } })],
   task_search: [task.list, buildTaskSearchInput],
   task_get: [task.getById, (a) => ({ params: { id: requireId(a) } })],
   task_history: [task.history, (a) => ({ params: { id: requireId(a) } })],
-  bug_search: [bug.list, (a) => ({ query: normalizeQuery(a, 'bug_search') })],
+  bug_search: [bug.list, buildBugSearchInput],
   bug_get: [bug.getById, (a) => ({ params: { id: requireId(a) } })],
   bug_history: [bug.history, (a) => ({ params: { id: requireId(a) } })],
-  work_order_search: [workOrder.list, (a) => ({ query: normalizeQuery(a, 'work_order_search') })],
+  work_order_search: [workOrder.list, buildWorkOrderSearchInput],
   work_order_get: [workOrder.getById, (a) => ({ params: { id: requireId(a) } })],
   work_order_history: [workOrder.getHistory, (a) => ({ params: { id: requireId(a) } })],
 }
@@ -256,10 +282,11 @@ function positiveId(value) {
   return Number.isSafeInteger(id) && id > 0 ? id : null
 }
 
-function sortClause(args, allowed, fallback) {
+function sortClause(args, allowed, fallback, stableId) {
   const column = allowed[args.sort_field]
   if (!column) return fallback
-  return `${column} ${String(args.sort_order).toLowerCase() === 'asc' ? 'ASC' : 'DESC'}`
+  const direction = String(args.sort_order).toLowerCase() === 'asc' ? 'ASC' : 'DESC'
+  return `${column} ${direction}, ${stableId} ${direction}`
 }
 
 async function runPagedSearch({ args, database, from, select, where, params, orderBy }) {
@@ -291,7 +318,7 @@ function normalizeSearchResult(value) {
   }
 }
 
-async function searchStagePlans(args = {}, database = db) {
+async function searchStagePlans(args = {}, database = db, context) {
   const where = ['p.is_deleted = 0', 's.is_deleted = 0', 'i.is_deleted = 0']
   const params = []
   const keyword = String(args.keyword || '').trim()
@@ -304,12 +331,18 @@ async function searchStagePlans(args = {}, database = db) {
   if (projectId) { where.push('p.id = ?'); params.push(projectId) }
   const ownerId = positiveId(args.owner_id)
   if (ownerId) { where.push('i.owner_id = ?'); params.push(ownerId) }
+  if (args.view === 'mine') {
+    const userId = currentUserId(context)
+    where.push(`(i.owner_id = ? OR EXISTS (SELECT 1 FROM pms_project_plan_item_collaborator c
+      WHERE c.plan_item_id = i.id AND c.user_id = ?))`)
+    params.push(userId, userId)
+  }
   if (args.status !== undefined && args.status !== null && args.status !== '') {
     where.push('i.status = ?')
     params.push(Number(args.status))
   }
   if (args.is_overdue !== undefined && args.is_overdue !== null && args.is_overdue !== '') {
-    const overdue = '(i.status IN (0, 1) AND i.current_due_date < CURRENT_DATE)'
+    const overdue = "(p.status <> 3 AND i.status IN (0, 1) AND i.current_due_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai')::date)"
     where.push(Number(args.is_overdue) === 1 || args.is_overdue === true ? overdue : `NOT ${overdue}`)
   }
   return runPagedSearch({
@@ -320,8 +353,12 @@ async function searchStagePlans(args = {}, database = db) {
       JOIN pms_project p ON p.id = s.project_id
       LEFT JOIN pms_user owner ON owner.id = i.owner_id`,
     select: `i.id, i.stage_id, s.name stage_name, p.id project_id, p.name project_name,
+      p.status parent_project_status,
       i.name item_name, s.description stage_description, i.remark, i.delivery_requirement,
       i.owner_id, owner.real_name owner_name, i.status,
+      COALESCE((SELECT json_agg(json_build_object('id',c.user_id,'name',cu.real_name) ORDER BY c.sort_order,c.user_id)
+        FROM pms_project_plan_item_collaborator c JOIN pms_user cu ON cu.id=c.user_id
+        WHERE c.plan_item_id=i.id),'[]'::json) collaborators,
       i.original_due_date, i.current_due_date, i.actual_end_date, i.requires_delivery_file,
       i.created_at, i.updated_at`,
     where,
@@ -333,7 +370,7 @@ async function searchStagePlans(args = {}, database = db) {
       status: 'i.status',
       current_due_date: 'i.current_due_date',
       created_at: 'i.created_at',
-    }, 'p.name ASC, s.sort_order ASC, i.sort_order ASC, i.id ASC'),
+    }, 'p.name ASC, s.sort_order ASC, i.sort_order ASC, i.id ASC', 'i.id'),
   })
 }
 
@@ -484,7 +521,7 @@ async function searchContracts(args = {}, database = db) {
       signed_date: 'c.signed_date',
       contract_amount: 'c.contract_amount',
       created_at: 'c.created_at',
-    }, 'c.signed_date DESC, c.id DESC'),
+    }, 'c.signed_date DESC, c.id DESC', 'c.id'),
   })
 }
 
@@ -533,7 +570,7 @@ async function searchPayments(args = {}, database = db) {
       payment_amount: 'r.payment_amount',
       handler_name: 'handler.real_name',
       created_at: 'r.created_at',
-    }, 'r.payment_month DESC, r.id DESC'),
+    }, 'r.payment_month DESC, r.id DESC', 'r.id'),
   })
 }
 
@@ -563,19 +600,62 @@ function normalizeQuery(args, toolName) {
 function buildProjectSearchInput(args, context) {
   const query = normalizeQuery(args, 'project_search')
   delete query.view
-  query.current_user_id = context.user.id
-  if (args.view === 'mine') query.owner_id = context.user.id
-  if (args.view === 'joined') query.joined_user_id = context.user.id
+  const userId = args.view ? currentUserId(context) : positiveId(context?.user?.id)
+  query.current_user_id = userId
+  if (args.view === 'mine') {
+    const filterOwnerId = positiveId(args.owner_id)
+    if (filterOwnerId) query.filter_owner_id = filterOwnerId
+    query.owner_id = userId
+  }
+  if (args.view === 'joined') query.joined_user_id = userId
   return { query }
 }
 
-function buildTaskSearchInput(args) {
-  return {
-    query: {
-      ...normalizeQuery(args, 'task_search'),
-      mcp_flat: '1',
-    },
+function buildRequirementSearchInput(args, context) {
+  const query = normalizeQuery(args, 'requirement_search')
+  if (args.view === 'mine') {
+    const filterOwnerId = positiveId(args.owner_id)
+    if (filterOwnerId) query.filter_owner_id = filterOwnerId
+    query.owner_id = currentUserId(context)
   }
+  return { query }
+}
+
+function buildTaskSearchInput(args, context) {
+  const query = { ...normalizeQuery(args, 'task_search'), mcp_flat: '1' }
+  if (args.view === 'mine') {
+    const filterOwnerId = positiveId(args.owner_id)
+    if (filterOwnerId) query.filter_owner_id = filterOwnerId
+    query.owner_id = currentUserId(context)
+  }
+  return { query }
+}
+
+function buildBugSearchInput(args, context) {
+  const query = normalizeQuery(args, 'bug_search')
+  if (args.view === 'mine') {
+    const filterAssigneeId = positiveId(args.assignee_id)
+    if (filterAssigneeId) query.filter_assignee_id = filterAssigneeId
+    query.assignee_id = currentUserId(context)
+  }
+  return { query }
+}
+
+function currentUserId(context) {
+  const userId = positiveId(context?.user?.id)
+  if (userId) return userId
+  const error = new Error('无法确认当前员工身份，不能查询本人工作范围')
+  error.code = 'MCP_PERMISSION_DENIED'
+  throw error
+}
+
+function buildWorkOrderSearchInput(args, context) {
+  const query = normalizeQuery(args, 'work_order_search')
+  delete query.view
+  query.filter_follower_id = args.follower_id
+  query.view_key = args.view === 'mine' ? 'mine' : 'all'
+  query.current_user_id = args.view === 'mine' ? currentUserId(context) : positiveId(context?.user?.id)
+  return { query }
 }
 
 function unwrapEnvelope(envelope) {
@@ -599,7 +679,9 @@ function unwrapEnvelope(envelope) {
 
 async function dispatchQueryTool(name, args, context, dependencies = {}) {
   if (name === 'business_period_analysis') {
-    return analyzeBusinessPeriod(args, context, dependencies.database, dependencies.now)
+    return normalizeMcpQueryContent(decoratePeriodResult(
+      await analyzeBusinessPeriod(args, context, dependencies.database, dependencies.now)
+    ), { summary: true })
   }
   if (name === 'business_analyze') {
     return decorateQueryResult(`${args.domain}_analyze`, await analyzeBusinessData(args, dependencies.database))
@@ -620,7 +702,7 @@ async function dispatchQueryTool(name, args, context, dependencies = {}) {
       await searchBusinessAttachments(args, context, dependencies.database, dependencies)
     ), { summary: true })
   }
-  if (name === 'stage_plan_search') return normalizeMcpQueryContent(decorateQueryResult(name, normalizeSearchResult(await searchStagePlans(args, dependencies.database))), { summary: true })
+  if (name === 'stage_plan_search') return normalizeMcpQueryContent(decorateQueryResult(name, normalizeSearchResult(await searchStagePlans(args, dependencies.database, context))), { summary: true })
   if (name === 'contract_search') return normalizeMcpQueryContent(decorateQueryResult(name, normalizeSearchResult(await searchContracts(args, dependencies.database))), { summary: true })
   if (name === 'payment_search') return normalizeMcpQueryContent(decorateQueryResult(name, normalizeSearchResult(await searchPayments(args, dependencies.database))), { summary: true })
   if (name === 'business_options') return searchBusinessOptions(args, dependencies.database)
@@ -630,6 +712,22 @@ async function dispatchQueryTool(name, args, context, dependencies = {}) {
       params: { id: args.target_id },
     }))
     return normalizeMcpQueryContent(value, { summary: true })
+  }
+  if (name === 'project_search' && args.view === 'mine') {
+    const userId = currentUserId(context)
+    const ownerId = positiveId(args.owner_id)
+    if (ownerId && ownerId !== userId) {
+      const { page, pageSize } = normalizePage(args)
+      return normalizeSearchResult({ items: [], total: 0, page, pageSize })
+    }
+  }
+  if (name === 'work_order_search' && args.view === 'mine') {
+    const userId = currentUserId(context)
+    const followerId = positiveId(args.follower_id)
+    if (followerId && followerId !== userId) {
+      const { page, pageSize } = normalizePage(args)
+      return normalizeSearchResult({ items: [], total: 0, page, pageSize })
+    }
   }
   const definition = handlers[name]
   if (!definition) throw new Error('查询工具不存在或无权限')

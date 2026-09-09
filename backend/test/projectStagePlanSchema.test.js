@@ -151,7 +151,6 @@ test('阶段主计划模板结构、内置模板与套用接口完整落地', ()
   assert.match(controller, /db\.transaction/)
   assert.match(controller, /firstStageId/)
   assert.match(controller, /'套用阶段模板'[\s\S]*firstStageId/)
-  assert.match(controller, /stageActions = \[[^\]]*'套用阶段模板'/)
 })
 
 test('阶段汇总时间由关键事项实时计算', () => {

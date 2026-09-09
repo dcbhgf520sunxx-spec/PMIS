@@ -12,7 +12,7 @@ function asToolResult(value) {
     ? value
     : { data: value }
   return {
-    content: [{ type: 'text', text: '工具调用成功，完整结构化结果见 structuredContent。' }],
+    content: [{ type: 'text', text: JSON.stringify(structuredContent) }],
     structuredContent,
   }
 }

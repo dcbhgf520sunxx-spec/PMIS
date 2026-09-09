@@ -68,7 +68,7 @@ function analysisDatabase() {
     task: [{
       business_type: 'task', id: 2, name: '逾期任务', status: 1, priority: 2,
       project_id: 1, project_name: '项目收尾', owner_id: 9, owner_name: '李东',
-      person_ids: [9, 99], person_names: ['李东', '创建人'],
+      person_ids: [9, 99], person_names: ['李东', '创建人'], creator_id: 99,
       plan_date: '2026-08-31', actual_date: null, created_at: '2026-08-31T02:00:00.000Z',
       is_overdue: 1, is_paused: false, is_completed: false,
       required_delivery: false, delivery_count: 0,
@@ -147,7 +147,11 @@ test('任意周期分析汇总真实流量、当前存量、计划、趋势和�
   assert.equal(result.risk_candidates.overdue.total, 1)
   assert.equal(result.risk_candidates.overdue.has_more, false)
   assert.equal(result.financials.contract_amount, 100000)
-  assert.equal(result.coverage.statistics_complete, true)
+  // Fixture contains two 1→2 transitions without a recorded reopen between them.
+  // The unfinished task has no status history either: today's blank actual date
+  // cannot prove it was unfinished at the historical cutoff.
+  assert.equal(result.coverage.statistics_complete, false)
+  assert.equal(result.coverage.plan_completion_unknown_count, 2)
   assert.equal(result.coverage.historical_stock_supported, false)
 })
 

@@ -71,6 +71,21 @@ test('RSA employee identity envelope rejects expired payloads', () => {
   }), /员工号密文已过期/)
 })
 
+test('disabling legacy identities rejects both old envelopes while signed v3 stays usable', () => {
+  const now = 1_722_000_000_000
+  const options = { now, allowLegacy: false, clientId: 7, endpointType: 'query',
+    signingSecret: 'identity-signing-secret',
+    rsaPrivateKeyBase64: Buffer.from(rsaKeys.privateKey).toString('base64') }
+  for (const encrypted of [encryptEmployeeIdentity('005829', 'query-token', { now }), rsaEnvelope('005829', now)]) {
+    assert.throws(() => decryptEmployeeIdentity(encrypted, 'query-token', options), /旧版员工身份凭证已停用/)
+  }
+  const assertion = createEmployeeIdentityAssertion('005829', {
+    now, clientId: 7, endpointType: 'query', nonce: 'non-legacy-check',
+    signingSecret: options.signingSecret, rsaPublicKey: rsaKeys.publicKey,
+  })
+  assert.equal(decryptEmployeeIdentity(assertion, 'query-token', options), '005829')
+})
+
 test('signed identity assertion is bound to client and endpoint', () => {
   const assertion = createEmployeeIdentityAssertion('005829', {
     clientId: 7,

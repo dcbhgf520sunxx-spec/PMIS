@@ -3,7 +3,7 @@ const { parsePagination, getSortDirection } = require('../utils/pagination')
 const { ok, fail, failField } = require('../utils/response')
 const { formatHistoryChanges, groupOperationLogs } = require('../utils/operationHistory')
 const { normalizeFollowUpHistoryAction } = require('../services/followUpRecordRules')
-const { allowedTaskStatuses, validateTaskStatusChange, resolveTaskStatusFields, calculateTaskOverdue, canCompleteParent, canLeaveCompletedSubtask } = require('../services/taskRules')
+const { allowedTaskStatuses, validateTaskStatusChange, resolveTaskStatusFields, calculateTaskOverdue, canCompleteParent, canLeaveCompletedSubtask, validateSubtaskParent } = require('../services/taskRules')
 const { DEFAULT_PRIORITY, parsePriority } = require('../services/priorityRules')
 const { softDeleteBusinessAttachments } = require('../services/businessAttachmentService')
 
@@ -38,6 +38,10 @@ function where(q) {
   if (q.owner_id !== undefined && q.owner_id !== '') {
     sql += ' AND EXISTS (SELECT 1 FROM pms_task_owner task_owner WHERE task_owner.task_id=t.id AND task_owner.user_id=?)'
     params.push(Number(q.owner_id))
+  }
+  if (q.filter_owner_id !== undefined && q.filter_owner_id !== null && q.filter_owner_id !== '') {
+    sql += ' AND EXISTS (SELECT 1 FROM pms_task_owner filtered_task_owner WHERE filtered_task_owner.task_id=t.id AND filtered_task_owner.user_id=?)'
+    params.push(Number(q.filter_owner_id))
   }
   for (const [key, column, operator] of [['expected_end_date_from', 't.expected_end_date', '>='], ['expected_end_date_to', 't.expected_end_date', '<=']]) {
     if (q[key]) {
@@ -271,25 +275,28 @@ exports.create = async (req, res) => {
 
 exports.createSubtask = async (req, res) => {
   try {
-    const parentTask = await db.prepare('SELECT * FROM pms_task WHERE id=? AND is_deleted=0').get(req.params.id)
-    if (!parentTask) return fail(res, 404, 404, '任务不存在')
-    if (parentTask.parent_task_id) return fail(res, 400, 400, '父任务必须是主任务')
-    if (Number(parentTask.status) === 2) return fail(res, 400, 400, '已完成的主任务不能新增子任务')
-    const body = {
-      ...req.body,
-      source_type: parentTask.source_type,
-      project_id: parentTask.project_id,
-      requirement_id: parentTask.requirement_id,
-    }
-    if (!await validate(res, body)) return
-    const overdue = calculateTaskOverdue(body.expected_end_date, 0)
-    let result
-    await db.transaction(async (connection) => {
-      result = await connection.prepare('INSERT INTO pms_task(name,description,parent_task_id,source_type,project_id,requirement_id,task_type,priority,status,is_overdue,start_date,expected_end_date,creator_id,updater_id)VALUES(?,?,?,?,?,?,?,?,0,?,?,?,?,?)').run(body.name.trim(), body.description || null, parentTask.id, parentTask.source_type, parentTask.project_id, parentTask.requirement_id, body.task_type, DEFAULT_PRIORITY, overdue, body.start_date || null, body.expected_end_date, req.user.id, req.user.id)
-      await saveOwners(connection, result.lastInsertRowid, normalizeOwnerIds(body.owner_ids))
-      await connection.writeLog(req.user.id, '新增', '任务', result.lastInsertRowid, 'parent_task_id', null, parentTask.id, req.ip, body.name.trim())
+    const saved = await db.withTransaction(async () => {
+      const parentTask = await db.prepare('SELECT * FROM pms_task WHERE id=? AND is_deleted=0 FOR UPDATE').get(req.params.id)
+      if (!parentTask) return fail(res, 404, 404, '任务不存在')
+      const parentError = validateSubtaskParent(parentTask)
+      if (parentError) return fail(res, 400, 400, parentError)
+      const body = {
+        ...req.body,
+        source_type: parentTask.source_type,
+        project_id: parentTask.project_id,
+        requirement_id: parentTask.requirement_id,
+      }
+      if (!await validate(res, body)) return
+      const overdue = calculateTaskOverdue(body.expected_end_date, 0)
+      let result
+      await db.transaction(async (connection) => {
+        result = await connection.prepare('INSERT INTO pms_task(name,description,parent_task_id,source_type,project_id,requirement_id,task_type,priority,status,is_overdue,start_date,expected_end_date,creator_id,updater_id)VALUES(?,?,?,?,?,?,?,?,0,?,?,?,?,?)').run(body.name.trim(), body.description || null, parentTask.id, parentTask.source_type, parentTask.project_id, parentTask.requirement_id, body.task_type, DEFAULT_PRIORITY, overdue, body.start_date || null, body.expected_end_date, req.user.id, req.user.id)
+        await saveOwners(connection, result.lastInsertRowid, normalizeOwnerIds(body.owner_ids))
+        await connection.writeLog(req.user.id, '新增', '任务', result.lastInsertRowid, 'parent_task_id', null, parentTask.id, req.ip, body.name.trim())
+      })
+      return { complete: true, id: result.lastInsertRowid }
     })
-    ok(res, { id: result.lastInsertRowid })
+    if (saved?.complete) ok(res, { id: saved.id })
   } catch (error) {
     console.error(error)
     fail(res, 500, 500, '创建子任务失败')
@@ -383,7 +390,7 @@ exports.batchAssign = async (req, res) => {
     if (nextOwners.length !== ownerIds.length) return failField(res, 'owner_ids', '部分负责人不存在或已停用')
     let updated = 0
     await db.transaction(async (connection) => {
-      const rows = await connection.prepare(`SELECT id,name FROM pms_task WHERE id IN (${ids.map(() => '?').join(',')}) AND is_deleted=0`).all(...ids)
+      const rows = await connection.prepare(`SELECT id,name FROM pms_task WHERE id IN (${ids.map(() => '?').join(',')}) AND is_deleted=0 ORDER BY id FOR UPDATE`).all(...ids)
       if (rows.length !== ids.length) throw new Error('部分任务不存在或已删除，请刷新后重试')
       for (const row of rows) {
         const oldOwners = await loadOwners(connection, row.id)

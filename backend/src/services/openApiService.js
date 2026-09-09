@@ -119,7 +119,7 @@ function createOpenApiService({ db = defaultDb, upload = cachedOpenUpload } = {}
       if (validated.originalname) file.originalname = validated.originalname
       if (validated.mimetype) file.mimetype = validated.mimetype
       if (!ctx.uploadReceipt) throw error('附件上传回执不存在',500)
-      const saved = await attachments.uploadBusinessAttachment(resource,row.id,file,user.id,{ db:connection, uploadAttachmentToOss:async () => ctx.uploadReceipt })
+      const saved = await attachments.uploadBusinessAttachment(resource,row.id,file,user.id,{ transactionConnection:connection, uploadAttachmentToOss:async () => ctx.uploadReceipt })
       await connection.writeLog(user.id,'新增附件',labels[resource],row.id,null,null,null,ctx.ip,saved.original_name)
       return { result:'CREATED', targetId:row.id, attachment:{ id:Number(saved.id), name:saved.original_name, size:Number(saved.file_size) } }
     }

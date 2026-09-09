@@ -7,6 +7,7 @@ const {
   allowedPlanItemStatuses,
   shouldInvalidatePlanItemFiles,
   validatePlanItemStatusChange,
+  validatePlanItemDeliveryChange,
   validatePlanAdjustmentReason,
   getPlanItemProgressHint,
 } = require('../services/projectStagePlanRules')
@@ -22,6 +23,7 @@ const {
   uploadAttachmentToOss,
 } = require('../services/projectContractOssService')
 const {
+  STAGE_ACTIONS,
   appendLegacyAdjustmentReasons,
   buildPlanItemStatusHistoryChanges,
   buildProjectStagePlanHistory,
@@ -238,9 +240,9 @@ exports.history = async (req, res) => {
   try {
     const project = await findProject(req.params.projectId)
     if (!project) return fail(res, 404, 404, '项目不存在')
-    const stageActions = ['新增阶段', '编辑阶段', '调整阶段顺序', '删除阶段', '套用阶段模板']
+    const stageActions = STAGE_ACTIONS
     const actionPlaceholders = stageActions.map(() => '?').join(',')
-    const logs = await db.prepare(`SELECT l.id,l.operation_id,l.action,l.target_name,l.field_name,l.old_value,l.new_value,l.created_at,
+    const logs = await db.prepare(`SELECT l.id,l.operation_id,l.action,l.target_id,l.target_name,l.field_name,l.old_value,l.new_value,l.created_at,
       COALESCE(u.real_name,'-') operator
       FROM pms_op_log l
       LEFT JOIN pms_user u ON u.id=l.user_id
@@ -273,6 +275,7 @@ exports.history = async (req, res) => {
       ? await db.prepare(`SELECT id,real_name FROM pms_user WHERE id IN(${userIds.map(() => '?').join(',')})`).all(...userIds)
       : []
     ok(res, buildProjectStagePlanHistory(enrichedLogs, {
+      projectId: project.id,
       stageLookup: new Map(stages.map((stage) => [String(stage.id), stage.name])),
       userLookup: new Map(users.map((user) => [String(user.id), user.real_name])),
     }))
@@ -327,17 +330,21 @@ exports.updateStage = async (req, res) => {
 
 exports.reorderStages = async (req, res) => {
   try {
-    const ids = normalizeIds(req.body.ids)
-    const rows = await db.prepare('SELECT id,name,sort_order FROM pms_project_plan_stage WHERE project_id=? AND is_deleted=0 ORDER BY sort_order,id').all(req.params.projectId)
-    if (ids.length !== rows.length || new Set(ids).size !== rows.length || rows.some((row) => !ids.includes(Number(row.id)))) {
-      return fail(res, 400, 400, '阶段排序数据已变化，请刷新后重试')
-    }
-    const moved = resolveMovedPlanRow(rows, ids, req.body.moved_id)
-    await db.transaction(async (tx) => {
+    const completed = await db.withTransaction(async (tx) => {
+      // Match MCP's parent-before-child lock order, independent of requested order.
+      await tx.prepare('SELECT id FROM pms_project WHERE id = ? AND is_deleted = 0 FOR UPDATE').get(req.params.projectId)
+      await tx.prepare('SELECT id FROM pms_project_plan_stage WHERE project_id = ? AND is_deleted = 0 ORDER BY id FOR UPDATE').all(req.params.projectId)
+      const ids = normalizeIds(req.body.ids)
+      const rows = await tx.prepare('SELECT id,name,sort_order FROM pms_project_plan_stage WHERE project_id=? AND is_deleted=0 ORDER BY sort_order,id').all(req.params.projectId)
+      if (ids.length !== rows.length || new Set(ids).size !== rows.length || rows.some((row) => !ids.includes(Number(row.id)))) {
+        return fail(res, 400, 400, '阶段排序数据已变化，请刷新后重试')
+      }
+      const moved = resolveMovedPlanRow(rows, ids, req.body.moved_id)
       for (const [index, id] of ids.entries()) await tx.prepare('UPDATE pms_project_plan_stage SET sort_order=?,updater_id=?,updated_at=NOW()WHERE id=?').run(index, req.user.id, id)
+      if (moved) await tx.writeLog(req.user.id, '调整阶段顺序', '项目阶段主计划', moved.id, 'sort_order', moved.oldPosition, moved.newPosition, req.ip, moved.name)
+      return true
     })
-    if (moved) await db.writeLog(req.user.id, '调整阶段顺序', '项目阶段主计划', moved.id, 'sort_order', moved.oldPosition, moved.newPosition, req.ip, moved.name)
-    ok(res, null)
+    if (completed === true) ok(res, null)
   } catch (error) {
     console.error(error)
     fail(res, 500, 500, '保存阶段排序失败')
@@ -437,7 +444,8 @@ exports.updateItem = async (req, res) => {
     if (!validated) return
     if (Number(old.status) === PLAN_ITEM_STATUS.COMPLETED && Number(old.requires_delivery_file) === 0 && Number(req.body.requires_delivery_file) === 1) {
       const count = await db.prepare('SELECT COUNT(*) count FROM pms_project_plan_delivery_file WHERE plan_item_id=? AND is_current=1 AND is_void=0').get(old.id)
-      if (!Number(count.count)) return fail(res, 400, 400, '已完成事项改为需要交付文件前，请先上传文件')
+      const deliveryError = validatePlanItemDeliveryChange(old, req.body.requires_delivery_file, count.count)
+      if (deliveryError) return fail(res, 400, 400, deliveryError)
     }
     const oldCollaborators = await db.prepare('SELECT user_id FROM pms_project_plan_item_collaborator WHERE plan_item_id=? ORDER BY sort_order,user_id').all(old.id)
     const oldCollaboratorIds = oldCollaborators.map((row) => Number(row.user_id)).sort((a, b) => a - b).join(',')
@@ -466,17 +474,21 @@ exports.updateItem = async (req, res) => {
 
 exports.reorderItems = async (req, res) => {
   try {
-    const stage = await findStage(req.params.projectId, req.params.stageId)
-    if (!stage) return fail(res, 404, 404, '阶段不存在')
-    const ids = normalizeIds(req.body.ids)
-    const rows = await db.prepare('SELECT id,name,sort_order FROM pms_project_plan_item WHERE stage_id=? AND is_deleted=0 ORDER BY sort_order,id').all(stage.id)
-    if (ids.length !== rows.length || rows.some((row) => !ids.includes(Number(row.id)))) return fail(res, 400, 400, '关键事项排序数据已变化，请刷新后重试')
-    const moved = resolveMovedPlanRow(rows, ids, req.body.moved_id)
-    await db.transaction(async (tx) => {
+    const completed = await db.withTransaction(async (tx) => {
+      await tx.prepare('SELECT id FROM pms_project WHERE id = ? AND is_deleted = 0 FOR UPDATE').get(req.params.projectId)
+      await tx.prepare('SELECT id FROM pms_project_plan_stage WHERE project_id = ? AND is_deleted = 0 ORDER BY id FOR UPDATE').all(req.params.projectId)
+      const stage = await findStage(req.params.projectId, req.params.stageId)
+      if (!stage) return fail(res, 404, 404, '阶段不存在')
+      await tx.prepare('SELECT id FROM pms_project_plan_item WHERE stage_id = ? AND is_deleted = 0 ORDER BY id FOR UPDATE').all(stage.id)
+      const ids = normalizeIds(req.body.ids)
+      const rows = await tx.prepare('SELECT id,name,sort_order FROM pms_project_plan_item WHERE stage_id=? AND is_deleted=0 ORDER BY sort_order,id').all(stage.id)
+      if (ids.length !== rows.length || rows.some((row) => !ids.includes(Number(row.id)))) return fail(res, 400, 400, '关键事项排序数据已变化，请刷新后重试')
+      const moved = resolveMovedPlanRow(rows, ids, req.body.moved_id)
       for (const [index, id] of ids.entries()) await tx.prepare('UPDATE pms_project_plan_item SET sort_order=?,updater_id=?,updated_at=NOW()WHERE id=?').run(index, req.user.id, id)
+      if (moved) await tx.writeLog(req.user.id, '调整关键事项顺序', '项目阶段主计划', moved.id, 'sort_order', moved.oldPosition, moved.newPosition, req.ip, moved.name)
+      return true
     })
-    if (moved) await db.writeLog(req.user.id, '调整关键事项顺序', '项目阶段主计划', moved.id, 'sort_order', moved.oldPosition, moved.newPosition, req.ip, moved.name)
-    ok(res, null)
+    if (completed === true) ok(res, null)
   } catch (error) {
     console.error(error)
     fail(res, 500, 500, '保存关键事项排序失败')

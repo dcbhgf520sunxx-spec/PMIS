@@ -59,7 +59,16 @@ function getPlanItemProgressHint(item, today = new Date().toISOString().slice(0,
   return null
 }
 
+function validatePlanItemDeliveryChange(old, requiresDeliveryFile, activeFileCount) {
+  if (Number(old?.status) === PLAN_ITEM_STATUS.COMPLETED && Number(old.requires_delivery_file) === 0
+    && Number(requiresDeliveryFile) === 1 && Number(activeFileCount) < 1) {
+    return '已完成事项改为需要交付文件前，请先上传文件'
+  }
+  return null
+}
+
 module.exports = {
+  validatePlanItemDeliveryChange,
   PLAN_ITEM_STATUS,
   allowedPlanItemStatuses,
   shouldInvalidatePlanItemFiles,

@@ -122,6 +122,7 @@ function createMcpAuth({
     return {
       endpointType,
       client,
+      identityVersion: encryptedEmployeeNo.split('.')[0],
       user: { id: user.id, employeeNo: user.employee_no, realName: user.real_name },
       allowedMenuPaths,
       allowedPermissionCodes,

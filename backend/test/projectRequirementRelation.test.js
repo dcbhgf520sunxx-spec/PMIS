@@ -40,12 +40,21 @@ test('项目接口强制所属需求并校验同产品和一对一占用关系',
   assert.match(routes, /router\.get\('\/requirement-options', ctrl\.requirementOptions\)/)
 })
 
-test('需求接口彻底移除所属项目并阻止删除已关联项目的需求', () => {
+test('需求接口彻底移除所属项目并阻止删除已关联项目的需求', async () => {
   const controller = read('src/controllers/requirementController.js')
 
   assert.doesNotMatch(controller, /project_id|project_name|projectName/)
-  assert.match(controller, /FROM pms_project WHERE requirement_id=\? AND is_deleted=0/)
-  assert.match(controller, /该需求已关联项目，无法删除/)
+  let wrote = false
+  const database = { prepare(sql) { return {
+    get: async () => sql.includes('FROM pms_requirement') ? { title: '已有项目的需求' } : { count: 1 },
+    run: async () => { wrote = true },
+  } } }
+  const { createRequirementController } = require('../src/controllers/requirementController')
+  const { invokeController } = require('../src/mcp/controllerAdapter')
+  const result = await invokeController(createRequirementController(database).remove, { user: { id: 8 } }, { params: { id: 1 } })
+  assert.equal(result.code, 400)
+  assert.match(result.message, /该需求已关联项目，无法删除/)
+  assert.equal(wrote, false)
 })
 
 test('MCP 同步反转项目和需求的关联字段', () => {

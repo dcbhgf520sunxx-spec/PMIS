@@ -473,13 +473,13 @@ test('global search returns compact summaries and never forwards inline image bo
   assert.doesNotMatch(JSON.stringify(result), /data:image|base64/i)
 })
 
-test('successful MCP tool responses keep full data only once', async () => {
+test('successful MCP tool responses are readable by text-only and structured clients', async () => {
   const value = { items: [{ id: 1, name: '任务A' }], total: 1 }
   const result = require('../src/mcp/createServer').asToolResult(value)
 
   assert.deepEqual(result.structuredContent, value)
-  assert.match(result.content[0].text, /结构化结果/)
-  assert.doesNotMatch(result.content[0].text, /任务A/)
+  assert.deepEqual(JSON.parse(result.content[0].text), value)
+  assert.equal(result.content.length, 1)
 })
 
 test('business analysis requires permission for the requested business domain', () => {

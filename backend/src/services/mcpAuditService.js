@@ -19,6 +19,10 @@ function redactAuditInput(value, key = '') {
 }
 
 async function recordMcpAudit(event, database = db) {
+  // This marker is server-owned: callers cannot spoof a migrated identity.
+  const identityVersion = ['v1', 'v2', 'v3'].includes(event.identityVersion)
+    ? event.identityVersion : 'unknown'
+  const inputSummary = { ...redactAuditInput(event.input || {}), _identity_version: identityVersion }
   return database.prepare(`
     INSERT INTO pms_mcp_audit_log (
       request_id, client_id, user_id, employee_no, endpoint_type, protocol_method,
@@ -37,7 +41,7 @@ async function recordMcpAudit(event, database = db) {
     event.module || null,
     event.targetId || null,
     event.targetName || null,
-    JSON.stringify(redactAuditInput(event.input || {})),
+    JSON.stringify(inputSummary),
     event.resultStatus,
     event.resultCount ?? null,
     event.errorCode || null,

@@ -22,8 +22,4 @@ async function getAllowedPermissionCodes(userId, database = db) {
   return new Set(rows.map((row) => row.code).filter(Boolean))
 }
 
-function hasMenuPermission(allowedMenuPaths, menuPath) {
-  return allowedMenuPaths instanceof Set && allowedMenuPaths.has(menuPath)
-}
-
-module.exports = { getAllowedMenuPaths, getAllowedPermissionCodes, hasMenuPermission }
+module.exports = { getAllowedMenuPaths, getAllowedPermissionCodes }

@@ -35,7 +35,7 @@ function createMcpActionTicketService({
   now = () => new Date(),
   randomUUID = crypto.randomUUID,
 } = {}) {
-  async function createTicket(context, toolName, args, preview, riskLevel = 'medium') {
+  async function createTicket(context, toolName, args, preview, riskLevel = 'medium', executionState, fileState) {
     const id = randomUUID()
     const createdAt = now()
     const expiresAt = new Date(createdAt.getTime() + 30 * 60 * 1000)
@@ -53,7 +53,8 @@ function createMcpActionTicketService({
         context.user.employeeNo,
         toolName,
         hashActionArguments(args),
-        JSON.stringify(preview),
+        JSON.stringify({ ...preview, ...(executionState ? { _executionState: executionState } : {}),
+          ...(fileState ? { _fileState: fileState } : {}) }),
         idempotencyKey,
         riskLevel,
         expiresAt.toISOString(),

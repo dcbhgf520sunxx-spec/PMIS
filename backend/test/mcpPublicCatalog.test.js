@@ -438,10 +438,15 @@ test('period analysis publishes a closed arbitrary-period contract and stable ou
   assert.deepEqual(Object.keys(definition.outputSchema.properties), [
     'resolved_periods', 'data_cutoff', 'period_flows', 'current_stock', 'plan_outlook',
     'comparison', 'trend', 'groupings', 'quality_and_delivery', 'financials',
-    'flow_candidates', 'risk_candidates', 'report_people', 'coverage',
+    'flow_candidates', 'risk_candidates', 'report_people', 'coverage', 'details', 'error',
   ])
-  assert.ok(definition.outputSchema.required.includes('flow_candidates'))
-  assert.ok(definition.outputSchema.required.includes('report_people'))
+  const successful = definition.outputSchema.oneOf[0]
+  assert.ok(successful.oneOf[0].required.includes('flow_candidates'))
+  assert.ok(successful.oneOf[0].required.includes('report_people'))
+  const detailResult = successful.oneOf.find((branch) => branch.required.includes('details'))
+  assert.ok(detailResult, 'successful output must preserve the compact detail result')
+  assert.deepEqual(detailResult.required, ['resolved_periods', 'data_cutoff', 'coverage', 'details'])
+  assert.deepEqual(definition.outputSchema.oneOf[1].required, ['error'])
   assert.deepEqual(definition.outputSchema.properties.report_people.items.required, [
     'user_id', 'name', 'sources', 'related_record_count', 'period_operation_count',
   ])

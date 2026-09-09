@@ -1,8 +1,10 @@
 const { Pool, types } = require('pg')
+const { AsyncLocalStorage } = require('node:async_hooks')
 const { toPostgresSql, withReturningId } = require('./dbSql')
 require('./config/loadEnv')
 
 const DB_TIMEZONE = process.env.DB_TIMEZONE || 'Asia/Shanghai'
+const transactionContext = new AsyncLocalStorage()
 
 types.setTypeParser(1082, (value) => value)
 types.setTypeParser(1114, (value) => value)
@@ -24,6 +26,8 @@ function normalizeParams(params) {
 }
 
 function prepare(sql) {
+  const scoped = transactionContext.getStore()
+  if (scoped) return scoped.tx.prepare(sql)
   return {
     get: async (...params) => {
       const result = await pool.query(toPostgresSql(sql), normalizeParams(params))
@@ -44,10 +48,30 @@ function prepare(sql) {
 }
 
 async function exec(sql, params = []) {
+  const scoped = transactionContext.getStore()
+  if (scoped) return scoped.tx.query(sql, params)
   return pool.query(toPostgresSql(sql), params)
 }
 
 async function transaction(fn) {
+  const scoped = transactionContext.getStore()
+  if (scoped) {
+    const savepoint = `mcp_action_${++scoped.nextSavepoint}`
+    await scoped.tx.query(`SAVEPOINT ${savepoint}`)
+    try {
+      const result = await fn(scoped.tx)
+      await scoped.tx.query(`RELEASE SAVEPOINT ${savepoint}`)
+      return result
+    } catch (error) {
+      try {
+        await scoped.tx.query(`ROLLBACK TO SAVEPOINT ${savepoint}`)
+        await scoped.tx.query(`RELEASE SAVEPOINT ${savepoint}`)
+      } catch {
+        error.transactionOutcomeUnknown = true
+      }
+      throw error
+    }
+  }
   const client = await pool.connect()
   const tx = {
     query: (sql, params = []) => client.query(toPostgresSql(sql), params),
@@ -81,17 +105,27 @@ async function transaction(fn) {
     return operationId
   }
 
+  let committing = false
   try {
     await client.query('BEGIN')
     const result = await fn(tx)
+    committing = true
     await client.query('COMMIT')
     return result
   } catch (error) {
-    await client.query('ROLLBACK')
+    if (committing) error.transactionOutcomeUnknown = true
+    try { await client.query('ROLLBACK') } catch { error.transactionOutcomeUnknown = true }
     throw error
   } finally {
     client.release()
   }
+}
+
+// Opt-in for the MCP action boundary only. Existing controllers can keep using
+// db.prepare/writeLogs and nested transactions; all stay on this one connection.
+async function withTransaction(fn) {
+  if (transactionContext.getStore()) return transaction(fn)
+  return transaction((tx) => transactionContext.run({ tx, nextSavepoint: 0 }, () => fn(tx)))
 }
 
 function writeLog(userId, action, module, targetId, fieldName, oldValue, newValue, ip, targetName, operationId) {
@@ -135,6 +169,7 @@ module.exports = {
   pool,
   prepare,
   transaction,
+  withTransaction,
   upsertOperationFieldLog,
   writeLog,
   writeLogs,

@@ -34,14 +34,18 @@ const FIELD_LABELS = {
   description: '阶段描述',
 }
 
+const STAGE_ACTIONS = ['新增阶段', '编辑阶段', '调整阶段顺序', '删除阶段', '套用阶段模板']
 const HIDE_DETAILS_ACTIONS = new Set(['新增阶段', '删除阶段', '新增关键事项', '删除关键事项', '套用阶段模板'])
 const DATE_FIELDS = new Set(['actual_end_date', 'current_due_date'])
 const STATUS_LOOKUP = new Map([['0', '未开始'], ['1', '进行中'], ['2', '已完成'], ['3', '已暂停']])
 
-function buildProjectStagePlanHistory(logs, { stageLookup = new Map(), userLookup = new Map() } = {}) {
+function buildProjectStagePlanHistory(logs, { stageLookup = new Map(), userLookup = new Map(), projectId = null } = {}) {
   const changedLogs = logs.filter((log) => !log.field_name || String(log.old_value ?? '') !== String(log.new_value ?? ''))
   return groupOperationLogs(changedLogs, FIELD_ORDER).map((group) => ({
     id: group.id,
+    target_type: STAGE_ACTIONS.includes(group.action) ? 'stage' : 'stage_item',
+    target_id: group.target_id == null ? null : Number(group.target_id),
+    project_id: projectId == null ? null : Number(projectId),
     action: `${group.action} · ${group.target_name || '-'}`,
     created_at: group.created_at,
     operator: group.operator,
@@ -123,6 +127,7 @@ function appendLegacyAdjustmentReasons(logs, adjustments) {
 }
 
 module.exports = {
+  STAGE_ACTIONS,
   appendLegacyAdjustmentReasons,
   buildPlanItemStatusHistoryChanges,
   buildProjectStagePlanHistory,

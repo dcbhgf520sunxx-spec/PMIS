@@ -1,3 +1,4 @@
+const crypto = require('node:crypto')
 const product = require('../controllers/productController')
 const project = require('../controllers/projectController')
 const stage = require('../controllers/projectStagePlanController')
@@ -12,18 +13,20 @@ const db = require('../db')
 const ticketService = require('../services/mcpActionTicketService')
 const { redactAuditInput } = require('../services/mcpAuditService')
 const { allowedProjectStatuses, validateProjectStatusChange } = require('../services/productProjectRules')
-const { allowedRequirementStatuses, validateRequirementStatusChange } = require('../services/requirementRules')
-const { allowedTaskStatuses, validateTaskStatusChange, canCompleteParent, canLeaveCompletedSubtask } = require('../services/taskRules')
+const { allowedRequirementStatuses, validateRequirementStatusChange, requirementDeleteBlocker } = require('../services/requirementRules')
+const { allowedTaskStatuses, validateTaskStatusChange, canCompleteParent, canLeaveCompletedSubtask, validateSubtaskParent } = require('../services/taskRules')
 const { allowedBugStatuses, validateBugStatusChange } = require('../services/bugRules')
 const { allowedWorkOrderStatuses, resolveWorkOrderResultFields, validateWorkOrderResultFields } = require('../services/workOrderStatusRules')
-const { allowedPlanItemStatuses, validatePlanItemStatusChange } = require('../services/projectStagePlanRules')
+const { allowedPlanItemStatuses, validatePlanItemStatusChange, validatePlanItemDeliveryChange } = require('../services/projectStagePlanRules')
 const { normalizePaymentMonth, validateContractStages, validatePaymentAmount } = require('../services/projectContractRules')
 const { validateAttachmentFile } = require('../services/projectContractAttachmentService')
 const { OSS_FILE_ORIGIN } = require('../services/projectContractOssService')
+const { assertBusinessCanAcceptAttachment } = require('../services/businessAttachmentService')
 const { validateActualBusinessDate } = require('../services/actualBusinessDateRules')
 const { normalizeFollowUpContent, resolveFollowUpTarget } = require('../services/followUpRecordRules')
 const { invokeController } = require('./controllerAdapter')
 const { unwrapEnvelope } = require('./queryTools')
+const { getCommandDefinition } = require('./catalog')
 
 const highRiskPattern = /(delete|change_status|change_priority|reorder|adjust|payment|assign|upload|batch)/
 const ACTUAL_DATE_FIELDS = {
@@ -251,20 +254,75 @@ const UPDATE_SPECS = {
     params: (args) => [args.payment_id, args.project_id],
     fields: ['payment_amount', 'payment_month', 'handler_id', 'remark'],
   },
+  follow_up_record_update: {
+    sql: (args) => {
+      const target = resolveFollowUpTarget(args.target_type, args.target_id)
+      return `SELECT content FROM pms_follow_up_record
+        WHERE id = ? AND ${target.column} = ? AND is_deleted = 0`
+    },
+    params: (args) => [args.follow_up_id, args.target_id],
+    fields: ['content'],
+  },
 }
 
-async function mergeActionUpdateArguments(name, args, database = db) {
+async function mergeActionUpdateArguments(name, args, database = db, { lock = false } = {}) {
   const spec = UPDATE_SPECS[name]
   if (!spec) return { ...args }
-  const row = await database.prepare(spec.sql).get(...spec.params(args))
+  const sql = typeof spec.sql === 'function' ? spec.sql(args) : spec.sql
+  const row = await database.prepare(`${sql}${lock ? ' FOR UPDATE' : ''}`).get(...spec.params(args))
   if (!row) return { ...args }
-  const merged = preserveOmittedFields(args, row, spec.fields)
+  const normalized = { ...row }
+  for (const field of ['contract_amount', 'payment_amount']) {
+    if (normalized[field] !== undefined && normalized[field] !== null) normalized[field] = Number(normalized[field])
+  }
+  if (normalized.payment_month) normalized.payment_month = String(normalized.payment_month).slice(0, 7)
+  const merged = preserveOmittedFields(args, normalized, spec.fields)
   if (spec.relationship && merged[spec.relationship.field] === undefined
     && (!spec.relationship.when || spec.relationship.when(args, row))) {
     const rows = await database.prepare(spec.relationship.sql).all(...spec.relationship.params(args, row))
     merged[spec.relationship.field] = rows.map(spec.relationship.map || ((item) => Number(item.id)))
   }
   return merged
+}
+
+function editableActionFields(name) {
+  const spec = UPDATE_SPECS[name]
+  return spec ? [...spec.fields, ...(spec.relationship ? [spec.relationship.field] : [])] : []
+}
+
+async function prepareActionUpdate(name, args, database, mergeArguments, lock = false) {
+  const lookup = { ...args }
+  for (const field of editableActionFields(name)) delete lookup[field]
+  const current = await mergeArguments(name, lookup, database, { lock })
+  return { current, preparedArgs: { ...current, ...args } }
+}
+
+function updateConfirmationState(name, args, current) {
+  if (!UPDATE_SPECS[name]) return undefined
+  return {
+    version: 1,
+    fields: Object.fromEntries(editableActionFields(name).filter((field) => args[field] !== undefined)
+      .map((field) => [field, ticketService.hashActionArguments({ value: current[field] ?? null })])),
+  }
+}
+
+function assertUpdateConfirmation(name, args, current, ticket) {
+  if (!UPDATE_SPECS[name]) return
+  const storedPreview = typeof ticket?.preview === 'string' ? JSON.parse(ticket.preview) : ticket?.preview
+  const baseline = storedPreview?._executionState
+  if (baseline?.version !== 1) {
+    const error = new Error('此编辑确认号缺少当前版本的字段校验依据，请重新预览并确认')
+    error.code = 'MCP_CONFIRMATION_ARGUMENTS_CHANGED'
+    throw error
+  }
+  const currentState = updateConfirmationState(name, args, current)
+  const changed = Object.keys(currentState.fields).filter((field) => baseline.fields?.[field] !== currentState.fields[field])
+  if (changed.length) {
+    const error = new Error('本次拟修改的字段在预览后已变化，请重新查询、预览并确认')
+    error.code = 'MCP_DATA_CHANGED'
+    error.fieldErrors = Object.fromEntries(changed.map((field) => [field, '此字段在预览后已变化']))
+    throw error
+  }
 }
 
 async function statusRow(database, sql, params, field, missingMessage) {
@@ -809,9 +867,9 @@ const actions = {
   payment_create: [contract.createPayment, (a) => ({ params: { id: id(a, 'project_id'), stageId: id(a, 'stage_id') }, body: cleanBody(a) })],
   payment_update: [contract.updatePayment, (a) => ({ params: { id: id(a, 'project_id'), paymentId: id(a, 'payment_id') }, body: cleanBody(a) })],
   payment_delete: [contract.deletePayment, (a) => ({ params: { id: id(a, 'project_id'), paymentId: id(a, 'payment_id') } })],
-  contract_attachment_upload: [contract.uploadAttachment, async (a) => ({ params: { id: id(a, 'project_id') }, file: await buildFileFromUrl(a) })],
+  contract_attachment_upload: [contract.uploadAttachment, async (a, file) => ({ params: { id: id(a, 'project_id') }, file: file || await buildFileFromUrl(a) })],
   contract_attachment_delete: [contract.deleteAttachment, (a) => ({ params: { id: id(a, 'project_id'), attachmentId: id(a, 'attachment_id') } })],
-  stage_delivery_upload: [stage.uploadFile, async (a) => ({ params: { projectId: id(a, 'project_id'), itemId: id(a, 'item_id') }, file: await buildFileFromUrl(a) })],
+  stage_delivery_upload: [stage.uploadFile, async (a, file) => ({ params: { projectId: id(a, 'project_id'), itemId: id(a, 'item_id') }, file: file || await buildFileFromUrl(a) })],
   stage_delivery_delete: [stage.deleteFile, (a) => ({ params: { projectId: id(a, 'project_id'), itemId: id(a, 'item_id'), fileId: id(a, 'file_id') } })],
   follow_up_record_create: [
     (req, res) => followUpRecord.forTarget(req.params.targetType).create(req, res),
@@ -825,8 +883,8 @@ const actions = {
     (req, res) => followUpRecord.forTarget(req.params.targetType).remove(req, res),
     (a) => ({ params: { targetType: a.target_type, id: a.target_id, followUpId: a.follow_up_id } }),
   ],
-  business_attachment_upload: [uploadBusinessAttachmentFromMcp, async (a) => ({
-    params: { id: id(a, 'business_id') }, body: { business_type: a.business_type }, file: await buildFileFromUrl(a),
+  business_attachment_upload: [uploadBusinessAttachmentFromMcp, async (a, file) => ({
+    params: { id: id(a, 'business_id') }, body: { business_type: a.business_type }, file: file || await buildFileFromUrl(a),
   })],
   business_attachment_delete: [deleteBusinessAttachmentFromMcp, (a) => ({
     params: { id: id(a, 'business_id'), attachmentId: id(a, 'attachment_id') }, body: { business_type: a.business_type },
@@ -1065,10 +1123,11 @@ async function validateDeleteBlockers(name, args, database) {
   if (name === 'product_delete') {
     const counts = await database.prepare(`SELECT
       (SELECT COUNT(*) FROM pms_project WHERE product_id = ? AND is_deleted = 0)::INTEGER project_count,
-      (SELECT COUNT(*) FROM pms_work_order WHERE product_id = ? AND is_deleted = 0)::INTEGER work_order_count`)
-      .get(args.id, args.id)
-    if (Number(counts?.project_count) || Number(counts?.work_order_count)) {
-      throw businessValidationError('id', '该产品已被项目或运维工单引用，无法删除')
+      (SELECT COUNT(*) FROM pms_work_order WHERE product_id = ? AND is_deleted = 0)::INTEGER work_order_count,
+      (SELECT COUNT(*) FROM pms_product_maintenance_contract WHERE product_id = ? AND is_deleted = 0)::INTEGER maintenance_contract_count`)
+      .get(args.id, args.id, args.id)
+    if (Number(counts?.project_count) || Number(counts?.work_order_count) || Number(counts?.maintenance_contract_count)) {
+      throw businessValidationError('id', '该产品已被项目、运维工单或运维合同引用，无法删除')
     }
   }
   if (name === 'project_delete') {
@@ -1083,12 +1142,12 @@ async function validateDeleteBlockers(name, args, database) {
   }
   if (name === 'requirement_delete') {
     const counts = await database.prepare(`SELECT
+      (SELECT COUNT(*) FROM pms_project WHERE requirement_id = ? AND is_deleted = 0)::INTEGER project_count,
       (SELECT COUNT(*) FROM pms_task WHERE requirement_id = ? AND is_deleted = 0)::INTEGER task_count,
       (SELECT COUNT(*) FROM pms_bug WHERE requirement_id = ? AND is_deleted = 0)::INTEGER bug_count`)
-      .get(args.id, args.id)
-    if (Number(counts?.task_count) || Number(counts?.bug_count)) {
-      throw businessValidationError('id', '该需求仍有关联任务或BUG，无法删除')
-    }
+      .get(args.id, args.id, args.id)
+    const blocker = requirementDeleteBlocker(counts)
+    if (blocker) throw businessValidationError('id', blocker)
   }
   if (name === 'task_delete') {
     const row = await database.prepare(
@@ -1132,6 +1191,14 @@ async function validateContractUpdatePayments(args, database) {
 }
 
 async function validateFileActionLimits(name, args, database) {
+  if (name === 'business_attachment_upload') {
+    try {
+      await assertBusinessCanAcceptAttachment(database, args.business_type, args.business_id)
+    } catch (error) {
+      if (!error.statusCode) throw error
+      throw businessValidationError('business_id', error.message)
+    }
+  }
   if (name === 'contract_attachment_upload') {
     const row = await database.prepare(`SELECT COUNT(a.id)::INTEGER count
       FROM pms_project_contract c
@@ -1156,7 +1223,37 @@ async function validateFileActionLimits(name, args, database) {
   }
 }
 
-async function validateActionBusinessRules(name, args, database = db) {
+async function validateActionBusinessRules(name, args, database = db, file) {
+  if (name === 'task_create_subtask') {
+    const parent = await database.prepare('SELECT id, status, parent_task_id FROM pms_task WHERE id = ? AND is_deleted = 0').get(args.parent_id)
+    if (!parent) throw businessValidationError('parent_id', '主任务不存在')
+    const blocker = validateSubtaskParent(parent)
+    if (blocker) throw businessValidationError('parent_id', blocker)
+  }
+  if (name === 'stage_item_update' && Number(args.requires_delivery_file) === 1) {
+    const old = await database.prepare(`SELECT i.status, i.requires_delivery_file,
+      (SELECT COUNT(*) FROM pms_project_plan_delivery_file f WHERE f.plan_item_id = i.id AND f.is_current = 1 AND f.is_void = 0)::INTEGER active_file_count
+      FROM pms_project_plan_item i JOIN pms_project_plan_stage s ON s.id = i.stage_id AND s.is_deleted = 0
+      WHERE i.id = ? AND s.project_id = ? AND i.is_deleted = 0`).get(args.item_id, args.project_id)
+    if (old) {
+      const blocker = validatePlanItemDeliveryChange(old, args.requires_delivery_file, old.active_file_count)
+      if (blocker) throw businessValidationError('requires_delivery_file', blocker)
+    }
+  }
+  if (UPDATE_SPECS[name]) {
+    const createSchema = getCommandDefinition(name.replace(/_update$/, '_create'), 'action')?.inputSchema
+    for (const field of createSchema?.required || []) {
+      const value = args[field]
+      if (value !== undefined && (value === null || typeof value === 'string' && !value.trim()
+        || Array.isArray(value) && value.length === 0)) {
+        const label = createSchema.properties[field]?.description?.split(/[：；，,]/)[0] || field
+        throw businessValidationError(field, `${label}不能为空`)
+      }
+    }
+  }
+  if (args.start_date && args.expected_end_date && args.expected_end_date < args.start_date) {
+    throw businessValidationError('expected_end_date', '预计完成日期不能早于计划开始日期')
+  }
   if (['follow_up_record_create', 'follow_up_record_update'].includes(name)) {
     try {
       normalizeFollowUpContent(args.content)
@@ -1167,7 +1264,7 @@ async function validateActionBusinessRules(name, args, database = db) {
   await validateFileActionLimits(name, args, database)
   if (name.endsWith('_upload')) {
     try {
-      validateAttachmentFile(await buildFileFromUrl(args))
+      validateAttachmentFile(file || await buildFileFromUrl(args))
     } catch (error) {
       if (error.code === 'MCP_BUSINESS_VALIDATION') throw error
       throw businessValidationError(
@@ -1254,6 +1351,66 @@ async function validateActionBusinessRules(name, args, database = db) {
   await validateDeleteBlockers(name, args, database)
 }
 
+function fileConfirmationState(file) {
+  return { version: 1, size: file.buffer.length, sha256: crypto.createHash('sha256').update(file.buffer).digest('hex') }
+}
+
+async function lockActionTargets(name, args, database) {
+  // Lock parents before children; re-read snapshots in a separate statement after
+  // waiting, so relationship subqueries cannot authorize using a stale snapshot.
+  let type = mainTargetType(name)
+  let ids = name.endsWith('_assign') ? args.ids : [name === 'task_create_subtask' ? args.parent_id : args.id]
+  if (name.startsWith('business_attachment_')) { type = args.business_type; ids = [args.business_id] }
+  if (type && MAIN_TARGETS[type]) {
+    if (name === `${type}_create`) return
+    const ordered = [...new Set((ids || []).map(Number))].filter((value) => Number.isSafeInteger(value) && value > 0).sort((a, b) => a - b)
+    if (!ordered.length) return
+    await database.prepare(`SELECT id FROM ${MAIN_TARGETS[type].table}
+      WHERE id IN (${ordered.map(() => '?').join(',')}) AND is_deleted = 0 ORDER BY id FOR UPDATE`).all(...ordered)
+    if (type === 'task') {
+      await database.prepare(`SELECT task_id, user_id FROM pms_task_owner
+        WHERE task_id IN (${ordered.map(() => '?').join(',')}) ORDER BY task_id, user_id FOR UPDATE`).all(...ordered)
+    }
+    return
+  }
+  if (!args.project_id || name.startsWith('follow_up_record_')) return
+  if (name.startsWith('contract_') || name.startsWith('payment_')) {
+    return contract.lockContractPaymentScope(args.project_id, database)
+  }
+  await database.prepare('SELECT id FROM pms_project WHERE id = ? AND is_deleted = 0 FOR UPDATE').get(args.project_id)
+  await database.prepare('SELECT id FROM pms_project_plan_stage WHERE project_id = ? AND is_deleted = 0 ORDER BY id FOR UPDATE').all(args.project_id)
+  if (name === 'stage_item_reorder') {
+    await database.prepare('SELECT id FROM pms_project_plan_item WHERE stage_id = ? AND is_deleted = 0 ORDER BY id FOR UPDATE').all(args.stage_id)
+  } else if (args.item_id) {
+    await database.prepare('SELECT id FROM pms_project_plan_item WHERE id = ? AND is_deleted = 0 FOR UPDATE').get(args.item_id)
+  }
+}
+
+async function prepareUploadFile(name, args, ticket) {
+  if (!name.endsWith('_upload')) return undefined
+  const preview = typeof ticket?.preview === 'string' ? JSON.parse(ticket.preview) : ticket?.preview
+  const baseline = preview?._fileState
+  if (ticket && (baseline?.version !== 1 || !Number.isSafeInteger(baseline.size) || !/^[a-f0-9]{64}$/.test(baseline.sha256))) {
+    const error = new Error('此上传确认号缺少文件内容校验依据，请重新预览并确认')
+    error.code = 'MCP_CONFIRMATION_ARGUMENTS_CHANGED'
+    throw error
+  }
+  const file = await buildFileFromUrl(args)
+  try { validateAttachmentFile(file) } catch (error) {
+    throw businessValidationError(/文件名/.test(error.message) ? 'file_name' : 'file_url', error.message)
+  }
+  if (ticket) {
+    const current = fileConfirmationState(file)
+    if (current.size !== baseline.size || current.sha256 !== baseline.sha256) {
+      const error = new Error('文件内容在预览后已变化，请重新预览并确认')
+      error.code = 'MCP_DATA_CHANGED'
+      error.fieldErrors = { file_url: '文件内容与已确认版本不一致' }
+      throw error
+    }
+  }
+  return file
+}
+
 async function dispatchActionTool(name, args, context, dependencies = {}) {
   const actionDefinitions = dependencies.actions || actions
   const actionTicketService = dependencies.ticketService || ticketService
@@ -1262,6 +1419,9 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
   const mergeArguments = dependencies.mergeArguments || mergeActionUpdateArguments
   const validateStatus = dependencies.validateStatus || validateStatusAction
   const validateBusinessRules = dependencies.validateBusinessRules || validateActionBusinessRules
+  const lockTargets = dependencies.lockTargets || lockActionTargets
+  const runTransaction = dependencies.runTransaction || db.withTransaction
+  const runSavepoint = dependencies.runSavepoint || db.transaction
   const definition = actionDefinitions[name]
   if (!definition) {
     const error = new Error('操作工具不存在或当前账号无权限')
@@ -1285,17 +1445,22 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
     }
   }
   validateActionActualDates(args)
-  const preparedArgs = await mergeArguments(name, args, database)
-  await validateStatus(name, preparedArgs, database)
-  await validateBusinessRules(name, preparedArgs, database)
+  const prepare = async (lock = false, file) => {
+    const update = await prepareActionUpdate(name, args, database, mergeArguments, lock)
+    await validateStatus(name, update.preparedArgs, database)
+    await validateBusinessRules(name, update.preparedArgs, database, file)
+    const target = await loadTarget(name, update.preparedArgs, database)
+    assertActionTargetOwnership(target, context, mode)
+    return { ...update, target }
+  }
   const riskLevel = highRiskPattern.test(name) ? 'high' : 'medium'
   const riskReason = riskLevel === 'high'
     ? '该操作会删除、变更状态或优先级、调整顺序、处理金额、批量处理或变更文件'
     : '该操作会新增或修改PMIS业务数据'
-  const target = await loadTarget(name, preparedArgs, database)
-  const affectedTargets = [target]
-  assertActionTargetOwnership(target, context, mode)
   if (mode === 'preview') {
+    const file = await prepareUploadFile(name, args)
+    const initial = await prepare(false, file)
+    const { target } = initial
     const preview = {
       tool: name,
       riskLevel,
@@ -1303,46 +1468,92 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
       target,
       changes: buildPreviewChanges(args),
     }
-    const ticket = await actionTicketService.createTicket(context, name, preparedArgs, preview, riskLevel)
+    const ticket = await actionTicketService.createTicket(context, name, args, preview, riskLevel,
+      updateConfirmationState(name, args, initial.current), file && fileConfirmationState(file))
     return {
       ...ticket,
       riskLevel,
       riskReason,
       requiresConfirmation: true,
       executed: false,
-      affectedTargets,
+      affectedTargets: [target],
       resultStatus: 'preview',
       executeArguments: {
-        ...preparedArgs,
+        ...args,
         mode: 'execute',
         confirmation_id: ticket.confirmationId,
       },
     }
   }
-  await actionTicketService.consumeTicket(context, name, preparedArgs, args.confirmation_id)
+  let handlerStarted = false
   try {
-    const [handler, buildInput] = definition
-    const data = unwrapEnvelope(await invokeController(handler, context, await buildInput(preparedArgs)))
-    const verification = await verifyActionResult(name, preparedArgs, database)
-    return {
-      success: true,
-      outcome: 'executed',
-      message: verification ? '操作已成功执行并通过结果校验' : '操作已成功执行',
-      tool: name,
-      riskLevel,
-      riskReason,
-      requiresConfirmation: false,
-      executed: true,
-      target,
-      affectedTargets,
-      changes: buildPreviewChanges(args),
-      resultStatus: 'success',
-      businessResult: data,
-      data,
-      ...(verification ? { verification } : {}),
-    }
+    const outcome = await runTransaction(async () => {
+      let ticket
+      try {
+        ticket = await actionTicketService.consumeTicket(context, name, args, args.confirmation_id)
+      } catch (error) {
+        if (error.transactionOutcomeUnknown) throw error
+        // consumeTicket persists expiration before returning its stable error.
+        // Keep that state while still rejecting the business operation.
+        return { error }
+      }
+      try {
+        const value = await runSavepoint(async () => {
+          // Validate the consumed ticket before fetching; download before holding business locks.
+          const file = await prepareUploadFile(name, args, ticket)
+          await lockTargets(name, args, database)
+          const { current, preparedArgs, target: currentTarget } = await prepare(true, file)
+          assertUpdateConfirmation(name, args, current, ticket)
+          const [handler, buildInput] = definition
+          const input = await buildInput(preparedArgs, file)
+          handlerStarted = true
+          const data = unwrapEnvelope(await invokeController(handler, context, input))
+          const verification = await verifyActionResult(name, preparedArgs, database)
+          return {
+            success: true,
+            outcome: 'executed',
+            message: verification ? '操作已成功执行并通过结果校验' : '操作已成功执行',
+            tool: name,
+            riskLevel,
+            riskReason,
+            requiresConfirmation: false,
+            executed: true,
+            target: currentTarget,
+            affectedTargets: [currentTarget],
+            changes: buildPreviewChanges(args),
+            resultStatus: 'success',
+            businessResult: data,
+            data,
+            ...(verification ? { verification } : {}),
+          }
+        })
+        return { value }
+      } catch (error) {
+        // The business savepoint has rolled back, but the ticket lock remains.
+        // Commit the failed attempt before releasing it, so a concurrent retry
+        // cannot consume the same confirmation between rollback and failure marking.
+        if (error.transactionOutcomeUnknown) throw error
+        try {
+          await actionTicketService.markTicketFailed(args.confirmation_id)
+        } catch (markError) {
+          error.transactionOutcomeUnknown = true
+          error.ticketFailureCause = markError
+          throw error
+        }
+        return { error }
+      }
+    })
+    if (outcome.error) throw outcome.error
+    return outcome.value
   } catch (error) {
-    await actionTicketService.markTicketFailed(args.confirmation_id).catch(() => {})
+    const externalEffect = handlerStarted && (name.endsWith('_upload')
+      || ['contract_delete', 'contract_attachment_delete', 'stage_delivery_delete'].includes(name))
+    if (error.transactionOutcomeUnknown || externalEffect) {
+      const uncertain = new Error('操作结果无法完全确认，可能已发生数据库提交或外部文件变更；请先查询业务结果及审计记录，不要直接重试')
+      uncertain.code = 'MCP_EXECUTION_OUTCOME_UNKNOWN'
+      uncertain.cause = error
+      throw uncertain
+    }
     throw error
   }
 }
