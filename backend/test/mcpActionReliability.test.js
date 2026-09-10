@@ -1,9 +1,12 @@
 const assert = require('node:assert/strict')
 const test = require('node:test')
+const { Client } = require('@modelcontextprotocol/sdk/client/index.js')
+const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js')
+const { createMcpServer } = require('../src/mcp/createServer')
 const db = require('../src/db')
 const { actions, dispatchActionTool, mergeActionUpdateArguments, validateActionBusinessRules } = require('../src/mcp/actionTools')
 const { getCommandDefinition } = require('../src/mcp/catalog')
-const { validateToolArguments } = require('../src/mcp/dispatcher')
+const { validateToolArguments, dispatchMcpTool } = require('../src/mcp/dispatcher')
 
 const context = {
   endpointType: 'action', client: { id: 3 },
@@ -36,6 +39,7 @@ function productFixture(t, { maintenanceContracts = 0, failLog = false, failTick
     }
     if (sql.startsWith('RELEASE SAVEPOINT ')) { connection.savepoints.delete(sql.slice(18)); return { rows: [] } }
     const current = connection?.state || state
+    if (/INSERT INTO pms_mcp_audit_log/.test(sql)) return { rows: [], rowCount: 1 }
     if (/INSERT INTO pms_mcp_action_ticket/.test(sql)) {
       const [id, client_id, user_id, employee_no, tool_name, arguments_hash, preview, idempotency_key, risk_level, expires_at] = values
       current.tickets[id] = { id, client_id, user_id, employee_no, tool_name, arguments_hash, preview: JSON.parse(preview), idempotency_key, risk_level, expires_at, status: 'pending' }
@@ -99,6 +103,66 @@ test('sparse execution preserves a concurrent edit to an omitted field', async (
   assert.equal(state.product.name, '新名称')
   assert.equal(state.product.description, '其他用户的新说明')
   assert.ok(statements.some(({ sql, connection }) => /FROM pms_product.*FOR UPDATE/s.test(sql) && connection !== 'pool'))
+})
+
+test('creator edit uses the complete confirmation chain and retains the actual owner', async (t) => {
+  const { state } = productFixture(t)
+  Object.assign(state.product, { owner_id: 9, creator_id: 8 })
+  const preview = await call('product_update', { id: 9, description: '创建人维护', mode: 'preview' })
+  assert.equal(preview.executed, false)
+  assert.equal(state.product.description, '原说明')
+  const result = await call('product_update', preview.executeArguments)
+  assert.equal(result.executed, true)
+  assert.equal(state.product.description, '创建人维护')
+  assert.equal(state.product.owner_id, 9)
+  assert.equal(state.product.creator_id, 8)
+  assert.equal(state.tickets[preview.confirmationId].status, 'executed')
+  await assert.rejects(call('product_update', preview.executeArguments), { code: 'MCP_CONFIRMATION_ALREADY_USED' })
+})
+
+test('creator maintenance permission is rechecked at execution before any business write', async (t) => {
+  const { state } = productFixture(t)
+  Object.assign(state.product, { owner_id: 9, creator_id: 8 })
+  const preview = await call('product_update', { id: 9, description: '创建人维护', mode: 'preview' })
+  state.product.creator_id = 10
+  await assert.rejects(call('product_update', preview.executeArguments), { code: 'MCP_ACTION_NOT_RESPONSIBLE' })
+  assert.equal(state.product.description, '原说明')
+  assert.equal(state.tickets[preview.confirmationId].status, 'failed')
+})
+
+test('public SDK discovers creator maintenance and completes its confirmed action with permission and schema errors', async (t) => {
+  const { state } = productFixture(t)
+  Object.assign(state.product, { owner_id: 9, creator_id: 8 })
+  const ctx = { ...context, allowedMenuPaths: new Set(context.allowedMenuPaths), allowedPermissionCodes: new Set(['product_update', 'product_delete', 'product_change_status']
+    .map((name) => getCommandDefinition(name, 'action')._meta.permissionCode)) }
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
+  const server = createMcpServer({ context: ctx, dispatch: dispatchMcpTool })
+  const client = new Client({ name: 'creator-permission-test', version: '1.0.0' })
+  t.after(async () => { await client.close(); await server.close() })
+  await server.connect(serverTransport)
+  await client.connect(clientTransport)
+  const { tools } = await client.listTools()
+  const manage = tools.find((tool) => tool.name === 'product_manage')
+  assert.match(manage.description, /当前负责人或该单据创建人/)
+  const args = { operation: 'update', mode: 'preview', id: 9, description: '协议创建人编辑' }
+  const invalid = await client.callTool({ name: 'product_manage', arguments: { ...args, creator_id: 8 } })
+  assert.equal(invalid.structuredContent.error.code, 'MCP_ARGUMENT_INVALID')
+  const reassignment = await client.callTool({ name: 'product_manage', arguments: { ...args, owner_id: 8 } })
+  assert.equal(reassignment.structuredContent.error.code, 'MCP_ACTION_NOT_RESPONSIBLE')
+  const preview = await client.callTool({ name: 'product_manage', arguments: args })
+  assert.equal(preview.isError, undefined)
+  assert.equal(preview.structuredContent.executed, false)
+  const payload = preview.structuredContent.execute_payload
+  assert.equal(payload.tool_name, 'product_manage')
+  assert.equal(state.product.description, '原说明')
+  const result = await client.callTool({ name: payload.tool_name, arguments: payload.arguments })
+  assert.equal(result.isError, undefined)
+  assert.equal(result.structuredContent.executed, true)
+  assert.equal(state.product.description, '协议创建人编辑')
+  assert.equal(state.product.owner_id, 9)
+  ctx.allowedMenuPaths.clear()
+  const denied = await client.callTool({ name: 'product_manage', arguments: args })
+  assert.equal(denied.structuredContent.error.code, 'MCP_PERMISSION_DENIED')
 })
 
 test('sparse execution rejects a concurrent edit to the field the user confirmed', async (t) => {
