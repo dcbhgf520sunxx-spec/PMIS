@@ -1462,6 +1462,8 @@ function genericQueryDefinition(name, title, domains, description) {
 
 function publicActionDefinition([name, title, operations]) {
   const entries = Object.entries(operations)
+  const creatorMaintenance = ['product_manage', 'project_manage', 'requirement_manage', 'task_manage', 'bug_manage', 'work_order_manage'].includes(name)
+    ? '普通 update/delete 允许当前负责人或该单据创建人操作，仍需菜单和按钮权限；创建人不能借普通编辑变更负责人、指派人或跟进人，也不因此获得状态、优先级、附件或子项操作权限。' : ''
   const definitions = entries.map(([, command]) => commandDefinition(command, 'action'))
   const requiredByField = new Map()
   for (const [operation, command] of entries) {
@@ -1503,7 +1505,7 @@ function publicActionDefinition([name, title, operations]) {
   return {
     name,
     title,
-    description: `${title}。通过 operation 选择具体操作。${operationSummary}。仅补齐必填或影响本次操作的歧义信息，不因非必填字段反复询问。所有操作必须先 preview，用户确认后再使用完全相同的业务参数和 confirmation_id 执行 execute。状态变更前必须先查询详情，只能从 allowed_statuses 中选择目标状态。`,
+    description: `${title}。通过 operation 选择具体操作。${operationSummary}。${creatorMaintenance}仅补齐必填或影响本次操作的歧义信息，不因非必填字段反复询问。所有操作必须先 preview，用户确认后再使用完全相同的业务参数和 confirmation_id 执行 execute。状态变更前必须先查询详情，只能从 allowed_statuses 中选择目标状态。`,
     inputSchema: {
       type: 'object',
       properties,

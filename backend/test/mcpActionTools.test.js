@@ -149,7 +149,7 @@ test('action preview rejects a target that the current employee is not responsib
       },
     }),
     (error) => error.code === 'MCP_ACTION_NOT_RESPONSIBLE'
-      && /只能操作本人负责的项目/.test(error.message)
+      && /只能操作本人负责或创建的项目/.test(error.message)
   )
   assert.equal(ticketCreated, false)
 })
@@ -391,6 +391,7 @@ test('target snapshot verifies an existing task and returns only confirmation-sa
             project_id: 2,
             requirement_id: null,
             owner_ids: [6, 8],
+            creator_id: 7,
           }
         },
       }
@@ -408,6 +409,7 @@ test('target snapshot verifies an existing task and returns only confirmation-sa
       project_id: 2,
       requirement_id: null,
       owner_ids: [6, 8],
+      creator_id: 7,
     },
   })
 })

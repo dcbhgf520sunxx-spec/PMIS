@@ -48,32 +48,32 @@ const MAIN_TARGETS = {
   product: {
     table: 'pms_product',
     nameColumn: 'name',
-    currentFields: ['status', 'owner_id'],
+    currentFields: ['status', 'owner_id', 'creator_id'],
   },
   project: {
     table: 'pms_project',
     nameColumn: 'name',
-    currentFields: ['status', 'priority', 'product_id', 'requirement_id', 'owner_id', 'expected_end_date'],
+    currentFields: ['status', 'priority', 'product_id', 'requirement_id', 'owner_id', 'expected_end_date', 'creator_id'],
   },
   requirement: {
     table: 'pms_requirement',
     nameColumn: 'title',
-    currentFields: ['status', 'priority', 'requirement_type', 'product_id', 'owner_id'],
+    currentFields: ['status', 'priority', 'requirement_type', 'product_id', 'owner_id', 'creator_id'],
   },
   task: {
     table: 'pms_task',
     nameColumn: 'name',
-    currentFields: ['status', 'priority', 'source_type', 'project_id', 'requirement_id', 'owner_ids'],
+    currentFields: ['status', 'priority', 'source_type', 'project_id', 'requirement_id', 'owner_ids', 'creator_id'],
   },
   bug: {
     table: 'pms_bug',
     nameColumn: 'title',
-    currentFields: ['status', 'source_type', 'project_id', 'requirement_id', 'assignee_id'],
+    currentFields: ['status', 'source_type', 'project_id', 'requirement_id', 'assignee_id', 'creator_id'],
   },
   work_order: {
     table: 'pms_work_order',
     nameColumn: "LEFT(COALESCE(problem_desc, ''), 200)",
-    currentFields: ['status', 'product_id', 'problem_type', 'follower_id', 'urgency', 'expected_resolve_date'],
+    currentFields: ['status', 'product_id', 'problem_type', 'follower_id', 'urgency', 'expected_resolve_date', 'creator_id'],
   },
 }
 const TARGET_LABELS = {
@@ -797,7 +797,7 @@ function ownershipError(message) {
   return error
 }
 
-function assertActionTargetOwnership(target, context, mode) {
+function assertActionTargetOwnership(target, context, mode, actionName, args = {}) {
   if (target.type === 'follow_up_record') return
   if (target.current === null) return
   const rows = target.type === 'stage_item_order' && Array.isArray(target.current?.order)
@@ -806,16 +806,32 @@ function assertActionTargetOwnership(target, context, mode) {
     ? target.current
     : [{ id: target.id, name: target.name, ...target.current }]
   const userId = Number(context.user.id)
-  const unauthorized = rows.filter((row) => !responsibleUserIds(target.type, row).includes(userId))
-  if (!unauthorized.length) return
+  // Only ordinary main-record maintenance accepts its persisted creator.
+  // Attachments and child creation can share this target but retain owner-only checks.
+  const allowCreator = Object.hasOwn(MAIN_TARGETS, target.type)
+    && [`${target.type}_update`, `${target.type}_delete`].includes(actionName)
+  const unauthorized = rows.filter((row) => !responsibleUserIds(target.type, row).includes(userId)
+    && !(allowCreator && Number(row.creator_id) > 0 && Number(row.creator_id) === userId))
+  if (!unauthorized.length) {
+    if (allowCreator && actionName.endsWith('_update')) {
+      const field = target.type === 'task' ? 'owner_ids'
+        : target.type === 'bug' ? 'assignee_id' : target.type === 'work_order' ? 'follower_id' : 'owner_id'
+      const ids = (value) => [...new Set((Array.isArray(value) ? value : [value]).map(Number))].sort((a, b) => a - b)
+      if (Object.hasOwn(args, field) && rows.some((row) => !responsibleUserIds(target.type, row).includes(userId)
+        && JSON.stringify(ids(args[field])) !== JSON.stringify(ids(row[field])))) {
+        throw ownershipError('创建人可普通编辑或删除单据，但不能通过编辑变更负责人、指派人或跟进人')
+      }
+    }
+    return
+  }
   const label = TARGET_LABELS[target.type] || '业务数据'
   const details = unauthorized
     .slice(0, 10)
     .map((row) => `#${row.id} ${row.name || ''}`.trim())
     .join('、')
   const overflow = unauthorized.length > 10 ? `等${unauthorized.length}条` : ''
-  const prefix = mode === 'execute' ? '负责人已发生变化，' : ''
-  throw ownershipError(`${prefix}只能操作本人负责的${label}；无权操作：${details}${overflow}`)
+  const prefix = mode === 'execute' ? (allowCreator ? '当前已不具有该单据维护权限，' : '负责人已发生变化，') : ''
+  throw ownershipError(`${prefix}只能操作本人负责${allowCreator ? '或创建' : ''}的${label}；无权操作：${details}${overflow}`)
 }
 
 const actions = {
@@ -1450,7 +1466,7 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
     await validateStatus(name, update.preparedArgs, database)
     await validateBusinessRules(name, update.preparedArgs, database, file)
     const target = await loadTarget(name, update.preparedArgs, database)
-    assertActionTargetOwnership(target, context, mode)
+    assertActionTargetOwnership(target, context, mode, name, update.preparedArgs)
     return { ...update, target }
   }
   const riskLevel = highRiskPattern.test(name) ? 'high' : 'medium'

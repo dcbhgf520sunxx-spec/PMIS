@@ -30,7 +30,11 @@ test('isolated PostgreSQL resource concurrency invariants', { skip: process.env.
     t.mock.method(db.pool, 'query', (sql, values) => isolated.query(sql, values))
     t.mock.method(db.pool, 'connect', () => isolated.connect())
     await isolated.query(`
-      CREATE TABLE pms_project (id BIGINT PRIMARY KEY, name TEXT, owner_id BIGINT, is_deleted INTEGER DEFAULT 0);
+      CREATE TABLE pms_project (id BIGINT PRIMARY KEY, name TEXT, owner_id BIGINT, is_deleted INTEGER DEFAULT 0, product_id BIGINT);
+      CREATE TABLE pms_product (id BIGINT PRIMARY KEY, name TEXT, description TEXT, status INTEGER DEFAULT 1,
+        owner_id BIGINT, creator_id BIGINT, updater_id BIGINT, updated_at TIMESTAMP DEFAULT NOW(), is_deleted INTEGER DEFAULT 0);
+      CREATE TABLE pms_work_order (id BIGINT PRIMARY KEY, product_id BIGINT, is_deleted INTEGER DEFAULT 0);
+      CREATE TABLE pms_product_maintenance_contract (id BIGINT PRIMARY KEY, product_id BIGINT, is_deleted INTEGER DEFAULT 0);
       CREATE TABLE pms_user (id BIGINT PRIMARY KEY, real_name TEXT, status INTEGER DEFAULT 1, is_deleted INTEGER DEFAULT 0);
       CREATE TABLE pms_archive_type (id BIGINT PRIMARY KEY, name TEXT, status INTEGER DEFAULT 1, is_deleted INTEGER DEFAULT 0);
       CREATE TABLE pms_archive (id BIGINT PRIMARY KEY, archive_type_id BIGINT, name TEXT, code TEXT, status INTEGER DEFAULT 1, is_deleted INTEGER DEFAULT 0);
@@ -45,10 +49,10 @@ test('isolated PostgreSQL resource concurrency invariants', { skip: process.env.
       CREATE TABLE pms_op_log (id BIGSERIAL PRIMARY KEY, user_id BIGINT, action TEXT, module TEXT, target_id BIGINT,
         field_name TEXT, old_value TEXT, new_value TEXT, ip TEXT, target_name TEXT, operation_id UUID);
       CREATE TABLE pms_task (id BIGINT PRIMARY KEY, name TEXT, description TEXT, status INTEGER DEFAULT 0, priority INTEGER DEFAULT 1,
-        source_type INTEGER, project_id BIGINT, requirement_id BIGINT, updater_id BIGINT, updated_at TIMESTAMP DEFAULT NOW(), is_deleted INTEGER DEFAULT 0);
+        source_type INTEGER, project_id BIGINT, requirement_id BIGINT, creator_id BIGINT, updater_id BIGINT, updated_at TIMESTAMP DEFAULT NOW(), is_deleted INTEGER DEFAULT 0);
       CREATE TABLE pms_task_owner (task_id BIGINT, user_id BIGINT, sort_order INTEGER);
       CREATE TABLE pms_bug (id BIGINT PRIMARY KEY, title TEXT, assignee_id BIGINT, status INTEGER DEFAULT 0, source_type INTEGER,
-        project_id BIGINT, requirement_id BIGINT, updater_id BIGINT, updated_at TIMESTAMP DEFAULT NOW(), is_deleted INTEGER DEFAULT 0);
+        project_id BIGINT, requirement_id BIGINT, creator_id BIGINT, updater_id BIGINT, updated_at TIMESTAMP DEFAULT NOW(), is_deleted INTEGER DEFAULT 0);
       CREATE TABLE pms_project_plan_stage (id BIGINT PRIMARY KEY, project_id BIGINT, name TEXT, sort_order INTEGER,
         updater_id BIGINT, updated_at TIMESTAMP DEFAULT NOW(), is_deleted INTEGER DEFAULT 0);
       CREATE TABLE pms_project_plan_item (id BIGINT PRIMARY KEY, stage_id BIGINT, name TEXT, owner_id BIGINT, sort_order INTEGER,
@@ -58,7 +62,8 @@ test('isolated PostgreSQL resource concurrency invariants', { skip: process.env.
         creator_id BIGINT, updater_id BIGINT, is_deleted INTEGER DEFAULT 0);
       CREATE TABLE pms_mcp_action_ticket (id UUID PRIMARY KEY, client_id BIGINT, user_id BIGINT, employee_no TEXT, tool_name TEXT,
         arguments_hash TEXT, preview JSONB, idempotency_key TEXT, risk_level TEXT, status TEXT, expires_at TIMESTAMPTZ, executed_at TIMESTAMPTZ);
-      INSERT INTO pms_project VALUES (1, '临时项目', 8, 0);
+      INSERT INTO pms_project(id,name,owner_id,is_deleted) VALUES (1, '临时项目', 8, 0);
+      INSERT INTO pms_product(id,name,description,owner_id,creator_id) VALUES(20,'创建人维护测试','原说明',9,8);
       INSERT INTO pms_user(id,real_name) VALUES(8,'临时甲'),(9,'临时乙');
       INSERT INTO pms_archive_type(id,name) VALUES(1,'供应商');
       INSERT INTO pms_archive(id,archive_type_id,name) VALUES(1,1,'临时供应商');
@@ -70,6 +75,25 @@ test('isolated PostgreSQL resource concurrency invariants', { skip: process.env.
       INSERT INTO pms_project_plan_stage(id,project_id,name,sort_order) VALUES(10,1,'临时计划阶段',0);
       INSERT INTO pms_project_plan_item(id,stage_id,name,owner_id,sort_order) VALUES(11,10,'临时事项甲',8,0),(12,10,'临时事项乙',8,1);
     `)
+
+    await t.test('creator update and delete commit through confirmation and preserve owner and audit identity', async () => {
+      const edit = await dispatchActionTool('product_update', { mode: 'preview', id: 20, description: '创建人编辑' }, context)
+      assert.equal(edit.executed, false)
+      assert.equal((await isolated.query('SELECT description FROM pms_product WHERE id=20')).rows[0].description, '原说明')
+      assert.equal((await dispatchActionTool('product_update', edit.executeArguments, context)).executed, true)
+      const edited = (await isolated.query('SELECT description,owner_id,creator_id,updater_id FROM pms_product WHERE id=20')).rows[0]
+      assert.deepEqual(edited, { description: '创建人编辑', owner_id: '9', creator_id: '8', updater_id: '8' })
+      await assert.rejects(dispatchActionTool('product_update', edit.executeArguments, context), { code: 'MCP_CONFIRMATION_ALREADY_USED' })
+      await assert.rejects(dispatchActionTool('product_change_status', { mode: 'preview', id: 20, status: 0 }, context), { code: 'MCP_ACTION_NOT_RESPONSIBLE' })
+      await assert.rejects(dispatchActionTool('product_update', { mode: 'preview', id: 20, owner_id: 8 }, context), { code: 'MCP_ACTION_NOT_RESPONSIBLE' })
+      const removal = await dispatchActionTool('product_delete', { mode: 'preview', id: 20 }, context)
+      assert.equal((await isolated.query('SELECT is_deleted FROM pms_product WHERE id=20')).rows[0].is_deleted, 0)
+      assert.equal((await dispatchActionTool('product_delete', removal.executeArguments, context)).executed, true)
+      assert.equal((await isolated.query('SELECT is_deleted FROM pms_product WHERE id=20')).rows[0].is_deleted, 1)
+      const history = (await isolated.query('SELECT action,user_id FROM pms_op_log WHERE target_id=20')).rows
+      assert.deepEqual(history.map((row) => row.action).sort(), ['删除', '编辑'])
+      assert.ok(history.every((row) => Number(row.user_id) === 8))
+    })
 
     await t.test('two HTTP payments serialize on their shared stage and cannot exceed its amount', async () => {
       await blocker.query('BEGIN')
