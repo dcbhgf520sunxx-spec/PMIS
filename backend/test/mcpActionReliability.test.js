@@ -239,6 +239,7 @@ test('a failed file handler reports uncertain external effects even when databas
   const dependencies = {
     lockTargets: async () => {},
     validateBusinessRules: async () => {},
+    resolvePreviewDisplay: async (_name, args) => ({ project_id: args.project_id, file_name: args.file_name }),
     loadTarget: async () => ({ type: 'contract', id: 2, current: { owner_id: 8 } }),
     actions: { contract_attachment_upload: [async (_req, res) => {
       externalEffects.push('uploaded to external storage')

@@ -110,6 +110,30 @@ const STATUS_LABELS = {
   work_order: { 0: '待处理', 1: '处理中', 2: '已解决', 4: '已暂停', 5: '被激活' },
   stage_item: { 0: '未开始', 1: '进行中', 2: '已完成', 3: '已暂停' },
 }
+const PREVIEW_ENUM_LABELS = {
+  priority: { 0: '低', 1: '中', 2: '高' },
+  source_type: { 1: '项目', 2: '需求' },
+  requirement_type: { 1: '上会立项', 2: '需求提报', 3: '预研', 4: '直接实施' },
+  severity: { 1: '低', 2: '中', 3: '高', 4: '致命' },
+  urgency: { 0: '低', 1: '中', 2: '高' },
+  requires_delivery_file: { 0: '不要求', 1: '要求' },
+  target_type: { project: '项目', requirement: '需求', task: '任务' },
+  business_type: { requirement: '需求', project: '项目', task: '任务', bug: 'BUG', work_order: '运维工单' },
+}
+const PREVIEW_REFERENCE_SQL = {
+  product_id: 'SELECT name FROM pms_product WHERE id = ? AND is_deleted = 0',
+  project_id: 'SELECT name FROM pms_project WHERE id = ? AND is_deleted = 0',
+  requirement_id: 'SELECT title name FROM pms_requirement WHERE id = ? AND is_deleted = 0',
+  parent_id: 'SELECT name FROM pms_task WHERE id = ? AND is_deleted = 0',
+  task_type: 'SELECT name FROM pms_archive WHERE id = ? AND is_deleted = 0',
+  bug_type_id: 'SELECT name FROM pms_archive WHERE id = ? AND is_deleted = 0',
+  resolution_id: 'SELECT name FROM pms_archive WHERE id = ? AND is_deleted = 0',
+  problem_type: 'SELECT name FROM pms_archive WHERE id = ? AND is_deleted = 0',
+  supplier_id: 'SELECT name FROM pms_archive WHERE id = ? AND is_deleted = 0',
+  item_id: 'SELECT name FROM pms_project_plan_item WHERE id = ? AND is_deleted = 0',
+}
+const PREVIEW_USER_FIELDS = new Set(['owner_id', 'assignee_id', 'follower_id', 'handler_id'])
+const PREVIEW_USER_ARRAY_FIELDS = new Set(['owner_ids', 'member_ids', 'collaborator_ids'])
 
 function cleanBody(args) {
   const body = { ...args }
@@ -132,6 +156,83 @@ function buildPreviewChanges(args) {
   const changes = { ...args }
   for (const key of ['mode', 'confirmation_id', 'idempotency_key']) delete changes[key]
   return redactAuditInput(changes)
+}
+
+function statusPreviewLabels(name) {
+  if (name.startsWith('stage_item_')) return STATUS_LABELS.stage_item
+  const domain = Object.keys(STATUS_LABELS).find((prefix) => name.startsWith(`${prefix}_`))
+  return domain ? STATUS_LABELS[domain] : undefined
+}
+
+async function previewName(database, sql, value) {
+  if (value === undefined || value === null || value === '') return value
+  const row = await database.prepare(sql).get(Number(value))
+  return row?.name || value
+}
+
+async function previewUserNames(database, values) {
+  const ids = [...new Set((Array.isArray(values) ? values : [values]).map(Number))]
+  if (!ids.length) return []
+  const rows = await database.prepare(`SELECT id, real_name name FROM pms_user
+    WHERE id IN (${ids.map(() => '?').join(',')}) AND is_deleted = 0`).all(...ids)
+  const names = new Map(rows.map((row) => [Number(row.id), row.name]))
+  return ids.map((value) => names.get(value) || value)
+}
+
+function targetDisplayName(field, value, target) {
+  if (!target) return undefined
+  if (field === 'attachment_id' && target.attachment?.name) return target.attachment.name
+  const ordered = target.proposed?.order || target.current?.order || (Array.isArray(target.current) ? target.current : [])
+  if (field === 'ids') return value.map((idValue) => ordered.find((item) => Number(item.id) === Number(idValue))?.name || idValue)
+  if (field === 'moved_id') return ordered.find((item) => Number(item.id) === Number(value))?.name
+  if (['id', 'business_id', 'target_id', 'follow_up_id', 'payment_id', 'attachment_id', 'file_id'].includes(field)) {
+    return target.name
+  }
+  if (field === 'item_id' && ['stage_item', 'stage_delivery'].includes(target.type)) return target.name
+  if (field === 'stage_id' && ['stage', 'payment_stage', 'stage_item_order'].includes(target.type)) return target.name
+  return undefined
+}
+
+async function resolvePreviewField(name, field, value, database, target) {
+  if (value === undefined || value === null) return value
+  if (field === 'status') return statusPreviewLabels(name)?.[String(value)] || value
+  if (PREVIEW_ENUM_LABELS[field]) return PREVIEW_ENUM_LABELS[field][String(value)] || value
+  if (PREVIEW_USER_FIELDS.has(field)) return (await previewUserNames(database, [value]))[0]
+  if (PREVIEW_USER_ARRAY_FIELDS.has(field)) return previewUserNames(database, value)
+  const targetValue = targetDisplayName(field, value, target)
+  if (targetValue !== undefined) return targetValue
+  if (field === 'stage_id') {
+    const sql = name.startsWith('payment_')
+      ? 'SELECT stage_name name FROM pms_project_payment_stage WHERE id = ? AND is_deleted = 0'
+      : 'SELECT name FROM pms_project_plan_stage WHERE id = ? AND is_deleted = 0'
+    return previewName(database, sql, value)
+  }
+  if (PREVIEW_REFERENCE_SQL[field]) return previewName(database, PREVIEW_REFERENCE_SQL[field], value)
+  return value
+}
+
+async function resolvePreviewDisplay(name, args, database = db, target) {
+  const changes = buildPreviewChanges(args)
+  const display = {}
+  for (const [field, value] of Object.entries(changes)) {
+    if (field === 'items' && Array.isArray(value)) {
+      display[field] = await Promise.all(value.map(async (item) => {
+        const result = {}
+        for (const [itemField, itemValue] of Object.entries(item)) {
+          result[itemField] = await resolvePreviewField('stage_item_create', itemField, itemValue, database, target)
+        }
+        return result
+      }))
+    } else if (field === 'stages' && Array.isArray(value)) {
+      display[field] = value.map((stage) => ({
+        ...stage,
+        ...(stage.id ? { id: stage.stage_name || stage.id } : {}),
+      }))
+    } else {
+      display[field] = await resolvePreviewField(name, field, value, database, target)
+    }
+  }
+  return display
 }
 
 function id(args, key = 'id') {
@@ -1438,6 +1539,7 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
   const lockTargets = dependencies.lockTargets || lockActionTargets
   const runTransaction = dependencies.runTransaction || db.withTransaction
   const runSavepoint = dependencies.runSavepoint || db.transaction
+  const buildDisplay = dependencies.resolvePreviewDisplay || resolvePreviewDisplay
   const definition = actionDefinitions[name]
   if (!definition) {
     const error = new Error('操作工具不存在或当前账号无权限')
@@ -1477,12 +1579,14 @@ async function dispatchActionTool(name, args, context, dependencies = {}) {
     const file = await prepareUploadFile(name, args)
     const initial = await prepare(false, file)
     const { target } = initial
+    const displayChanges = await buildDisplay(name, args, database, target)
     const preview = {
       tool: name,
       riskLevel,
       operator: { employeeNo: context.user.employeeNo, realName: context.user.realName },
       target,
       changes: buildPreviewChanges(args),
+      displayChanges,
     }
     const ticket = await actionTicketService.createTicket(context, name, args, preview, riskLevel,
       updateConfirmationState(name, args, initial.current), file && fileConfirmationState(file))
@@ -1610,6 +1714,7 @@ module.exports = {
   dispatchActionTool,
   loadActionTargetSnapshot,
   mergeActionUpdateArguments,
+  resolvePreviewDisplay,
   validateActionBusinessRules,
   validateStatusAction,
 }

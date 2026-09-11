@@ -222,6 +222,29 @@ test('all action schemas require an explicit mode', () => {
   }
 })
 
+test('action output tells clients to render display changes instead of raw identifiers', () => {
+  const schema = getToolDefinition('task_manage', 'action').outputSchema
+  assert.ok(schema.properties.preview.properties?.displayChanges)
+  assert.match(schema.properties.preview.properties.displayChanges.description, /确认界面/)
+  assert.match(schema.properties.execute_payload.description, /原样复用/)
+})
+
+test('query output schemas declare relation names already returned by controllers', () => {
+  for (const [toolName, fields] of Object.entries({
+    project_search: ['product_id', 'product_name', 'requirement_id', 'requirement_name', 'owner_id', 'owner_name', 'members'],
+    requirement_search: ['product_id', 'product_name', 'owner_id'],
+    task_search: ['project_id', 'project_name', 'requirement_id', 'requirement_name', 'task_type', 'task_type_name', 'owners'],
+    bug_search: ['project_id', 'project_name', 'requirement_id', 'requirement_name', 'bug_type_id', 'bug_type_name', 'resolution_id', 'resolution_name'],
+    work_order_search: ['product_id', 'product_name', 'problem_type', 'problem_type_name', 'follower_id', 'follower_name'],
+    stage_plan_search: ['project_id', 'project_name', 'stage_id', 'stage_name', 'owner_id', 'owner_name', 'requires_delivery_file_label'],
+    contract_search: ['project_id', 'project_name', 'supplier_id', 'supplier_name'],
+    payment_search: ['project_id', 'project_name', 'stage_id', 'stage_name', 'handler_id', 'handler_name'],
+  })) {
+    const item = getToolDefinition(toolName, 'query').outputSchema.properties.items.items
+    for (const field of fields) assert.ok(item.properties[field], `${toolName}.${field}`)
+  }
+})
+
 test('优先级 MCP 使用独立工具并按按钮权限精确暴露', () => {
   const context = {
     endpointType: 'action',
