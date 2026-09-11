@@ -166,6 +166,7 @@ Action 工具采用两步确认：
 
 1. 先选择业务域工具，再通过 `operation` 选择具体动作，例如 `task_manage` 的 `create`、`create_subtask`、`update`、`delete`，或 `task_flow` 的 `assign`、`change_status`。
 2. 首次调用传 `mode: "preview"`、`operation` 和本次实际需要的业务参数。新增操作必须提供 Schema 标记的全部必填字段；编辑操作只传目标标识和用户明确要求修改的字段，服务端会读取并保留其他当前值。服务会在生成确认号前完成参数、枚举、日期顺序、关联记录、重复值、状态流转、删除依赖、合同回款和文件限制等业务校验，并读取当前业务目标；其中阶段和关键事项按所属范围校验同名，批量关键事项同时校验批次内同名与每项负责人/协作人，合同校验编码唯一且同一项目只能有一份有效合同，项目校验需求属于所选产品且未关联其他项目。校验失败或目标不存在时不会生成确认号。成功后返回 `confirmationId`、有效期、风险等级、风险原因、操作人、当前目标和变更摘要，同时明确 `resultStatus="preview"`、`requiresConfirmation=true`、`executed=false`。
+   预览中的 `preview.changes` 保留本次真实业务参数，`preview.displayChanges` 将项目、产品、需求、阶段、任务类型、档案、人员、附件等内部标识转换为业务名称，并将状态、优先级、关联类型等代码转换为中文标签。确认界面必须优先展示 `displayChanges`；正式执行只能原样使用 `execute_payload`，不得把展示名称回填为执行参数。
 3. 用户确认后，在 30 分钟内使用完全相同的 `operation` 和业务参数调用 `mode: "execute"`，并传回 `confirmation_id`。
 
 业务参数、员工、智能体、工具或确认号任一变化，服务都会拒绝执行。确认号只能使用一次。建议每次业务操作同时传入唯一的 `idempotency_key`。
@@ -250,7 +251,7 @@ Query MCP 用来查找目标、读取当前值和确认可选业务数据；Acti
 
 三、两步确认
 1. 所有 Action 工具第一次只能使用 mode="preview"，并明确传入 operation。
-2. 收到预览后，向用户清楚展示：操作名称、目标名称与 ID、当前状态或关键当前值、拟变更内容、风险等级和确认号有效期。
+2. 收到预览后，向用户清楚展示：操作名称、目标名称、当前状态或关键当前值、拟变更内容、风险等级和确认号有效期。拟变更内容优先使用 `preview.displayChanges` 的业务名称和中文标签，不直接展示 `preview.changes` 中的内部 ID 或代码；只有业务消歧确有需要时才附带目标 ID。
 3. 只有用户针对本次预览明确回复同意、确认或执行后，才能调用 mode="execute"。
 4. execute 必须使用与 preview 完全相同的 operation 和业务参数，并附上原 confirmation_id；不得静默增加、删除或修改参数。
 5. 用户修改了任何业务内容、确认号过期、员工变化、目标变化或工具变化时，必须重新 preview 并再次取得用户确认。

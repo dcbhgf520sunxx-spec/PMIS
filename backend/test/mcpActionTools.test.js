@@ -5,6 +5,7 @@ const {
   dispatchActionTool: dispatchActionToolWithDb,
   loadActionTargetSnapshot,
   mergeActionUpdateArguments,
+  resolvePreviewDisplay,
   validateStatusAction,
 } = require('../src/mcp/actionTools')
 const { hashActionArguments } = require('../src/services/mcpActionTicketService')
@@ -12,7 +13,92 @@ const { hashActionArguments } = require('../src/services/mcpActionTicketService'
 // Unit fixtures replace transaction boundaries explicitly. The pg-level atomic
 // rollback, nesting and isolation regressions live in mcpActionReliability.test.
 const dispatchActionTool = (name, args, context, dependencies) => dispatchActionToolWithDb(name, args, context, {
-  runTransaction: (callback) => callback(), runSavepoint: (callback) => callback(), lockTargets: async () => {}, ...dependencies,
+  runTransaction: (callback) => callback(), runSavepoint: (callback) => callback(), lockTargets: async () => {},
+  resolvePreviewDisplay: async (_name, args) => Object.fromEntries(Object.entries(args)
+    .filter(([key]) => !['mode', 'confirmation_id', 'idempotency_key'].includes(key))),
+  ...dependencies,
+})
+
+test('task preview exposes business names while keeping raw execute arguments unchanged', async () => {
+  let ticketPreview
+  const database = {
+    prepare(sql) {
+      if (sql.includes('FROM pms_project WHERE')) return { async get() { return { name: '绿色建筑培训项目' } } }
+      if (sql.includes('FROM pms_archive WHERE')) return { async get() { return { name: '培训任务' } } }
+      if (/FROM pms_user\s+WHERE/.test(sql)) return { async all() { return [{ id: 8, name: '孙鑫鑫' }] } }
+      throw new Error(`unexpected SQL: ${sql}`)
+    },
+  }
+  const args = {
+    name: '开展 Codex 基础培训',
+    source_type: 1,
+    project_id: 13,
+    task_type: 33,
+    owner_ids: [8],
+    expected_end_date: '2026-09-18',
+    idempotency_key: 'task-display-preview-1',
+    mode: 'preview',
+  }
+  const result = await dispatchActionToolWithDb('task_create', args, {
+    client: { id: 3 },
+    user: { id: 8, employeeNo: '005829', realName: '孙鑫鑫' },
+  }, {
+    actions: { task_create: [async () => {}, () => ({ body: {} })] },
+    database,
+    validateBusinessRules: async () => {},
+    loadTarget: async () => ({ type: 'task', id: null, name: args.name, current: null }),
+    ticketService: {
+      createTicket: async (_context, _name, _args, preview) => {
+        ticketPreview = preview
+        return { confirmationId: 'ticket-display-1', preview }
+      },
+    },
+  })
+
+  assert.deepEqual(ticketPreview.displayChanges, {
+    name: '开展 Codex 基础培训',
+    source_type: '项目',
+    project_id: '绿色建筑培训项目',
+    task_type: '培训任务',
+    owner_ids: ['孙鑫鑫'],
+    expected_end_date: '2026-09-18',
+  })
+  assert.equal(result.executeArguments.project_id, 13)
+  assert.equal(result.executeArguments.task_type, 33)
+  assert.deepEqual(result.executeArguments.owner_ids, [8])
+})
+
+test('preview display resolves enums, archive references, people and nested batch items', async () => {
+  const database = {
+    prepare(sql) {
+      if (/FROM pms_user\s+WHERE/.test(sql)) return {
+        async all(...ids) { return ids.map((id) => ({ id, name: { 8: '孙鑫鑫', 9: '协作人' }[id] })) },
+      }
+      if (sql.includes('FROM pms_archive WHERE')) return {
+        async get(id) { return { name: { 41: '功能缺陷', 42: '代码修复', 43: '软件供应商' }[id] } },
+      }
+      if (sql.includes('FROM pms_project WHERE')) return { async get() { return { name: 'SIDM 项目' } } }
+      if (sql.includes('FROM pms_project_plan_stage WHERE')) return { async get() { return { name: '实施阶段' } } }
+      throw new Error(`unexpected SQL: ${sql}`)
+    },
+  }
+
+  const bug = await resolvePreviewDisplay('bug_change_status', {
+    id: 20, status: 1, resolution_id: 42, assignee_id: 8, mode: 'preview',
+  }, database, { type: 'bug', id: 20, name: '登录失败', current: {} })
+  assert.deepEqual(bug, { id: '登录失败', status: '已修复', resolution_id: '代码修复', assignee_id: '孙鑫鑫' })
+
+  const batch = await resolvePreviewDisplay('stage_item_batch_create', {
+    project_id: 13,
+    stage_id: 7,
+    items: [{ name: '上线', owner_id: 8, collaborator_ids: [9], requires_delivery_file: 1 }],
+    mode: 'preview',
+  }, database, { type: 'stage', id: 7, name: '实施阶段', current: {} })
+  assert.deepEqual(batch, {
+    project_id: 'SIDM 项目',
+    stage_id: '实施阶段',
+    items: [{ name: '上线', owner_id: '孙鑫鑫', collaborator_ids: ['协作人'], requires_delivery_file: '要求' }],
+  })
 })
 
 test('action preview loads the current target without invoking a business write', async () => {
