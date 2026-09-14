@@ -24,6 +24,9 @@ test('completion and pause require their business fields', () => {
   assert.equal(validateRequirementStatusChange(33, { actual_end_date: '2026-02-29', completion_status: '已完成' }, '2026-07-12'), '实际完成时间格式不正确，请使用YYYY-MM-DD')
   assert.equal(validateRequirementStatusChange(33, { actual_end_date: '2026-07-13', completion_status: '已完成' }, '2026-07-12'), '实际完成时间不能晚于今天（2026-07-12）')
   assert.equal(validateRequirementStatusChange(35, {}), '请选择暂停时间')
+  assert.equal(validateRequirementStatusChange(35, { pause_date: '2026-07-12' }), '请输入暂停原因')
+  assert.equal(validateRequirementStatusChange(35, { pause_date: '2026-07-12', pause_reason: '原'.repeat(201) }), '暂停原因最多200字符')
+  assert.equal(validateRequirementStatusChange(35, { pause_date: '2026-07-12', pause_reason: ' 业务调整 ' }), null)
   assert.equal(validateRequirementStatusChange(34, { actual_end_date: '2026-07-12', completion_status: '未投入使用' }, '2026-07-12'), null)
 })
 
@@ -34,16 +37,16 @@ test('完成情况允许200字符，拒绝201字符', () => {
   }
 })
 test('pause preserves completion fields and restoring follows project field rules', () => {
-  const completed = { status: 33, actual_end_date: '2026-07-12', completion_status: '已交付', pause_date: null }
-  assert.deepEqual(resolveRequirementStatusFields(completed, 35, { pause_date: '2026-07-13' }), {
-    actualEndDate: '2026-07-12', completionStatus: '已交付', pauseDate: '2026-07-13'
+  const completed = { status: 33, actual_end_date: '2026-07-12', completion_status: '已交付', pause_date: null, pause_reason: null }
+  assert.deepEqual(resolveRequirementStatusFields(completed, 35, { pause_date: '2026-07-13', pause_reason: ' 等待资源 ' }), {
+    actualEndDate: '2026-07-12', completionStatus: '已交付', pauseDate: '2026-07-13', pauseReason: '等待资源'
   })
-  const paused = { status: 35, actual_end_date: '2026-07-12', completion_status: '已交付', pause_date: '2026-07-13' }
+  const paused = { status: 35, actual_end_date: '2026-07-12', completion_status: '已交付', pause_date: '2026-07-13', pause_reason: '等待资源' }
   assert.deepEqual(resolveRequirementStatusFields(paused, 31, {}), {
-    actualEndDate: null, completionStatus: null, pauseDate: null
+    actualEndDate: null, completionStatus: null, pauseDate: null, pauseReason: null
   })
   assert.deepEqual(resolveRequirementStatusFields(paused, 34, { actual_end_date: '2026-07-14', completion_status: '未使用' }), {
-    actualEndDate: '2026-07-14', completionStatus: '未使用', pauseDate: null
+    actualEndDate: '2026-07-14', completionStatus: '未使用', pauseDate: null, pauseReason: null
   })
 })
 

@@ -179,6 +179,7 @@ export function WorkOrderDetailPage() {
                 { label: '预计完成时间', value: detail.expectedResolveDate },
                 { label: '实际修复时间', value: detail.resolveDate || '-' },
                 { label: '暂停时间', value: detail.suspendDate || '-' },
+                { label: '暂停原因', value: detail.suspendReason || '-', wide: true, longText: true },
                 { label: '处置结果', value: detail.resultDesc || '-', wide: true, longText: true },
                 ...(detail.activationReason
                   ? [{ label: '激活原因', value: detail.activationReason, wide: true, longText: true }]

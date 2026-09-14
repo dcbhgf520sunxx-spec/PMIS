@@ -7,6 +7,14 @@ test('开放接口完成情况最多200字符',() => {
   assert.equal(parseInput('requirement',input).data.completionStatus.length,200)
   assert.throws(() => parseInput('requirement',{...input,data:{...input.data,completionStatus:'好'.repeat(201)}}))
 })
+test('开放接口暂停时要求暂停原因且最多200字符',() => {
+  const requirement={...base,operation:'CHANGE_STATUS',data:{status:35,pauseDate:'2026-09-14',pauseReason:'等待资源'}}
+  assert.equal(parseInput('requirement',requirement).data.pauseReason,'等待资源')
+  assert.throws(() => parseInput('requirement',{...requirement,data:{status:35,pauseDate:'2026-09-14'}}))
+  const workOrder={...base,operation:'CHANGE_STATUS',data:{status:4,suspendDate:'2026-09-14',suspendReason:'等待配件'}}
+  assert.equal(parseInput('work_order',workOrder).data.suspendReason,'等待配件')
+  assert.throws(() => parseInput('work_order',{...workOrder,data:{...workOrder.data,suspendReason:'原'.repeat(201)}}))
+})
 test('开放契约拒绝未知字段、伪造创建人、无效日期和标题换行',() => {
   assert.equal(parseInput('requirement',base).data.title,'测试')
   for (const extra of [{creatorId:1},{priority:2},{submitDate:'2026-02-30'},{title:'两行\n标题'}]) assert.throws(() => parseInput('requirement',{...base,data:{...base.data,...extra}}))

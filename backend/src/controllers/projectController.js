@@ -9,8 +9,8 @@ const { DEFAULT_PRIORITY, parsePriority } = require('../services/priorityRules')
 const { normalizeFollowUpHistoryAction } = require('../services/followUpRecordRules')
 const { softDeleteBusinessAttachments } = require('../services/businessAttachmentService')
 
-const DETAIL_FIELD_ORDER = ['name', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'priority', 'description', 'start_date', 'expected_end_date', 'progress_text', 'risk_text', 'status', 'is_overdue', 'actual_end_date', 'suspend_date', 'follow_up_content', 'contract', 'contract_code', 'contract_name', 'contract_supplier', 'contract_signed_date', 'contract_amount', 'contract_remark', 'contract_stages', 'contract_attachment', 'payment', 'payment_stage', 'payment_amount', 'payment_month', 'payment_handler', 'payment_remark']
-const HISTORY_FIELD_LABELS = { name: '项目名称', product_id: '所属产品', requirement_id: '所属需求', owner_id: '负责人', member_ids: '项目成员', priority: '优先级', description: '项目描述', start_date: '启动日期', expected_end_date: '预计完成日期', progress_text: '进度记录', risk_text: '风险记录', status: '状态', is_overdue: '逾期状态', actual_end_date: '实际完成日期', suspend_date: '暂停日期', follow_up_content: '跟进内容', contract: '合同信息', contract_code: '合同编码', contract_name: '合同名称', contract_supplier: '供应商', contract_signed_date: '签订时间', contract_amount: '合同金额（元）', contract_remark: '备注', contract_stages: '付款阶段', contract_attachment: '合同附件', payment: '付款记录', payment_stage: '付款阶段', payment_amount: '本次付款金额（元）', payment_month: '付款时间', payment_handler: '经办人', payment_remark: '备注', is_deleted: '删除状态' }
+const DETAIL_FIELD_ORDER = ['name', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'priority', 'description', 'start_date', 'expected_end_date', 'progress_text', 'risk_text', 'status', 'is_overdue', 'actual_end_date', 'suspend_date', 'suspend_reason', 'follow_up_content', 'contract', 'contract_code', 'contract_name', 'contract_supplier', 'contract_signed_date', 'contract_amount', 'contract_remark', 'contract_stages', 'contract_attachment', 'payment', 'payment_stage', 'payment_amount', 'payment_month', 'payment_handler', 'payment_remark']
+const HISTORY_FIELD_LABELS = { name: '项目名称', product_id: '所属产品', requirement_id: '所属需求', owner_id: '负责人', member_ids: '项目成员', priority: '优先级', description: '项目描述', start_date: '启动日期', expected_end_date: '预计完成日期', progress_text: '进度记录', risk_text: '风险记录', status: '状态', is_overdue: '逾期状态', actual_end_date: '实际完成日期', suspend_date: '暂停日期', suspend_reason: '暂停原因', follow_up_content: '跟进内容', contract: '合同信息', contract_code: '合同编码', contract_name: '合同名称', contract_supplier: '供应商', contract_signed_date: '签订时间', contract_amount: '合同金额（元）', contract_remark: '备注', contract_stages: '付款阶段', contract_attachment: '合同附件', payment: '付款记录', payment_stage: '付款阶段', payment_amount: '本次付款金额（元）', payment_month: '付款时间', payment_handler: '经办人', payment_remark: '备注', is_deleted: '删除状态' }
 const HISTORY_DATE_FIELDS = new Set(['start_date', 'expected_end_date', 'actual_end_date', 'suspend_date', 'contract_signed_date'])
 
 const schema = {
@@ -24,7 +24,7 @@ const schema = {
 const fields = `p.id, p.name, p.description, p.product_id, product.name product_name,
   p.requirement_id, requirement.title requirement_name,
   p.owner_id, owner.real_name owner_name, p.priority, p.status, p.is_overdue, p.start_date,
-  p.expected_end_date, p.actual_end_date, p.suspend_date, p.progress_text, p.risk_text,
+  p.expected_end_date, p.actual_end_date, p.suspend_date, p.suspend_reason, p.progress_text, p.risk_text,
   p.creator_id, creator.real_name creator_name, p.updater_id, updater.real_name updater_name,
   p.created_at, p.updated_at,
   CASE WHEN p.status = 3 THEN (SELECT old_value::INTEGER FROM pms_op_log l WHERE l.module = '项目' AND l.target_id = p.id AND l.action = '状态变更' AND l.field_name = 'status' AND l.new_value = '3' ORDER BY l.created_at DESC LIMIT 1) END previous_status,
@@ -205,7 +205,7 @@ exports.toggleStatus = async (req, res) => {
     if (![0, 1, 2, 3].includes(status)) return fail(res, 400, 400, '状态不正确')
     const validation = validateProjectStatusChange(status, req.body)
     if (validation) return fail(res, 400, 400, validation)
-    const old = await db.prepare('SELECT name, status, expected_end_date, actual_end_date, suspend_date FROM pms_project WHERE id = ? AND is_deleted = 0').get(req.params.id)
+    const old = await db.prepare('SELECT name, status, expected_end_date, actual_end_date, suspend_date, suspend_reason FROM pms_project WHERE id = ? AND is_deleted = 0').get(req.params.id)
     if (!old) return fail(res, 404, 404, '项目不存在')
     if (!allowedProjectStatuses(old.status).includes(status)) return fail(res, 400, 400, '不允许执行该状态流转')
     const actualEndDate = status === 2
@@ -214,11 +214,13 @@ exports.toggleStatus = async (req, res) => {
         ? old.actual_end_date
         : null
     const suspendDate = status === 3 ? req.body.suspend_date : null
+    const suspendReason = status === 3 ? String(req.body.suspend_reason).trim() : null
     const overdue = calculateProjectOverdue(old.expected_end_date, status)
-    await db.prepare('UPDATE pms_project SET status = ?, is_overdue = ?, actual_end_date = ?, suspend_date = ?, updater_id = ?, updated_at = NOW() WHERE id = ?').run(status, overdue, actualEndDate, suspendDate, req.user.id, req.params.id)
+    await db.prepare('UPDATE pms_project SET status = ?, is_overdue = ?, actual_end_date = ?, suspend_date = ?, suspend_reason = ?, updater_id = ?, updated_at = NOW() WHERE id = ?').run(status, overdue, actualEndDate, suspendDate, suspendReason, req.user.id, req.params.id)
     const changes = [{ field: 'status', oldVal: old.status, newVal: status }]
     if (String(old.actual_end_date || '') !== String(actualEndDate || '')) changes.push({ field: 'actual_end_date', oldVal: old.actual_end_date, newVal: actualEndDate })
     if (String(old.suspend_date || '') !== String(suspendDate || '')) changes.push({ field: 'suspend_date', oldVal: old.suspend_date, newVal: suspendDate })
+    if (String(old.suspend_reason || '') !== String(suspendReason || '')) changes.push({ field: 'suspend_reason', oldVal: old.suspend_reason, newVal: suspendReason })
     await db.writeLogs(req.user.id, '状态变更', '项目', req.params.id, changes, req.ip, old.name)
     ok(res, null)
   } catch (error) { console.error(error); fail(res, 500, 500, '操作失败') }

@@ -95,11 +95,14 @@ test('action schemas expose only relevant fields and encode conditional requirem
 test('status schemas publish fields required by each target status', () => {
   const cases = [
     ['task_change_status', 2, ['actual_end_date']],
-    ['task_change_status', 3, ['suspend_date']],
+    ['project_change_status', 3, ['suspend_date', 'suspend_reason']],
+    ['task_change_status', 3, ['suspend_date', 'suspend_reason']],
     ['requirement_change_status', 33, ['actual_end_date', 'completion_status']],
+    ['requirement_change_status', 35, ['pause_date', 'pause_reason']],
     ['bug_change_status', 1, ['resolved_date', 'resolution_id', 'assignee_id']],
     ['bug_change_status', 3, ['activation_reason', 'assignee_id']],
     ['work_order_change_status', 2, ['resolve_date', 'result_desc']],
+    ['work_order_change_status', 4, ['suspend_date', 'suspend_reason']],
     ['stage_item_change_status', 3, ['pause_reason']],
   ]
   for (const [toolName, status, fields] of cases) {

@@ -22,6 +22,7 @@ export type WorkOrderRecord = Record<string, unknown> & {
   resolveDate?: string;
   closeDate?: string;
   suspendDate?: string;
+  suspendReason?: string;
   resultDesc?: string;
   activationReason?: string;
   creatorName: string;

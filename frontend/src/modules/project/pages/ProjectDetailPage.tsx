@@ -107,7 +107,7 @@ export function ProjectDetailPage() {
         { label: '逾期状态', value: renderProjectOverdue(row.isOverdue, row.expectedEndDate), wide: true },
       ] } : null}
       statusAction={row ? <ProjectStatusChangeAction block type="primary" project={row} onConfirm={async (status, values) => {
-        await updateProjectStatus(row.id, status, status === 2 ? { actual_end_date: dateValue(values.actualEndDate) } : status === 3 ? { suspend_date: dateValue(values.suspendDate) } : {});
+        await updateProjectStatus(row.id, status, status === 2 ? { actual_end_date: dateValue(values.actualEndDate) } : status === 3 ? { suspend_date: dateValue(values.suspendDate), suspend_reason: values.suspendReason } : {});
         message.success('状态更新成功');
         load();
       }} /> : null}
@@ -123,7 +123,7 @@ export function ProjectDetailPage() {
               { label: '项目名称', value: row.name }, { label: '所属产品', value: row.productName }, { label: '所属需求', value: row.requirementName },
               { label: '负责人', value: row.ownerName }, { label: '项目成员', value: row.members.map((member) => member.name).join('、') || '-' },
               { label: '启动时间', value: row.startDate }, { label: '预计完成时间', value: row.expectedEndDate },
-              { label: '实际完成时间', value: row.actualEndDate }, { label: '暂停时间', value: row.suspendDate },
+              { label: '实际完成时间', value: row.actualEndDate }, { label: '暂停时间', value: row.suspendDate }, { label: '暂停原因', value: row.suspendReason || '-', wide: true, longText: true },
               { label: '项目描述', value: row.description, wide: true, longText: true },
               { label: '附件', value: <BusinessAttachmentField readOnly apiPath="/projects" businessId={row.id} />, wide: true },
             ]} />

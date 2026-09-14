@@ -59,13 +59,25 @@ export function WorkOrderStatusChangeAction({
             </AdminFormItem>
           ) : null}
           {target === 4 ? (
-            <AdminFormItem
-              name="suspendedAt"
-              label="暂停时间"
-              rules={[{ required: true, message: '请选择暂停时间' }]}
-            >
-              <AdminDatePicker placeholder="请选择暂停时间" />
-            </AdminFormItem>
+            <>
+              <AdminFormItem
+                name="suspendedAt"
+                label="暂停时间"
+                rules={[{ required: true, message: '请选择暂停时间' }]}
+              >
+                <AdminDatePicker placeholder="请选择暂停时间" />
+              </AdminFormItem>
+              <AdminFormItem
+                name="suspendReason"
+                label="暂停原因"
+                rules={[
+                  { required: true, whitespace: true, message: '请输入暂停原因' },
+                  { max: 200, message: '暂停原因最多200字符' }
+                ]}
+              >
+                <AdminTextArea rows={3} maxLength={200} showCount placeholder="请输入暂停原因" />
+              </AdminFormItem>
+            </>
           ) : null}
           {target === 5 ? (
             <AdminFormItem

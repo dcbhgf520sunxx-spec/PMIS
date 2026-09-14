@@ -7,6 +7,7 @@ const BUSINESS_FIELD_LIMITS = Object.freeze({
   submitterDept: 100,
   problemTypeCode: 50,
   activationReason: 100,
+  pauseReason: 200,
 })
 
 module.exports = { BUSINESS_FIELD_LIMITS }

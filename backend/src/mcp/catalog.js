@@ -120,6 +120,8 @@ const FIELD_DESCRIPTIONS = {
   actual_end_date: '实际完成日期，格式 YYYY-MM-DD；完成状态时按规则必填',
   suspend_date: '暂停日期，格式 YYYY-MM-DD；暂停状态时必填',
   pause_date: '暂停日期，格式 YYYY-MM-DD；暂停状态时必填',
+  suspend_reason: '暂停原因，最多 200 字；暂停状态时必填',
+  pause_reason: '暂停原因，最多 200 字；需求或关键事项暂停时必填',
   resolved_date: '解决日期，格式 YYYY-MM-DD；BUG变为已修复时必填',
   closed_date: '关闭日期，格式 YYYY-MM-DD；BUG变为已关闭时必填',
   resolve_date: '解决日期，格式 YYYY-MM-DD；工单变为已解决时必填',
@@ -136,7 +138,6 @@ const FIELD_DESCRIPTIONS = {
   parent_id: '父任务标识；先用 task_search 定位',
   completion_status: '完成情况说明；需求完成时必填',
   activation_reason: '激活原因；恢复激活时必填',
-  pause_reason: '暂停原因；关键事项暂停时必填',
   reason: '调整原因',
   file_url: '已上传到受信任 OSS 的文件URL；PMIS只通过URL读取文件，不接受Base64文件内容',
   id: '业务记录标识；先用对应查询工具定位，不要猜测',
@@ -329,19 +330,19 @@ const actionFields = {
   project_create: ['name', 'description', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'start_date', 'expected_end_date', 'progress_text', 'risk_text'],
   project_update: ['id', 'name', 'description', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'start_date', 'expected_end_date', 'progress_text', 'risk_text'],
   project_change_priority: ['id', 'priority'],
-  project_change_status: ['id', 'status', 'actual_end_date', 'suspend_date'],
+  project_change_status: ['id', 'status', 'actual_end_date', 'suspend_date', 'suspend_reason'],
   project_delete: ['id'],
   requirement_create: ['title', 'description', 'requirement_type', 'product_id', 'owner_id', 'submitter_name', 'submitter_dept', 'submit_date', 'start_date', 'expected_end_date'],
   requirement_update: ['id', 'title', 'description', 'requirement_type', 'product_id', 'owner_id', 'submitter_name', 'submitter_dept', 'submit_date', 'start_date', 'expected_end_date'],
   requirement_change_priority: ['id', 'priority'],
-  requirement_change_status: ['id', 'status', 'actual_end_date', 'completion_status', 'pause_date'],
+  requirement_change_status: ['id', 'status', 'actual_end_date', 'completion_status', 'pause_date', 'pause_reason'],
   requirement_delete: ['id'],
   task_create: ['name', 'description', 'source_type', 'project_id', 'requirement_id', 'task_type', 'owner_ids', 'start_date', 'expected_end_date'],
   task_create_subtask: ['parent_id', 'name', 'description', 'task_type', 'owner_ids', 'start_date', 'expected_end_date'],
   task_update: ['id', 'name', 'description', 'source_type', 'project_id', 'requirement_id', 'task_type', 'owner_ids', 'start_date', 'expected_end_date'],
   task_assign: ['ids', 'owner_ids'],
   task_change_priority: ['id', 'priority'],
-  task_change_status: ['id', 'status', 'actual_end_date', 'suspend_date'],
+  task_change_status: ['id', 'status', 'actual_end_date', 'suspend_date', 'suspend_reason'],
   task_delete: ['id'],
   bug_create: ['title', 'description', 'source_type', 'project_id', 'requirement_id', 'bug_type_id', 'severity', 'assignee_id'],
   bug_update: ['id', 'title', 'description', 'source_type', 'project_id', 'requirement_id', 'bug_type_id', 'severity', 'assignee_id'],
@@ -351,7 +352,7 @@ const actionFields = {
   work_order_create: ['product_id', 'problem_type', 'problem_desc', 'result_desc', 'follower_id', 'urgency', 'expected_resolve_date', 'resolve_date', 'submitter_name', 'submitter_dept', 'submit_time'],
   work_order_update: ['id', 'product_id', 'problem_type', 'problem_desc', 'result_desc', 'follower_id', 'urgency', 'expected_resolve_date', 'resolve_date', 'submitter_name', 'submitter_dept', 'submit_time'],
   work_order_assign: ['ids', 'follower_id'],
-  work_order_change_status: ['id', 'status', 'resolve_date', 'result_desc', 'suspend_date', 'activation_reason'],
+  work_order_change_status: ['id', 'status', 'resolve_date', 'result_desc', 'suspend_date', 'suspend_reason', 'activation_reason'],
   work_order_delete: ['id'],
   stage_create: ['project_id', 'name', 'description'],
   stage_update: ['project_id', 'stage_id', 'name', 'description'],
@@ -438,17 +439,17 @@ const statusActionSchemas = {
   project_change_status: {
     type: 'integer',
     enum: [0, 1, 2, 3],
-    description: '目标状态：0 未开始，1 进行中，2 已完成，3 已暂停；完成需 actual_end_date，暂停需 suspend_date',
+    description: '目标状态：0 未开始，1 进行中，2 已完成，3 已暂停；完成需 actual_end_date，暂停需 suspend_date、suspend_reason',
   },
   requirement_change_status: {
     type: 'integer',
     enum: [0, 1, 2, 3, 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 33, 34, 35],
-    description: '目标状态由需求路径和当前状态决定；33/34 需 actual_end_date、completion_status，35 需 pause_date',
+    description: '目标状态由需求路径和当前状态决定；33/34 需 actual_end_date、completion_status，35 需 pause_date、pause_reason',
   },
   task_change_status: {
     type: 'integer',
     enum: [0, 1, 2, 3],
-    description: '目标状态：0 待处理，1 处理中，2 已完成，3 已暂停；完成需 actual_end_date，暂停需 suspend_date',
+    description: '目标状态：0 待处理，1 处理中，2 已完成，3 已暂停；完成需 actual_end_date，暂停需 suspend_date、suspend_reason',
   },
   bug_change_status: {
     type: 'integer',
@@ -458,7 +459,7 @@ const statusActionSchemas = {
   work_order_change_status: {
     type: 'integer',
     enum: [0, 1, 2, 4, 5],
-    description: '目标状态：0 待处理，1 处理中，2 已解决，4 已暂停，5 已激活；解决需 resolve_date、result_desc，暂停需 suspend_date，激活需 activation_reason',
+    description: '目标状态：0 待处理，1 处理中，2 已解决，4 已暂停，5 已激活；解决需 resolve_date、result_desc，暂停需 suspend_date、suspend_reason，激活需 activation_reason',
   },
   stage_item_change_status: {
     type: 'integer',
@@ -620,7 +621,7 @@ function actionInputSchema(name) {
   properties.stages?.items?.properties && (properties.stages.items.properties.stage_name.maxLength = 100)
   if ('file_url' in properties) properties.file_url = described({ type: 'string', format: 'uri', maxLength: 2000 }, FIELD_DESCRIPTIONS.file_url)
   for (const key of [
-    'name', 'description', 'title', 'start_date', 'expected_end_date', 'actual_end_date', 'suspend_date',
+    'name', 'description', 'title', 'start_date', 'expected_end_date', 'actual_end_date', 'suspend_date', 'suspend_reason',
     'progress_text', 'risk_text', 'submitter_name', 'submitter_dept', 'submit_date', 'pause_date',
     'completion_status', 'problem_desc', 'result_desc', 'expected_resolve_date', 'resolve_date', 'close_date',
     'resolved_date', 'closed_date',
@@ -644,6 +645,7 @@ function actionInputSchema(name) {
     submitter_name: 50,
     submitter_dept: 100,
     activation_reason: 100,
+    suspend_reason: 200,
     pause_reason: 200,
     reason: 100,
     contract_code: 100,
@@ -712,11 +714,11 @@ function actionInputSchema(name) {
     ]
   }
   const conditionalStatusFields = {
-    project_change_status: { 2: ['actual_end_date'], 3: ['suspend_date'] },
-    requirement_change_status: { 33: ['actual_end_date', 'completion_status'], 34: ['actual_end_date', 'completion_status'], 35: ['pause_date'] },
-    task_change_status: { 2: ['actual_end_date'], 3: ['suspend_date'] },
+    project_change_status: { 2: ['actual_end_date'], 3: ['suspend_date', 'suspend_reason'] },
+    requirement_change_status: { 33: ['actual_end_date', 'completion_status'], 34: ['actual_end_date', 'completion_status'], 35: ['pause_date', 'pause_reason'] },
+    task_change_status: { 2: ['actual_end_date'], 3: ['suspend_date', 'suspend_reason'] },
     bug_change_status: { 1: ['resolved_date', 'resolution_id', 'assignee_id'], 2: ['closed_date'], 3: ['activation_reason', 'assignee_id'] },
-    work_order_change_status: { 2: ['resolve_date', 'result_desc'], 4: ['suspend_date'], 5: ['activation_reason'] },
+    work_order_change_status: { 2: ['resolve_date', 'result_desc'], 4: ['suspend_date', 'suspend_reason'], 5: ['activation_reason'] },
     stage_item_change_status: { 2: ['actual_end_date'], 3: ['pause_reason'] },
   }
   if (conditionalStatusFields[name]) {

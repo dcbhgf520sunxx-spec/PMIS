@@ -245,7 +245,7 @@ Query MCP 用来查找目标、读取当前值和确认可选业务数据；Acti
 7. 新增时补齐当前 operation 的 Schema 中 required 字段；只有缺少必填信息、存在业务歧义或影响操作范围时才询问。未提供的非必填字段遵守业务默认规则，不强制逐项询问；预览清楚展示实际变更，取得一次明确确认后按原参数执行。
 8. 编辑时只传目标标识和用户明确要求修改的字段，不得为了凑齐参数重复发送未修改字段。
 9. 固定枚举必须使用工具 Schema 给出的代码与中文含义；查询结果存在 *_label 时，先用中文标签核对，禁止自行猜测数字映射。
-10. 状态变更前先查询详情，只能从 allowed_statuses 中选择目标状态，并按 change_status 分支 Schema 补齐该目标状态要求的日期、原因、处理结果、解决方案、指派人或交付文件；BUG 变更为已修复时，assignee_id 表示后续验证人；BUG 重新激活时，assignee_id 表示后续处理人。allowed_statuses 为空时不得发起状态变更。
+10. 状态变更前先查询详情，只能从 allowed_statuses 中选择目标状态，并按 change_status 分支 Schema 补齐该目标状态要求的日期、原因、处理结果、解决方案、指派人或交付文件。项目、任务和运维工单暂停时同时提供 `suspend_date`、`suspend_reason`，需求暂停时同时提供 `pause_date`、`pause_reason`；暂停原因最多 200 字。BUG 变更为已修复时，assignee_id 表示后续验证人；BUG 重新激活时，assignee_id 表示后续处理人。allowed_statuses 为空时不得发起状态变更。
 11. 项目阶段或关键事项排序必须先查询当前完整列表，传入排序后的全部 ids 和本次 moved_id；不得只传发生移动的部分记录。
 12. 登记付款时，stage_id 指合同付款阶段，不是项目阶段；必须先调用 business_get(domain=contract,target_id=项目ID)，从合同 stages 中选择。
 

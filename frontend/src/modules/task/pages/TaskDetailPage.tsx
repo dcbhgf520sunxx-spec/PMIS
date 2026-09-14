@@ -81,7 +81,7 @@ export function TaskDetailPage() {
     onOk: () => navigateWithReturn(`/tasks/${parentTaskId}`)
   });
   const changeStatus = async (task: TaskRecord, status: number, values: any) => {
-    const result = await updateTaskStatus(task.id, status as TaskRecord['status'], status === 2 ? { actual_end_date: date(values.actualEndTime) } : status === 3 ? { suspend_date: date(values.suspendTime) } : {});
+    const result = await updateTaskStatus(task.id, status as TaskRecord['status'], status === 2 ? { actual_end_date: date(values.actualEndTime) } : status === 3 ? { suspend_date: date(values.suspendTime), suspend_reason: values.suspendReason } : {});
     message.success('状态更新成功');
     setRevision((value) => value + 1);
     if (result.allSubtasksCompleted) promptParentCompletion(result.parentTaskId);
@@ -114,7 +114,7 @@ export function TaskDetailPage() {
   >
     {row ? <>
       <TemplateDetailSection title="基本信息"><DetailMetaList items={[{ label: '任务名称', value: row.name, wide: true }, { label: '任务描述', value: <RichTextViewer value={row.description} />, wide: true }, ...(row.parentTaskId ? [{ label: '所属主任务', value: <span className="task-parent-link">{renderTaskLevel()}<DetailLinkCell title={row.parentTaskName} onClick={() => navigateWithReturn(`/tasks/${row.parentTaskId}`)}>{row.parentTaskName}</DetailLinkCell></span> }] : []), { label: '关联类型', value: row.sourceType === 1 ? '项目' : '需求' }, { label: '关联对象', value: row.sourceType === 1 ? row.projectName : row.requirementName }, { label: '任务类型', value: row.taskTypeName }, { label: '附件', value: <BusinessAttachmentField readOnly apiPath="/tasks" businessId={row.id} />, wide: true }]} /></TemplateDetailSection>
-      <TemplateDetailSection title="处理信息"><DetailMetaList items={[{ label: '负责人', value: row.ownerNames }, { label: '启动时间', value: row.startTime || '-' }, { label: '预计完成时间', value: row.expectedEndTime || '-' }, { label: '实际完成时间', value: row.actualEndTime || '-' }, { label: '暂停时间', value: row.suspendTime || '-' }]} /></TemplateDetailSection>
+      <TemplateDetailSection title="处理信息"><DetailMetaList items={[{ label: '负责人', value: row.ownerNames }, { label: '启动时间', value: row.startTime || '-' }, { label: '预计完成时间', value: row.expectedEndTime || '-' }, { label: '实际完成时间', value: row.actualEndTime || '-' }, { label: '暂停时间', value: row.suspendTime || '-' }, { label: '暂停原因', value: row.suspendReason || '-', wide: true, longText: true }]} /></TemplateDetailSection>
       {!row.parentTaskId ? <TemplateDetailTableSection<TaskRecord> title="子任务" summary={`已完成 ${row.completedChildCount} / 共 ${row.childCount}`} extra={<PermissionButton permission="task" size="small" type="primary" onClick={() => navigateWithReturn(`/tasks/${row.id}/subtasks/new`)}>新增子任务</PermissionButton>} table={{ rowKey: 'id', columns: subtaskColumns, dataSource: subtasks, scroll: { x: 1100 } }} /> : null}
       <FollowUpRecordSection target={{ type: 'task', id: row.id, name: row.name }} records={followUps} onChanged={refreshFollowUpSections} />
       <HistoryTimelineSection items={history} />

@@ -456,7 +456,7 @@ async function validateStatusAction(name, args, database = db) {
     const allowed = allowedProjectStatuses(row.status)
     if (!allowed.includes(target)) rejectTransition('project', row.status, allowed)
     const message = validateProjectStatusChange(target, args)
-    if (message) throw businessValidationError(target === 2 ? 'actual_end_date' : 'suspend_date', message)
+    if (message) throw businessValidationError(target === 2 ? 'actual_end_date' : !args.suspend_date ? 'suspend_date' : 'suspend_reason', message)
     return
   }
 
@@ -470,7 +470,7 @@ async function validateStatusAction(name, args, database = db) {
         ? 'actual_end_date'
         : !String(args.completion_status || '').trim() && [33, 34].includes(target)
           ? 'completion_status'
-          : 'pause_date'
+          : !args.pause_date ? 'pause_date' : 'pause_reason'
       throw businessValidationError(field, message)
     }
     return
@@ -500,7 +500,7 @@ async function validateStatusAction(name, args, database = db) {
       throw businessValidationError('status', '主任务已完成，请先调整主任务状态')
     }
     const message = validateTaskStatusChange(target, args)
-    if (message) throw businessValidationError(target === 2 ? 'actual_end_date' : 'suspend_date', message)
+    if (message) throw businessValidationError(target === 2 ? 'actual_end_date' : !args.suspend_date ? 'suspend_date' : 'suspend_reason', message)
     return
   }
 
@@ -526,7 +526,7 @@ async function validateStatusAction(name, args, database = db) {
   }
 
   if (name === 'work_order_change_status') {
-    const row = await statusRow(database, `SELECT status, resolve_date, close_date, result_desc, suspend_date, activation_reason
+    const row = await statusRow(database, `SELECT status, resolve_date, close_date, result_desc, suspend_date, suspend_reason, activation_reason
       FROM pms_work_order WHERE id = ? AND is_deleted = 0`, [args.id], 'id', '工单不存在')
     const allowed = allowedWorkOrderStatuses(row.status)
     if (!allowed.includes(target)) rejectTransition('work_order', row.status, allowed)
@@ -535,7 +535,7 @@ async function validateStatusAction(name, args, database = db) {
     if (message) {
       const field = target === 2
         ? (!args.resolve_date ? 'resolve_date' : 'result_desc')
-        : target === 4 ? 'suspend_date' : 'activation_reason'
+        : target === 4 ? (!args.suspend_date ? 'suspend_date' : 'suspend_reason') : 'activation_reason'
       throw businessValidationError(field, message)
     }
     return

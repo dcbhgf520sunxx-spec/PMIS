@@ -1,4 +1,5 @@
 const { validateActualBusinessDate } = require('./actualBusinessDateRules')
+const { BUSINESS_FIELD_LIMITS } = require('./businessFieldRules')
 
 function allowedTaskStatuses(status) {
   if (Number(status) === 3) return [0, 1, 2]
@@ -8,6 +9,8 @@ function allowedTaskStatuses(status) {
 function validateTaskStatusChange(target, body = {}, today) {
   if (Number(target) === 2 && !body.actual_end_date) return '请填写实际完成时间'
   if (Number(target) === 3 && !body.suspend_date) return '请填写暂停时间'
+  if (Number(target) === 3 && !String(body.suspend_reason || '').trim()) return '请填写暂停原因'
+  if (Number(target) === 3 && String(body.suspend_reason || '').trim().length > BUSINESS_FIELD_LIMITS.pauseReason) return `暂停原因最多${BUSINESS_FIELD_LIMITS.pauseReason}字符`
   return Number(target) === 2
     ? validateActualBusinessDate(body.actual_end_date, '实际完成时间', today)
     : null
@@ -22,6 +25,7 @@ function resolveTaskStatusFields(old, target, body = {}) {
         ? old.actual_end_date || null
         : null,
     suspendDate: status === 3 ? body.suspend_date : null,
+    suspendReason: status === 3 ? String(body.suspend_reason || '').trim() : null,
   }
 }
 
