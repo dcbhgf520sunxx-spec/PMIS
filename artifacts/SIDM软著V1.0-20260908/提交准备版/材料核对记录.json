@@ -1,0 +1,17 @@
+{
+  "申请信息表": {
+    "pages": 3,
+    "sha256": "f82cf69bfd847516dcccd6b33cbf0ad5963c8bfcaafe525f15a4913aad24cb81"
+  },
+  "源程序鉴别材料": {
+    "pages": 60,
+    "sha256": "ad25f91194a73a7d2cb03247fa05c8f62062ebfbeb53ac1dfa2b21a0f80b3bdc"
+  },
+  "操作说明书": {
+    "pages": 10,
+    "sha256": "fc2882acc6250330a70b5580464156d84344f634b8e33066ca2c8eae7b1fac52"
+  },
+  "sourceMinNonemptyOriginalLines": 50,
+  "snapshotUnchanged": true,
+  "manualImages": 8
+}
