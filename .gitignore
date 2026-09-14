@@ -29,3 +29,6 @@ logs/
 # Vite
 .vite/
 .worktrees/
+
+# Local generated previews and intermediate files
+tmp/
