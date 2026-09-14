@@ -28,6 +28,7 @@ export type TaskRecord = {
   expectedEndTime: string;
   actualEndTime: string;
   suspendTime: string;
+  suspendReason: string;
   creatorName: string;
   updaterName: string;
   createdAt: string;

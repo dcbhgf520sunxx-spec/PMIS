@@ -21,7 +21,9 @@ test('project status requires completion date when completed', () => {
 
 test('project status requires suspend date when paused', () => {
   assert.equal(validateProjectStatusChange(3, {}), '请选择暂停日期')
-  assert.equal(validateProjectStatusChange(3, { suspend_date: '2026-07-11' }), null)
+  assert.equal(validateProjectStatusChange(3, { suspend_date: '2026-07-11' }), '请输入暂停原因')
+  assert.equal(validateProjectStatusChange(3, { suspend_date: '2026-07-11', suspend_reason: ' 资源调整 ' }), null)
+  assert.equal(validateProjectStatusChange(3, { suspend_date: '2026-07-11', suspend_reason: '原'.repeat(201) }), '暂停原因最多200字符')
 })
 
 test('completed and paused projects are not overdue', () => {

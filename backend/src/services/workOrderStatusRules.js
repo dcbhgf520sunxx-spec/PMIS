@@ -21,6 +21,7 @@ function resolveWorkOrderResultFields(status, body = {}, old = {}) {
       closeDate: old.close_date || null,
       resultDesc: old.result_desc || null,
       suspendDate: null,
+      suspendReason: null,
       activationReason: String(body.activation_reason || '').trim()
     }
   }
@@ -29,7 +30,8 @@ function resolveWorkOrderResultFields(status, body = {}, old = {}) {
       resolveDate: old.resolve_date || null,
       closeDate: old.close_date || null,
       resultDesc: old.result_desc || null,
-      suspendDate: body.suspend_date || null
+      suspendDate: body.suspend_date || null,
+      suspendReason: String(body.suspend_reason || '').trim()
     }
   }
   if (target === 2) {
@@ -37,14 +39,16 @@ function resolveWorkOrderResultFields(status, body = {}, old = {}) {
       resolveDate: body.resolve_date || null,
       closeDate: old.close_date || null,
       resultDesc: body.result_desc ? String(body.result_desc).trim() : null,
-      suspendDate: null
+      suspendDate: null,
+      suspendReason: null
     }
   }
   return {
     resolveDate: null,
     closeDate: old.close_date || null,
     resultDesc: null,
-    suspendDate: null
+    suspendDate: null,
+    suspendReason: null
   }
 }
 
@@ -57,6 +61,8 @@ function validateWorkOrderResultFields(status, values, today) {
   }
   if (target === 2) return validateActualBusinessDate(values.resolveDate, '实际修复时间', today) || ''
   if (target === 4 && !values.suspendDate) return '暂停工单时必须填写暂停时间'
+  if (target === 4 && !values.suspendReason) return '暂停工单时必须填写暂停原因'
+  if (target === 4 && values.suspendReason.length > BUSINESS_FIELD_LIMITS.pauseReason) return `暂停原因不能超过${BUSINESS_FIELD_LIMITS.pauseReason}字`
   return ''
 }
 

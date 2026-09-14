@@ -1,0 +1,93 @@
+[
+  {
+    "key": "home",
+    "file": "截图/01-home.png",
+    "verified": true,
+    "logoutVisible": true,
+    "url": "https://gcglsys.znjs.com:9088/home"
+  },
+  {
+    "key": "products",
+    "file": "截图/02-products.png",
+    "verified": true,
+    "logoutVisible": false,
+    "url": "https://gcglsys.znjs.com:9088/products"
+  },
+  {
+    "key": "requirements",
+    "file": "截图/03-requirements.png",
+    "verified": true,
+    "logoutVisible": false,
+    "url": "https://gcglsys.znjs.com:9088/requirements"
+  },
+  {
+    "key": "projects",
+    "file": "截图/04-projects.png",
+    "verified": true,
+    "logoutVisible": false,
+    "url": "https://gcglsys.znjs.com:9088/projects"
+  },
+  {
+    "key": "tasks",
+    "file": "截图/05-tasks.png",
+    "verified": true,
+    "logoutVisible": false,
+    "url": "https://gcglsys.znjs.com:9088/tasks"
+  },
+  {
+    "key": "bugs",
+    "file": "截图/06-bugs.png",
+    "verified": true,
+    "logoutVisible": false,
+    "url": "https://gcglsys.znjs.com:9088/bugs"
+  },
+  {
+    "key": "work-orders",
+    "file": "截图/07-work-orders.png",
+    "verified": true,
+    "logoutVisible": false,
+    "url": "https://gcglsys.znjs.com:9088/work-orders"
+  },
+  {
+    "key": "knowledge-base",
+    "file": "截图/08-knowledge-base.png",
+    "verified": true,
+    "logoutVisible": false,
+    "url": "https://gcglsys.znjs.com:9088/knowledge-base"
+  },
+  {
+    "key": "archive",
+    "file": "截图/09-archive.png",
+    "verified": true,
+    "logoutVisible": false,
+    "url": "https://gcglsys.znjs.com:9088/archive"
+  },
+  {
+    "key": "integrations",
+    "file": "截图/10-integrations.png",
+    "verified": true,
+    "logoutVisible": false,
+    "url": "https://gcglsys.znjs.com:9088/integrations"
+  },
+  {
+    "key": "access-logs",
+    "file": "截图/11-access-logs.png",
+    "verified": true,
+    "logoutVisible": false,
+    "url": "https://gcglsys.znjs.com:9088/access-logs"
+  },
+  {
+    "key": "users",
+    "file": "截图/12-users.png",
+    "verified": true,
+    "logoutVisible": false,
+    "url": "https://gcglsys.znjs.com:9088/users"
+  },
+  {
+    "key": "roles",
+    "file": "截图/13-roles.png",
+    "verified": true,
+    "logoutVisible": false,
+    "url": "https://gcglsys.znjs.com:9088/roles"
+  }
+]

@@ -19,6 +19,7 @@ export function buildStatusPayload(status: WorkOrderStatus, values: Record<strin
     suspendDate: values.suspendedAt && typeof values.suspendedAt === 'object' && 'format' in values.suspendedAt
       ? (values.suspendedAt as { format: (format: string) => string }).format('YYYY-MM-DD')
       : undefined,
+    suspendReason: typeof values.suspendReason === 'string' ? values.suspendReason : undefined,
     resultDesc: typeof values.result === 'string' ? values.result : undefined,
     activationReason: typeof values.activationReason === 'string' ? values.activationReason : undefined
   };

@@ -6,7 +6,7 @@ export type ProjectRecord = {
   ownerId: string; ownerName: string; memberIds: string[]; members: ProjectMember[];
   priority: ProjectPriority; status: ProjectStatus; isOverdue: boolean; startDate: string; expectedEndDate: string;
   previousStatus?: ProjectStatus;
-  actualEndDate: string; suspendDate: string; progressText: string; riskText: string;
+  actualEndDate: string; suspendDate: string; suspendReason: string; progressText: string; riskText: string;
   creatorName: string; updaterName: string; createdAt: string; updatedAt: string;
 };
 export type ProjectFormValues = { name: string; productId: string; requirementId: string; ownerId: string; memberIds?: string[]; priority: ProjectPriority; startDate?: string; expectedEndDate: string; description?: string; progressText?: string; riskText?: string };

@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>SIDM · 知识产权行动清单</title>
+  <style>
+    :root{--ink:#23322d;--muted:#63736b;--green:#28674e;--line:#dfe6df;--paper:#fffefa;--wash:#f4f6f1}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--wash);color:var(--ink);font:15px/1.7 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+    button,input,select,textarea{font:inherit}
+    button,a,input,select,textarea,summary{outline-offset:4px}
+    button{cursor:pointer}
+    .page{max-width:960px;margin:auto;padding:38px 30px 50px}
+    .topline{display:flex;align-items:center;justify-content:space-between;gap:16px;color:var(--muted);font-size:12px;letter-spacing:.06em}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:650;color:var(--green);font-size:15px;letter-spacing:.1em}
+    .mark{width:25px;height:25px;display:grid;place-items:center;background:var(--green);color:white;border-radius:7px;font-size:15px}
+    h1{font-size:clamp(27px,5vw,38px);line-height:1.3;letter-spacing:-.03em;margin:27px 0 9px;font-weight:650}
+    .intro{margin:0;color:var(--muted)}
+    .goals{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:26px 0}
+    .goal{padding:17px 20px;border:1px solid var(--line);border-radius:12px;background:var(--paper)}
+    .goal small{display:block;color:var(--green);font-size:12px;margin-bottom:5px}
+    .goal strong{display:block;font-size:18px;font-weight:600}
+    .goal p{font-size:13px;color:var(--muted);margin:5px 0 0}
+    .progress-head{display:flex;align-items:center;justify-content:space-between;gap:15px;margin:29px 0 9px}
+    .progress-head p{margin:0;font-size:14px}
+    .count{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+    progress{display:block;width:100%;height:5px;border:0;border-radius:5px;overflow:hidden;background:#e1e7df;accent-color:var(--green);margin-bottom:23px}
+    progress::-webkit-progress-bar{background:#e1e7df}
+    progress::-webkit-progress-value{background:var(--green)}
+    progress::-moz-progress-bar{background:var(--green)}
+    details.step{background:var(--paper);border:1px solid var(--line);border-radius:12px;margin:12px 0;overflow:hidden}
+    details.step.current{border-color:#8db29b;box-shadow:0 0 0 1px #8db29b20}
+    summary{list-style:none;display:flex;align-items:center;gap:15px;padding:18px 20px;cursor:pointer}
+    summary::-webkit-details-marker{display:none}
+    .number{flex:none;width:34px;height:34px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+    .current .number{background:var(--green);color:white;border-color:var(--green)}
+    .done .number{background:#e7f0e9;color:var(--green);border-color:#e7f0e9}
+    .step-title{font-size:17px;font-weight:600;flex:1}
+    .status{font-size:12px;color:var(--muted);white-space:nowrap}
+    .current .status{color:var(--green)}
+    .chevron{width:8px;height:8px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(45deg);margin:0 3px 5px 6px;flex:none}
+    details[open]>summary .chevron{transform:rotate(225deg);margin-bottom:0}
+    .content{padding:0 22px 22px 69px}
+    .content p{margin:0 0 12px}
+    .actions{padding-left:19px;margin:0 0 17px}
+    .actions li{padding:2px 0}
+    .who{display:inline-block;color:var(--green);font-size:12px;margin-right:8px;font-weight:600}
+    .fields{display:grid;grid-template-columns:1fr 1fr;gap:13px 17px;margin:17px 0}
+    .field{display:block;font-size:13px;min-width:0}
+    .field.wide{grid-column:1/-1}
+    input[type=text],select,textarea{display:block;width:100%;border:1px solid #ccd7cd;border-radius:7px;padding:9px 11px;margin-top:6px;background:#fff;color:var(--ink);min-height:43px;font-size:14px}
+    textarea{min-height:73px;resize:vertical}
+    input::placeholder,textarea::placeholder{color:#7b867e;opacity:1}
+    .hint{color:var(--muted);font-size:12px}
+    .outcome{font-size:13px;padding:11px 13px;background:#f1f5ee;border-left:3px solid #8eae92;border-radius:0 6px 6px 0;margin:16px 0}
+    .complete{display:flex;align-items:center;gap:10px;width:fit-content;min-height:44px;cursor:pointer;font-size:13px}
+    input[type=checkbox]{width:18px;height:18px;accent-color:var(--green);margin:0;flex:none}
+    .requirements{border-top:1px solid var(--line);padding-top:10px;margin-top:12px;font-size:12px;color:var(--muted)}
+    .requirements>summary{padding:4px 0;font-weight:500;font-size:12px;color:var(--green)}
+    .requirements p{margin:8px 0 0}
+    a{color:var(--green);text-underline-offset:3px}
+    .footer{margin-top:24px;display:flex;align-items:flex-start;justify-content:space-between;gap:18px;border-top:1px solid var(--line);padding-top:19px}
+    .footer p{margin:0;color:var(--muted);font-size:12px}
+    .buttons{display:flex;gap:9px;flex-wrap:wrap;flex:none}
+    button{padding:9px 13px;min-height:42px;border:1px solid #ccd7cd;border-radius:7px;background:var(--paper);color:var(--ink);font-size:12px}
+    button.primary{background:var(--green);border-color:var(--green);color:#fff}
+    button:hover{filter:brightness(.96)}
+    .sources{font-size:12px;color:var(--muted);margin-top:16px}
+    .sources a{margin-right:12px}
+    noscript{display:block;padding:12px;background:#fff3db}
+    @media(max-width:620px){.page{padding:24px 16px 32px}.topline{align-items:flex-start}.goals{grid-template-columns:1fr;gap:10px;margin:21px 0}.goal{padding:14px 16px}summary{padding:16px 14px;gap:10px}.step-title{font-size:16px}.number{width:29px;height:29px}.content{padding:0 17px 17px}.fields{grid-template-columns:1fr}.status{font-size:11px}.footer{flex-direction:column}.buttons{width:100%}.buttons button{flex:1}input[type=text],select,textarea{font-size:16px}.intro{font-size:14px}}
+    @media print{@page{margin:16mm}body{background:#fff;font-size:11pt}.page{padding:0;max-width:none}.topline{font-size:9pt}h1{font-size:25pt;margin-top:15px}.goal{padding:10px 14px}.goals{margin:17px 0}details.step{break-inside:avoid;box-shadow:none!important}.content{padding-bottom:14px}summary{padding-top:12px;padding-bottom:12px}.footer,.chevron,progress{display:none}.hint,.sources,.outcome{font-size:9pt}input,select,textarea{font-size:10pt!important}.progress-head{margin:17px 0 10px}}
+  </style>
+</head>
+<body>
+<main class="page">
+  <div class="topline"><div class="brand"><span class="mark" aria-hidden="true">S</span>SIDM</div><span>公司申请 · 杭州 · 内部自用</span></div>
+  <header><h1>知识产权行动清单</h1><p class="intro">一件整套软著，一个专利评估方向。按步骤准备，完成一项勾选一项。</p></header>
+  <div class="goals">
+    <article class="goal"><small>准备申请</small><strong>整套软件著作权 · 1 件</strong><p>智能数管 SIDM 企业数字化交付与运维管理软件<br>V1.0 · 名称与版本已确认。</p></article>
+    <article class="goal"><small>先做检索</small><strong>发明专利 · 1 个方向</strong><p>智能体业务操作的确认与安全执行。<br>检索后决定是否申请。</p></article>
+  </div>
+  <noscript>当前浏览器未启用脚本。内容仍可阅读；进度自动保存和导出功能需要启用脚本。</noscript>
+  <div class="progress-head"><p id="next-step" aria-live="polite">从第 3 步开始：准备并提交整套软著</p><span class="count" id="count">2 / 5 步已完成</span></div>
+  <progress id="progress" max="5" value="2" aria-label="准备进度"></progress>
+
+  <details class="step done" id="step-1">
+    <summary><span class="number">✓</span><span class="step-title">确认公司与权属</span><span class="status">已完成</span><span class="chevron" aria-hidden="true"></span></summary>
+    <div class="content">
+      <p><span class="who">你提供</span>申请公司全称、底座归属或许可；确认是否存在其他合作权利人。</p>
+      <div class="fields">
+        <label class="field wide">申请公司全称<input data-save id="company" type="text" value="浙江中南建设集团有限公司" placeholder="与营业执照一致" autocomplete="organization"></label>
+        <label class="field wide">project-template 底座权属<select data-save id="template-rights"><option value="">待确认</option><option value="company" selected>同一公司拥有权利</option><option value="licensed">有其他权利人的适用许可</option><option value="review">需要进一步核实</option></select></label>
+        <label class="field wide">权属说明<textarea data-save id="ownership-note" placeholder="记录底座依据，以及员工、外包或合作方的成果归属情况。">用户确认：SIDM 与 project-template 底座均为浙江中南建设集团有限公司自有成果；底座由用户本人开发。确认日期：2026-09-08。</textarea></label>
+      </div>
+      <div class="outcome">完成标准：公司名称准确，底座使用及改进权利有依据，合作权属已理清。</div>
+      <label class="complete"><input data-save data-done id="done-1" type="checkbox" checked>已由用户确认以上信息</label>
+    </div>
+  </details>
+
+  <details class="step done" id="step-2">
+    <summary><span class="number">✓</span><span class="step-title">固定软件版本与日期</span><span class="status">已完成</span><span class="chevron" aria-hidden="true"></span></summary>
+    <div class="content">
+      <ul class="actions"><li><span class="who">一起确认</span>软件名称、版本、开发完成日期与发表情况。</li><li><span class="who">我来准备</span>整理对应源码、功能范围，记录 Git 提交号或源码快照。</li></ul>
+      <div class="fields">
+        <label class="field wide">确认后的软件名称与版本<input data-save id="software-name" type="text" value="智能数管 SIDM 企业数字化交付与运维管理软件 V1.0" placeholder="填写确认后的软件名称与版本"></label>
+        <label class="field wide">内部正式上线日期（用户确认）<input data-save id="internal-launch-date" type="text" value="2026-07-23" placeholder="YYYY-MM-DD"></label>
+        <label class="field">开发完成日期（用户确认）<input data-save id="completion-date" type="text" value="2026-09-07" placeholder="按证据填写，如 YYYY-MM-DD"></label>
+        <label class="field">发表情况<select data-save id="publication"><option value="">待核实</option><option value="unpublished" selected>未发表（申报草稿）</option><option value="published">核实为已发表</option></select></label>
+        <label class="field wide">公开情况记录（用户确认）<textarea data-save id="disclosure-note" placeholder="记录软件、源码及演示的对外提供情况。">用户确认：SIDM 仅供公司内部使用，上线前后未向公司外部提供软件、源码，也未做过公开演示。</textarea></label>
+        <label class="field wide">版本与日期依据<textarea data-save id="version-note" placeholder="提交号或源码快照位置；完成日期依据；已发表时记录首次发表时间及方式。">用户确认采用当前完善版本，开发完成日期为 2026-09-07。源码已于 2026-09-08 11:15:27 固定，共 793 个文件，包含当前 7 个未提交修改文件。基准提交：bb03b28fa0a8c1c782ff4288bf62f97663448f4b。资料目录：SIDM软著V1.0-20260908。2026-07-23 为内部上线日期，快照采集日与开发完成日期分别记录。</textarea></label>
+      </div>
+      <p class="hint">版本与开发完成日期已确认；按用户确认的公开情况，发表状态暂按“未发表”准备，提交前复核。<a href="SIDM软著V1.0-20260908/版本说明.md" target="_blank" rel="noopener noreferrer">版本说明</a> · <a href="SIDM软著V1.0-20260908/SIDM-V1.0-源码快照.zip" download>源码快照</a></p>
+      <div class="outcome">完成标准：名称、版本、日期、发表情况和源码能够互相对应。</div>
+      <label class="complete"><input data-save data-done id="done-2" type="checkbox" checked>版本与日期已确认并留档</label>
+    </div>
+  </details>
+
+  <details class="step current" id="step-3" open>
+    <summary><span class="number">03</span><span class="step-title">准备并提交整套软著</span><span class="status">当前准备</span><span class="chevron" aria-hidden="true"></span></summary>
+    <div class="content">
+      <ul class="actions"><li><span class="who">线下已备</span>公司营业执照已由你们线下备妥，无需上传给我。</li><li><span class="who">材料已备</span>申请信息表、重新核对分页的源程序、带真实截图的操作说明书。</li><li><span class="who">公司经办</span>安排经办人和签章，核对材料后通过中国版权保护中心提交申请，跟进受理或补正。</li></ul>
+      <p class="hint">已完成业务功能纳入材料；建设中的知识库和外部大模型不作为公司自研成果。</p>
+      <p class="hint">最新版：<a href="SIDM软著V1.0-20260908/提交准备版/SIDM-V1.0-申请信息表.docx">申请信息表（3 页）</a> · <a href="SIDM软著V1.0-20260908/提交准备版/SIDM-V1.0-源程序鉴别材料.docx">源程序鉴别材料（60 页）</a> · <a href="SIDM软著V1.0-20260908/提交准备版/SIDM-V1.0-操作说明书.docx">操作说明书（10 页）</a>。<a href="SIDM软著V1.0-20260908/SIDM-V1.0-公司经办材料包.zip" download>下载公司经办材料包</a>。</p>
+      <p class="hint">下一步：公司补经办信息、核对机构实名认证，按平台生成的申请表和声明办理签章、上传提交。源码已按每页至少 50 个非空原始行重新分页；旧草稿仅留档。整套申请尚未提交。</p>
+      <label class="field">材料位置与提交记录<textarea data-save id="copyright-note" placeholder="记录材料目录、经办人、提交日期及受理号。"></textarea></label>
+      <details class="requirements"><summary>查看材料页数要求 ›</summary><p>源程序与一种文档分别提交前、后各连续 30 页；各自不足 60 页的提交全部。除特定情况外，程序每页不少于 50 行，文档每页不少于 30 行。敏感内容按例外交存或封存规则处理，最终按办理要求核对。</p></details>
+      <div class="outcome">完成标准：材料已核对并正式提交，留存提交凭证。提交或受理不代表已获登记。</div>
+      <label class="complete"><input data-save data-done id="done-3" type="checkbox">已提交并保存凭证</label>
+    </div>
+  </details>
+
+  <details class="step" id="step-4">
+    <summary><span class="number">04</span><span class="step-title">检索并决定专利申请</span><span class="status">待准备</span><span class="chevron" aria-hidden="true"></span></summary>
+    <div class="content">
+      <p><strong>方向：</strong>面向智能体业务操作的预览确认、身份权限复核与防重复执行。</p>
+      <ul class="actions"><li><span class="who">我来准备</span>技术方案、关键流程、代码证据；一起核对技术公开情况。</li><li><span class="who">专利代理师</span>检索现有技术，评估差异、技术效果和可保护范围。</li><li><span class="who">公司决定</span>有申请价值再整理交底、确认实际发明人并提交；不足则结束本项。</li></ul>
+      <p class="hint">本步可与软著材料准备同步进行；拟申请技术对外披露前先完成公开情况及申请时机评估。</p>
+      <div class="fields"><label class="field wide">检索后的决定<select data-save id="patent-decision"><option value="">待检索决定</option><option value="apply">决定申请，继续准备交底材料</option><option value="stop">决定不申请，保留评估记录</option><option value="more">证据不足，继续补充</option></select></label><label class="field wide">检索与申请记录<textarea data-save id="patent-note" placeholder="记录代理师结论及报告位置；决定申请后补充交底、实际发明人和提交凭证。"></textarea></label></div>
+      <div class="outcome">完成标准：已决定不申请并留档，或决定申请且已提交并保存凭证。</div>
+      <label class="complete"><input data-save data-done id="done-4" type="checkbox">本项已按决定办结</label>
+    </div>
+  </details>
+
+  <details class="step" id="step-5">
+    <summary><span class="number">05</span><span class="step-title">跟进结果与统一归档</span><span class="status">待准备</span><span class="chevron" aria-hidden="true"></span></summary>
+    <div class="content">
+      <ul class="actions"><li><span class="who">公司经办</span>跟进软著补正与登记结果；有专利申请时，由代理师跟进审查和期限。</li><li><span class="who">一起归档</span>保存权属材料、申报源码、申请文件、证书或结案记录及实际参与人员贡献。</li></ul>
+      <label class="field">归档位置与结果<textarea data-save id="archive-note" placeholder="记录目录、软著登记结果；有专利时记录审查状态、下一期限及跟进人。"></textarea></label>
+      <div class="outcome">完成标准：软著结果已归档；专利如仍在审，跟进责任人及下一期限明确。</div>
+      <label class="complete"><input data-save data-done id="done-5" type="checkbox">结果已归档，后续事项已安排</label>
+    </div>
+  </details>
+
+  <footer class="footer"><div><p id="save-status" role="status">进度保存在当前浏览器。</p><p>换设备或交接时，请保存进度副本。勾选仅记录办理进度。</p></div><div class="buttons"><button id="print" type="button">打印 / 存为 PDF</button><button id="export" type="button" class="primary">保存进度副本</button></div></footer>
+  <div class="sources">材料依据：<a href="https://www.ncac.gov.cn/xxfb/flfg/bmgz/202410/t20241015_869486.html" target="_blank" rel="noopener noreferrer">软件著作权登记办法</a><a href="https://www.cnipa.gov.cn/art/2020/11/23/art_97_155167.html" target="_blank" rel="noopener noreferrer">专利法</a>清单制定：2026-09-08</div>
+</main>
+<script type="application/json" id="saved-state">{"updatedAt":1788837827905,"fields":{"company":"浙江中南建设集团有限公司","template-rights":"company","ownership-note":"用户确认：SIDM 与 project-template 底座均为浙江中南建设集团有限公司自有成果；底座由用户本人开发。确认日期：2026-09-08。","done-1":true,"software-name":"智能数管 SIDM 企业数字化交付与运维管理软件 V1.0","internal-launch-date":"2026-07-23","disclosure-note":"用户确认：SIDM 仅供公司内部使用，上线前后未向公司外部提供软件、源码，也未做过公开演示。","version-note":"用户确认采用当前完善版本，开发完成日期为 2026-09-07。源码已于 2026-09-08 11:15:27 固定，共 793 个文件，包含当前 7 个未提交修改文件。基准提交：bb03b28fa0a8c1c782ff4288bf62f97663448f4b。资料目录：SIDM软著V1.0-20260908。2026-07-23 为内部上线日期，快照采集日与开发完成日期分别记录。","completion-date":"2026-09-07","publication":"unpublished","done-2":true}}</script>
+<script>
+(() => {
+  'use strict';
+  const key = 'sidm-ip-action-plan-v1';
+  const fields = Array.from(document.querySelectorAll('[data-save]'));
+  const checks = Array.from(document.querySelectorAll('[data-done]'));
+  const steps = Array.from(document.querySelectorAll('details.step'));
+  const feedback = document.getElementById('save-status');
+  let updatedAt = 0;
+  const readState = text => {
+    try { const value = JSON.parse(text); return value && typeof value === 'object' && value.fields && typeof value.fields === 'object' ? value : null; }
+    catch { return null; }
+  };
+  let state = readState(document.getElementById('saved-state').textContent);
+  let storageAvailable = true;
+  try {
+    const local = readState(localStorage.getItem(key));
+    if (local) {
+      const localIsNewer = !state || Number(local.updatedAt) > Number(state.updatedAt);
+      state = localIsNewer
+        ? {...local, fields:{...state?.fields, ...local.fields}}
+        : {...state, fields:{...local.fields, ...state.fields}};
+    }
+  } catch { storageAvailable = false; }
+  if (state) {
+    updatedAt = Number(state.updatedAt) || 0;
+    fields.forEach(field => {
+      const value = state.fields[field.id];
+      if (field.type === 'checkbox') field.checked = value === true;
+      else if (typeof value === 'string') field.value = value || (field.id === 'company' ? field.defaultValue : '');
+    });
+  }
+  function collect() {
+    return {updatedAt, fields:Object.fromEntries(fields.map(field => [field.id, field.type === 'checkbox' ? field.checked : field.value]))};
+  }
+  function refresh(openNext = false) {
+    const count = checks.filter(check => check.checked).length;
+    const next = checks.findIndex(check => !check.checked);
+    document.getElementById('count').textContent = count + ' / 5 步已完成';
+    document.getElementById('progress').value = count;
+    steps.forEach((step, i) => {
+      step.classList.toggle('done', checks[i].checked);
+      step.classList.toggle('current', i === next);
+      step.querySelector('.status').textContent = checks[i].checked ? '已完成' : i === next ? '当前准备' : '待准备';
+      step.querySelector('.number').textContent = checks[i].checked ? '✓' : String(i + 1).padStart(2, '0');
+    });
+    document.getElementById('next-step').textContent = next < 0 ? '清单已完成；已受理或在审事项仍按实际状态跟进。' : '从第 ' + (next + 1) + ' 步开始：' + steps[next].querySelector('.step-title').textContent;
+    if (openNext && next >= 0) { steps.forEach(step => { step.open = false; }); steps[next].open = true; }
+  }
+  function save() {
+    updatedAt = Date.now();
+    try { localStorage.setItem(key, JSON.stringify(collect())); storageAvailable = true; feedback.textContent = '进度已保存到当前浏览器。'; }
+    catch { storageAvailable = false; feedback.textContent = '当前浏览器无法自动保存，请使用“保存进度副本”。'; }
+  }
+  fields.forEach(field => field.addEventListener(field.type === 'checkbox' || field.tagName === 'SELECT' ? 'change' : 'input', () => {
+    refresh(field.hasAttribute('data-done'));
+    save();
+  }));
+  refresh(true);
+  if (!storageAvailable) feedback.textContent = '当前浏览器无法自动保存，请使用“保存进度副本”。';
+  document.getElementById('export').addEventListener('click', () => {
+    updatedAt = Date.now();
+    const clone = document.documentElement.cloneNode(true);
+    clone.querySelector('#saved-state').textContent = JSON.stringify(collect()).replace(/</g, '\\u003c');
+    const blob = new Blob(['<!doctype html>\n' + clone.outerHTML], {type:'text/html;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'SIDM知识产权行动清单-进度副本.html';
+    document.body.append(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    feedback.textContent = '已生成包含当前填写内容的进度副本。';
+  });
+  let beforePrint = null;
+  window.addEventListener('beforeprint', () => {
+    beforePrint = Array.from(document.querySelectorAll('details')).map(item => [item, item.open]);
+    beforePrint.forEach(([item]) => { item.open = true; });
+  });
+  window.addEventListener('afterprint', () => {
+    if (beforePrint) beforePrint.forEach(([item, open]) => { item.open = open; });
+    beforePrint = null;
+  });
+  document.getElementById('print').addEventListener('click', () => window.print());
+})();
+</script>
+</body>
+</html>

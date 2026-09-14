@@ -67,7 +67,7 @@ Query 只读；Action 必须保持 `preview → 用户确认 → execute`，执�
 
 ## Git、版本与正式发布
 
-Git 交付和正式环境发布是两个独立阶段。用户要求“提交 Git、合并、更新 Git”时，默认只处理本次范围内的文件：检查工作区和差异、运行完整门禁、提交并推送 `codex/` 分支、创建或更新 PR、等待远程检查、合并 `master`，最后核对本地 `master` 与 `origin/master` 一致。不得混入 `tmp/`、用户文档或其他无关未提交修改。
+Git 交付和正式环境发布是两个独立阶段。本项目固定同时交付 GitHub（`origin`）和 GitLab（`gitlab`）。用户要求“提交 Git、合并、更新 Git”时，默认只处理本次范围内的文件：检查工作区和差异、运行完整门禁、提交并推送 `codex/` 分支、创建或更新 GitHub PR、等待远程检查、合并 `master`，再将同一最终提交推送到 GitLab `main`。完成后必须分别核对本地 `master`、`origin/master` 和 `gitlab/main` 指向同一提交；任一远程失败时不得宣称 Git 交付完成。不得混入 `tmp/`、用户文档或其他无关未提交修改，未获得用户明确授权时不得强制推送。
 
 产品运行代码、数据库初始化或生产部署配置发生变化时，同步更新 `frontend/src/modules/release-notes/release-notes.json`，版本使用 `vYYYY.MM.DD.N`。版本记录表示准备发布的产品内容，不等于正式环境已经部署。
 

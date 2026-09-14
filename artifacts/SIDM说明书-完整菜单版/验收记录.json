@@ -1,0 +1,23 @@
+{
+  "pages": 13,
+  "screenshots": 13,
+  "chapters": [
+    "1 首页与退出登录",
+    "2 产品管理",
+    "3 需求管理",
+    "4 项目管理",
+    "5 任务管理",
+    "6 BUG管理",
+    "7 运维工单",
+    "8 知识库",
+    "9 基础设置 基础档案",
+    "10 基础设置 接口管理",
+    "11 基础设置 访问日志",
+    "12 用户权限 用户管理",
+    "13 用户权限 角色管理"
+  ],
+  "homepageLogoutVisible": true,
+  "componentWorkbenchExcluded": true,
+  "visualReview": "13 pages checked; no overflow or blank continuation pages",
+  "fileSha256": "772c04c313b9bc73efb4e67cb218b8b876d224501da68ad1344c43dbb5ec7d3b"
+}

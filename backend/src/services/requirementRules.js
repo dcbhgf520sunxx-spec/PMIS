@@ -29,6 +29,8 @@ function validateRequirementStatusChange(status, values = {}, today) {
   if ([33, 34].includes(Number(status)) && !String(values.completion_status || '').trim()) return '请输入完成情况'
   if ([33, 34].includes(Number(status)) && String(values.completion_status || '').trim().length > BUSINESS_FIELD_LIMITS.requirementCompletionStatus) return `完成情况最多${BUSINESS_FIELD_LIMITS.requirementCompletionStatus}字符`
   if (Number(status) === 35 && !values.pause_date) return '请选择暂停时间'
+  if (Number(status) === 35 && !String(values.pause_reason || '').trim()) return '请输入暂停原因'
+  if (Number(status) === 35 && String(values.pause_reason || '').trim().length > BUSINESS_FIELD_LIMITS.pauseReason) return `暂停原因最多${BUSINESS_FIELD_LIMITS.pauseReason}字符`
   return [33, 34].includes(Number(status))
     ? validateActualBusinessDate(values.actual_end_date, '实际完成时间', today)
     : null
@@ -40,6 +42,7 @@ function resolveRequirementStatusFields(old, target, values = {}) {
     actualEndDate: completed ? values.actual_end_date : preserveCompleted ? old.actual_end_date : null,
     completionStatus: completed ? values.completion_status : preserveCompleted ? old.completion_status : null,
     pauseDate: Number(target) === 35 ? values.pause_date : null,
+    pauseReason: Number(target) === 35 ? String(values.pause_reason || '').trim() : null,
   }
 }
 function calculateRequirementOverdue(date, status, today = new Date().toISOString().slice(0, 10)) {

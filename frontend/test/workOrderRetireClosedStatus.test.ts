@@ -43,6 +43,7 @@ test('状态变更请求不再发送关闭时间', async () => {
     status: 2,
     resolveDate: '2026-07-27',
     suspendDate: undefined,
+    suspendReason: undefined,
     resultDesc: '处理完成',
     activationReason: undefined
   });

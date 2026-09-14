@@ -19,21 +19,24 @@ test('任务暂停后可以恢复到任意其他状态', () => {
 test('完成和暂停要求对应时间', () => {
   assert.equal(validateTaskStatusChange(2, {}), '请填写实际完成时间')
   assert.equal(validateTaskStatusChange(3, {}), '请填写暂停时间')
+  assert.equal(validateTaskStatusChange(3, { suspend_date: '2026-07-13' }), '请填写暂停原因')
+  assert.equal(validateTaskStatusChange(3, { suspend_date: '2026-07-13', suspend_reason: '原'.repeat(201) }), '暂停原因最多200字符')
+  assert.equal(validateTaskStatusChange(3, { suspend_date: '2026-07-13', suspend_reason: ' 等待资源 ' }), null)
   assert.equal(validateTaskStatusChange(2, { actual_end_date: '2026-07-13' }, '2026-07-13'), null)
   assert.equal(validateTaskStatusChange(2, { actual_end_date: '2026-07-32' }, '2026-07-13'), '实际完成时间格式不正确，请使用YYYY-MM-DD')
   assert.equal(validateTaskStatusChange(2, { actual_end_date: '2026-07-14' }, '2026-07-13'), '实际完成时间不能晚于今天（2026-07-13）')
 })
 
 test('暂停任务恢复时按目标状态清理时间字段', () => {
-  assert.deepEqual(resolveTaskStatusFields({ status: 2, actual_end_date: '2026-01-01', suspend_date: null }, 3, { suspend_date: '2026-07-13' }), {
-    actualEndDate: '2026-01-01', suspendDate: '2026-07-13'
+  assert.deepEqual(resolveTaskStatusFields({ status: 2, actual_end_date: '2026-01-01', suspend_date: null, suspend_reason: null }, 3, { suspend_date: '2026-07-13', suspend_reason: ' 等待资源 ' }), {
+    actualEndDate: '2026-01-01', suspendDate: '2026-07-13', suspendReason: '等待资源'
   })
-  const paused = { status: 3, actual_end_date: '2026-01-01', suspend_date: '2026-07-13' }
+  const paused = { status: 3, actual_end_date: '2026-01-01', suspend_date: '2026-07-13', suspend_reason: '等待资源' }
   assert.deepEqual(resolveTaskStatusFields(paused, 1, {}), {
-    actualEndDate: null, suspendDate: null
+    actualEndDate: null, suspendDate: null, suspendReason: null
   })
   assert.deepEqual(resolveTaskStatusFields(paused, 2, { actual_end_date: '2026-07-14' }), {
-    actualEndDate: '2026-07-14', suspendDate: null
+    actualEndDate: '2026-07-14', suspendDate: null, suspendReason: null
   })
 })
 
