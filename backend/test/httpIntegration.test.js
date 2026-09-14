@@ -256,13 +256,14 @@ test('真实 HTTP、PostgreSQL 和核心业务流程', { skip: !enabled }, async
       assert.equal(missingSuspendDate.response.status, 400)
 
       const paused = await request(`/api/work-orders/${workOrderId}/status`, {
-        method: 'PUT', body: { status: 4, suspend_date: '2026-07-18' }
+        method: 'PUT', body: { status: 4, suspend_date: '2026-07-18', suspend_reason: '等待外部系统恢复' }
       })
       assert.equal(paused.response.status, 200)
 
       const pausedDetail = await request(`/api/work-orders/${workOrderId}`)
       assert.equal(pausedDetail.body.data.status, 4)
       assert.equal(String(pausedDetail.body.data.suspend_date).slice(0, 10), '2026-07-18')
+      assert.equal(pausedDetail.body.data.suspend_reason, '等待外部系统恢复')
       assert.equal(String(pausedDetail.body.data.resolve_date).slice(0, 10), '2026-07-16')
       assert.equal(pausedDetail.body.data.close_date, null)
       assert.match(pausedDetail.body.data.result_desc, /已解决/)
@@ -275,6 +276,7 @@ test('真实 HTTP、PostgreSQL 和核心业务流程', { skip: !enabled }, async
       const resumedDetail = await request(`/api/work-orders/${workOrderId}`)
       assert.equal(resumedDetail.body.data.status, 1)
       assert.equal(resumedDetail.body.data.suspend_date, null)
+      assert.equal(resumedDetail.body.data.suspend_reason, null)
       assert.equal(resumedDetail.body.data.resolve_date, null)
       assert.equal(resumedDetail.body.data.close_date, null)
       assert.equal(resumedDetail.body.data.result_desc, null)
