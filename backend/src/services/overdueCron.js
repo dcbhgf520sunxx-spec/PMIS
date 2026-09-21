@@ -1,41 +1,24 @@
+const { overdueSql } = require('./overdueRules')
 const cron = require('node-cron')
 const db = require('../db')
 const { getShanghaiDateText } = require('../utils/date')
 
 async function refreshOverdueStatus() {
   const today = getShanghaiDateText()
-  const workOrderResult = await db.prepare(
-    `UPDATE pms_work_order
-     SET is_overdue = CASE
-       WHEN expected_resolve_date::date < ?::date AND status <> 2 THEN 1
-       ELSE 0
-     END
-     WHERE is_deleted = 0
-       AND is_overdue <> CASE
-         WHEN expected_resolve_date::date < ?::date AND status <> 2 THEN 1
-         ELSE 0
-       END`
-  ).run(today, today)
+  let changed = 0
+  for (const type of ['project', 'requirement', 'task', 'work_order']) {
+    const { flag } = overdueSql(type)
+    const result = await db.prepare(`UPDATE pms_${type} SET is_overdue = ${flag}
+      WHERE is_deleted = 0 AND is_overdue IS DISTINCT FROM ${flag}`).run()
+    changed += result.changes || 0
+  }
 
-  const taskResult = await db.prepare(
-    `UPDATE pms_task
-     SET is_overdue = CASE
-       WHEN expected_end_date::date < ?::date AND status NOT IN (2, 3) THEN 1
-       ELSE 0
-     END
-     WHERE is_deleted = 0
-       AND is_overdue <> CASE
-         WHEN expected_end_date::date < ?::date AND status NOT IN (2, 3) THEN 1
-         ELSE 0
-       END`
-  ).run(today, today)
-
-  return { changed: (workOrderResult.changes || 0) + (taskResult.changes || 0), checkedAt: today }
+  return { changed, checkedAt: today }
 }
 
 /**
  * 每天凌晨 0:30 执行
- * 每天刷新运维工单和任务的 is_overdue 字段。
+ * 每天刷新业务逾期缓存；查询始终实时计算。
  * 规则：运维工单已解决、任务已完成或已暂停时不逾期；其他状态按预计完成时间判断。
  */
 function start() {
@@ -46,7 +29,7 @@ function start() {
     } catch (err) {
       console.error('[Cron] 逾期刷新任务执行失败:', err)
     }
-  })
+  }, { timezone: 'Asia/Shanghai' })
 
   console.log('[Cron] 逾期自动刷新任务已启动（每天 00:30 执行）')
 }

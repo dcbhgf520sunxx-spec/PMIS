@@ -23,7 +23,7 @@ export type TaskRecord = {
   priority: TaskPriority;
   status: TaskStatus;
   previousStatus?: TaskStatus;
-  isOverdue: boolean;
+  isOverdue: boolean; overdueDays?: number;
   startTime: string;
   expectedEndTime: string;
   actualEndTime: string;

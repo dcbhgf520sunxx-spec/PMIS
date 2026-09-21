@@ -1,3 +1,4 @@
+const { calculateOverdue } = require('./overdueRules')
 const crypto = require('crypto')
 const db = require('../db')
 const { mapItopsRecord, mergeSyncedSection, resolveSyncWindow } = require('./itopsSyncRules')
@@ -109,9 +110,7 @@ async function resolveProblemType(tx, name) {
 }
 
 function isOverdue(dateValue, completed) {
-  if (!dateValue || completed) return 0
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
-  return dateValue < today ? 1 : 0
+  return calculateOverdue('work_order', { date: dateValue, status: completed ? 2 : 0 }).isOverdue
 }
 
 function collectHistoryChanges(target, nextValues, dateFields = []) {

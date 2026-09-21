@@ -1,7 +1,6 @@
 const db = require('../db')
-const { TERMINAL: REQUIREMENT_TERMINAL_STATUSES } = require('./requirementRules')
+const { overdueSql } = require('./overdueRules')
 
-const SHANGHAI_TODAY_SQL = "(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai')::DATE"
 
 const DOMAINS = {
   product: {
@@ -10,18 +9,18 @@ const DOMAINS = {
   },
   project: {
     label: '项目', table: 'pms_project', date: 'created_at', status: 'status', statuses: [0, 1, 2, 3],
-    overdue: `status NOT IN (2,3) AND expected_end_date < ${SHANGHAI_TODAY_SQL}`,
+    overdue: overdueSql('project').predicate,
     metrics: ['count', 'overdue_count', 'status_distribution'], deleted: true,
   },
   requirement: {
     label: '需求', table: 'pms_requirement', date: 'created_at', status: 'status',
     statuses: [0, 1, 2, 3, 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 33, 34, 35],
-    overdue: `status NOT IN (${[...REQUIREMENT_TERMINAL_STATUSES].join(',')}) AND expected_end_date < ${SHANGHAI_TODAY_SQL}`,
+    overdue: overdueSql('requirement').predicate,
     metrics: ['count', 'overdue_count', 'status_distribution'], deleted: true,
   },
   task: {
     label: '任务', table: 'pms_task', date: 'created_at', status: 'status', statuses: [0, 1, 2, 3],
-    overdue: `status NOT IN (2,3) AND expected_end_date < ${SHANGHAI_TODAY_SQL}`,
+    overdue: overdueSql('task').predicate,
     metrics: ['count', 'overdue_count', 'status_distribution'], deleted: true,
   },
   bug: {
@@ -30,7 +29,7 @@ const DOMAINS = {
   },
   work_order: {
     label: '工单', table: 'pms_work_order', date: 'created_at', status: 'status', statuses: [0, 1, 2, 4, 5],
-    overdue: `status NOT IN (2,4) AND (expected_resolve_date AT TIME ZONE 'Asia/Shanghai')::DATE < ${SHANGHAI_TODAY_SQL}`,
+    overdue: overdueSql('work_order').predicate,
     metrics: ['count', 'overdue_count', 'status_distribution'], deleted: true,
   },
   contract: {

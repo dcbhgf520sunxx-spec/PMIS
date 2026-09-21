@@ -40,7 +40,7 @@ test('逾期标签不再硬编码三天', () => {
 test('已逾期但缺少到期时间时展示逾期而不是未逾期', () => {
   const helpers = read('../src/modules/work-order/helpers.tsx');
   const tag = read('../src/components/admin/OverdueTag/index.tsx');
-  assert.match(helpers, /if \(!expectedResolveDate\) return <OverdueTag overdue/);
+  assert.match(helpers, /overdue=\{isOverdue && overdueDays === undefined\}/);
   assert.match(tag, /overdue\?: boolean/);
   assert.match(tag, /if \(overdue\)/);
   assert.match(tag, />逾期<\/Tag>/);

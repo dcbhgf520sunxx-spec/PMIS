@@ -1,3 +1,5 @@
+const { overdueSql } = require('../services/overdueRules')
+const overdue = overdueSql('task', { alias: 't' })
 const db = require('../db')
 const { parsePagination, getSortDirection } = require('../utils/pagination')
 const { ok, fail, failField } = require('../utils/response')
@@ -15,7 +17,7 @@ const HISTORY_FIELD_LABELS = {
 }
 const HISTORY_DATE_FIELDS = new Set(['start_date', 'expected_end_date', 'actual_end_date', 'suspend_date'])
 const ownerNamesSql = `(SELECT STRING_AGG(owner_user.real_name,'、' ORDER BY task_owner.sort_order,task_owner.user_id) FROM pms_task_owner task_owner JOIN pms_user owner_user ON owner_user.id=task_owner.user_id WHERE task_owner.task_id=t.id)`
-const fields = `t.*,COALESCE((SELECT JSON_AGG(JSON_BUILD_OBJECT('id',owner_user.id,'name',owner_user.real_name) ORDER BY task_owner.sort_order,task_owner.user_id) FROM pms_task_owner task_owner JOIN pms_user owner_user ON owner_user.id=task_owner.user_id WHERE task_owner.task_id=t.id),'[]'::json) owners,COALESCE(${ownerNamesSql},'') owner_names,creator.real_name creator_name,updater.real_name updater_name,project.name project_name,requirement.title requirement_name,archive.name task_type_name,parent.name parent_task_name,(SELECT COUNT(*)::INTEGER FROM pms_task child WHERE child.parent_task_id=t.id AND child.is_deleted=0)child_count,(SELECT COUNT(*)::INTEGER FROM pms_task child WHERE child.parent_task_id=t.id AND child.is_deleted=0 AND child.status=2)completed_child_count,CASE WHEN t.status=3 THEN(SELECT old_value::INTEGER FROM pms_op_log l WHERE l.module='任务' AND l.target_id=t.id AND l.action='状态变更' AND l.field_name='status' AND l.new_value='3' ORDER BY l.created_at DESC LIMIT 1)END previous_status`
+const fields = `t.*,${overdue.fields},COALESCE((SELECT JSON_AGG(JSON_BUILD_OBJECT('id',owner_user.id,'name',owner_user.real_name) ORDER BY task_owner.sort_order,task_owner.user_id) FROM pms_task_owner task_owner JOIN pms_user owner_user ON owner_user.id=task_owner.user_id WHERE task_owner.task_id=t.id),'[]'::json) owners,COALESCE(${ownerNamesSql},'') owner_names,creator.real_name creator_name,updater.real_name updater_name,project.name project_name,requirement.title requirement_name,archive.name task_type_name,parent.name parent_task_name,(SELECT COUNT(*)::INTEGER FROM pms_task child WHERE child.parent_task_id=t.id AND child.is_deleted=0)child_count,(SELECT COUNT(*)::INTEGER FROM pms_task child WHERE child.parent_task_id=t.id AND child.is_deleted=0 AND child.status=2)completed_child_count,CASE WHEN t.status=3 THEN(SELECT old_value::INTEGER FROM pms_op_log l WHERE l.module='任务' AND l.target_id=t.id AND l.action='状态变更' AND l.field_name='status' AND l.new_value='3' ORDER BY l.created_at DESC LIMIT 1)END previous_status`
 const taskJoins = ` FROM pms_task t LEFT JOIN pms_user creator ON creator.id=t.creator_id LEFT JOIN pms_user updater ON updater.id=t.updater_id LEFT JOIN pms_project project ON project.id=t.project_id LEFT JOIN pms_requirement requirement ON requirement.id=t.requirement_id JOIN pms_archive archive ON archive.id=t.task_type LEFT JOIN pms_task parent ON parent.id=t.parent_task_id`
 
 function base(extra = fields) {
@@ -29,7 +31,7 @@ function where(q) {
     sql += ' AND t.name ILIKE ?'
     params.push(`%${q.name}%`)
   }
-  for (const [key, column] of Object.entries({ source_type: 't.source_type', project_id: 't.project_id', requirement_id: 't.requirement_id', task_type: 't.task_type', priority: 't.priority', status: 't.status', is_overdue: 't.is_overdue', creator_id: 't.creator_id' })) {
+  for (const [key, column] of Object.entries({ source_type: 't.source_type', project_id: 't.project_id', requirement_id: 't.requirement_id', task_type: 't.task_type', priority: 't.priority', status: 't.status', is_overdue: overdue.flag, creator_id: 't.creator_id' })) {
     if (q[key] !== undefined && q[key] !== '') {
       sql += ` AND ${column}=?`
       params.push(Number(q[key]))

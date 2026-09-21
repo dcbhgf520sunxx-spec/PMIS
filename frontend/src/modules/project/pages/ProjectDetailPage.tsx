@@ -1,3 +1,4 @@
+import { useBusinessDay } from '../../../hooks/useBusinessDay';
 import { useEffect, useState } from 'react';
 import { App } from 'antd';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -33,6 +34,7 @@ const mapProjectHistoryItem = (item: ProjectHistoryItem): HistoryTimelineItem =>
 };
 
 export function ProjectDetailPage() {
+ const businessDay = useBusinessDay();
   const { navigateWithReturn, returnToSource } = usePageReturnNavigation('/projects');
   const params = useParams();
   const location = useLocation();
@@ -60,7 +62,7 @@ export function ProjectDetailPage() {
     }).finally(() => setLoading(false));
   };
 
-  useEffect(load, [params.id, revision]);
+  useEffect(load, [params.id, revision, businessDay]);
 
   const refreshFollowUpSections = () => {
     if (!row) return Promise.resolve();
@@ -104,7 +106,7 @@ export function ProjectDetailPage() {
       statusSection={row ? { items: [
         { label: '项目状态', value: renderProjectStatus(row.status), wide: true },
         { label: '优先级', value: renderProjectPriority(row.priority), wide: true },
-        { label: '逾期状态', value: renderProjectOverdue(row.isOverdue, row.expectedEndDate), wide: true },
+        { label: '逾期状态', value: renderProjectOverdue(row.isOverdue, row.overdueDays), wide: true },
       ] } : null}
       statusAction={row ? <ProjectStatusChangeAction block type="primary" project={row} onConfirm={async (status, values) => {
         await updateProjectStatus(row.id, status, status === 2 ? { actual_end_date: dateValue(values.actualEndDate) } : status === 3 ? { suspend_date: dateValue(values.suspendDate), suspend_reason: values.suspendReason } : {});

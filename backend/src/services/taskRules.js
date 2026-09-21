@@ -1,3 +1,4 @@
+const { calculateOverdue } = require('./overdueRules')
 const { validateActualBusinessDate } = require('./actualBusinessDateRules')
 const { BUSINESS_FIELD_LIMITS } = require('./businessFieldRules')
 
@@ -29,10 +30,8 @@ function resolveTaskStatusFields(old, target, body = {}) {
   }
 }
 
-function calculateTaskOverdue(expectedEndDate, status) {
-  if (!expectedEndDate || [2, 3].includes(Number(status))) return 0
-  const today = new Date().toISOString().slice(0, 10)
-  return String(expectedEndDate).slice(0, 10) < today ? 1 : 0
+function calculateTaskOverdue(date, status, today) {
+  return calculateOverdue('task', { date, status }, today).isOverdue
 }
 
 function canCompleteParent(completed, total) {

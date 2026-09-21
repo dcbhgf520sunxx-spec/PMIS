@@ -1,8 +1,8 @@
-const { getShanghaiDateText } = require('../utils/date')
+const { calculateOverdue, POLICIES } = require('./overdueRules')
 const { validateActualBusinessDate } = require('./actualBusinessDateRules')
 const { BUSINESS_FIELD_LIMITS } = require('./businessFieldRules')
 
-const TERMINAL = new Set([3, 13, 22, 33, 34, 35])
+const TERMINAL = new Set(POLICIES.requirement.excluded)
 const TRANSITIONS = {
   '1_0': [1, 35], '1_1': [2, 3, 35], '1_2': [30, 35], '1_3': [0, 35],
   '2_10': [11, 35], '2_11': [12, 13, 35], '2_12': [30, 35], '2_13': [10, 35],
@@ -46,10 +46,8 @@ function resolveRequirementStatusFields(old, target, values = {}) {
     pauseReason: Number(target) === 35 ? String(values.pause_reason || '').trim() : null,
   }
 }
-function calculateRequirementOverdue(date, status, today = getShanghaiDateText()) {
-  if (TERMINAL.has(Number(status))) return null
-  if (!date) return 0
-  return String(date).slice(0, 10) < today ? 1 : 0
+function calculateRequirementOverdue(date, status, today) {
+  return calculateOverdue('requirement', { date, status }, today).isOverdue
 }
 function requirementDeleteBlocker(counts = {}) {
   if (Number(counts.project_count)) return '该需求已关联项目，无法删除'

@@ -82,7 +82,7 @@ export function createWorkOrderColumns({
             >
               {problemSummary}
             </DetailLinkCell>
-            {record.isOverdue ? <span className="work-order-problem-cell__tag">{renderOverdue(true, record.expectedResolveDate)}</span> : null}
+            {record.isOverdue ? <span className="work-order-problem-cell__tag">{renderOverdue(true, record.overdueDays)}</span> : null}
           </div>
         );
       }

@@ -14,7 +14,7 @@ export type WorkOrderRecord = Record<string, unknown> & {
   followerName: string;
   urgency: WorkOrderUrgency;
   status: WorkOrderStatus;
-  isOverdue: boolean;
+  isOverdue: boolean; overdueDays?: number;
   expectedResolveDate: string;
   submitterName: string;
   submitterDept: string;

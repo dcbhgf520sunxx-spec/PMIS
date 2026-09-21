@@ -1,3 +1,5 @@
+const { getShanghaiDateText, calendarDaysBetween } = require('../utils/date')
+const { calculateOverdue } = require('./overdueRules')
 const { validateActualBusinessDate } = require('./actualBusinessDateRules')
 
 const PLAN_ITEM_STATUS = Object.freeze({
@@ -47,14 +49,16 @@ function dateUtc(value) {
   return Date.UTC(year, month - 1, day)
 }
 
-function getPlanItemProgressHint(item, today = new Date().toISOString().slice(0, 10)) {
+function getPlanItemProgressHint(item, today = getShanghaiDateText()) {
   const status = Number(item.status)
   if (status === PLAN_ITEM_STATUS.COMPLETED && item.actual_end_date) {
     return dateUtc(item.actual_end_date) <= dateUtc(item.current_due_date) ? '按期完成' : '延期完成'
   }
   if (![PLAN_ITEM_STATUS.NOT_STARTED, PLAN_ITEM_STATUS.IN_PROGRESS].includes(status) || !item.current_due_date) return null
-  const days = Math.round((dateUtc(item.current_due_date) - dateUtc(today)) / 86400000)
-  if (days < 0) return `已逾期 ${Math.abs(days)} 天`
+  if (Number(item.parent_project_status) === 3) return null
+  const overdue = calculateOverdue('stage_plan', { date: item.current_due_date, status, parentStatus: item.parent_project_status }, today)
+  if (overdue.isOverdue) return `已逾期 ${overdue.overdueDays} 天`
+  const days = calendarDaysBetween(item.current_due_date, today)
   if (days <= 3) return '临近截止'
   return null
 }

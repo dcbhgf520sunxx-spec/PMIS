@@ -1,3 +1,4 @@
+const { overdueSql } = require('../services/overdueRules')
 const product = require('../controllers/productController')
 const project = require('../controllers/projectController')
 const stagePlan = require('../controllers/projectStagePlanController')
@@ -342,7 +343,7 @@ async function searchStagePlans(args = {}, database = db, context) {
     params.push(Number(args.status))
   }
   if (args.is_overdue !== undefined && args.is_overdue !== null && args.is_overdue !== '') {
-    const overdue = "(p.status <> 3 AND i.status IN (0, 1) AND i.current_due_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai')::date)"
+    const overdue = overdueSql('stage_plan', { alias: 'i', parentAlias: 'p' }).predicate
     where.push(Number(args.is_overdue) === 1 || args.is_overdue === true ? overdue : `NOT ${overdue}`)
   }
   return runPagedSearch({
@@ -352,7 +353,7 @@ async function searchStagePlans(args = {}, database = db, context) {
       JOIN pms_project_plan_stage s ON s.id = i.stage_id
       JOIN pms_project p ON p.id = s.project_id
       LEFT JOIN pms_user owner ON owner.id = i.owner_id`,
-    select: `i.id, i.stage_id, s.name stage_name, p.id project_id, p.name project_name,
+    select: `i.id, ${overdueSql('stage_plan', { alias: 'i', parentAlias: 'p' }).fields}, i.stage_id, s.name stage_name, p.id project_id, p.name project_name,
       p.status parent_project_status,
       i.name item_name, s.description stage_description, i.remark, i.delivery_requirement,
       i.owner_id, owner.real_name owner_name, i.status,
