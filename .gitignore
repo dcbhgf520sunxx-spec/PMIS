@@ -32,3 +32,8 @@ logs/
 
 # Local generated previews and intermediate files
 tmp/
+
+# Local business discussion documents (not product deliverables)
+/docs/SIDM业务骨架.md
+/docs/SIDM本体建设总体蓝图.md
+/docs/SIDM本体建设现状证据.md
