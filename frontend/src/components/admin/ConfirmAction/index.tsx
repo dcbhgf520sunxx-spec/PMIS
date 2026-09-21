@@ -48,6 +48,8 @@ export function ConfirmAction({
       }
       setOpen(false);
     } catch (error) {
+      // Embedded forms already display field validation errors next to their inputs.
+      if (error && typeof error === 'object' && 'errorFields' in error) return;
       const nextMessage = error instanceof Error ? error.message : '操作失败，请稍后重试';
       setErrorMessage(nextMessage);
       message.error(nextMessage);

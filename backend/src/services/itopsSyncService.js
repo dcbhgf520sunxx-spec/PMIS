@@ -143,6 +143,12 @@ async function uniqueRequirementTitle(tx, title, externalCode, targetId) {
 }
 
 async function saveRequirement(tx, mapped, config, owner, target, actorId) {
+  if (target) {
+    if (Number(target.status) === 36) {
+      mapped = { ...mapped, status: 36, actualEndDate: target.actual_end_date, completionStatus: target.completion_status }
+      config = { ...config, product_id: target.product_id }
+    }
+  }
   const title = await uniqueRequirementTitle(tx, mapped.title, mapped.externalCode, target?.id)
   const description = mergeSyncedSection(target?.description, mapped.syncedSection)
   const overdue = calculateRequirementOverdue(mapped.expectedEndDate, mapped.status)
@@ -229,7 +235,7 @@ async function loadTarget(tx, mapping) {
   if (!mapping?.target_id) return null
   if (mapping.target_type === 'requirement') return tx.prepare(`SELECT id,title,description,requirement_type,product_id,
     owner_id,priority,status,is_overdue,submitter_name,submitter_dept,submit_date,expected_end_date,actual_end_date,
-    completion_status,creator_id,is_deleted FROM pms_requirement WHERE id=?`).get(mapping.target_id)
+    completion_status,creator_id,is_deleted FROM pms_requirement WHERE id=? FOR UPDATE`).get(mapping.target_id)
   return tx.prepare(`SELECT id,product_id,problem_type,problem_desc,result_desc,follower_id,urgency,status,is_overdue,
     expected_resolve_date,resolve_date,submitter_name,submitter_dept,submit_time,creator_id,is_deleted
     FROM pms_work_order WHERE id=?`).get(mapping.target_id)

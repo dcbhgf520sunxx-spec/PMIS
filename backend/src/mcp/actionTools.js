@@ -103,7 +103,7 @@ const STATUS_LABELS = {
     10: '提报评估', 11: '需求审批', 12: '审批通过', 13: '审批未通过',
     20: '需求验证', 21: '预研通过', 22: '预研不通过',
     30: '需求整理', 31: '实施中', 32: '试运行', 33: '已完成',
-    34: '已完成未使用', 35: '暂停',
+    34: '已完成未使用', 35: '暂停', 36: '已转项目',
   },
   task: { 0: '待处理', 1: '处理中', 2: '已完成', 3: '已暂停' },
   bug: { 0: '新建', 1: '已修复', 2: '已关闭', 3: '被激活' },
@@ -228,6 +228,8 @@ async function resolvePreviewDisplay(name, args, database = db, target) {
         ...stage,
         ...(stage.id ? { id: stage.stage_name || stage.id } : {}),
       }))
+    } else if (field === 'requirement_release' && value) {
+      display[field] = { ...value, status: STATUS_LABELS.requirement[Number(value.status)] || value.status }
     } else {
       display[field] = await resolvePreviewField(name, field, value, database, target)
     }
@@ -944,7 +946,7 @@ const actions = {
   project_update: [project.update, (a) => ({ params: { id: id(a) }, body: cleanBody(a) })],
   project_change_priority: [project.updatePriority, (a) => ({ params: { id: id(a) }, body: cleanBody(a) })],
   project_change_status: [project.toggleStatus, (a) => ({ params: { id: id(a) }, body: cleanBody(a) })],
-  project_delete: [project.remove, (a) => ({ params: { id: id(a) } })],
+  project_delete: [project.remove, (a) => ({ params: { id: id(a) }, body: cleanBody(a) })],
   requirement_create: [requirement.create, (a) => ({ body: cleanBody(a) })],
   requirement_update: [requirement.update, (a) => ({ params: { id: id(a) }, body: cleanBody(a) })],
   requirement_change_priority: [requirement.updatePriority, (a) => ({ params: { id: id(a) }, body: cleanBody(a) })],
@@ -1408,6 +1410,13 @@ async function validateActionBusinessRules(name, args, database = db, file) {
     if (!product) throw businessValidationError('product_id', '所属产品不存在或已停用')
   }
   await validateProjectRequirement(name, args, database)
+  if (['project_delete', 'project_update'].includes(name)) {
+    const source = await database.prepare(`SELECT r.* FROM pms_project p JOIN pms_requirement r ON r.id=p.requirement_id WHERE p.id=? AND p.is_deleted=0`).get(args.id)
+    if (source && (name === 'project_delete' || Number(source.id) !== Number(args.requirement_id))) {
+      const error = require('../services/requirementRules').validateRequirementRelease(source.requirement_type, args.requirement_release || {})
+      if (error) throw businessValidationError('requirement_release', error)
+    }
+  }
   if (['task_create', 'task_update', 'bug_create', 'bug_update'].includes(name)) {
     if (Number(args.source_type) === 1) {
       const project = await database.prepare(

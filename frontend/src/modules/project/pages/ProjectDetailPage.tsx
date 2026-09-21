@@ -1,10 +1,11 @@
+import { ProjectDeleteConfirmAction } from '../components/ProjectDeleteConfirmAction';
 import { useBusinessDay } from '../../../hooks/useBusinessDay';
 import { useEffect, useState } from 'react';
 import { App } from 'antd';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { DeleteConfirmAction, DetailMetaList, HistoryTimelineSection, PermissionButton, PriorityChangeAction, TemplateDetailPage, TemplateDetailSection, usePageReturnNavigation } from '../../../components/admin';
+import { RichTextViewer, DetailMetaList, HistoryTimelineSection, PermissionButton, PriorityChangeAction, TemplateDetailPage, TemplateDetailSection, usePageReturnNavigation } from '../../../components/admin';
 import type { HistoryTimelineItem } from '../../../components/admin';
-import { deleteProject, getProject, getProjectHistory, updateProjectPriority, updateProjectStatus } from '../../../api/projectApi';
+import { getProject, getProjectHistory, updateProjectPriority, updateProjectStatus } from '../../../api/projectApi';
 import type { ProjectHistoryItem } from '../../../api/projectApi';
 import type { ProjectRecord } from '../types';
 import { renderProjectOverdue, renderProjectPriority } from '../helpers';
@@ -100,7 +101,7 @@ export function ProjectDetailPage() {
         <>
           <PermissionButton permission="project" type="primary" onClick={() => navigateWithReturn(`/projects/${row.id}/edit`)}>编辑</PermissionButton>
           <PriorityChangeAction permission="project_priority_adjust" current={row.priority} onConfirm={async (priority) => { await updateProjectPriority(row.id, priority); message.success('优先级调整成功'); load(); }} />
-          <DeleteConfirmAction entityName="项目" targetName={row.name} successMessage="删除成功" onConfirm={async () => { await deleteProject(row.id); returnToSource(); }}>删除</DeleteConfirmAction>
+          <ProjectDeleteConfirmAction project={row} onDeleted={returnToSource} />
         </>
       ) : null}
       statusSection={row ? { items: [
@@ -126,7 +127,7 @@ export function ProjectDetailPage() {
               { label: '负责人', value: row.ownerName }, { label: '项目成员', value: row.members.map((member) => member.name).join('、') || '-' },
               { label: '启动时间', value: row.startDate }, { label: '预计完成时间', value: row.expectedEndDate },
               { label: '实际完成时间', value: row.actualEndDate }, { label: '暂停时间', value: row.suspendDate }, { label: '暂停原因', value: row.suspendReason || '-', wide: true, longText: true },
-              { label: '项目描述', value: row.description, wide: true, longText: true },
+              { label: '项目描述', value: <RichTextViewer value={row.description} />, wide: true },
               { label: '附件', value: <BusinessAttachmentField readOnly apiPath="/projects" businessId={row.id} />, wide: true },
             ]} />
           </TemplateDetailSection>

@@ -339,7 +339,7 @@ CREATE TABLE IF NOT EXISTS pms_requirement (
   product_id BIGINT NOT NULL REFERENCES pms_product(id) ON DELETE RESTRICT,
   owner_id BIGINT NOT NULL REFERENCES pms_user(id) ON DELETE RESTRICT,
   priority SMALLINT NOT NULL DEFAULT 0 CHECK (priority IN (0,1,2)), -- 新建默认低；历史数据由增量迁移回填为中
-  status SMALLINT NOT NULL,
+  status SMALLINT NOT NULL, -- 36=已转项目：创建关联项目后自动结束需求；删除/换绑时人工选择恢复状态
   is_overdue SMALLINT CHECK (is_overdue IN (0,1)),
   submitter_name VARCHAR(50) NOT NULL,
   submitter_dept VARCHAR(100),

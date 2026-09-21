@@ -1,6 +1,7 @@
 const { overdueSql } = require('../services/overdueRules')
 const overdue = overdueSql('project', { alias: 'p' })
 const db = require('../db')
+const { lockRequirements, releaseRequirement, transferRequirement } = require('../services/requirementProjectTransfer')
 const { parsePagination, getSortDirection } = require('../utils/pagination')
 const { ok, fail, failField } = require('../utils/response')
 const { validateBody } = require('../utils/validation')
@@ -24,7 +25,7 @@ const schema = {
 }
 
 const fields = `p.id, p.name, p.description, p.product_id, product.name product_name,
-  p.requirement_id, requirement.title requirement_name,
+  p.requirement_id, requirement.title requirement_name, requirement.requirement_type,
   p.owner_id, owner.real_name owner_name, p.priority, p.status, ${overdue.fields}, p.start_date,
   p.expected_end_date, p.actual_end_date, p.suspend_date, p.suspend_reason, p.progress_text, p.risk_text,
   p.creator_id, creator.real_name creator_name, p.updater_id, updater.real_name updater_name,
@@ -156,16 +157,20 @@ exports.create = async (req, res) => {
     if (!(await validate(res, req.body))) return
     const operatorId = req.user.id
     const id = await db.transaction(async (tx) => {
+      const [source] = await lockRequirements(tx, [req.body.requirement_id])
+      if (!source || Number(source.product_id) !== Number(req.body.product_id)) throw Object.assign(new Error('来源需求已变更，请重新选择'), { field: 'requirement_id' })
       const result = await tx.prepare(`INSERT INTO pms_project
         (name, description, product_id, requirement_id, owner_id, priority, status, is_overdue, start_date, expected_end_date, progress_text, risk_text, creator_id, updater_id)
         VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)`)
         .run(req.body.name.trim(), req.body.description || null, req.body.product_id, req.body.requirement_id, req.body.owner_id, DEFAULT_PRIORITY, calculateProjectOverdue(req.body.expected_end_date, 0), req.body.start_date || null, req.body.expected_end_date, req.body.progress_text || null, req.body.risk_text || null, operatorId, operatorId)
       await replaceMembers(tx, result.lastInsertRowid, req.body.member_ids)
+      await transferRequirement(tx, source, operatorId, req.ip, req.body.name.trim())
+      await tx.writeLog(operatorId, '新增', '项目', result.lastInsertRowid, null, null, null, req.ip, req.body.name.trim())
       return result.lastInsertRowid
     })
-    await db.writeLog(operatorId, '新增', '项目', id, null, null, null, req.ip, req.body.name.trim())
     ok(res, { id })
   } catch (error) {
+    if (error.field) return failField(res, error.field, error.message)
     if (error.constraint === 'ux_project_requirement_active') return failField(res, 'requirement_id', '所属需求已关联其他项目')
     console.error(error); fail(res, 500, 500, '创建失败')
   }
@@ -173,19 +178,28 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    const old = await db.prepare('SELECT * FROM pms_project WHERE id = ? AND is_deleted = 0').get(req.params.id)
-    if (!old) return fail(res, 404, 404, '项目不存在')
-    if (!(await validate(res, req.body, Number(req.params.id)))) return
-    const operatorId = req.user.id
-    const status = Number(old.status)
-    const overdue = calculateProjectOverdue(req.body.expected_end_date, status)
-    const oldMembers = await db.prepare('SELECT user_id FROM pms_project_member WHERE project_id = ?').all(req.params.id)
-    const oldMemberIds = serializeMemberIds(oldMembers.map((member) => member.user_id))
-    const newMemberIds = serializeMemberIds(normalizeMemberIds(req.body.member_ids))
-    await db.transaction(async (tx) => {
-      await tx.prepare(`UPDATE pms_project SET name = ?, description = ?, product_id = ?, requirement_id = ?, owner_id = ?, is_overdue = ?, start_date = ?, expected_end_date = ?, progress_text = ?, risk_text = ?, updater_id = ?, updated_at = NOW() WHERE id = ?`)
-        .run(req.body.name.trim(), req.body.description || null, req.body.product_id, req.body.requirement_id, req.body.owner_id, overdue, req.body.start_date || null, req.body.expected_end_date, req.body.progress_text || null, req.body.risk_text || null, operatorId, req.params.id)
-      await replaceMembers(tx, req.params.id, req.body.member_ids)
+    const changed = await db.withTransaction(async (tx) => {
+      const old = await tx.prepare('SELECT * FROM pms_project WHERE id = ? AND is_deleted = 0 FOR UPDATE').get(req.params.id)
+      if (!old) { fail(res, 404, 404, '项目不存在'); return false }
+      if (!(await validate(res, req.body, Number(req.params.id)))) return
+      const changing = Number(old.requirement_id || 0) !== Number(req.body.requirement_id)
+      const sources = await lockRequirements(tx, [old.requirement_id, req.body.requirement_id])
+      const source = sources.find(r => Number(r.id) === Number(req.body.requirement_id))
+      if (!source || Number(source.product_id) !== Number(req.body.product_id)) throw Object.assign(new Error('来源需求已变更，请重新选择'), { field: 'requirement_id' })
+      if (changing) {
+        if (old.requirement_id) await releaseRequirement(tx, sources.find(r => Number(r.id) === Number(old.requirement_id)), req.body.requirement_release || {}, req.user.id, req.ip, old.name)
+        await transferRequirement(tx, sources.find(r => Number(r.id) === Number(req.body.requirement_id)), req.user.id, req.ip, req.body.name.trim())
+      }
+      const operatorId = req.user.id
+      const status = Number(old.status)
+      const overdue = calculateProjectOverdue(req.body.expected_end_date, status)
+      const oldMembers = await db.prepare('SELECT user_id FROM pms_project_member WHERE project_id = ?').all(req.params.id)
+      const oldMemberIds = serializeMemberIds(oldMembers.map((member) => member.user_id))
+      const newMemberIds = serializeMemberIds(normalizeMemberIds(req.body.member_ids))
+      await db.transaction(async (tx) => {
+        await tx.prepare(`UPDATE pms_project SET name = ?, description = ?, product_id = ?, requirement_id = ?, owner_id = ?, is_overdue = ?, start_date = ?, expected_end_date = ?, progress_text = ?, risk_text = ?, updater_id = ?, updated_at = NOW() WHERE id = ?`)
+          .run(req.body.name.trim(), req.body.description || null, req.body.product_id, req.body.requirement_id, req.body.owner_id, overdue, req.body.start_date || null, req.body.expected_end_date, req.body.progress_text || null, req.body.risk_text || null, operatorId, req.params.id)
+        await replaceMembers(tx, req.params.id, req.body.member_ids)
     })
     const changes = []
     for (const field of ['name', 'description', 'product_id', 'requirement_id', 'owner_id', 'start_date', 'expected_end_date', 'progress_text', 'risk_text', 'is_overdue']) {
@@ -194,8 +208,11 @@ exports.update = async (req, res) => {
     }
     if (oldMemberIds !== newMemberIds) changes.push({ field: 'member_ids', oldVal: oldMemberIds, newVal: newMemberIds })
     if (changes.length) await db.writeLogs(operatorId, '编辑', '项目', req.params.id, changes, req.ip, req.body.name.trim())
-    ok(res, null)
+    return true
+    })
+    if (changed) ok(res, null)
   } catch (error) {
+    if (error.field) return failField(res, error.field, error.message)
     if (error.constraint === 'ux_project_requirement_active') return failField(res, 'requirement_id', '所属需求已关联其他项目')
     console.error(error); fail(res, 500, 500, '更新失败')
   }
@@ -243,19 +260,26 @@ exports.updatePriority = async (req, res) => {
 
 exports.remove = async (req, res) => {
   try {
-    const project = await db.prepare('SELECT name FROM pms_project WHERE id = ? AND is_deleted = 0').get(req.params.id)
-    if (!project) return fail(res, 404, 404, '项目不存在')
-    const taskCount = Number((await db.prepare('SELECT COUNT(*) count FROM pms_task WHERE project_id = ? AND is_deleted = 0').get(req.params.id))?.count || 0)
-    if (taskCount > 0) return fail(res, 400, 400, `该项目下还有 ${taskCount} 个任务，无法删除`)
-    const bugCount = Number((await db.prepare('SELECT COUNT(*) count FROM pms_bug WHERE project_id = ? AND is_deleted = 0').get(req.params.id))?.count || 0)
-    if (bugCount > 0) return fail(res, 400, 400, `该项目下还有 ${bugCount} 个 BUG，无法删除`)
-    const contractCount = Number((await db.prepare('SELECT COUNT(*) count FROM pms_project_contract WHERE project_id = ? AND is_deleted = 0').get(req.params.id))?.count || 0)
-    if (contractCount > 0) return fail(res, 400, 400, '该项目已存在合同，无法删除')
-    await db.prepare('UPDATE pms_project SET is_deleted = 1, updater_id = ?, updated_at = NOW() WHERE id = ?').run(req.user.id, req.params.id)
-    await softDeleteBusinessAttachments(db, 'project', req.params.id, req.user.id)
-    await db.writeLog(req.user.id, '删除', '项目', req.params.id, 'is_deleted', 0, 1, req.ip, project.name)
-    ok(res, null)
-  } catch (error) { console.error(error); fail(res, 500, 500, '删除失败') }
+    const changed = await db.withTransaction(async (tx) => {
+      const project = await tx.prepare('SELECT name, requirement_id FROM pms_project WHERE id = ? AND is_deleted = 0 FOR UPDATE').get(req.params.id)
+      if (!project) { fail(res, 404, 404, '项目不存在'); return false }
+      const taskCount = Number((await db.prepare('SELECT COUNT(*) count FROM pms_task WHERE project_id = ? AND is_deleted = 0').get(req.params.id))?.count || 0)
+      if (taskCount > 0) { fail(res, 400, 400, `该项目下还有 ${taskCount} 个任务，无法删除`); return false }
+      const bugCount = Number((await db.prepare('SELECT COUNT(*) count FROM pms_bug WHERE project_id = ? AND is_deleted = 0').get(req.params.id))?.count || 0)
+      if (bugCount > 0) { fail(res, 400, 400, `该项目下还有 ${bugCount} 个 BUG，无法删除`); return false }
+      const contractCount = Number((await db.prepare('SELECT COUNT(*) count FROM pms_project_contract WHERE project_id = ? AND is_deleted = 0').get(req.params.id))?.count || 0)
+      if (contractCount > 0) { fail(res, 400, 400, '该项目已存在合同，无法删除'); return false }
+      if (project.requirement_id) {
+        const [source] = await lockRequirements(tx, [project.requirement_id])
+        await releaseRequirement(tx, source, req.body?.requirement_release || {}, req.user.id, req.ip, project.name)
+      }
+      await db.prepare('UPDATE pms_project SET is_deleted = 1, updater_id = ?, updated_at = NOW() WHERE id = ?').run(req.user.id, req.params.id)
+      await softDeleteBusinessAttachments(db, 'project', req.params.id, req.user.id)
+      await db.writeLog(req.user.id, '删除', '项目', req.params.id, 'is_deleted', 0, 1, req.ip, project.name)
+      return true
+    })
+    if (changed) ok(res, null)
+  } catch (error) { if (error.field) return failField(res, error.field, error.message); console.error(error); fail(res, 500, 500, '删除失败') }
 }
 
 exports.history = async (req, res) => {

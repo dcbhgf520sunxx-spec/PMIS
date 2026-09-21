@@ -24,7 +24,7 @@ test('暂停后可以恢复到当前需求路径内任意状态', () => {
 test('需求查询状态选项跟随需求路径并清空不兼容状态', () => {
   assert.match(source, /export function requirementStatusesForType/);
   assert.match(source, /export function normalizeRequirementStatusForType/);
-  assert.match(source, /\[\.\.\.pathStatuses\[type\],35\]/);
+  assert.match(source, /\[\.\.\.pathStatuses\[type\],35,36\]/);
   assert.match(listSource, /requirementStatusesForType\(filters\.draftFilters\.requirementType[^)]*\)/);
   assert.match(listSource, /normalizeRequirementStatusForType\(requirementType,prev\.status[^)]*\)/);
 });

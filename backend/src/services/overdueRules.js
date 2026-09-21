@@ -2,7 +2,7 @@ const { getShanghaiDateText, businessDateText, calendarDaysBetween } = require('
 
 const POLICIES = Object.freeze({
   project: { excluded: [2, 3], field: 'expected_end_date', inactive: 0 },
-  requirement: { excluded: [3, 13, 22, 33, 34, 35], field: 'expected_end_date', inactive: null },
+  requirement: { excluded: [3, 13, 22, 33, 34, 35, 36], field: 'expected_end_date', inactive: null },
   task: { excluded: [2, 3], field: 'expected_end_date', inactive: 0 },
   work_order: { excluded: [2, 4], field: 'expected_resolve_date', inactive: 0, timestamp: true },
   stage_plan: { excluded: [2, 3], field: 'current_due_date', inactive: 0 },

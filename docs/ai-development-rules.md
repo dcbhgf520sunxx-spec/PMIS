@@ -101,6 +101,7 @@ API 接入保持统一：
 - 除序号列和操作列外，标准列表每个可见列都必须声明 `sorter: true`；服务端分页列表同时绑定 `sortOrder` 并把统一排序状态传给接口。
 - 标准业务列表的最后两个业务列必须依次为“创建人”（`creatorName`）和“创建时间”（`createdAt`），并紧邻操作列之前；没有操作列时“创建时间”就是最后一列。两列必须返回真实数据、声明数值型 `width` 并支持排序。访问日志等不存在“创建人”业务语义的系统事件列表属于明确例外。
 - 操作列使用 `OperationColumnActions`，最多 3 个动作直接展示；4 个及以上时由组件保留前 2 个，第 3 个及之后收入“更多”。动作统一使用文字形态：普通动作使用 `AdminTextAction`，删除使用 `DeleteConfirmAction variant="text"`，状态变更使用 `StatusChangeAction variant="text"` 或以它为底层的业务 `*StatusChangeAction`。
+- 操作列先排除空项、`hidden` 项和无权限且采用隐藏模式的项，再计算折叠；Fragment 分组中的动作同样参与。`unauthorizedMode="disabled"` 的无权限动作保留位置，由动作组件负责禁用。业务状态导致的隐藏必须在传入操作列时条件渲染，不能仅在子组件内部返回 `null`；包装组件内部的权限也应显式向操作列暴露 `permission`，不能让隐藏项占位。条件渲染及分组内的动作仍受统一文字动作审计。工作台示例见数据展示分类的“操作列可见性与折叠”。
 - 删除不得使用通用 `ConfirmAction danger` 或业务自建 `Modal`；启用、停用等二态确认使用 `StatusConfirmAction`。
 - `ConfirmAction`、`StatusConfirmAction`、`DeleteConfirmAction` 和 `BubbleConfirmAction` 默认负责成功提示；业务页需要自定义静态文案时传 `successMessage`，需要根据接口结果动态提示时传 `successMessage={false}` 后自行提示，同一次操作不得由组件和业务页重复提示。
 - 序号使用 `renderIndex(index)`，按过滤后的全量数据位置计算。

@@ -26,7 +26,7 @@ type TemplateFormPageProps<T extends Record<string, unknown>> = {
   children: ReactNode;
   onSubmit: (values: T) => Promise<void> | void;
   onSubmitError?: (error: unknown, form: ProFormInstance<T>) => boolean | void;
-  fieldNameMap?: Record<string, string>;
+  fieldNameMap?: Record<string, string | string[]>;
   onCancel: () => void;
 };
 
@@ -38,7 +38,7 @@ type TemplateFormSectionProps = {
 function applyApiFieldErrors<T extends Record<string, unknown>>(
   error: unknown,
   form: ProFormInstance<T>,
-  fieldNameMap: Record<string, string>
+  fieldNameMap: Record<string, string | string[]>
 ) {
   if (!(error instanceof ApiError) || !error.fieldErrors) return false;
   const fields = Object.entries(error.fieldErrors).map(([field, errors]) => ({

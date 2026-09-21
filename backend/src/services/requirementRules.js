@@ -18,7 +18,7 @@ const PATH_STATUSES = {
 function initialRequirementStatus(type) { return ({ 1: 0, 2: 10, 3: 20, 4: 30 })[Number(type)] }
 function resolveRequirementTypeChange(oldType, oldStatus, nextType) {
   if (Number(oldType) === Number(nextType)) return { allowed: true, status: Number(oldStatus) }
-  if ([30, 31, 32, 33, 34, 35].includes(Number(oldStatus))) return { allowed: false, status: Number(oldStatus) }
+  if ([30, 31, 32, 33, 34, 35, 36].includes(Number(oldStatus))) return { allowed: false, status: Number(oldStatus) }
   return { allowed: true, status: initialRequirementStatus(nextType) }
 }
 function allowedRequirementStatuses(type, current, _previous) {
@@ -56,4 +56,9 @@ function requirementDeleteBlocker(counts = {}) {
   return null
 }
 
-module.exports = { TERMINAL, initialRequirementStatus, resolveRequirementTypeChange, allowedRequirementStatuses, validateRequirementStatusChange, resolveRequirementStatusFields, calculateRequirementOverdue, requirementDeleteBlocker }
+function validateRequirementRelease(type, values = {}) {
+  if (values.status === undefined || values.status === null || values.status === '' || ![...(PATH_STATUSES[Number(type)] || []), 35].includes(Number(values.status))) return '请选择原需求恢复状态'
+  return validateRequirementStatusChange(Number(values.status), values)
+}
+
+module.exports = { validateRequirementRelease, TERMINAL, initialRequirementStatus, resolveRequirementTypeChange, allowedRequirementStatuses, validateRequirementStatusChange, resolveRequirementStatusFields, calculateRequirementOverdue, requirementDeleteBlocker }

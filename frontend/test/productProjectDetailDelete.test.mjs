@@ -8,6 +8,14 @@ for (const [name, path, entity, listPath, apiName] of [
 ]) {
   test(`${name}使用统一删除确认并在成功后返回列表`, () => {
     const source = readFileSync(path, 'utf8');
+    if (entity === '项目') {
+      assert.match(source, /<ProjectDeleteConfirmAction project=\{row\} onDeleted=\{returnToSource\}/);
+      const component = readFileSync('src/modules/project/components/ProjectDeleteConfirmAction.tsx', 'utf8');
+      assert.match(component, /<DeleteConfirmAction/);
+      assert.match(component, /form.validateFields/);
+      assert.match(component, /await deleteProject/);
+      return;
+    }
     assert.match(source, /<DeleteConfirmAction/);
     assert.match(source, new RegExp(`entityName="${entity}"`));
     assert.match(source, new RegExp(`await ${apiName}\\(row\\.id\\)`));

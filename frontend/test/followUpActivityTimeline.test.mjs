@@ -59,11 +59,12 @@ test('活动时间线操作区紧跟记录日期而不是靠到行尾', () => {
 });
 
 test('列表跟进记录操作位于复制前且项目中位于调整优先级后', () => {
-  assert.ok(requirementList.includes('>跟进记录</AdminTextAction><AdminTextAction onClick={() => navigate(`/requirements/${row.id}/copy`)}>复制</AdminTextAction>'));
+  assert.ok(requirementList.indexOf('>跟进记录</AdminTextAction>') < requirementList.indexOf('>转项目</AdminTextAction>'));
+  assert.ok(requirementList.indexOf('>转项目</AdminTextAction>') < requirementList.indexOf('>复制</AdminTextAction>'));
   assert.ok(taskList.includes('>跟进记录</AdminTextAction><AdminTextAction onClick={() => navigate(`/tasks/${row.id}/copy`)}>复制</AdminTextAction>'));
   const projectActions = projectList.slice(projectList.indexOf("{ title: '操作'"), projectList.indexOf('</OperationColumnActions>'));
   const priority = projectActions.indexOf('PriorityChangeAction');
   const followUp = projectActions.indexOf('>跟进记录<');
-  const remove = projectActions.indexOf('>删除<');
+  const remove = projectActions.indexOf('<ProjectDeleteConfirmAction');
   assert.ok(priority >= 0 && followUp > priority && remove > followUp);
 });

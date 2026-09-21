@@ -46,8 +46,8 @@ const ENUMS = {
   bugStatus: { values: [0, 1, 2, 3], text: '0=新建，1=已修复，2=已关闭，3=被激活' },
   workOrderStatus: { values: [0, 1, 2, 4, 5], text: '0=待处理，1=处理中，2=已解决，4=已暂停，5=被激活' },
   requirementStatus: {
-    values: [0, 1, 2, 3, 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 33, 34, 35],
-    text: '0=上会评估，1=需求上会，2=上会通过，3=过会未通过，10=提报评估，11=需求审批，12=审批通过，13=审批未通过，20=需求验证，21=预研通过，22=预研不通过，30=需求整理，31=实施中，32=试运行，33=已完成，34=已完成未使用，35=暂停',
+    values: [0, 1, 2, 3, 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 33, 34, 35, 36],
+    text: '0=上会评估，1=需求上会，2=上会通过，3=过会未通过，10=提报评估，11=需求审批，12=审批通过，13=审批未通过，20=需求验证，21=预研通过，22=预研不通过，30=需求整理，31=实施中，32=试运行，33=已完成，34=已完成未使用，35=暂停，36=已转项目',
   },
   severity: { values: [1, 2, 3, 4], text: '1=低，2=中，3=高，4=致命' },
   urgency: { values: [0, 1, 2], text: '0=低，1=中，2=高' },
@@ -328,10 +328,10 @@ const actionFields = {
   product_change_status: ['id', 'status'],
   product_delete: ['id'],
   project_create: ['name', 'description', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'start_date', 'expected_end_date', 'progress_text', 'risk_text'],
-  project_update: ['id', 'name', 'description', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'start_date', 'expected_end_date', 'progress_text', 'risk_text'],
+  project_update: ['id', 'requirement_release', 'name', 'description', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'start_date', 'expected_end_date', 'progress_text', 'risk_text'],
   project_change_priority: ['id', 'priority'],
   project_change_status: ['id', 'status', 'actual_end_date', 'suspend_date', 'suspend_reason'],
-  project_delete: ['id'],
+  project_delete: ['id', 'requirement_release'],
   requirement_create: ['title', 'description', 'requirement_type', 'product_id', 'owner_id', 'submitter_name', 'submitter_dept', 'submit_date', 'start_date', 'expected_end_date'],
   requirement_update: ['id', 'title', 'description', 'requirement_type', 'product_id', 'owner_id', 'submitter_name', 'submitter_dept', 'submit_date', 'start_date', 'expected_end_date'],
   requirement_change_priority: ['id', 'priority'],
@@ -579,6 +579,13 @@ function actionInputSchema(name) {
       ? { idempotency_key: controlProperties.idempotency_key }
       : {}),
     ...fields(actionFields[name] || []),
+  }
+  if ('requirement_release' in properties) properties.requirement_release = {
+    type: 'object', description: '删除有关联需求的项目或换绑需求时必填，由用户选择原需求恢复状态；不是自动恢复',
+    properties: { status: { ...statusActionSchemas.requirement_change_status, description: '原需求恢复状态：按原需求路径选择，不能选择36；33/34需完成信息，35需暂停信息' },
+      actual_end_date: withDescription('actual_end_date', { type: 'string', format: 'date' }), completion_status: withDescription('completion_status', { type: 'string', maxLength: 200 }),
+      pause_date: withDescription('pause_date', { type: 'string', format: 'date' }), pause_reason: withDescription('pause_reason', { type: 'string', maxLength: 200 }) },
+    required: ['status'], additionalProperties: false,
   }
   for (const key of ['owner_ids', 'ids']) if (key in properties) properties[key] = idArrayField
   for (const key of ['member_ids', 'collaborator_ids']) if (key in properties) properties[key] = optionalIdArrayField

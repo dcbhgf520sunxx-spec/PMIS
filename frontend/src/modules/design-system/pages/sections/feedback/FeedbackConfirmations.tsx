@@ -1,11 +1,16 @@
+import { Form } from 'antd';
 import {
-  AdminCard, BubbleConfirmAction, DeleteConfirmAction, StatusConfirmAction, useAdminFeedback
+  AdminCard, AdminFormItem, AdminInput, BubbleConfirmAction, DeleteConfirmAction, StatusConfirmAction, useAdminFeedback
 } from '../../../../../components/admin';
 import { ComponentEntry } from '../../components/ComponentEntry';
 
 export function FeedbackConfirmations() {
   const { message } = useAdminFeedback();
+  const [form] = Form.useForm();
   return (<>
+            <AdminCard title="带必填字段的删除确认">
+              <DeleteConfirmAction entityName="示例记录" description={<Form form={form} layout="vertical"><AdminFormItem name="reason" label="处理说明" rules={[{required:true,whitespace:true,message:'请输入处理说明'}]}><AdminInput /></AdminFormItem></Form>} onConfirm={async()=>{await form.validateFields();form.resetFields();}}>删除确认（字段校验）</DeleteConfirmAction>
+            </AdminCard>
             <AdminCard title="3. 气泡确认框">
               <div className="design-system-page__input-grid">
                 <section className="design-system-page__input-panel">

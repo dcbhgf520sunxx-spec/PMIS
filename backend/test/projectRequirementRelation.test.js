@@ -40,10 +40,11 @@ test('项目接口强制所属需求并校验同产品和一对一占用关系',
   assert.match(routes, /router\.get\('\/requirement-options', ctrl\.requirementOptions\)/)
 })
 
-test('需求接口彻底移除所属项目并阻止删除已关联项目的需求', async () => {
+test('需求接口只读展示关联项目并阻止删除已关联项目的需求', async () => {
   const controller = read('src/controllers/requirementController.js')
 
-  assert.doesNotMatch(controller, /project_id|project_name|projectName/)
+  assert.match(controller, /linked_project_id/)
+  assert.doesNotMatch(controller, /SET[^`]*project_id=/)
   let wrote = false
   const database = { prepare(sql) { return {
     get: async () => sql.includes('FROM pms_requirement') ? { title: '已有项目的需求' } : { count: 1 },

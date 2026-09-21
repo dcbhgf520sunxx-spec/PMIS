@@ -1,4 +1,5 @@
-import { Children } from 'react';
+import { useAuthStore } from '../../../stores/authStore';
+import { visibleOperationActions } from './visibleActions';
 import type { ReactNode } from 'react';
 import { Popover } from 'antd';
 import { AdminTextAction } from '../AdminTextAction';
@@ -16,7 +17,8 @@ export function OperationColumnActions({
   collapseThreshold = 4,
   visibleCountWhenCollapsed = 2
 }: OperationColumnActionsProps) {
-  const actions = Children.toArray(children).filter(Boolean);
+  const permissions = useAuthStore((state) => state.permissions);
+  const actions = visibleOperationActions(children, permissions);
   const shouldCollapse = actions.length >= collapseThreshold;
   const visibleActions = shouldCollapse ? actions.slice(0, visibleCountWhenCollapsed) : actions;
   const overflowActions = shouldCollapse ? actions.slice(visibleCountWhenCollapsed) : [];

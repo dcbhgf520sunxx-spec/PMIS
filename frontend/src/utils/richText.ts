@@ -24,6 +24,11 @@ const allowedAttributes: Record<string, Set<string>> = {
   SPAN: new Set(['style'])
 };
 
+export function isSafeRichTextImageSource(src: string) {
+  // 旧数据仅兼容内嵌位图，不接受 SVG、HTML 或其他 data URL。
+  return /^https?:\/\//i.test(src) || /^data:image\/(?:png|jpe?g|gif|webp|bmp);base64,[A-Za-z0-9+/]+={0,2}$/i.test(src);
+}
+
 export function plainTextToHtml(text = '') {
   const container = document.createElement('div');
   container.textContent = text;
@@ -71,7 +76,7 @@ export function sanitizeRichText(html = '') {
 
     if (tag === 'IMG') {
       const src = element.getAttribute('src') || '';
-      if (!/^https?:\/\//i.test(src)) {
+      if (!isSafeRichTextImageSource(src)) {
         element.remove();
         return;
       }

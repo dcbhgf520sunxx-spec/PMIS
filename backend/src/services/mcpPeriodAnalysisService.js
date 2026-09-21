@@ -735,8 +735,10 @@ function isRejectedRequirement(record) {
   return record.business_type === 'requirement' && [3, 13, 22].includes(record.status)
 }
 
+function isTransferredRequirement(record) { return record.business_type === 'requirement' && Number(record.status) === 36 }
+
 function isUnfinished(record) {
-  return !record.is_completed && !isRejectedRequirement(record)
+  return !record.is_completed && !isRejectedRequirement(record) && !isTransferredRequirement(record)
 }
 
 function summarizeStock(types, records, cutoffDate) {
@@ -757,7 +759,7 @@ function selectPlanRecords(records, planPeriod, completionCutoff, logs = [], cut
   const selected = { planned: [], completed: [], pending: [], unknown: [] }
   if (!planPeriod) return selected
   for (const record of records) {
-    if (isRejectedRequirement(record) || record.is_paused || record.parent_project_paused || !dateInPeriod(record.plan_date, planPeriod)) continue
+    if (isRejectedRequirement(record) || isTransferredRequirement(record) || record.is_paused || record.parent_project_paused || !dateInPeriod(record.plan_date, planPeriod)) continue
     const state = completionStateAt(record, completionCutoff, histories.get(historyKey(record.business_type, record.id)), cutoffDate)
     if (state.completed && state.date < planPeriod.start_date) continue
     selected.planned.push(record)
@@ -1053,13 +1055,13 @@ function selectRiskItems(records, cutoffDate, riskPeriod, metric) {
   }
   const selectors = {
     overdue: record => currentOverdue(record, cutoffDate),
-    due_soon: record => !record.is_completed && !record.is_paused && !record.parent_project_paused
+    due_soon: record => !isTransferredRequirement(record) && !record.is_completed && !record.is_paused && !record.parent_project_paused
       && !isRejectedRequirement(record)
       && dateInPeriod(record.plan_date, period),
     paused: record => record.is_paused,
     missing_delivery: record => record.business_type === 'stage_plan'
       && record.required_delivery && record.delivery_count === 0 && !record.parent_project_paused,
-    missing_plan_date: record => !record.plan_date && record.business_type !== 'bug',
+    missing_plan_date: record => !isTransferredRequirement(record) && !record.plan_date && record.business_type !== 'bug',
   }
   return records.filter(selectors[metric]).sort((a, b) => number(b.priority) - number(a.priority)
     || String(a.plan_date || '9999-12-31').localeCompare(String(b.plan_date || '9999-12-31'))
