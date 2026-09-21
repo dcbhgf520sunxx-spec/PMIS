@@ -37,6 +37,7 @@ test('i8 已完成需求保存时同步落库完成情况', async () => {
   assert.ok(insert)
   assert.match(insert.sql, /completion_status/)
   assert.equal(insert.params[4], 0)
+  assert.equal(insert.params[6], null)
   assert.ok(insert.params.includes('已处理'))
   assert.equal(logs.length, 1)
   assert.deepEqual(logs[0].slice(0, 5), [88, 'i8同步新增', '需求', 101, null])

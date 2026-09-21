@@ -64,3 +64,13 @@ test('terminal requirement statuses do not carry overdue state', () => {
   assert.equal(calculateRequirementOverdue('2026-07-11', 31, '2026-07-12'), 1)
   assert.equal(calculateRequirementOverdue('2026-07-12', 31, '2026-07-12'), 0)
 })
+
+
+test('需求在上海午夜立即逾期，终态及无日期保持原口径', (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: new Date('2026-09-21T00:01:00+08:00') })
+  assert.equal(calculateRequirementOverdue('2026-09-20', 31), 1)
+  assert.equal(calculateRequirementOverdue('2026-09-21', 31), 0)
+  assert.equal(calculateRequirementOverdue('2026-09-22', 31), 0)
+  assert.equal(calculateRequirementOverdue(null, 31), 0)
+  for (const status of [3,13,22,33,34,35]) assert.equal(calculateRequirementOverdue('2026-09-20', status), null)
+})

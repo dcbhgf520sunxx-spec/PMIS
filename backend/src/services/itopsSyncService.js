@@ -1,6 +1,7 @@
 const crypto = require('crypto')
 const db = require('../db')
 const { mapItopsRecord, mergeSyncedSection, resolveSyncWindow } = require('./itopsSyncRules')
+const { calculateRequirementOverdue } = require('./requirementRules')
 const { DEFAULT_PRIORITY } = require('./priorityRules')
 
 const INTEGRATION_CODE = 'i8_it_operations'
@@ -145,7 +146,7 @@ async function uniqueRequirementTitle(tx, title, externalCode, targetId) {
 async function saveRequirement(tx, mapped, config, owner, target, actorId) {
   const title = await uniqueRequirementTitle(tx, mapped.title, mapped.externalCode, target?.id)
   const description = mergeSyncedSection(target?.description, mapped.syncedSection)
-  const overdue = isOverdue(mapped.expectedEndDate, mapped.status === 33)
+  const overdue = calculateRequirementOverdue(mapped.expectedEndDate, mapped.status)
   const submitterName = String(mapped.submitterName || '').trim() || 'i8'
   const submitterDept = String(mapped.submitterDept || '').trim() || 'i8'
   const nextValues = {
