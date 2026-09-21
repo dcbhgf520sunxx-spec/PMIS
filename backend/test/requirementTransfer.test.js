@@ -1,0 +1,17 @@
+const test = require('node:test')
+const assert = require('node:assert/strict')
+const rules = require('../src/services/requirementRules')
+test('已转项目不能普通流转或更改路径，也不再逾期', () => {
+  assert.deepEqual(rules.allowedRequirementStatuses(1, 36), [])
+  assert.equal(rules.resolveRequirementTypeChange(1, 36, 2).allowed, false)
+  assert.equal(rules.calculateRequirementOverdue('2020-01-01', 36), null)
+})
+test('删除换绑必须主动选择路径内的恢复状态并满足附加字段', () => {
+  assert.ok(rules.validateRequirementRelease(1, {}))
+  assert.ok(rules.validateRequirementRelease(1, { status: 36 }))
+  assert.ok(rules.validateRequirementRelease(1, { status: 10 }))
+  assert.equal(rules.validateRequirementRelease(1, { status: 0 }), null)
+  assert.ok(rules.validateRequirementRelease(1, { status: 33 }))
+  assert.ok(rules.validateRequirementRelease(1, { status: 35, pause_date: '2026-09-21' }))
+  assert.equal(rules.validateRequirementRelease(1, { status: 35, pause_date: '2026-09-21', pause_reason: '重新评估' }), null)
+})

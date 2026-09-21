@@ -1,3 +1,4 @@
+import { usePermission } from '../../../hooks/usePermission';
 import { useEffect, useState } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
 import { App } from 'antd';
@@ -16,6 +17,7 @@ const defaults = { title: '', requirementType: undefined as number | undefined, 
 const date = (value: any) => value && typeof value === 'object' && 'format' in value ? value.format('YYYY-MM-DD') : undefined;
 
 export function RequirementListPage() {
+  const canCreateProject = usePermission('project');
   const { currentPath, navigateWithReturn: navigate } = usePageReturnNavigation('/requirements');
   const { message } = App.useApp();
   const [view, setView] = useListViewState<'all' | 'mine'>('mine', ['all', 'mine'], true);
@@ -53,7 +55,7 @@ export function RequirementListPage() {
     { title: '预计完成时间', dataIndex: 'expectedEndDate', width: 140, sorter: true, sortOrder: sortOrder('expectedEndDate'), render: (_, row) => row.expectedEndDate || '-' },
     { title: '创建人', dataIndex: 'creatorName', width: 100, sorter: true, sortOrder: sortOrder('creatorName') },
     { title: '创建时间', dataIndex: 'createdAt', width: 170, sorter: true, sortOrder: sortOrder('createdAt') },
-    { title: '操作', valueType: 'option', width: 190, fixed: 'right', render: (_, row) => <OperationColumnActions><AdminTextAction onClick={() => navigate(`/requirements/${row.id}/edit`)}>编辑</AdminTextAction><RequirementStatusChangeAction variant="text" requirement={row} onConfirm={(status, values) => submitStatus(row, status, values)}>状态变更</RequirementStatusChangeAction><PriorityChangeAction variant="text" permission="requirement_priority_adjust" current={row.priority} onConfirm={async (priority) => { await updateRequirementPriority(row.id, priority); message.success('优先级调整成功'); await load(); }} /><AdminTextAction onClick={() => setFollowUpTarget({ type: 'requirement', id: row.id, name: row.title })}>跟进记录</AdminTextAction><AdminTextAction onClick={() => navigate(`/requirements/${row.id}/copy`)}>复制</AdminTextAction><DeleteConfirmAction variant="text" entityName="需求" targetName={row.title} successMessage="删除成功" onConfirm={async () => { await deleteRequirement(row.id); await load(); }}>删除</DeleteConfirmAction></OperationColumnActions> }
+    { title: '操作', valueType: 'option', width: 190, fixed: 'right', render: (_, row) => <OperationColumnActions><AdminTextAction onClick={() => navigate(`/requirements/${row.id}/edit`)}>编辑</AdminTextAction>{!row.linkedProjectId && row.status !== 36 ? <RequirementStatusChangeAction variant="text" requirement={row} onConfirm={(status, values) => submitStatus(row, status, values)}>状态变更</RequirementStatusChangeAction> : null}<PriorityChangeAction variant="text" permission="requirement_priority_adjust" current={row.priority} onConfirm={async (priority) => { await updateRequirementPriority(row.id, priority); message.success('优先级调整成功'); await load(); }} /><AdminTextAction onClick={() => setFollowUpTarget({ type: 'requirement', id: row.id, name: row.title })}>跟进记录</AdminTextAction>{canCreateProject && !row.linkedProjectId && row.status !== 36 ? <AdminTextAction onClick={() => navigate(`/projects/new?requirement_id=${row.id}`)}>转项目</AdminTextAction> : null}<AdminTextAction onClick={() => navigate(`/requirements/${row.id}/copy`)}>复制</AdminTextAction><DeleteConfirmAction variant="text" entityName="需求" targetName={row.title} successMessage="删除成功" onConfirm={async () => { await deleteRequirement(row.id); await load(); }}>删除</DeleteConfirmAction></OperationColumnActions> }
   ];
   const statusOptions=requirementStatusesForType(filters.draftFilters.requirementType as RequirementType|undefined).map(value=>({value,label:requirementStatusLabels[value]}));
   const items = createListFilterItems([

@@ -443,3 +443,14 @@ test('测试连接使用配置的首次同步日期且不依赖同步落库的�
   assert.equal(result.recordCount, 1)
   assert.deepEqual(requestBody, { kssj: '2026-08-01', jssj: '' })
 })
+
+test('i8 同步不得覆盖已转项目状态、所属产品和历史完成信息', async () => {
+  let params
+  const tx = { prepare: () => ({ get: async () => null, run: async (...values) => { params = values; return { changes: 1 } } }), writeLogs: async () => {} }
+  await saveRequirement(tx, { title: '已转项目', externalCode: 'transfer', syncedSection: '', status: 31, expectedEndDate: null, submitDate: '2026-09-21' }, { product_id: 999 }, { id: 1 }, { id: 1, status: 36, product_id: 2, actual_end_date: '2026-09-01', completion_status: '历史完成' }, 1)
+  assert.equal(params[2], 2)
+  assert.equal(params[4], 36)
+  assert.equal(params[5], null)
+  assert.equal(params[10], '2026-09-01')
+  assert.equal(params[11], '历史完成')
+})

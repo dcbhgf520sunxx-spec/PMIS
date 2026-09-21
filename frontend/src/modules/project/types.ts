@@ -2,14 +2,14 @@ export type ProjectStatus = 0 | 1 | 2 | 3;
 export type ProjectPriority = 0 | 1 | 2;
 export type ProjectMember = { id: string; name: string };
 export type ProjectRecord = {
-  id: string; name: string; description: string; productId: string; productName: string; requirementId: string; requirementName: string;
+  id: string; name: string; description: string; productId: string; productName: string; requirementId: string; requirementName: string; requirementType?: import('../requirement/types').RequirementType;
   ownerId: string; ownerName: string; memberIds: string[]; members: ProjectMember[];
   priority: ProjectPriority; status: ProjectStatus; isOverdue: boolean; overdueDays?: number; startDate: string; expectedEndDate: string;
   previousStatus?: ProjectStatus;
   actualEndDate: string; suspendDate: string; suspendReason: string; progressText: string; riskText: string;
   creatorName: string; updaterName: string; createdAt: string; updatedAt: string;
 };
-export type ProjectFormValues = { name: string; productId: string; requirementId: string; ownerId: string; memberIds?: string[]; priority: ProjectPriority; startDate?: string; expectedEndDate: string; description?: string; progressText?: string; riskText?: string };
+export type ProjectFormValues = { requirementRelease?: import('../requirement/components/RequirementReleaseFields').RequirementReleaseValues; name: string; productId: string; requirementId: string; ownerId: string; memberIds?: string[]; priority: ProjectPriority; startDate?: string; expectedEndDate: string; description?: string; progressText?: string; riskText?: string };
 
 export type ProjectPaymentStatus = 0 | 1 | 2;
 export type ProjectPaymentStage = {

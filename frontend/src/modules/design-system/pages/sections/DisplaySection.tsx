@@ -22,6 +22,7 @@ import {
   AdminTextAction,
   AdminTree,
   CategoryTag,
+  ConfirmAction,
   defineCategoryToneMap,
   DetailMetaList,
   HistoryTimeline,
@@ -194,6 +195,40 @@ export function DisplaySection() {
                   </section>
                 ))}
               </div>
+            </AdminCard>
+            <AdminCard title="操作列可见性与折叠">
+              <ComponentEntry name="OperationColumnActions" />
+              <p>先排除隐藏和无权限操作，再计数。最多三项直接显示，四项及以上显示前两项和“更多”。业务状态隐藏应在传入时条件渲染。</p>
+              <section aria-label="隐藏操作自动补位">
+                <h3>隐藏项不占位，分组动作参与折叠</h3>
+                <OperationColumnActions>
+                  <AdminTextAction>编辑</AdminTextAction>
+                  <AdminTextAction hidden>隐藏状态操作</AdminTextAction>
+                  <ConfirmAction variant="text" permission="demo_operation_unavailable" title="权限示例" onConfirm={() => {}}>无权限操作</ConfirmAction>
+                  <>
+                    <AdminTextAction>跟进记录</AdminTextAction>
+                    <AdminTextAction>复制</AdminTextAction>
+                  </>
+                  <AdminTextAction>查看历史</AdminTextAction>
+                </OperationColumnActions>
+              </section>
+              <section aria-label="不足四项全部显示">
+                <h3>过滤后不足四项，不显示更多</h3>
+                <OperationColumnActions>
+                  <AdminTextAction>编辑</AdminTextAction>
+                  <AdminTextAction hidden>隐藏状态操作</AdminTextAction>
+                  <AdminTextAction>跟进记录</AdminTextAction>
+                  <AdminTextAction>复制</AdminTextAction>
+                </OperationColumnActions>
+              </section>
+              <section aria-label="禁用操作保留位置">
+                <h3>无权限但明确保留禁用入口</h3>
+                <OperationColumnActions>
+                  <AdminTextAction>编辑</AdminTextAction>
+                  <ConfirmAction variant="text" permission="demo_operation_unavailable" unauthorizedMode="disabled" title="权限示例" onConfirm={() => {}}>受限操作</ConfirmAction>
+                  <AdminTextAction>跟进记录</AdminTextAction>
+                </OperationColumnActions>
+              </section>
             </AdminCard>
             <AdminCard title="数据展示组件">
               <div className="design-system-page__input-grid">

@@ -36,7 +36,7 @@ test('项目列表和详情展示并筛选所属需求', () => {
   assert.match(types, /requirementId: string; requirementName: string/);
 })
 
-test('需求前端不再读写或展示所属项目', () => {
+test('需求仅展示只读关联项目，不能在需求表单直接换绑', () => {
   for (const file of [
     'src/api/requirementApi.ts',
     'src/modules/requirement/types.ts',
@@ -45,6 +45,6 @@ test('需求前端不再读写或展示所属项目', () => {
     'src/modules/requirement/pages/RequirementDetailPage.tsx',
   ]) {
     const source = read(file);
-    assert.doesNotMatch(source, /projectId|project_id|projectName|所属项目|getProjectOptions/, `${file} 仍包含所属项目`);
+    assert.doesNotMatch(source, /(?<!linked_)project_id|(?<!linked)projectId|所属项目|getProjectOptions/, `${file} 仍包含所属项目`);
   }
 });

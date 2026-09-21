@@ -40,7 +40,8 @@ test('PMIS 业务详情直接复用富文本空值规则', () => {
   for (const file of [
     '../src/modules/requirement/pages/RequirementDetailPage.tsx',
     '../src/modules/bug/pages/BugDetailPage.tsx',
-    '../src/modules/task/pages/TaskDetailPage.tsx'
+    '../src/modules/task/pages/TaskDetailPage.tsx',
+    '../src/modules/project/pages/ProjectDetailPage.tsx'
   ]) {
     const source = readFileSync(new URL(file, import.meta.url), 'utf8');
     assert.match(source, /<RichTextViewer value=\{row\.description\}/);
@@ -48,10 +49,9 @@ test('PMIS 业务详情直接复用富文本空值规则', () => {
   }
 });
 
-test('产品和项目普通多行描述直接复用详情长文本空值规则', () => {
+test('产品普通多行描述直接复用详情长文本空值规则', () => {
   for (const file of [
-    '../src/modules/product/pages/ProductDetailPage.tsx',
-    '../src/modules/project/pages/ProjectDetailPage.tsx'
+    '../src/modules/product/pages/ProductDetailPage.tsx'
   ]) {
     const source = readFileSync(new URL(file, import.meta.url), 'utf8');
     assert.match(source, /value: row\.description, wide: true, longText: true/);

@@ -183,6 +183,7 @@ export function AdvancedInputExamples({ richText, setRichText }: AdvancedInputEx
               <p>适合问题描述、处理记录，支持粘贴图片并调整图片大小。</p>
             </div>
             <RichDescriptionEditor value={richText} onChange={setRichText} />
+            <div>兼容历史 PNG、JPEG 等 Base64 位图；新增图片通过上传回调保存。</div>
           </section>
         </div>
       </AdminCard>

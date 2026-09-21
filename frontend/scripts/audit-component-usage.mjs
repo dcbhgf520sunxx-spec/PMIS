@@ -372,9 +372,10 @@ function collectSemanticViolations(files) {
     const inspectBusinessStatusAction = (node, name) => {
       const isBusinessChangeAction = name !== 'StatusChangeAction' && name.endsWith('StatusChangeAction');
       const isBusinessConfirmAction = name !== 'StatusConfirmAction' && name.endsWith('StatusConfirmAction');
-      if (!isBusinessChangeAction && !isBusinessConfirmAction) return;
+      const isBusinessDeleteAction = name !== 'DeleteConfirmAction' && name.endsWith('DeleteConfirmAction');
+      if (!isBusinessChangeAction && !isBusinessConfirmAction && !isBusinessDeleteAction) return;
       const componentSource = resolveImportedComponentSource(file, sourceFile, name);
-      const requiredComponent = isBusinessChangeAction ? 'StatusChangeAction' : 'StatusConfirmAction';
+      const requiredComponent = isBusinessDeleteAction ? 'DeleteConfirmAction' : isBusinessChangeAction ? 'StatusChangeAction' : 'StatusConfirmAction';
       const rendersRequiredComponent = new RegExp(`<${requiredComponent}(?:<|\\s|/|>)`).test(componentSource);
       if (!rendersRequiredComponent) {
         violations.push(finding(file, sourceFile, node, `业务状态动作 ${name} 必须直接调用公共 ${requiredComponent}`));
@@ -383,10 +384,17 @@ function collectSemanticViolations(files) {
 
     const inspectOperationChildren = (container) => {
       const inspect = (node) => {
-        if (!ts.isJsxElement(node) && !ts.isJsxSelfClosingElement(node)) return;
+        if (!ts.isJsxElement(node) && !ts.isJsxSelfClosingElement(node)) {
+          ts.forEachChild(node, inspect);
+          return;
+        }
         const name = jsxTagName(node, sourceFile);
+        if (name === 'Fragment' || name === 'React.Fragment') {
+          ts.forEachChild(node, inspect);
+          return;
+        }
         if (name && name !== 'OperationColumnActions') {
-          const isStatusChangeAction = name.endsWith('StatusChangeAction');
+          const isStatusChangeAction = name.endsWith('StatusChangeAction') || name.endsWith('DeleteConfirmAction');
           if (!allowedOperationActions.has(name) && !isStatusChangeAction) {
             violations.push(finding(file, sourceFile, node, '操作列只允许统一文字操作组件，普通按钮应改为文字操作'));
           } else if ((textVariantActions.has(name) || isStatusChangeAction) && attributeText(node, 'variant', sourceFile) !== '"text"') {

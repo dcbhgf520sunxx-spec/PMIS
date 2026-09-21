@@ -1,21 +1,33 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { App } from 'antd';
 import { ProForm } from '@ant-design/pro-components';
-import { useParams } from 'react-router-dom';
-import { AdminProFormDatePicker, AdminProFormSelect, AdminProFormText, AdminProFormTextArea, TemplateFormPage, TemplateFormSection, usePageReturnNavigation } from '../../../components/admin';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { AdminProFormRichDescription, AdminProFormDatePicker, AdminProFormSelect, AdminProFormText, AdminProFormTextArea, TemplateFormPage, TemplateFormSection, usePageReturnNavigation } from '../../../components/admin';
 import { createProject, getProject, getProjectRequirementOptions, updateProject } from '../../../api/projectApi';
 import { getProductOptions } from '../../../api/productApi';
 import { getUserOptions } from '../../../api/userApi';
 import type { ProjectFormValues } from '../types';
 import { BusinessAttachmentField, type BusinessAttachmentFieldHandle } from '../../../components/business/BusinessAttachmentField';
 
+import { getRequirement } from '../../../api/requirementApi';
+import { RequirementReleaseFields } from '../../requirement/components/RequirementReleaseFields';
+import type { RequirementType } from '../../requirement/types';
+
+import { createRichTextImageUploader } from '../../../api/richTextImageApi';
+const uploadRichTextImage = createRichTextImageUploader('/projects');
+
 type RequirementOption = { label: string; value: string; productId: string };
 
 export function ProjectFormPage({ mode }: { mode: 'create' | 'edit' }) {
   const { returnToSource } = usePageReturnNavigation('/projects');
   const params = useParams();
+  const [searchParams] = useSearchParams();
+  const sourceId = searchParams.get('requirement_id');
+  const [originalType, setOriginalType] = useState<RequirementType>();
+
   const { message } = App.useApp();
   const [form] = ProForm.useForm<ProjectFormValues>();
+  const selectedRequirementId = ProForm.useWatch('requirementId', form);
   const productId = ProForm.useWatch('productId', form);
   const [products, setProducts] = useState<Array<{ label: string; value: string }>>([]);
   const [requirements, setRequirements] = useState<RequirementOption[]>([]);
@@ -54,7 +66,7 @@ export function ProjectFormPage({ mode }: { mode: 'create' | 'edit' }) {
       getProjectRequirementOptions({ availableOnly: true, projectId: mode === 'edit' ? params.id : undefined }).then(setRequirements),
       getUserOptions().then(setUsers),
       mode === 'edit' && params.id
-        ? getProject(params.id).then((row) => setInitial({
+        ? getProject(params.id).then((row) => { setOriginalType(row.requirementType); setInitial({
           name: row.name,
           productId: row.productId,
           requirementId: row.requirementId,
@@ -66,19 +78,19 @@ export function ProjectFormPage({ mode }: { mode: 'create' | 'edit' }) {
           description: row.description,
           progressText: row.progressText,
           riskText: row.riskText,
-        }))
-        : Promise.resolve(),
+        }); })
+        : sourceId ? getRequirement(sourceId).then(row => { if(row.linkedProjectId || row.status === 36) throw new Error('该需求已关联项目'); setInitial({ priority: 0, requirementId: row.id, productId: row.productId, name: row.title, ownerId: row.ownerId, description: row.description, expectedEndDate: row.expectedEndDate || undefined }); }) : Promise.resolve(),
     ]).catch((reason) => {
       const text = reason instanceof Error ? reason.message : '加载失败';
       if (text.includes('不存在')) setNotFound(true); else setError(text);
     }).finally(() => setLoading(false));
-  }, [mode, params.id, rev]);
+  }, [mode, params.id, rev, sourceId]);
 
   return <TemplateFormPage<ProjectFormValues>
     title={mode === 'create' ? '新增项目' : '编辑项目'}
     formId="project-form"
     form={form}
-    fieldNameMap={{ requirement_id: 'requirementId' }}
+    fieldNameMap={{ requirement_id: 'requirementId', requirement_release: ['requirementRelease', 'status'] }}
     initialValues={initial}
     loading={loading}
     error={error}
@@ -86,6 +98,7 @@ export function ProjectFormPage({ mode }: { mode: 'create' | 'edit' }) {
     onRetry={() => setRev((value) => value + 1)}
     onCancel={returnToSource}
     onSubmit={async (values) => {
+      if (values.requirementId === initial?.requirementId) values.requirementRelease = undefined;
       let savedId = params.id;
       if (mode === 'create') savedId = String((await createProject(values)).id); else if (params.id) await updateProject(params.id, values);
       if (savedId) await attachmentRef.current?.commit(savedId);
@@ -103,10 +116,11 @@ export function ProjectFormPage({ mode }: { mode: 'create' | 'edit' }) {
         <AdminProFormDatePicker name="startDate" label="启动时间" />
         <AdminProFormDatePicker name="expectedEndDate" label="预计完成时间" rules={[{ required: true, message: '请选择预计完成时间' }]} />
         <AdminProFormSelect name="memberIds" label="项目成员" mode="multiple" options={users} />
-        <AdminProFormTextArea name="description" label="项目描述" fieldProps={{ rows: 4 }} formItemProps={{ className: 'admin-template-form-page__field is-full' }} />
+        <AdminProFormRichDescription name="description" label="项目描述" className="admin-template-form-page__field is-full" onUploadImage={uploadRichTextImage} />
         <BusinessAttachmentField ref={attachmentRef} apiPath="/projects" businessId={mode === 'edit' ? params.id : undefined} />
       </div>
     </TemplateFormSection>
+    {mode === 'edit' && initial?.requirementId && selectedRequirementId !== initial.requirementId && originalType ? <TemplateFormSection title="原需求恢复状态"><RequirementReleaseFields requirementType={originalType} prefix="requirementRelease" /></TemplateFormSection> : null}
     <TemplateFormSection title="进展与风险">
       <div className="admin-template-form-page__grid">
         <AdminProFormTextArea name="progressText" label="进度记录" fieldProps={{ rows: 4 }} formItemProps={{className:'admin-template-form-page__field is-full'}} />

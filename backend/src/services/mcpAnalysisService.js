@@ -14,7 +14,7 @@ const DOMAINS = {
   },
   requirement: {
     label: '需求', table: 'pms_requirement', date: 'created_at', status: 'status',
-    statuses: [0, 1, 2, 3, 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 33, 34, 35],
+    statuses: [0, 1, 2, 3, 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 33, 34, 35, 36],
     overdue: overdueSql('requirement').predicate,
     metrics: ['count', 'overdue_count', 'status_distribution'], deleted: true,
   },
