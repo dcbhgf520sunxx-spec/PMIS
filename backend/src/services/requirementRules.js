@@ -1,3 +1,4 @@
+const { getShanghaiDateText } = require('../utils/date')
 const { validateActualBusinessDate } = require('./actualBusinessDateRules')
 const { BUSINESS_FIELD_LIMITS } = require('./businessFieldRules')
 
@@ -45,7 +46,7 @@ function resolveRequirementStatusFields(old, target, values = {}) {
     pauseReason: Number(target) === 35 ? String(values.pause_reason || '').trim() : null,
   }
 }
-function calculateRequirementOverdue(date, status, today = new Date().toISOString().slice(0, 10)) {
+function calculateRequirementOverdue(date, status, today = getShanghaiDateText()) {
   if (TERMINAL.has(Number(status))) return null
   if (!date) return 0
   return String(date).slice(0, 10) < today ? 1 : 0
