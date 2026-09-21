@@ -1,3 +1,4 @@
+const { calculateOverdue, overdueSql } = require('./overdueRules')
 const db = require('../db')
 const { summarizeRichText } = require('../mcp/contentPolicy')
 const { validatePeriodDetailQuery, paginatePeriodDetails, createPeriodDatasetToken, assertPeriodDatasetToken } = require('./mcpPeriodDetails')
@@ -42,7 +43,7 @@ const RECORD_QUERIES = {
       ARRAY_REMOVE(ARRAY[p.owner_id,p.creator_id] || COALESCE((SELECT ARRAY_AGG(member.user_id ORDER BY member.user_id)
         FROM pms_project_member member WHERE member.project_id=p.id),'{}'::BIGINT[]),NULL) person_ids,
       p.expected_end_date plan_date,p.actual_end_date actual_date,p.suspend_date pause_date,
-      p.created_at,p.is_overdue,(p.status=3) is_paused,(p.status=2) is_completed,
+      p.created_at,${overdueSql('project', {alias:'p'}).fields},(p.status=3) is_paused,(p.status=2) is_completed,
       FALSE parent_project_paused,FALSE required_delivery,0 delivery_count
     FROM pms_project p
     JOIN pms_product product ON product.id=p.product_id
@@ -57,7 +58,7 @@ const RECORD_QUERIES = {
       ARRAY_REMOVE(ARRAY[r.owner_id],NULL) business_role_ids,
       ARRAY_REMOVE(ARRAY[r.owner_id,r.creator_id],NULL) person_ids,
       r.expected_end_date plan_date,r.actual_end_date actual_date,r.pause_date,
-      r.created_at,COALESCE(r.is_overdue,0) is_overdue,(r.status=35) is_paused,
+      r.created_at,${overdueSql('requirement', {alias:'r'}).fields},(r.status=35) is_paused,
       (r.status IN (33,34)) is_completed,FALSE parent_project_paused,FALSE required_delivery,0 delivery_count
     FROM pms_requirement r
     JOIN pms_product product ON product.id=r.product_id
@@ -75,7 +76,7 @@ const RECORD_QUERIES = {
       ARRAY_REMOVE(ARRAY[item.owner_id,item.creator_id] || COALESCE((SELECT ARRAY_AGG(c.user_id ORDER BY c.sort_order,c.user_id)
         FROM pms_project_plan_item_collaborator c WHERE c.plan_item_id=item.id),'{}'::BIGINT[]),NULL) person_ids,
       item.current_due_date plan_date,item.actual_end_date actual_date,item.created_at,
-      CASE WHEN item.status NOT IN (2,3) AND item.current_due_date<CURRENT_DATE THEN 1 ELSE 0 END is_overdue,
+      ${overdueSql('stage_plan', {alias:'item',parentAlias:'project'}).fields},
       (item.status=3) is_paused,(item.status=2) is_completed,(project.status=3) parent_project_paused,
       (item.requires_delivery_file=1) required_delivery,
       (SELECT COUNT(*)::INTEGER FROM pms_project_plan_delivery_file f
@@ -95,7 +96,7 @@ const RECORD_QUERIES = {
       owners.owner_id,owners.owner_name,COALESCE(owners.owner_ids,'{}'::BIGINT[]) owner_ids,
       COALESCE(owners.owner_ids,'{}'::BIGINT[]) business_role_ids,
       ARRAY_REMOVE(COALESCE(owners.owner_ids,'{}'::BIGINT[]) || ARRAY[t.creator_id],NULL) person_ids,
-      t.expected_end_date plan_date,t.actual_end_date actual_date,t.suspend_date pause_date,t.created_at,t.is_overdue,
+      t.expected_end_date plan_date,t.actual_end_date actual_date,t.suspend_date pause_date,t.created_at,${overdueSql('task', {alias:'t'}).fields},
       (t.status=3) is_paused,(t.status=2) is_completed,FALSE parent_project_paused,
       FALSE required_delivery,0 delivery_count,t.parent_task_id
     FROM pms_task t
@@ -129,7 +130,7 @@ const RECORD_QUERIES = {
       w.creator_id,w.updater_id,owner.real_name owner_name,ARRAY[w.follower_id] owner_ids,
       ARRAY_REMOVE(ARRAY[w.follower_id],NULL) business_role_ids,
       ARRAY_REMOVE(ARRAY[w.follower_id,w.creator_id],NULL) person_ids,w.expected_resolve_date::DATE plan_date,
-      w.resolve_date::DATE actual_date,w.suspend_date::DATE pause_date,w.created_at,w.is_overdue,(w.status=4) is_paused,
+      w.resolve_date::DATE actual_date,w.suspend_date::DATE pause_date,w.created_at,${overdueSql('work_order', {alias:'w'}).fields},(w.status=4) is_paused,
       (w.status=2) is_completed,FALSE parent_project_paused,FALSE required_delivery,0 delivery_count
     FROM pms_work_order w
     JOIN pms_product product ON product.id=w.product_id
@@ -723,10 +724,11 @@ function uniquePeriodEvents(events, period) {
 }
 
 function currentOverdue(record, cutoffDate) {
-  if (record.is_completed || record.is_paused || !record.plan_date) return false
-  if (record.business_type === 'stage_plan' && record.parent_project_paused) return false
-  if (record.business_type === 'requirement') return calculateRequirementOverdue(record.plan_date, record.status, cutoffDate) === 1
-  return record.plan_date < cutoffDate
+  if (record.business_type === 'bug') return false
+  return calculateOverdue(record.business_type, {
+    date: record.plan_date, status: record.status,
+    parentStatus: record.parent_project_paused ? 3 : undefined,
+  }, cutoffDate).isOverdue === 1
 }
 
 function isRejectedRequirement(record) {
@@ -939,9 +941,7 @@ function candidate(record, cutoffDate) {
     priority: record.priority,
     plan_date: record.plan_date,
     is_overdue: overdue,
-    overdue_days: overdue && record.plan_date && record.plan_date < cutoffDate
-      ? daysInRange(parseDate(record.plan_date), parseDate(cutoffDate)) - 1
-      : 0,
+    overdue_days: overdue ? calculateOverdue(record.business_type, { date: record.plan_date, status: record.status }, cutoffDate).overdueDays : 0,
   }
 }
 

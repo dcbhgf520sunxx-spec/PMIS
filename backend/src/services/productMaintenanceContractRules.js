@@ -1,4 +1,4 @@
-const DAY_MS = 24 * 60 * 60 * 1000
+const { calendarDaysBetween } = require('../utils/date')
 const BEFORE_EXPIRY_DAYS = new Set([30, 15, 7, 3, 2, 1])
 
 function formatContractAmount(value) {
@@ -64,7 +64,7 @@ function isValidDateText(value) {
 }
 
 function diffDays(later, earlier) {
-  return Math.round((later.getTime() - earlier.getTime()) / DAY_MS)
+  return calendarDaysBetween(later.toISOString().slice(0, 10), earlier.toISOString().slice(0, 10))
 }
 
 function deriveContractStatus(contract, todayText) {

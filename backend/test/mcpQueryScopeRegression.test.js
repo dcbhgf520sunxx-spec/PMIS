@@ -81,7 +81,7 @@ test('阶段关键事项逾期筛选排除暂停父项目并固定上海日期',
   await dispatchQueryTool('stage_plan_search', { is_overdue: 1 }, context)
   const main = calls.find((call) => call.method === 'all')
   assert.match(main.sql, /p\.status <> 3/)
-  assert.match(main.sql, /i\.status IN \(0, 1\)/)
+  assert.match(main.sql, /i\.status NOT IN \(2,3\)/)
   assert.match(main.sql, /AT TIME ZONE 'Asia\/Shanghai'/)
 })
 
@@ -103,7 +103,7 @@ test('阶段未逾期筛选使用包含父项目暂停规则的整体反条件',
   const calls = captureQueries(t)
   await dispatchQueryTool('stage_plan_search', { is_overdue: 0 }, context)
   const main = calls.find((call) => call.method === 'all')
-  assert.match(main.sql, /NOT \(p\.status <> 3 AND i\.status IN \(0, 1\)/)
+  assert.match(main.sql, /AND NOT \(i\.status NOT IN \(2,3\) AND p\.status <> 3/)
 })
 
 test('公开查询拒绝伪造本人身份及控制器内部筛选参数', () => {

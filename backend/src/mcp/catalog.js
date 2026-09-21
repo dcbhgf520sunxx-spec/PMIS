@@ -850,6 +850,7 @@ const SEARCH_OUTPUT_FIELDS = {
     created_at: outputField('创建时间，ISO 8601日期时间'),
   },
   project_search: {
+    overdue_days: { type: 'integer', minimum: 0, description: '按上海自然日计算的当前逾期天数，不逾期为0' },
     id: outputField('项目标识'), name: outputField('项目名称'), product_id: outputField('所属产品标识'),
     product_name: outputField('所属产品名称'),
     requirement_id: outputField('所属需求标识'), requirement_name: outputField('所属需求名称'),
@@ -862,14 +863,17 @@ const SEARCH_OUTPUT_FIELDS = {
     created_at: outputField('创建时间，ISO 8601日期时间'),
   },
   requirement_search: {
+    overdue_days: { type: 'integer', minimum: 0, description: '按上海自然日计算的当前逾期天数，不逾期为0' },
     id: outputField('需求标识'), title: outputField('需求标题'), requirement_type: outputField('需求类型代码'),
     requirement_type_label: outputField('需求类型中文名称'), priority: outputField('优先级代码'),
     priority_label: outputField('优先级中文名称'), status: outputField('需求状态代码'),
-    status_label: outputField('需求状态中文名称'), product_id: outputField('所属产品标识'),
+    status_label: outputField('需求状态中文名称'), is_overdue: outputField('逾期代码；暂停或终态为空'),
+    is_overdue_label: outputField('逾期状态中文名称'), product_id: outputField('所属产品标识'),
     product_name: outputField('所属产品名称'), owner_id: outputField('负责人标识'), owner_name: outputField('负责人姓名'),
     expected_end_date: outputField('预计完成日期，YYYY-MM-DD'),
   },
   task_search: {
+    overdue_days: { type: 'integer', minimum: 0, description: '按上海自然日计算的当前逾期天数，不逾期为0' },
     id: outputField('任务标识'), name: outputField('任务名称'), parent_task_id: outputField('父任务标识；空值表示主任务'),
     parent_task_name: outputField('父任务名称'), source_type: outputField('关联类型代码'),
     source_type_label: outputField('关联类型中文名称'), project_id: outputField('关联项目标识'),
@@ -892,6 +896,7 @@ const SEARCH_OUTPUT_FIELDS = {
     resolution_name: outputField('解决方案名称'), assignee_id: outputField('处理人标识'), assignee_name: outputField('处理人姓名'),
   },
   work_order_search: {
+    overdue_days: { type: 'integer', minimum: 0, description: '按上海自然日计算的当前逾期天数，不逾期为0' },
     id: outputField('工单标识'), problem_desc: outputField('问题描述'), urgency: outputField('紧急程度代码'),
     urgency_label: outputField('紧急程度中文名称'), status: outputField('工单状态代码'),
     status_label: outputField('工单状态中文名称'), is_overdue: outputField('逾期代码'),
@@ -901,11 +906,13 @@ const SEARCH_OUTPUT_FIELDS = {
     expected_resolve_date: outputField('预计解决日期，YYYY-MM-DD'),
   },
   stage_plan_search: {
+    overdue_days: { type: 'integer', minimum: 0, description: '按上海自然日计算的当前逾期天数，不逾期为0' },
     id: outputField('关键事项标识'), project_id: outputField('项目标识'), project_name: outputField('项目名称'),
     stage_id: outputField('阶段标识'), stage_name: outputField('阶段名称'), owner_id: outputField('负责人标识'),
     owner_name: outputField('负责人姓名'),
     item_name: outputField('关键事项名称'), status: outputField('关键事项状态代码'),
     status_label: outputField('关键事项状态中文名称'), current_due_date: outputField('当前计划完成日期，YYYY-MM-DD'),
+    is_overdue: outputField('逾期代码'), is_overdue_label: outputField('逾期状态中文名称'),
     parent_project_status: outputField('所属项目状态代码；暂停项目下的关键事项不计当前逾期'),
     parent_project_status_label: outputField('所属项目状态中文名称'),
     requires_delivery_file: outputField('是否要求交付文件代码'),

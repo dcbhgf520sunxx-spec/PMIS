@@ -3,11 +3,11 @@ import { request, unwrap } from './requestClient';
 import { arrayContract, objectContract } from './responseContract';
 import type { TaskFormValues, TaskPriority, TaskRecord, TaskStatus, TaskStatusUpdateResult } from '../modules/task/types';
 
-type Row = { id: number; name: string; description?: string; parent_task_id?: number; parent_task_name?: string; child_count?: number; completed_child_count?: number; source_type: 1 | 2; project_id?: number; project_name?: string; requirement_id?: number; requirement_name?: string; owners: Array<{id:number;name:string}>; owner_names: string; task_type: number; task_type_name: string; priority: number; status: number; previous_status?: number; is_overdue: number; start_date?: string; expected_end_date?: string; actual_end_date?: string; suspend_date?: string; suspend_reason?: string; creator_name?: string; updater_name?: string; created_at?: string; updated_at?: string };
+type Row = { id: number; name: string; description?: string; parent_task_id?: number; parent_task_name?: string; child_count?: number; completed_child_count?: number; source_type: 1 | 2; project_id?: number; project_name?: string; requirement_id?: number; requirement_name?: string; owners: Array<{id:number;name:string}>; owner_names: string; task_type: number; task_type_name: string; priority: number; status: number; previous_status?: number; is_overdue: number; overdue_days: number; start_date?: string; expected_end_date?: string; actual_end_date?: string; suspend_date?: string; suspend_reason?: string; creator_name?: string; updater_name?: string; created_at?: string; updated_at?: string };
 type Page = { list: Row[]; total: number; page: number; pageSize: number; viewCounts: { all: number; mine: number } };
 
 const ownerContract = objectContract<{id:number;name:string}>(['id', 'name']);
-const rowContract = objectContract<Row>(['id', 'name', 'source_type', 'owners', 'owner_names', 'task_type', 'task_type_name', 'priority', 'status', 'is_overdue'], { owners: arrayContract(ownerContract) });
+const rowContract = objectContract<Row>(['id', 'name', 'source_type', 'owners', 'owner_names', 'task_type', 'task_type_name', 'priority', 'status', 'is_overdue','overdue_days'], { owners: arrayContract(ownerContract) });
 const pageContract = objectContract<Page>(['list', 'total', 'page', 'pageSize', 'viewCounts'], { list: arrayContract(rowContract) });
 const neighborsContract = objectContract<{ prevId: number | null; nextId: number | null; ordinal?: number; total?: number }>(['prevId', 'nextId']);
 const availableContract = objectContract<{ available: boolean }>(['available']);
@@ -28,7 +28,7 @@ function mapTask(row: Row): TaskRecord {
     ownerIds: row.owners.map((owner) => String(owner.id)), owners: row.owners.map((owner) => ({ id: String(owner.id), name: owner.name })), ownerNames: row.owner_names, taskType: String(row.task_type), taskTypeName: row.task_type_name,
     priority: Number(row.priority) as TaskPriority, status: Number(row.status) as TaskStatus,
     previousStatus: row.previous_status === undefined ? undefined : Number(row.previous_status) as TaskStatus,
-    isOverdue: Boolean(Number(row.is_overdue)), startTime: dateText(row.start_date), expectedEndTime: dateText(row.expected_end_date),
+    isOverdue: Boolean(Number(row.is_overdue)),overdueDays: Number(row.overdue_days),  startTime: dateText(row.start_date), expectedEndTime: dateText(row.expected_end_date),
     actualEndTime: dateText(row.actual_end_date), suspendTime: dateText(row.suspend_date), suspendReason: row.suspend_reason || '', creatorName: row.creator_name || '-',
     updaterName: row.updater_name || '-', createdAt: dateTimeText(row.created_at), updatedAt: dateTimeText(row.updated_at)
   };

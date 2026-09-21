@@ -1,3 +1,4 @@
+import { useBusinessDay } from '../../../hooks/useBusinessDay';
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -26,6 +27,7 @@ export function useDetailNeighbors({
   routeBase,
   fetchNeighbors
 }: UseDetailNeighborsParams) {
+  const businessDay = useBusinessDay();
   const navigate = useNavigate();
   const location = useLocation();
   const returnTo = new URLSearchParams(location.search).get('returnTo');
@@ -57,7 +59,7 @@ export function useDetailNeighbors({
     return () => {
       cancelled = true;
     };
-  }, [fetchNeighbors, id, moduleKey, returnTo]);
+  }, [fetchNeighbors, id, moduleKey, returnTo, businessDay]);
 
   const context = returnTo ? loadDetailNeighborContext(moduleKey, returnTo) : null;
   const activeRouteBase = context?.routeBase || routeBase;

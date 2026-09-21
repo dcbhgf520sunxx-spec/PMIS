@@ -1,3 +1,4 @@
+import { useBusinessDay } from '../../../hooks/useBusinessDay';
 import { useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useListPageData } from '../DataListPage/useListPageData';
@@ -32,6 +33,7 @@ export function useTemplateServerListData<T extends Record<string, unknown>, M =
   defaultPageSize,
   urlSync = false
 }: UseTemplateServerListDataOptions<T, M>) {
+  const businessDay = useBusinessDay();
   const queryContextSignature = JSON.stringify(queryKey);
   const previousQueryContextRef = useRef(queryContextSignature);
   const pendingQueryContextRef = useRef<string>();
@@ -49,12 +51,13 @@ export function useTemplateServerListData<T extends Record<string, unknown>, M =
   const requestPage = pendingQueryReset ? 1 : currentPage;
   const serverQueryKey = useMemo(() => [
     'template-server-list',
+    businessDay,
     ...queryKey,
     requestPage,
     pageSize,
     sortState.field,
     sortState.order
-  ], [queryKey, requestPage, pageSize, sortState.field, sortState.order]);
+  ], [businessDay, queryKey, requestPage, pageSize, sortState.field, sortState.order]);
   const query = useQuery({
     queryKey: serverQueryKey,
     queryFn: () => request({

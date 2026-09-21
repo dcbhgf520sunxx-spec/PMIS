@@ -1,3 +1,5 @@
+const { overdueSql } = require('../services/overdueRules')
+const stageOverdue = overdueSql('stage_plan', { alias: 'i', parentAlias: 'p' })
 const db = require('../db')
 const fs = require('node:fs')
 const { Readable } = require('node:stream')
@@ -34,7 +36,7 @@ const { buildTemplateApplication } = require('../services/projectPlanTemplateRul
 const DELIVERY_ROOT = PROJECT_PLAN_DELIVERY_DIR
 
 async function findProject(projectId) {
-  return db.prepare('SELECT id,name FROM pms_project WHERE id=? AND is_deleted=0').get(projectId)
+  return db.prepare('SELECT id,name,status FROM pms_project WHERE id=? AND is_deleted=0').get(projectId)
 }
 
 async function findStage(projectId, stageId) {
@@ -119,8 +121,9 @@ exports.getPlan = async (req, res) => {
       MIN(i.current_due_date) min_due_date,MAX(i.current_due_date) max_due_date,
       CASE WHEN COUNT(i.id)>0 AND COUNT(i.id) FILTER(WHERE i.status=2)=COUNT(i.id)
         THEN MAX(i.actual_end_date) ELSE NULL END actual_end_date,
-      COUNT(i.id) FILTER(WHERE i.status IN(0,1) AND i.current_due_date<CURRENT_DATE)::INTEGER overdue_count
+      COUNT(i.id) FILTER(WHERE ${stageOverdue.predicate})::INTEGER overdue_count
       FROM pms_project_plan_stage s
+      JOIN pms_project p ON p.id=s.project_id
       LEFT JOIN pms_project_plan_item i ON i.stage_id=s.id AND i.is_deleted=0
       WHERE s.project_id=? AND s.is_deleted=0
       GROUP BY s.id ORDER BY s.sort_order,s.id`).all(project.id)
@@ -135,7 +138,7 @@ exports.getPlan = async (req, res) => {
       ORDER BY i.stage_id,i.sort_order,i.id`).all(project.id)
     const byStage = new Map()
     for (const item of items) {
-      item.progress_hint = getPlanItemProgressHint(item)
+      item.progress_hint = getPlanItemProgressHint({ ...item, parent_project_status: project.status })
       if (!byStage.has(String(item.stage_id))) byStage.set(String(item.stage_id), [])
       byStage.get(String(item.stage_id)).push(item)
     }
@@ -197,7 +200,7 @@ exports.applyTemplate = async (req, res) => {
     if (Number(ownerCount.count) !== ownerIds.length) return fail(res, 400, 400, '部分负责人不存在或已停用，请重新选择')
 
     const result = await db.transaction(async (tx) => {
-      const project = await tx.prepare('SELECT id,name FROM pms_project WHERE id=? AND is_deleted=0 FOR UPDATE').get(req.params.projectId)
+      const project = await tx.prepare('SELECT id,name,status FROM pms_project WHERE id=? AND is_deleted=0 FOR UPDATE').get(req.params.projectId)
       if (!project) {
         const error = new Error('项目不存在')
         error.status = 404

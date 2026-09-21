@@ -1,3 +1,5 @@
+const { overdueSql } = require('../services/overdueRules')
+const overdue = overdueSql('project', { alias: 'p' })
 const db = require('../db')
 const { parsePagination, getSortDirection } = require('../utils/pagination')
 const { ok, fail, failField } = require('../utils/response')
@@ -23,7 +25,7 @@ const schema = {
 
 const fields = `p.id, p.name, p.description, p.product_id, product.name product_name,
   p.requirement_id, requirement.title requirement_name,
-  p.owner_id, owner.real_name owner_name, p.priority, p.status, p.is_overdue, p.start_date,
+  p.owner_id, owner.real_name owner_name, p.priority, p.status, ${overdue.fields}, p.start_date,
   p.expected_end_date, p.actual_end_date, p.suspend_date, p.suspend_reason, p.progress_text, p.risk_text,
   p.creator_id, creator.real_name creator_name, p.updater_id, updater.real_name updater_name,
   p.created_at, p.updated_at,
@@ -54,7 +56,7 @@ function where(q) {
   if (q.joined_user_id) { sql += ' AND EXISTS (SELECT 1 FROM pms_project_member pm WHERE pm.project_id = p.id AND pm.user_id = ?)'; params.push(Number(q.joined_user_id)) }
   if (q.status !== undefined && q.status !== '') { sql += ' AND p.status = ?'; params.push(Number(q.status)) }
   if (q.priority !== undefined && q.priority !== '') { sql += ' AND p.priority = ?'; params.push(Number(q.priority)) }
-  if (q.is_overdue !== undefined && q.is_overdue !== '') { sql += ' AND p.is_overdue = ?'; params.push(Number(q.is_overdue)) }
+  if (q.is_overdue !== undefined && q.is_overdue !== '') { sql += ` AND ${overdue.flag} = ?`; params.push(Number(q.is_overdue)) }
   if (q.expected_end_date_from) { sql += ' AND p.expected_end_date >= ?'; params.push(q.expected_end_date_from) }
   if (q.expected_end_date_to) { sql += ' AND p.expected_end_date <= ?'; params.push(q.expected_end_date_to) }
   if (q.creator_id) { sql += ' AND p.creator_id = ?'; params.push(Number(q.creator_id)) }

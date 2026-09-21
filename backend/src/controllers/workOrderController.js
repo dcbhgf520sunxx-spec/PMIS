@@ -1,3 +1,5 @@
+const { overdueSql } = require('../services/overdueRules')
+const overdue = overdueSql('work_order', { alias: 'w' })
 const defaultDb = require('../db')
 function createWorkOrderController(db = defaultDb) {
 const exports = {}
@@ -69,13 +71,13 @@ async function validateActiveProduct(productId) {
 
 const WORK_ORDER_SORT_MAP = {
   problem_desc: 'w.problem_desc', product_id: 'p.name', problem_type: 'pt.name', urgency: 'w.urgency', status: 'w.status',
-  is_overdue: 'w.is_overdue', follower_name: 'w.follower_id', follower_id: 'w.follower_id',
+  is_overdue: overdue.flag, follower_name: 'w.follower_id', follower_id: 'w.follower_id',
   submitter_name: 'w.submitter_name', submitter_dept: 'w.submitter_dept', submit_time: 'w.submit_time',
   expected_resolve_date: 'w.expected_resolve_date', creator_name: 'u1.real_name', created_at: 'w.created_at'
 }
 
 function withJoins(sql) {
-  return `SELECT ${sql}, u1.real_name as creator_name, u2.real_name as updater_name, u3.real_name as follower_name,
+  return `SELECT ${sql}, ${overdue.fields}, u1.real_name as creator_name, u2.real_name as updater_name, u3.real_name as follower_name,
       p.name as product_name, pt.name as problem_type_name
     FROM pms_work_order w
     LEFT JOIN pms_user u1 ON w.creator_id = u1.id
@@ -103,7 +105,7 @@ function buildWhereClause(q) {
   }
   if (q.urgency !== undefined && q.urgency !== '') { sql += ' AND w.urgency = ?'; params.push(q.urgency) }
   if (q.status !== undefined && q.status !== '') { sql += ' AND w.status = ?'; params.push(q.status) }
-  if (q.is_overdue !== undefined && q.is_overdue !== '') { sql += ' AND w.is_overdue = ?'; params.push(q.is_overdue) }
+  if (q.is_overdue !== undefined && q.is_overdue !== '') { sql += ` AND ${overdue.flag} = ?`; params.push(q.is_overdue) }
   if (q.follower_id) { sql += ' AND w.follower_id = ?'; params.push(q.follower_id) }
   if (q.submitter_name) { sql += ' AND w.submitter_name LIKE ?'; params.push(`%${q.submitter_name}%`) }
   if (q.submit_time_from) { sql += ' AND w.submit_time >= ?'; params.push(q.submit_time_from) }

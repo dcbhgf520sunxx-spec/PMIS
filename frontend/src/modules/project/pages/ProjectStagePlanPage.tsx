@@ -1,3 +1,4 @@
+import { useBusinessDay } from '../../../hooks/useBusinessDay';
 import { useEffect, useMemo, useState, type DragEvent } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
 import dayjs from 'dayjs';
@@ -69,6 +70,7 @@ const setProjectPlanDragPreview=(event:DragEvent<HTMLElement>)=>{
 };
 
 export function ProjectStagePlanPage(){
+ const businessDay = useBusinessDay();
   const params=useParams();
   const location=useLocation();
   const navigate=useNavigate();
@@ -109,7 +111,7 @@ export function ProjectStagePlanPage(){
     setLoading(true);setError('');
     Promise.all([getProjectStagePlan(params.id),getUserOptions(),getProjectStagePlanHistory(params.id)]).then(([result,options,historyRows])=>{setPlan(result);setUsers(options);setHistory(historyRows.map(mapHistoryItem));}).catch((cause)=>setError(cause instanceof Error?cause.message:'加载失败')).finally(()=>setLoading(false));
   };
-  useEffect(load,[params.id,revision]);
+  useEffect(load,[params.id,revision,businessDay]);
   const refresh=()=>setRevision((value)=>value+1);
 
   const visibleStages=useMemo(()=>plan?.stages||[],[plan]);

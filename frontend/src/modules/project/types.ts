@@ -4,7 +4,7 @@ export type ProjectMember = { id: string; name: string };
 export type ProjectRecord = {
   id: string; name: string; description: string; productId: string; productName: string; requirementId: string; requirementName: string;
   ownerId: string; ownerName: string; memberIds: string[]; members: ProjectMember[];
-  priority: ProjectPriority; status: ProjectStatus; isOverdue: boolean; startDate: string; expectedEndDate: string;
+  priority: ProjectPriority; status: ProjectStatus; isOverdue: boolean; overdueDays?: number; startDate: string; expectedEndDate: string;
   previousStatus?: ProjectStatus;
   actualEndDate: string; suspendDate: string; suspendReason: string; progressText: string; riskText: string;
   creatorName: string; updaterName: string; createdAt: string; updatedAt: string;

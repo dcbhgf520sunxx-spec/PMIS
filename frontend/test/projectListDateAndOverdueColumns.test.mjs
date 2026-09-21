@@ -16,11 +16,11 @@ test('项目列表把逾期标签放在项目名称后并只对逾期项目展�
   assert.doesNotMatch(page, /<Space\s+size=\{6\}>/);
 });
 
-test('项目详情根据预计完成日期实时展示逾期天数', () => {
+test('项目详情展示服务端返回的逾期天数', () => {
   const detail = readFileSync('src/modules/project/pages/ProjectDetailPage.tsx', 'utf8');
-  assert.match(detail, /renderProjectOverdue\(row\.isOverdue, row\.expectedEndDate\)/);
+  assert.match(detail, /renderProjectOverdue\(row\.isOverdue, row\.overdueDays\)/);
   assert.doesNotMatch(detail, /overdueDays=\{row\.isOverdue \? 1 : 0\}/);
-  assert.match(helper, /Date\.now\(\)[\s\S]*due\.getTime\(\)[\s\S]*86_400_000/);
+  assert.doesNotMatch(helper, /Date\.now|Math\.ceil/);
 });
 
 test('项目列表展示启动时间和完整的预计完成时间列名', () => {

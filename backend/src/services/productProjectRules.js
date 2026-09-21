@@ -1,3 +1,4 @@
+const { calculateOverdue } = require('./overdueRules')
 const { validateActualBusinessDate } = require('./actualBusinessDateRules')
 const { BUSINESS_FIELD_LIMITS } = require('./businessFieldRules')
 
@@ -16,9 +17,8 @@ function validateProjectStatusChange(status, values = {}, today) {
     : null
 }
 
-function calculateProjectOverdue(expectedEndDate, status, today = new Date().toISOString().slice(0, 10)) {
-  if (!expectedEndDate || [2, 3].includes(Number(status))) return 0
-  return String(expectedEndDate).slice(0, 10) < today ? 1 : 0
+function calculateProjectOverdue(date, status, today) {
+  return calculateOverdue('project', { date, status }, today).isOverdue
 }
 
 function allowedProjectStatuses(currentStatus) {

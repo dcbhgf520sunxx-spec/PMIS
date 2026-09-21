@@ -1,3 +1,4 @@
+import { useBusinessDay } from '../../../hooks/useBusinessDay';
 import { useCallback, useEffect, useState } from 'react';
 import { App } from 'antd';
 import { useParams } from 'react-router-dom';
@@ -29,6 +30,7 @@ import { buildStatusPayload, statusTransitions } from './workOrderList.constants
 import { BusinessAttachmentField } from '../../../components/business/BusinessAttachmentField';
 
 export function WorkOrderDetailPage() {
+ const businessDay = useBusinessDay();
   const { message } = App.useApp();
   const { navigateWithReturn, returnToSource } = usePageReturnNavigation('/work-orders');
   const params = useParams();
@@ -68,7 +70,7 @@ export function WorkOrderDetailPage() {
 
   useEffect(() => {
     void loadDetail();
-  }, [loadDetail]);
+  }, [loadDetail, businessDay]);
 
   if (!detail) {
     return (
@@ -124,7 +126,7 @@ export function WorkOrderDetailPage() {
         items: [
           { label: '状态', value: renderWorkOrderStatus(detail.status) },
           { label: '紧急程度', value: renderUrgency(detail.urgency) },
-          { label: '逾期', value: detail.status === 2 ? '-' : renderOverdue(detail.isOverdue, detail.expectedResolveDate) }
+          { label: '逾期', value: detail.status === 2 ? '-' : renderOverdue(detail.isOverdue, detail.overdueDays) }
         ]
       }}
       statusAction={(

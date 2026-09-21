@@ -19,7 +19,7 @@ type WorkOrderResponse = {
   follower_name?: string;
   urgency: number;
   status: number;
-  is_overdue: number;
+  is_overdue: number; overdue_days: number;
   expected_resolve_date?: string;
   resolve_date?: string;
   close_date?: string;
@@ -36,7 +36,7 @@ type WorkOrderResponse = {
 
 const workOrderContract = objectContract<WorkOrderResponse>([
   'id', 'problem_type', 'problem_desc', 'follower_id', 'urgency', 'status',
-  'is_overdue', 'submitter_name', 'submitter_dept', 'submit_time'
+  'is_overdue','overdue_days', 'submitter_name', 'submitter_dept', 'submit_time'
 ]);
 const workOrderListContract = arrayContract(workOrderContract);
 const workOrderIdContract = objectContract<{ id: number }>(['id']);
@@ -99,6 +99,7 @@ export function toWorkOrderRecord(row: WorkOrderResponse): WorkOrderRecord {
     urgency: row.urgency as WorkOrderRecord['urgency'],
     status: row.status as WorkOrderStatus,
     isOverdue: Boolean(Number(row.is_overdue)),
+    overdueDays: Number(row.overdue_days),
     expectedResolveDate: normalizeOptionalWorkOrderDateText(row.expected_resolve_date),
     submitterName: row.submitter_name,
     submitterDept: row.submitter_dept,

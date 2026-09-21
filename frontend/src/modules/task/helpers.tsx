@@ -24,9 +24,6 @@ export function renderTaskLevel(parentTaskId?: string) {
   return parentTaskId ? <AdminTag className="task-level-tag">子</AdminTag> : <CategoryTag className="task-level-tag" tone={taskMainLevelTones.main}>主</CategoryTag>;
 }
 
-export function renderTaskOverdue(isOverdue: boolean, expectedEndTime?: string) {
-  if (!isOverdue) return <OverdueTag overdueDays={0} />;
-  const due = new Date(expectedEndTime || '');
-  const overdueDays = Number.isNaN(due.getTime()) ? 1 : Math.max(1, Math.ceil((Date.now() - due.getTime()) / 86_400_000));
-  return <OverdueTag overdueDays={overdueDays} />;
+export function renderTaskOverdue(isOverdue: boolean, overdueDays?: number) {
+  return <OverdueTag overdueDays={isOverdue ? overdueDays : 0} overdue={isOverdue && overdueDays === undefined} />;
 }
