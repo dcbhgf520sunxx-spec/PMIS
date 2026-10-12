@@ -133,6 +133,10 @@
 #rb-twin .rb-node-alert:focus-visible{outline:2px solid var(--rb);outline-offset:2px}
 #rb-twin .rb-focus-filter{display:inline-flex;align-items:center;gap:8px;margin-left:12px;font-size:12px;color:var(--app-muted)}
 #rb-twin .rb-focus-filter .admin-text-action{font-size:12px}
+#rb-twin .rb-ai-summary{padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--line)}
+#rb-twin .rb-ai-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+#rb-twin .rb-ai-text{margin:0;font-size:12px;line-height:1.8;color:var(--ink);overflow-wrap:anywhere}
+#rb-twin .rb-ai-source{margin-top:8px;font-size:10px;color:var(--sub)}
 
 /* Normalized path length keeps four moving dots on both short and long links. */
 #rb-twin .rb-wire-current{fill:none;stroke:#749cde;stroke-width:2.6;stroke-dasharray:0 25;stroke-linecap:round;animation:rb-wire-current 2s linear infinite;pointer-events:none}

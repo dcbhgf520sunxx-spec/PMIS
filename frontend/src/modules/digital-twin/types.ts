@@ -63,4 +63,12 @@ export type TwinSnapshot = {
     records: TwinRecord[];
     attention: TwinRecord[];
 };
+export type TwinAiSummary = {
+    text: string;
+    model: string;
+    generatedAt: string;
+    sourceAsOf: string;
+    updatedCount: number;
+    sourceRevision: string;
+};
 export const kindNames: Record<string, string> = { products: '产品', requirements: '需求', projects: '项目', tasks: '任务', bugs: '缺陷', planStages: '项目阶段', planItems: '关键事项', contracts: '项目合同', paymentStages: '付款阶段', payments: '付款记录', maintenance: '维保合同', orders: '工单' };
