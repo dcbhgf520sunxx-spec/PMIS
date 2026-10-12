@@ -1,4 +1,5 @@
 const service = require('../services/digitalTwinService');
+const { generateSummary } = require('../services/digitalTwinAiSummary');
 const { ok, fail } = require('../utils/response');
 exports.products = async (req, res, next) => {
     try {
@@ -19,6 +20,18 @@ exports.snapshot = async (req, res, next) => {
     catch (error) {
         if (error.status)
             return fail(res, error.status, error.status, error.message);
+        return next(error);
+    }
+};
+exports.aiSummary = async (req, res, next) => {
+    if (!/^[1-9]\d*$/.test(req.params.id) || !Number.isSafeInteger(Number(req.params.id)))
+        return fail(res, 400, 400, '产品编号不正确');
+    if (req.body?.force !== undefined && typeof req.body.force !== 'boolean')
+        return fail(res, 400, 400, '重新生成参数不正确');
+    try {
+        return ok(res, await generateSummary(req.user.id, req.params.id, { force: req.body?.force === true }));
+    } catch (error) {
+        if (error.status) return fail(res, error.status, error.status, error.message);
         return next(error);
     }
 };

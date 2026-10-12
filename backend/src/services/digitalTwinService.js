@@ -4,6 +4,7 @@ const M = require('./digitalTwinModel');
 const { calculatePaymentSummary } = require('./projectContractRules');
 const { deriveContractStatus } = require('./productMaintenanceContractRules');
 const { summaryDefinitions, money } = require('./digitalTwinSummary');
+const { recentTwinUpdates, RECENT_UPDATE_LIMIT } = require('./digitalTwinRecentUpdates');
 const kindPermissions = {
     products: '/products', requirements: '/requirements', projects: '/projects', tasks: '/tasks',
     bugs: '/bugs', planStages: '/projects', planItems: '/projects', contracts: '/projects',
@@ -130,12 +131,7 @@ function buildSnapshot(data, paths, asOf) {
             return [{ level, label, count: matches.length, detail: node.kind === 'tasks' ? `主任务 ${matches.length - subtasks} · 子任务 ${subtasks}` : '' }];
         });
     }
-    const weekStart = new Date(date + 'T12:00:00Z');
-    // 查询日期为上海本地日期，周一作为本周起点。
-    const dayOfWeek = new Date(date + 'T12:00:00Z').getUTCDay();
-    weekStart.setUTCDate(weekStart.getUTCDate() - (dayOfWeek + 6) % 7);
-    const threshold = weekStart.toISOString().slice(0, 10);
-    const attention = records.filter(r => r.kind !== 'products' && M.day(r.updatedAt) >= threshold).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 5);
+    const attention = recentTwinUpdates(records, asOf).slice(0, RECENT_UPDATE_LIMIT);
     return { product: { id: product.id, name: product.name, owner: product.owner_name }, asOf, groups, nodes, records, attention };
 }
 async function snapshot(userId, productId, query = db) {

@@ -7,12 +7,10 @@ const M = require('../src/services/digitalTwinModel');
 const permitted = new Set(['/products', '/requirements', '/projects', '/tasks', '/bugs', '/work-orders']);
 const empty = () => ({ ...Object.fromEntries(Object.keys(M.kinds).map(kind => [kind, []])), products: [{ id: '1', name: '测试产品', owner_name: '负责人', status: 1 }] });
 function row(id, props = {}) { return { id, name: id, status: 0, created_at: '2026-10-09 08:00:00', updated_at: '2026-10-09 08:00:00', ...props }; }
-test('本周更新按上海日历周计算，上午八点前后不会包含上周日', () => {
+test('最近7天按读取时刻滚动计算，包含边界和跨周记录，排除范围外及未来更新', () => {
     const data = empty();
-    data.tasks = [row('1', { updated_at: '2026-10-11 23:59:59' }), row('2', { updated_at: '2026-10-12 00:00:00' })];
-    for (const asOf of ['2026-10-12 00:00:00', '2026-10-12 07:59:59', '2026-10-12 08:00:00', '2026-10-18 07:59:59']) {
-        assert.deepEqual(buildSnapshot(data, permitted, asOf).attention.map(record => record.id), ['2'], asOf);
-    }
+    data.tasks = [row('1', { updated_at: '2026-10-05 11:59:59' }), row('2', { updated_at: '2026-10-05 12:00:00' }), row('3', { updated_at: '2026-10-11 23:59:59' }), row('4', { updated_at: '2026-10-12 00:00:00' }), row('5', { updated_at: '2026-10-12 12:00:01' })];
+    assert.deepEqual(buildSnapshot(data, permitted, '2026-10-12 12:00:00').attention.map(record => record.id), ['4', '3', '2']);
 });
 test('节点提醒只计未结束的高优先级对象，任务主子分别说明，缺陷高与致命分别统计', () => {
     const data = empty();
