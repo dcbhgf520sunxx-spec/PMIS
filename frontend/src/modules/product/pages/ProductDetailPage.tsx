@@ -5,7 +5,7 @@ import { deleteProduct, getProduct, getProductHistory, updateProductStatus } fro
 import type { ProductRecord } from '../types';
 
 export function ProductDetailPage() {
-  const { navigateWithReturn, returnToSource } = usePageReturnNavigation('/products');
+  const { navigateWithReturn, returnToSource, backText } = usePageReturnNavigation('/products');
   const params = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -38,7 +38,7 @@ export function ProductDetailPage() {
   return (
     <TemplateDetailPage
       title="产品详情" loading={loading} error={error} notFound={notFound}
-      onRetry={() => setRevision((value) => value + 1)} onBack={returnToSource}
+      onRetry={() => setRevision((value) => value + 1)} onBack={returnToSource} backText={backText}
       sectionNavigation={{
         items: [
           { key: 'basic', title: '基本信息' },

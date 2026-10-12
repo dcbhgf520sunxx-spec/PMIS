@@ -12,7 +12,7 @@ const money = (value: number) => value.toLocaleString('zh-CN', { minimumFraction
 export function ProductMaintenanceContractDetailPage() {
   const params = useParams();
   const fallback = params.id ? `/products/${params.id}` : '/products';
-  const { navigateWithReturn, returnToSource } = usePageReturnNavigation(fallback);
+  const { navigateWithReturn, returnToSource, backText } = usePageReturnNavigation(fallback);
   const [contract, setContract] = useState<ProductMaintenanceContract>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -33,7 +33,7 @@ export function ProductMaintenanceContractDetailPage() {
     error={error}
     notFound={notFound}
     onRetry={() => setRevision((value) => value + 1)}
-    onBack={returnToSource}
+    onBack={returnToSource} backText={backText}
     actions={contract ? <>
       <PermissionButton permission="product" type="primary" onClick={() => navigateWithReturn(`/products/${contract.productId}/maintenance-contracts/${contract.id}/edit`)}>编辑</PermissionButton>
       {!contract.hasSuccessor ? <DeleteConfirmAction entityName="运维合同" targetName={contract.contractName} successMessage="删除成功" onConfirm={async () => { await deleteProductMaintenanceContract(contract.productId, contract.id); returnToSource(); }}>删除</DeleteConfirmAction> : null}

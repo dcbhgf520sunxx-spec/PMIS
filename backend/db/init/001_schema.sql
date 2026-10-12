@@ -872,7 +872,9 @@ VALUES
   (20, 0, '需求管理', 'requirement', 2, '/requirements', 'FileTextOutlined', 7, 1, 1),
   (21, 0, '任务管理', 'task', 2, '/tasks', 'CheckSquareOutlined', 9, 1, 1),
   (22, 0, 'BUG管理', 'bug', 2, '/bugs', 'BugOutlined', 10, 1, 1),
-  (23, 0, '知识库', 'knowledge_base', 2, '/knowledge-base', 'BookOutlined', 12, 1, 1),
+  (23, 0, '知识库', 'knowledge_base', 2, '/knowledge-base', 'BookOutlined', 14, 1, 1),
+  (29, 0, '业务本体', 'business_ontology', 2, '/business-ontology', 'ApartmentOutlined', 12, 1, 1),
+  (28, 0, '数字孪生', 'digital_twin', 2, '/digital-twin', 'DeploymentUnitOutlined', 13, 1, 1),
   (24, 20, '调整优先级', 'requirement_priority_adjust', 3, NULL, NULL, 701, 1, 1),
   (25, 19, '调整优先级', 'project_priority_adjust', 3, NULL, NULL, 801, 1, 1),
   (26, 21, '调整优先级', 'task_priority_adjust', 3, NULL, NULL, 901, 1, 1)

@@ -63,7 +63,7 @@ function buildAuditSummary(commandName, args = {}, result) {
           ? args.item_id
           : commandName.startsWith('stage_')
             ? args.stage_id
-            : args.id || args.project_id
+            : args.id || args.project_id || args.product_id
   const affectedCount = Array.isArray(result?.affectedTargets)
     ? result.affectedTargets.reduce((count, item) => count + (Array.isArray(item.ids) ? item.ids.length : 1), 0)
     : null
@@ -380,6 +380,7 @@ function buildExecutePayload(publicToolName, publicArgs, result) {
 }
 
 function validateToolPermission(definition, args, context) {
+  if (definition.name === 'sidm_standard_ontology_query') require('./ontologyQuery').assertPermission(context)
   if (definition.name === 'business_period_analysis'
     && !Object.entries(BUSINESS_TYPES).some(([type, config]) => context.allowedMenuPaths?.has(config.menu)
       && (!args.business_types?.length || args.business_types.includes(type)))) {

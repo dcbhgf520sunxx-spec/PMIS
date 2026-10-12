@@ -1,3 +1,4 @@
+const { definition: ontologyDefinition, requiredMenus: ontologyMenus } = require('./ontologyQuery')
 const QUERY_TOOLS = [
   ['global_search', null],
   ['business_attachment_search', null],
@@ -1395,11 +1396,13 @@ function baseDefinition([name, menuPath], endpointType) {
 }
 
 const commandCatalog = [
+  { ...ontologyDefinition, outputSchema: withToolErrorSchema(ontologyDefinition.outputSchema) },
   ...QUERY_TOOLS.map((item) => baseDefinition(item, 'query')),
   ...ACTION_TOOLS.map((item) => baseDefinition(item, 'action')),
 ]
 
 const PUBLIC_QUERY_NAMES = [
+  'sidm_standard_ontology_query',
   'global_search',
   'business_attachment_search',
   'product_search',
@@ -1807,6 +1810,7 @@ function scopeBusinessAttachmentAction(tool, allowedMenuPaths) {
 function filterToolsForContext(context) {
   return publicToolCatalog.filter((tool) => {
     if (tool._meta.endpointType !== context.endpointType) return false
+    if (tool.name === 'sidm_standard_ontology_query' && !ontologyMenus.every(menu => context.allowedMenuPaths.has(menu))) return false
     if (tool._meta.permissionCode
       && !(context.allowedPermissionCodes instanceof Set
         && context.allowedPermissionCodes.has(tool._meta.permissionCode))) return false

@@ -1,0 +1,14 @@
+PREFIX s: <urn:sidm:ontology:>
+SELECT ?contract ?product ?status ?amount ?serviceStart ?serviceEnd ?supplier ?previous ?paid ?paymentStatus ?paymentBasis WHERE {
+ ?contract a s:MaintenanceContract ; s:belongsToProduct ?product .
+ OPTIONAL { ?contract s:status ?status }
+ OPTIONAL { ?contract s:amount ?amount }
+ OPTIONAL { ?contract s:serviceStartOn ?serviceStart }
+ OPTIONAL { ?contract s:serviceEndOn ?serviceEnd }
+ OPTIONAL { ?contract s:supplier ?supplier }
+ OPTIONAL { ?contract s:previousContract ?previous }
+ BIND(IF(isNumeric(?amount) && ?amount > 0, ?amount, 1/0) AS ?paid)
+ BIND(IF(BOUND(?paid), "已付款", "待核实") AS ?paymentStatus)
+ BIND("运维合同录入即表示已付款，无单独付款明细" AS ?paymentBasis)
+}
+ORDER BY ?contract

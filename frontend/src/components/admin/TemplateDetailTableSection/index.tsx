@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import type { SearchTableProps } from '../SearchTable';
 import { SearchTable } from '../SearchTable';
 import { TemplateDetailSection, templateDetailSectionMarker } from '../TemplateDetailPage';
+import { TablePagination } from '../TablePagination';
 import './index.css';
 
 type DetailTableProps<
@@ -20,13 +21,14 @@ export type TemplateDetailTableSectionProps<
   sectionKey?: string;
   summary?: ReactNode;
   extra?: ReactNode;
+  pagination?: ComponentProps<typeof TablePagination>;
   table: DetailTableProps<T, P>;
 };
 
 function TemplateDetailTableSectionComponent<
   T extends Record<string, unknown>,
   P extends Record<string, unknown> = Record<string, unknown>
->({ title, sectionKey, summary, extra, table }: TemplateDetailTableSectionProps<T, P>) {
+>({ title, sectionKey, summary, extra, pagination, table }: TemplateDetailTableSectionProps<T, P>) {
   const { className, columns, scroll, ...tableProps } = table;
   const hasHorizontalScroll = typeof scroll === 'object' && scroll !== null && Boolean(scroll.x);
   const firstBusinessColumnIndex = hasHorizontalScroll
@@ -70,6 +72,7 @@ function TemplateDetailTableSectionComponent<
         tableAlertRender={false}
         toolBarRender={false}
       />
+      {pagination ? <div className="admin-template-detail-table-section__pagination"><TablePagination {...pagination} /></div> : null}
     </TemplateDetailSection>
   );
 }

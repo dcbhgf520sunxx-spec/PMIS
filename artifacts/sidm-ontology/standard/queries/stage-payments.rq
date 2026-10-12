@@ -1,0 +1,26 @@
+PREFIX s: <urn:sidm:ontology:>
+SELECT ?stage ?planned ?observedPaid ?coverage ?paid ?unpaid ?paymentStatus WHERE {
+ {
+  SELECT ?stage ?planned (SUM(COALESCE(?v, 0.0)) AS ?observedPaid) WHERE {
+   ?stage a s:PaymentStage ; s:plannedAmount ?planned .
+   OPTIONAL { ?record s:recordStage ?stage ; s:amount ?v }
+  } GROUP BY ?stage ?planned
+ }
+ FILTER(BOUND(?stage) && BOUND(?planned))
+ BIND((EXISTS { ?stage s:paymentsComplete true }
+   && ?planned > 0
+   && NOT EXISTS {
+    ?badRecord s:recordStage ?stage .
+    OPTIONAL { ?badRecord s:amount ?badAmount }
+    FILTER(!BOUND(?badAmount) || !isNumeric(?badAmount) || ?badAmount <= 0)
+   }
+   && NOT EXISTS {
+    ?badRecord s:recordStage ?stage .
+    ?badRecord s:amount ?a, ?b . FILTER(?a != ?b)
+   }) AS ?complete)
+ BIND(IF(?complete, "已确认样本范围完整", "完整性或金额有效性未证实") AS ?coverage)
+ BIND(IF(?complete, ?observedPaid, 1/0) AS ?paid)
+ BIND(IF(?complete, ?planned - ?observedPaid, 1/0) AS ?unpaid)
+ BIND(IF(!?complete, "待核实", IF(?paid > ?planned, "异常", IF(?paid = 0, "未付款", IF(?paid = ?planned, "已付清", "部分付款")))) AS ?paymentStatus)
+}
+ORDER BY ?stage

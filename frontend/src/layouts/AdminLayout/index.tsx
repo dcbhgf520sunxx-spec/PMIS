@@ -1,6 +1,8 @@
 import {
   DownOutlined,
   AppstoreOutlined,
+  DeploymentUnitOutlined,
+  ApartmentOutlined,
   BookOutlined,
   BugOutlined,
   ExperimentOutlined,
@@ -75,6 +77,16 @@ const businessMenuItems: AdminMenuItems = [
     key: '/work-orders',
     icon: <ToolOutlined />,
     label: '运维工单'
+  },
+  {
+    key: '/business-ontology',
+    icon: <ApartmentOutlined />,
+    label: '业务本体'
+  },
+  {
+    key: '/digital-twin',
+    icon: <DeploymentUnitOutlined />,
+    label: '数字孪生'
   },
   {
     key: '/knowledge-base',

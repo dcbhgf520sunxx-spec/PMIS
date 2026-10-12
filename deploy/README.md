@@ -297,3 +297,9 @@ sudo nginx -s reload
 - 默认账号为 `admin / vv123456`
 - 生产数据迁移后沿用旧系统账号和密码哈希，不再使用初始化默认密码
 - PostgreSQL 备份脚本为 `deploy/backup-postgresql.sh`，生产凭据通过 `.pgpass` 提供
+
+## 标准本体Query运行环境
+
+发布包会从 `artifacts/sidm-ontology` 仅复制执行源文件到 `backend/ontology`，不会带入真实采集、登录凭据、教材、本机Java或虚拟环境。启用标准本体查询前需在服务器准备Python与Java17，并按[本体Query接入说明](../artifacts/sidm-ontology/standard/Query-MCP接入说明.md)配置 `SIDM_ONTOLOGY_PYTHON`、`SIDM_ONTOLOGY_JAVA` 和稳定的 `SIDM_ONTOLOGY_ENVIRONMENT`。依赖使用 `requirements.lock.txt` 锁定清单。未准备运行环境时工具返回明确的 `MCP_ONTOLOGY_UNAVAILABLE`，不会用旧JSON或快照代替。
+
+正式发布前除健康检查外，要用实际员工身份完成本体工具发现、成功查询、权限拒绝、参数错误与审计回读；服务器安装和HTTP凭据握手不能以本机SDK验证代替。本轮仅准备代码与说明，未执行生产部署。

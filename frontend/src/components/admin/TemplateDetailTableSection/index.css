@@ -1,8 +1,17 @@
 .admin-template-detail-table-section__summary {
+  display: inline-flex;
+  align-items: center;
   color: var(--app-muted);
   font-size: 12px;
   font-weight: 400;
   line-height: 22px;
+}
+
+.admin-template-detail-table-section__pagination {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 0 0;
+  overflow-x: auto;
 }
 
 .admin-template-detail-table-section__table .ant-table-container {

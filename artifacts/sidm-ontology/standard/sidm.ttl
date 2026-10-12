@@ -1,0 +1,291 @@
+@prefix s: <urn:sidm:ontology:> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+
+<urn:sidm:ontology> a owl:Ontology ; owl:versionIRI <urn:sidm:ontology:version:1.0.2> ;
+ rdfs:label "SIDM业务本体"@zh ; owl:versionInfo "1.0.2" ;
+ rdfs:comment "正式OWL 2 DL模型；基于已确认业务骨架。缺失信息采用开放世界语义，数据完整性由SHACL检查。"@zh .
+
+
+s:Product a owl:Class ; rdfs:label "产品"@zh ; rdfs:comment "持续建设、使用和维护的数字化对象"@zh .
+
+s:Requirement a owl:Class ; rdfs:label "需求"@zh ; rdfs:comment "希望解决的问题或实现的改变"@zh .
+
+s:Project a owl:Class ; rdfs:label "项目"@zh ; rdfs:comment "由需求转化而来、组织实施的建设工作"@zh .
+
+s:ProjectStage a owl:Class ; rdfs:label "项目阶段"@zh ; rdfs:comment "按需划分的项目实施过程"@zh .
+
+s:KeyItem a owl:Class ; rdfs:label "关键事项"@zh ; rdfs:comment "阶段内需要关注的重要工作节点"@zh .
+
+s:Task a owl:Class ; rdfs:label "任务及子任务"@zh ; rdfs:comment "具体执行工作及其拆分；子任务仍是任务，通过父任务关系表达"@zh .
+
+s:Bug a owl:Class ; rdfs:label "BUG"@zh ; rdfs:comment "建设过程中的软件缺陷记录"@zh .
+
+s:ProjectContract a owl:Class ; rdfs:label "项目合同"@zh ; rdfs:comment "项目建设中的商务约定"@zh .
+
+s:PaymentStage a owl:Class ; rdfs:label "付款阶段"@zh ; rdfs:comment "项目合同金额的分阶段安排"@zh .
+
+s:PaymentRecord a owl:Class ; rdfs:label "付款记录"@zh ; rdfs:comment "实际付款后登记的金额、月份及经办信息"@zh .
+
+s:MaintenanceContract a owl:Class ; rdfs:label "产品运维合同"@zh ; rdfs:comment "产品持续运维服务的商务约定"@zh .
+
+s:WorkOrder a owl:Class ; rdfs:label "运维工单"@zh ; rdfs:comment "产品使用中的问题处理记录"@zh .
+
+s:Supplier a owl:Class ; rdfs:label "供应商"@zh ; rdfs:comment "提供建设或运维服务的合作方"@zh .
+
+s:Person a owl:Class ; rdfs:label "人员"@zh ; rdfs:comment "承担具体业务责任和参与工作的人员"@zh .
+
+[] a owl:AllDisjointClasses ; owl:members ( s:Product s:Requirement s:Project s:ProjectStage s:KeyItem s:Task s:Bug s:ProjectContract s:PaymentStage s:PaymentRecord s:MaintenanceContract s:WorkOrder s:Supplier s:Person ) .
+
+s:belongsToProduct a owl:ObjectProperty ; rdfs:label "归属产品"@zh ; rdfs:domain [ a owl:Class ; owl:unionOf ( s:Requirement s:Project s:WorkOrder s:MaintenanceContract ) ] ; rdfs:range s:Product .
+
+s:Requirement rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:belongsToProduct ; owl:someValuesFrom s:Product ] .
+
+s:Requirement rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:belongsToProduct ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:Project rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:belongsToProduct ; owl:someValuesFrom s:Product ] .
+
+s:Project rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:belongsToProduct ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:WorkOrder rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:belongsToProduct ; owl:someValuesFrom s:Product ] .
+
+s:WorkOrder rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:belongsToProduct ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:MaintenanceContract rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:belongsToProduct ; owl:someValuesFrom s:Product ] .
+
+s:MaintenanceContract rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:belongsToProduct ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:sourceRequirement a owl:ObjectProperty ; rdfs:label "来源需求"@zh ; rdfs:domain s:Project ; rdfs:range s:Requirement .
+
+s:Project rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:sourceRequirement ; owl:someValuesFrom s:Requirement ] .
+
+s:Project rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:sourceRequirement ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:belongsToRequirement a owl:ObjectProperty ; rdfs:label "直接归属需求"@zh ; rdfs:domain [ a owl:Class ; owl:unionOf ( s:Task s:Bug ) ] ; rdfs:range s:Requirement .
+
+s:Task rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:belongsToRequirement ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:Bug rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:belongsToRequirement ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:belongsToProject a owl:ObjectProperty ; rdfs:label "直接归属项目"@zh ; rdfs:domain [ a owl:Class ; owl:unionOf ( s:Task s:Bug ) ] ; rdfs:range s:Project .
+
+s:Task rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:belongsToProject ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:Bug rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:belongsToProject ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:stageProject a owl:ObjectProperty ; rdfs:label "阶段归属项目"@zh ; rdfs:domain s:ProjectStage ; rdfs:range s:Project .
+
+s:ProjectStage rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:stageProject ; owl:someValuesFrom s:Project ] .
+
+s:ProjectStage rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:stageProject ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:itemStage a owl:ObjectProperty ; rdfs:label "事项归属阶段"@zh ; rdfs:domain s:KeyItem ; rdfs:range s:ProjectStage .
+
+s:KeyItem rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:itemStage ; owl:someValuesFrom s:ProjectStage ] .
+
+s:KeyItem rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:itemStage ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:parentTask a owl:ObjectProperty ; rdfs:label "父任务"@zh ; rdfs:domain s:Task ; rdfs:range s:Task .
+
+s:Task rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:parentTask ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:contractProject a owl:ObjectProperty ; rdfs:label "合同归属项目"@zh ; rdfs:domain s:ProjectContract ; rdfs:range s:Project .
+
+s:ProjectContract rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:contractProject ; owl:someValuesFrom s:Project ] .
+
+s:ProjectContract rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:contractProject ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:stageContract a owl:ObjectProperty ; rdfs:label "付款阶段归属合同"@zh ; rdfs:domain s:PaymentStage ; rdfs:range s:ProjectContract .
+
+s:PaymentStage rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:stageContract ; owl:someValuesFrom s:ProjectContract ] .
+
+s:PaymentStage rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:stageContract ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:recordStage a owl:ObjectProperty ; rdfs:label "付款记录归属阶段"@zh ; rdfs:domain s:PaymentRecord ; rdfs:range s:PaymentStage .
+
+s:PaymentRecord rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:recordStage ; owl:someValuesFrom s:PaymentStage ] .
+
+s:PaymentRecord rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:recordStage ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:supplier a owl:ObjectProperty ; rdfs:label "供应商"@zh ; rdfs:domain [ a owl:Class ; owl:unionOf ( s:ProjectContract s:MaintenanceContract ) ] ; rdfs:range s:Supplier .
+
+s:ProjectContract rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:supplier ; owl:someValuesFrom s:Supplier ] .
+
+s:ProjectContract rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:supplier ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:MaintenanceContract rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:supplier ; owl:someValuesFrom s:Supplier ] .
+
+s:MaintenanceContract rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:supplier ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:previousContract a owl:ObjectProperty ; rdfs:label "续签自"@zh ; rdfs:domain s:MaintenanceContract ; rdfs:range s:MaintenanceContract .
+
+s:MaintenanceContract rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:previousContract ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:owner a owl:ObjectProperty ; rdfs:label "负责人"@zh ; rdfs:domain [ a owl:Class ; owl:unionOf ( s:Product s:Requirement s:Project s:KeyItem ) ] ; rdfs:range s:Person .
+
+s:Product rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:owner ; owl:someValuesFrom s:Person ] .
+
+s:Product rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:owner ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:Requirement rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:owner ; owl:someValuesFrom s:Person ] .
+
+s:Requirement rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:owner ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:Project rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:owner ; owl:someValuesFrom s:Person ] .
+
+s:Project rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:owner ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:KeyItem rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:owner ; owl:someValuesFrom s:Person ] .
+
+s:KeyItem rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:owner ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:taskOwner a owl:ObjectProperty ; rdfs:label "任务负责人"@zh ; rdfs:domain s:Task ; rdfs:range s:Person .
+
+s:Task rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:taskOwner ; owl:someValuesFrom s:Person ] .
+
+s:member a owl:ObjectProperty ; rdfs:label "项目成员"@zh ; rdfs:domain s:Project ; rdfs:range s:Person .
+
+s:collaborator a owl:ObjectProperty ; rdfs:label "事项协作人"@zh ; rdfs:domain s:KeyItem ; rdfs:range s:Person .
+
+s:assignee a owl:ObjectProperty ; rdfs:label "BUG处理人"@zh ; rdfs:domain s:Bug ; rdfs:range s:Person .
+
+s:Bug rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:assignee ; owl:someValuesFrom s:Person ] .
+
+s:Bug rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:assignee ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:follower a owl:ObjectProperty ; rdfs:label "工单跟进人"@zh ; rdfs:domain s:WorkOrder ; rdfs:range s:Person .
+
+s:WorkOrder rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:follower ; owl:someValuesFrom s:Person ] .
+
+s:WorkOrder rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:follower ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:handler a owl:ObjectProperty ; rdfs:label "付款经办人"@zh ; rdfs:domain s:PaymentRecord ; rdfs:range s:Person .
+
+s:PaymentRecord rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:handler ; owl:someValuesFrom s:Person ] .
+
+s:PaymentRecord rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:handler ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:submitter a owl:ObjectProperty ; rdfs:label "提出人"@zh ; rdfs:domain [ a owl:Class ; owl:unionOf ( s:Requirement s:WorkOrder ) ] ; rdfs:range s:Person .
+
+s:Requirement rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:submitter ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:WorkOrder rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:submitter ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
+
+s:name a owl:DatatypeProperty ; rdfs:label "名称"@zh ; rdfs:range xsd:string .
+
+s:description a owl:DatatypeProperty ; rdfs:label "业务说明"@zh ; rdfs:range xsd:string .
+
+s:requirementType a owl:DatatypeProperty ; rdfs:label "需求类型"@zh ; rdfs:range xsd:string .
+
+s:submitterName a owl:DatatypeProperty ; rdfs:label "提出人姓名"@zh ; rdfs:range xsd:string .
+
+s:submitterDepartment a owl:DatatypeProperty ; rdfs:label "提出部门"@zh ; rdfs:range xsd:string .
+
+s:submittedOn a owl:DatatypeProperty ; rdfs:label "提出日期"@zh ; rdfs:range xsd:dateTime .
+
+s:priority a owl:DatatypeProperty ; rdfs:label "优先级"@zh ; rdfs:range xsd:string .
+
+s:startOn a owl:DatatypeProperty ; rdfs:label "开始日期"@zh ; rdfs:range xsd:dateTime .
+
+s:expectedEndOn a owl:DatatypeProperty ; rdfs:label "预计完成日期"@zh ; rdfs:range xsd:dateTime .
+
+s:actualEndOn a owl:DatatypeProperty ; rdfs:label "实际完成日期"@zh ; rdfs:range xsd:dateTime .
+
+s:status a owl:DatatypeProperty ; rdfs:label "状态"@zh ; rdfs:range xsd:string .
+
+s:pauseReason a owl:DatatypeProperty ; rdfs:label "暂停原因"@zh ; rdfs:range xsd:string .
+
+s:pausedAt a owl:DatatypeProperty ; rdfs:label "暂停时间"@zh ; rdfs:range xsd:dateTime .
+
+s:progress a owl:DatatypeProperty ; rdfs:label "进展记录"@zh ; rdfs:range xsd:string .
+
+s:risk a owl:DatatypeProperty ; rdfs:label "风险记录"@zh ; rdfs:range xsd:string .
+
+s:order a owl:DatatypeProperty ; rdfs:label "排列顺序"@zh ; rdfs:range xsd:integer .
+
+s:originalDueOn a owl:DatatypeProperty ; rdfs:label "原定完成日期"@zh ; rdfs:range xsd:dateTime .
+
+s:currentDueOn a owl:DatatypeProperty ; rdfs:label "当前计划日期"@zh ; rdfs:range xsd:dateTime .
+
+s:deliveryRequirement a owl:DatatypeProperty ; rdfs:label "交付要求"@zh ; rdfs:range xsd:string .
+
+s:taskType a owl:DatatypeProperty ; rdfs:label "任务类型"@zh ; rdfs:range xsd:string .
+
+s:bugType a owl:DatatypeProperty ; rdfs:label "缺陷类型"@zh ; rdfs:range xsd:string .
+
+s:severity a owl:DatatypeProperty ; rdfs:label "严重程度"@zh ; rdfs:range xsd:string .
+
+s:resolution a owl:DatatypeProperty ; rdfs:label "解决方案"@zh ; rdfs:range xsd:string .
+
+s:resolvedOn a owl:DatatypeProperty ; rdfs:label "修复时间"@zh ; rdfs:range xsd:dateTime .
+
+s:closedOn a owl:DatatypeProperty ; rdfs:label "关闭时间"@zh ; rdfs:range xsd:dateTime .
+
+s:activationReason a owl:DatatypeProperty ; rdfs:label "激活原因"@zh ; rdfs:range xsd:string .
+
+s:code a owl:DatatypeProperty ; rdfs:label "合同编号"@zh ; rdfs:range xsd:string .
+
+s:signedOn a owl:DatatypeProperty ; rdfs:label "签订日期"@zh ; rdfs:range xsd:dateTime .
+
+s:amount a owl:DatatypeProperty ; rdfs:label "金额"@zh ; rdfs:range xsd:decimal .
+
+s:plannedAmount a owl:DatatypeProperty ; rdfs:label "计划付款金额"@zh ; rdfs:range xsd:decimal .
+
+s:paymentMonth a owl:DatatypeProperty ; rdfs:label "付款月份"@zh ; rdfs:range xsd:string .
+
+s:serviceStartOn a owl:DatatypeProperty ; rdfs:label "服务开始日期"@zh ; rdfs:range xsd:dateTime .
+
+s:serviceEndOn a owl:DatatypeProperty ; rdfs:label "服务结束日期"@zh ; rdfs:range xsd:dateTime .
+
+s:terminationOn a owl:DatatypeProperty ; rdfs:label "终止日期"@zh ; rdfs:range xsd:dateTime .
+
+s:terminationReason a owl:DatatypeProperty ; rdfs:label "终止原因"@zh ; rdfs:range xsd:string .
+
+s:problemType a owl:DatatypeProperty ; rdfs:label "问题类型"@zh ; rdfs:range xsd:string .
+
+s:urgency a owl:DatatypeProperty ; rdfs:label "紧急程度"@zh ; rdfs:range xsd:string .
+
+s:submittedAt a owl:DatatypeProperty ; rdfs:label "提出时间"@zh ; rdfs:range xsd:dateTime .
+
+s:expectedResolveAt a owl:DatatypeProperty ; rdfs:label "预计解决时间"@zh ; rdfs:range xsd:dateTime .
+
+s:resolvedAt a owl:DatatypeProperty ; rdfs:label "实际解决时间"@zh ; rdfs:range xsd:dateTime .
+
+s:result a owl:DatatypeProperty ; rdfs:label "处理结果"@zh ; rdfs:range xsd:string .
+
+s:hasProject a owl:ObjectProperty ; rdfs:label "关联项目"@zh ; owl:inverseOf s:sourceRequirement .
+
+s:relatedProduct a owl:ObjectProperty ; rdfs:label "关联产品"@zh ; rdfs:range s:Product ; rdfs:comment "通过直接归属追溯产品，不替代直接归属关系"@zh ; owl:propertyChainAxiom ( s:belongsToProject s:belongsToProduct ), ( s:belongsToRequirement s:belongsToProduct ) .
+
+s:Task rdfs:subClassOf [ a owl:Class ; owl:unionOf ( [ a owl:Class ; owl:intersectionOf ( [ a owl:Restriction ; owl:onProperty s:belongsToRequirement ; owl:someValuesFrom s:Requirement ] [ a owl:Restriction ; owl:onProperty s:belongsToProject ; owl:maxCardinality "0"^^xsd:nonNegativeInteger ] ) ] [ a owl:Class ; owl:intersectionOf ( [ a owl:Restriction ; owl:onProperty s:belongsToProject ; owl:someValuesFrom s:Project ] [ a owl:Restriction ; owl:onProperty s:belongsToRequirement ; owl:maxCardinality "0"^^xsd:nonNegativeInteger ] ) ] ) ] .
+
+s:Bug rdfs:subClassOf [ a owl:Class ; owl:unionOf ( [ a owl:Class ; owl:intersectionOf ( [ a owl:Restriction ; owl:onProperty s:belongsToRequirement ; owl:someValuesFrom s:Requirement ] [ a owl:Restriction ; owl:onProperty s:belongsToProject ; owl:maxCardinality "0"^^xsd:nonNegativeInteger ] ) ] [ a owl:Class ; owl:intersectionOf ( [ a owl:Restriction ; owl:onProperty s:belongsToProject ; owl:someValuesFrom s:Project ] [ a owl:Restriction ; owl:onProperty s:belongsToRequirement ; owl:maxCardinality "0"^^xsd:nonNegativeInteger ] ) ] ) ] .
+
+# Provenance annotations do not add business object classes.
+s:sourceId a owl:AnnotationProperty .
+s:sourceEnvironment a owl:AnnotationProperty .
+s:sourceCapturedAt a owl:AnnotationProperty .
+s:sourceEndpoint a owl:AnnotationProperty .
+s:sourceSnapshot a owl:AnnotationProperty .
+s:datasetKind a owl:AnnotationProperty .
+s:sourceGranularity a owl:AnnotationProperty .
+s:startOn s:sourceGranularity "date" .
+s:expectedEndOn s:sourceGranularity "date" .
+s:actualEndOn s:sourceGranularity "date" .
+s:signedOn s:sourceGranularity "date" .
+s:serviceStartOn s:sourceGranularity "date" .
+s:serviceEndOn s:sourceGranularity "date" .
+s:originalDueOn s:sourceGranularity "date" .
+s:currentDueOn s:sourceGranularity "date" .
+s:paymentMonth s:sourceGranularity "yearMonth" .
+s:paymentsComplete a owl:AnnotationProperty ; rdfs:comment "该次样本已读取指定合同或阶段全部付款；仅凭无明细不能设置为true"@zh .
+s:sourceScope a owl:AnnotationProperty .
+s:sourceConsistency a owl:AnnotationProperty .
+s:unresolvedRelations a owl:AnnotationProperty .
+
+# 用户确认的业务口径：运维合同录入表示已付款，项目合同仍使用付款明细。
+s:MaintenanceContract rdfs:comment "运维合同录入即表示已付款；合同金额按已付款金额表达，不另设运维付款阶段和付款明细。"@zh .

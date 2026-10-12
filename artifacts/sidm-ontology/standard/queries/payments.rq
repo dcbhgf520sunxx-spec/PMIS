@@ -1,0 +1,25 @@
+PREFIX s: <urn:sidm:ontology:>
+SELECT ?contract ?amount ?observedPaid ?coverage ?paid ?unpaid WHERE {
+ {
+  SELECT ?contract ?amount (SUM(COALESCE(?value, 0.0)) AS ?observedPaid) WHERE {
+   ?contract a s:ProjectContract ; s:amount ?amount .
+   OPTIONAL { ?stage s:stageContract ?contract . ?record s:recordStage ?stage ; s:amount ?value }
+  } GROUP BY ?contract ?amount
+ }
+ FILTER(BOUND(?contract) && BOUND(?amount))
+ BIND((EXISTS { ?contract s:paymentsComplete true }
+   && ?amount > 0
+   && NOT EXISTS {
+    ?badStage s:stageContract ?contract . ?badRecord s:recordStage ?badStage .
+    OPTIONAL { ?badRecord s:amount ?badAmount }
+    FILTER(!BOUND(?badAmount) || !isNumeric(?badAmount) || ?badAmount <= 0)
+   }
+   && NOT EXISTS {
+    ?badStage s:stageContract ?contract . ?badRecord s:recordStage ?badStage .
+    ?badRecord s:amount ?a, ?b . FILTER(?a != ?b)
+   }) AS ?complete)
+ BIND(IF(?complete, "已确认样本范围完整", "完整性或金额有效性未证实") AS ?coverage)
+ BIND(IF(?complete, ?observedPaid, 1/0) AS ?paid)
+ BIND(IF(?complete, ?amount - ?observedPaid, 1/0) AS ?unpaid)
+}
+ORDER BY ?contract

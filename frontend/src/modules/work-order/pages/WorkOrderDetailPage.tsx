@@ -32,7 +32,7 @@ import { BusinessAttachmentField } from '../../../components/business/BusinessAt
 export function WorkOrderDetailPage() {
  const businessDay = useBusinessDay();
   const { message } = App.useApp();
-  const { navigateWithReturn, returnToSource } = usePageReturnNavigation('/work-orders');
+  const { navigateWithReturn, returnToSource, backText } = usePageReturnNavigation('/work-orders');
   const params = useParams();
   const [detail, setDetail] = useState<WorkOrderRecord>();
   const [history, setHistory] = useState<WorkOrderHistoryItem[]>([]);
@@ -80,7 +80,7 @@ export function WorkOrderDetailPage() {
         error={loadError}
         notFound={notFound}
         onRetry={loadDetail}
-        onBack={returnToSource}
+        onBack={returnToSource} backText={backText}
       >
         {null}
       </TemplateDetailPage>
@@ -91,7 +91,7 @@ export function WorkOrderDetailPage() {
   return (
     <TemplateDetailPage
       title="工单详情"
-      onBack={returnToSource}
+      onBack={returnToSource} backText={backText}
       titleCode={detail.code}
       titleCenter={(
         <DetailNeighborNav

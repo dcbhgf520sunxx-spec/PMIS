@@ -1,0 +1,43 @@
+const test = require('node:test')
+const assert = require('node:assert/strict')
+const fixture = require('../scripts/fixtures/digital-twin-demo.json')
+const { validateFixture, assertLocal } = require('../scripts/seed-digital-twin-demo')
+test('原型全链路样本校验通过，主子任务、金额和维保独立汇总', () => {
+  const s = validateFixture(fixture)
+  assert.equal(s.requirements.total, 18)
+  assert.equal(s.requirements.transferred, 6)
+  assert.equal(s.projects.total, 6)
+  assert.equal(s.plan.stages, 18)
+  assert.equal(s.plan.done, 21)
+  assert.equal(s.tasks.total, 30)
+  assert.equal(s.tasks.subtasks.total, 12)
+  assert.equal(s.bugs.total, 12)
+  assert.equal(s.finance.amount, 1500000)
+  assert.equal(s.finance.paid, 1050000)
+  assert.equal(s.finance.unpaid, 450000)
+  assert.equal(s.maintenance.amount, 440000)
+  assert.equal(s.maintenance.current, 1)
+  assert.equal(s.maintenance.future, 1)
+  assert.equal(s.orders.total, 10)
+})
+test('坏关联、跨来源子任务和阶段超付款在写入前拒绝', () => {
+  const broken = structuredClone(fixture)
+  broken.tasks[0].project_id = 'missing'
+  assert.throws(() => validateFixture(broken), /关联不存在/)
+  const child = structuredClone(fixture)
+  child.tasks.find(t => t.parent_task_id).project_id = child.projects[5].id
+  assert.throws(() => validateFixture(child))
+  const overpaid = structuredClone(fixture)
+  overpaid.payments[0].payment_amount = 10000000
+  assert.throws(() => validateFixture(overpaid), /付款超过阶段金额/)
+})
+test('必需交付证据缺失在写入前拒绝', () => {
+  const missing = structuredClone(fixture)
+  missing.evidence = missing.evidence.filter(e => e.kind !== 'planItems')
+  assert.throws(() => validateFixture(missing), /请上传至少一个关键交付文件/)
+})
+test('专用脚本拒绝非本机数据库和生产运行模式', () => {
+  assert.doesNotThrow(() => assertLocal({ DB_HOST: 'localhost' }))
+  assert.throws(() => assertLocal({ DB_HOST: 'production.example' }), /仅允许写入本机/)
+  assert.throws(() => assertLocal({ DB_HOST: 'localhost', NODE_ENV: 'production' }), /禁止在生产环境/)
+})

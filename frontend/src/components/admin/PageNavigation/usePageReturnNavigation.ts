@@ -6,19 +6,21 @@ export function usePageReturnNavigation(fallbackPath: string) {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = currentRelativePath(location);
+  const returnTarget = resolveReturnTo(location.search, fallbackPath, fallbackPath, ['/digital-twin']);
 
   const navigateWithReturn = useCallback((target: string) => {
     navigate(appendReturnTo(target, currentPath));
   }, [currentPath, navigate]);
 
   const returnToSource = useCallback(() => {
-    navigate(resolveReturnTo(location.search, fallbackPath, fallbackPath), { replace: true });
-  }, [fallbackPath, location.search, navigate]);
+    navigate(returnTarget, { replace: true });
+  }, [returnTarget, navigate]);
 
   return {
     currentPath,
     navigateWithReturn,
-    returnTarget: resolveReturnTo(location.search, fallbackPath, fallbackPath),
+    returnTarget,
+    backText: new URL(returnTarget, 'http://local').pathname === '/digital-twin' ? '返回数字孪生' : '返回列表',
     returnToSource
   };
 }

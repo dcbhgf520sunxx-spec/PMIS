@@ -20,6 +20,9 @@ function withRouteSuspense(element: ReactNode) {
   );
 }
 
+const BusinessOntologyPage = lazy(() => import('../modules/business-ontology/pages/BusinessOntologyPage').then((module) => ({ default: module.BusinessOntologyPage })));
+const DigitalTwinPage = lazy(() => import('../modules/digital-twin/pages/DigitalTwinPage').then((module) => ({ default: module.DigitalTwinPage })));
+
 const HomePage = lazy(() =>
   import('../modules/home/pages/HomePage').then((module) => ({
     default: module.HomePage
@@ -193,6 +196,8 @@ export const routes: RouteObject[] = [
       { path: 'integrations/clients/:id/edit', element: withRouteSuspense(<OpenClientFormPage />) },
       { path: 'integrations/clients/:id/requests', element: withRouteSuspense(<OpenClientRequestsPage />) },
       { path: 'access-logs', element: withRouteSuspense(<AccessLogListPage />) },
+      { path: 'business-ontology', element: withRouteSuspense(<BusinessOntologyPage />) },
+      { path: 'digital-twin', element: withRouteSuspense(<DigitalTwinPage />) },
       { path: 'work-orders', element: withRouteSuspense(<WorkOrderListPage />) },
       { path: 'work-orders/new', element: withRouteSuspense(<WorkOrderFormPage mode="create" />) },
       { path: 'work-orders/:id/copy', element: withRouteSuspense(<WorkOrderFormPage mode="copy" />) },

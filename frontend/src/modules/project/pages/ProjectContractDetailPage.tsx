@@ -42,7 +42,7 @@ export function ProjectContractDetailPage() {
   const params = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { navigateWithReturn, returnToSource } = usePageReturnNavigation('/projects');
+  const { navigateWithReturn, returnToSource, backText } = usePageReturnNavigation('/projects');
   const [projectName, setProjectName] = useState('');
   const [contract, setContract] = useState<ProjectContractRecord | null>(null);
   const [userOptions, setUserOptions] = useState<Array<{ label: string; value: string }>>([]);
@@ -115,7 +115,7 @@ export function ProjectContractDetailPage() {
         error={error}
         notFound={notFound}
         onRetry={() => setRevision((value) => value + 1)}
-        onBack={returnToSource}
+        onBack={returnToSource} backText={backText}
         sectionNavigation={{
           items: [
             { key: 'basic', title: '基本信息' },
