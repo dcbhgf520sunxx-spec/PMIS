@@ -533,3 +533,11 @@ MCP 初始化、工具发现、查询、操作预览、操作执行和资源读�
 `project_update` 更换所属需求，或 `project_delete` 删除有关联需求的项目时，必须提供 `requirement_release` 对象，由用户明确选择 `status`；33/34 附带 `actual_end_date`、`completion_status`，35 附带 `pause_date`、`pause_reason`。状态必须属于原需求路径且不能是 36。无关联需求的历史项目删除无需该对象。
 
 继续使用原工具权限、负责人规则、preview → 确认 → 相同参数 execute 链路；预览校验恢复状态并展示中文状态。执行将项目、需求及变更历史放在同一事务，完成后查询项目和涉及需求核实。已转项目不计入需求待办或逾期；状态分布中单列。i8 同步保留已转项目状态，不能覆盖交接结果。
+
+## 标准本体业务关系查询（2026-10-09）
+
+Query工具 `sidm_standard_ontology_query` 接受正整数 `product_id` 和可选 `project_id`，项目必须属于所选产品。复用现有员工身份、工具目录、动态菜单权限与审计；Action不提供此工具。当前完整读取产品关系范围，需要产品、项目、需求、任务、BUG、工单六类模块查询权限，缺一项即隐藏并拒绝。
+
+后台只读调用业务控制器，随后执行标准OWL/RDF、Java HermiT、SHACL与SPARQL。每条答案附 `validationStatus` 和 `validationIssues`；异常待核实不得作为已核对结论，SIDM已登记付款不证明OA或银行状态。未知与无权不按零处理，失败不回退历史快照。运行环境缺失返回 `MCP_ONTOLOGY_UNAVAILABLE`，参数、权限与执行失败沿用明确MCP错误契约。
+
+智能体配置、完整Schema、运行环境及验证边界见[标准本体Query接入说明](../artifacts/sidm-ontology/standard/Query-MCP接入说明.md)。本机SDK真实数据调用与审计已验证；正式平台HTTP凭据与员工号密文握手、生产发布尚未验证。当前新增能力不修改业务数据，无数据库迁移。

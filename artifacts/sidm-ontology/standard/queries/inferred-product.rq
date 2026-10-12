@@ -1,0 +1,3 @@
+PREFIX s: <urn:sidm:ontology:>
+SELECT ?work ?product WHERE { ?work s:relatedProduct ?product }
+ORDER BY ?work

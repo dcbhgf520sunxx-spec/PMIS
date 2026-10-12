@@ -679,6 +679,7 @@ function unwrapEnvelope(envelope) {
 }
 
 async function dispatchQueryTool(name, args, context, dependencies = {}) {
+  if (name === 'sidm_standard_ontology_query') return require('./ontologyQuery').queryOntology(args, context)
   if (name === 'business_period_analysis') {
     return normalizeMcpQueryContent(decoratePeriodResult(
       await analyzeBusinessPeriod(args, context, dependencies.database, dependencies.now)

@@ -1,0 +1,11 @@
+PREFIX s: <urn:sidm:ontology:>
+SELECT ?work ?type ?status ?category ?owner WHERE {
+ VALUES ?type { s:Task s:KeyItem s:Bug }
+ ?work a ?type .
+ OPTIONAL { ?work s:status ?status }
+ OPTIONAL { ?work (s:taskOwner|s:owner|s:assignee) ?owner }
+ FILTER(!BOUND(?status) || (?type=s:Bug && ?status!="已关闭") || (?type!=s:Bug && ?status!="已完成"))
+ BIND(IF(!BOUND(?status), false, IF(?type=s:Task, STR(?status) IN ("待处理","处理中","已完成","已暂停"), IF(?type=s:KeyItem, STR(?status) IN ("未开始","进行中","已完成","已暂停"), STR(?status) IN ("新建","已修复","已关闭","被激活")))) AS ?known)
+ BIND(IF(!?known, "待核实", IF(?type=s:Bug && ?status="已修复", "待关闭", "未完成")) AS ?category)
+}
+ORDER BY ?work ?owner

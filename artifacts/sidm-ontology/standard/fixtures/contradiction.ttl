@@ -1,0 +1,116 @@
+@prefix d: <urn:sidm:fixture:> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix s: <urn:sidm:ontology:> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<urn:sidm:fixture> rdfs:comment "全部为虚构验证数据；金额与业务记录无关"@zh .
+
+d:bug a s:Bug ;
+    s:assignee d:person ;
+    s:belongsToRequirement d:requirement ;
+    s:name "示例缺陷" ;
+    s:status "已修复" .
+
+d:child a s:Task ;
+    s:belongsToProject d:project ;
+    s:name "示例子任务" ;
+    s:parentTask d:task ;
+    s:status "待处理" ;
+    s:taskOwner d:person .
+
+d:item a s:KeyItem ;
+    s:collaborator d:person ;
+    s:currentDueOn "2026-10-01T00:00:00+00:00"^^xsd:dateTime ;
+    s:itemStage d:stageProject ;
+    s:name "示例事项" ;
+    s:originalDueOn "2026-09-01T00:00:00+00:00"^^xsd:dateTime ;
+    s:owner d:person ;
+    s:status "进行中" .
+
+d:payment a s:PaymentRecord ;
+    s:amount 30000.00 ;
+    s:handler d:person ;
+    s:paymentMonth "2026-09" ;
+    s:recordStage d:stagePay .
+
+d:renewal a s:MaintenanceContract ;
+    s:amount 6000.00 ;
+    s:belongsToProduct d:product ;
+    s:name "示例下期运维合同" ;
+    s:previousContract d:maintenance ;
+    s:serviceEndOn "2027-12-31T00:00:00+00:00"^^xsd:dateTime ;
+    s:serviceStartOn "2027-01-02T00:00:00+00:00"^^xsd:dateTime ;
+    s:status "待生效" ;
+    s:supplier d:supplier .
+
+d:workOrder a s:WorkOrder ;
+    s:belongsToProduct d:product ;
+    s:description "示例使用问题" ;
+    s:follower d:person ;
+    s:status "处理中" ;
+    s:submitter d:person .
+
+d:contract a s:ProjectContract ;
+    s:amount 100000.00 ;
+    s:contractProject d:project ;
+    s:name "示例建设合同" ;
+    s:paymentsComplete true ;
+    s:supplier d:supplier .
+
+d:maintenance a s:MaintenanceContract ;
+    s:amount 5000.00 ;
+    s:belongsToProduct d:product ;
+    s:name "示例本期运维合同" ;
+    s:serviceEndOn "2026-12-31T00:00:00+00:00"^^xsd:dateTime ;
+    s:serviceStartOn "2026-01-01T00:00:00+00:00"^^xsd:dateTime ;
+    s:status "已续签" ;
+    s:supplier d:supplier .
+
+d:stagePay a s:PaymentStage,
+        s:ProjectStage ;
+    s:name "示例付款阶段" ;
+    s:order 1 ;
+    s:paymentsComplete true ;
+    s:plannedAmount 100000.00 ;
+    s:stageContract d:contract .
+
+d:stageProject a s:ProjectStage ;
+    s:name "示例项目阶段" ;
+    s:order 1 ;
+    s:stageProject d:project .
+
+d:task a s:Task ;
+    s:belongsToProject d:project ;
+    s:name "示例任务" ;
+    s:status "处理中" ;
+    s:taskOwner d:person .
+
+d:requirement a s:Requirement ;
+    s:belongsToProduct d:product ;
+    s:name "示例需求" ;
+    s:owner d:person ;
+    s:status "已转项目" ;
+    s:submitter d:person .
+
+d:supplier a s:Supplier ;
+    s:name "示例供应商" .
+
+d:project a s:Project ;
+    s:belongsToProduct d:product ;
+    s:member d:person ;
+    s:name "示例项目" ;
+    s:owner d:person ;
+    s:sourceRequirement d:requirement ;
+    s:status "进行中" .
+
+d:product a s:Product ;
+    s:name "示例产品" ;
+    s:owner d:person .
+
+d:person a s:Person ;
+    s:name "示例负责人" .
+
+[] a owl:AllDifferent ;
+    owl:distinctMembers ( d:person d:supplier d:product d:requirement d:project d:task d:child d:stageProject d:item d:bug d:contract d:stagePay d:payment d:maintenance d:renewal d:workOrder ) .

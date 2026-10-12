@@ -1,0 +1,26 @@
+@prefix s: <urn:sidm:ontology:> .
+@prefix d: <urn:sidm:fixture:> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+<urn:sidm:fixture> rdfs:comment "全部为虚构验证数据；金额与业务记录无关"@zh .
+d:person a s:Person ; s:name "示例负责人" .
+d:supplier a s:Supplier ; s:name "示例供应商" .
+d:product a s:Product ; s:name "示例产品" ; s:owner d:person .
+d:requirement a s:Requirement ; s:name "示例需求" ; s:status "已转项目" ; s:belongsToProduct d:product ; s:owner d:person ; s:submitter d:person .
+d:project a s:Project ; s:name "示例项目" ; s:status "进行中" ; s:sourceRequirement d:requirement ; s:belongsToProduct d:product ; s:owner d:person ; s:member d:person .
+d:task a s:Task ; s:name "示例任务" ; s:status "处理中" ; s:belongsToProject d:project ; s:taskOwner d:person .
+d:child a s:Task ; s:name "示例子任务" ; s:status "待处理" ; s:belongsToProject d:project ; s:parentTask d:task ; s:taskOwner d:person .
+d:stageProject a s:ProjectStage ; s:name "示例项目阶段" ; s:stageProject d:project ; s:order 1 .
+d:item a s:KeyItem ; s:name "示例事项" ; s:status "进行中" ; s:itemStage d:stageProject ; s:owner d:person ; s:collaborator d:person ; s:originalDueOn "2026-09-01T00:00:00Z"^^xsd:dateTime ; s:currentDueOn "2026-10-01T00:00:00Z"^^xsd:dateTime .
+d:bug a s:Bug ; s:name "示例缺陷" ; s:status "已修复" ; s:belongsToRequirement d:requirement ; s:assignee d:person .
+d:contract a s:ProjectContract ; s:name "示例建设合同" ; s:amount "100000.00"^^xsd:decimal ; s:contractProject d:project ; s:supplier d:supplier .
+d:stagePay a s:PaymentStage ; s:name "示例付款阶段" ; s:plannedAmount "100000.00"^^xsd:decimal ; s:stageContract d:contract ; s:order 1 .
+d:payment a s:PaymentRecord ; s:amount "30000.00"^^xsd:decimal ; s:paymentMonth "2026-09" ; s:recordStage d:stagePay ; s:handler d:person .
+d:maintenance a s:MaintenanceContract ; s:name "示例本期运维合同" ; s:amount "5000.00"^^xsd:decimal ; s:status "已续签" ; s:belongsToProduct d:product ; s:supplier d:supplier ; s:serviceStartOn "2026-01-01T00:00:00Z"^^xsd:dateTime ; s:serviceEndOn "2026-12-31T00:00:00Z"^^xsd:dateTime .
+d:renewal a s:MaintenanceContract ; s:name "示例下期运维合同" ; s:amount "6000.00"^^xsd:decimal ; s:status "待生效" ; s:belongsToProduct d:product ; s:supplier d:supplier ; s:previousContract d:maintenance ; s:serviceStartOn "2027-01-02T00:00:00Z"^^xsd:dateTime ; s:serviceEndOn "2027-12-31T00:00:00Z"^^xsd:dateTime .
+d:workOrder a s:WorkOrder ; s:description "示例使用问题" ; s:status "处理中" ; s:belongsToProduct d:product ; s:follower d:person ; s:submitter d:person .
+[] a owl:AllDifferent ; owl:distinctMembers ( d:person d:supplier d:product d:requirement d:project d:task d:child d:stageProject d:item d:bug d:contract d:stagePay d:payment d:maintenance d:renewal d:workOrder ) .
+# Fictional fixture scope is complete by construction, not an assertion about SIDM.
+d:contract s:paymentsComplete true .
+d:stagePay s:paymentsComplete true .

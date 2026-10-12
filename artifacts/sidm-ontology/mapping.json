@@ -1,0 +1,357 @@
+{
+  "version": "0.1.0",
+  "scope": "第一条业务链及接口已返回的人员角色；仅使用既有GET查询接口",
+  "readAuthorization": "沿用verifyToken与对应模块checkPermission；401/403终止，不绕过权限读取数据库",
+  "types": {
+    "Product": {
+      "collection": "products",
+      "endpoint": "/api/products",
+      "sourceTable": "pms_product",
+      "sourceFile": "backend/src/controllers/productController.js",
+      "fields": {
+        "name": "name",
+        "description": "description"
+      },
+      "enums": {}
+    },
+    "Requirement": {
+      "collection": "requirements",
+      "endpoint": "/api/requirements",
+      "sourceTable": "pms_requirement",
+      "sourceFile": "backend/src/controllers/requirementController.js",
+      "fields": {
+        "description": "description",
+        "priority": "priority",
+        "startOn": "start_date",
+        "expectedEndOn": "expected_end_date",
+        "actualEndOn": "actual_end_date",
+        "pausedAt": "pause_date",
+        "pauseReason": "pause_reason",
+        "status": "status",
+        "name": "title",
+        "requirementType": "requirement_type",
+        "submitterName": "submitter_name",
+        "submitterDepartment": "submitter_dept",
+        "submittedOn": "submit_date"
+      },
+      "enums": {
+        "status": {
+          "0": "上会评估",
+          "1": "需求上会",
+          "2": "上会通过",
+          "3": "过会未通过",
+          "10": "提报评估",
+          "11": "需求审批",
+          "12": "审批通过",
+          "13": "审批未通过",
+          "20": "需求验证",
+          "21": "预研通过",
+          "22": "预研不通过",
+          "30": "需求整理",
+          "31": "实施中",
+          "32": "试运行",
+          "33": "已完成",
+          "34": "已完成未使用",
+          "35": "暂停",
+          "36": "已转项目"
+        },
+        "priority": {
+          "0": "低",
+          "1": "中",
+          "2": "高"
+        },
+        "requirementType": {
+          "1": "上会立项",
+          "2": "需求提报",
+          "3": "预研",
+          "4": "直接实施"
+        }
+      }
+    },
+    "Project": {
+      "collection": "projects",
+      "endpoint": "/api/projects",
+      "sourceTable": "pms_project",
+      "sourceFile": "backend/src/controllers/projectController.js",
+      "fields": {
+        "description": "description",
+        "priority": "priority",
+        "startOn": "start_date",
+        "expectedEndOn": "expected_end_date",
+        "actualEndOn": "actual_end_date",
+        "pausedAt": "suspend_date",
+        "pauseReason": "suspend_reason",
+        "status": "status",
+        "name": "name",
+        "progress": "progress_text",
+        "risk": "risk_text"
+      },
+      "enums": {
+        "status": {
+          "0": "未开始",
+          "1": "进行中",
+          "2": "已完成",
+          "3": "已暂停"
+        },
+        "priority": {
+          "0": "低",
+          "1": "中",
+          "2": "高"
+        }
+      }
+    },
+    "Task": {
+      "collection": "tasks",
+      "endpoint": "/api/tasks",
+      "sourceTable": "pms_task",
+      "sourceFile": "backend/src/controllers/taskController.js",
+      "fields": {
+        "description": "description",
+        "priority": "priority",
+        "startOn": "start_date",
+        "expectedEndOn": "expected_end_date",
+        "actualEndOn": "actual_end_date",
+        "pausedAt": "suspend_date",
+        "pauseReason": "suspend_reason",
+        "status": "status",
+        "name": "name",
+        "taskType": "task_type_name"
+      },
+      "enums": {
+        "status": {
+          "0": "待处理",
+          "1": "处理中",
+          "2": "已完成",
+          "3": "已暂停"
+        },
+        "priority": {
+          "0": "低",
+          "1": "中",
+          "2": "高"
+        }
+      }
+    }
+  },
+  "relations": {
+    "belongsToProduct": "Requirement.product_id / Project.product_id",
+    "sourceRequirement": "Project.requirement_id",
+    "belongsToProject": "Task.source_type=1 且仅 project_id 有值",
+    "belongsToRequirement": "Task.source_type=2 且仅 requirement_id 有值",
+    "parentTask": "Task.parent_task_id",
+    "owner": "Product/Requirement/Project.owner_id",
+    "taskOwner": "Task.owners[].id（来自pms_task_owner）",
+    "member": "Project.members[].id（来自pms_project_member）"
+  },
+  "notes": [
+    "数据库表名仅用于说明来源，不直连数据库。",
+    "任务total为组数，list包含主子任务；按页码和pageSize推进，不能按行数判断完成。",
+    "Project.requirement_type为关联展示字段，不映射为项目自身类型。",
+    "不把产品启停状态映射成建设进度。",
+    "快照为读取期间结果，不是跨请求事务快照；问题清单单独保留。"
+  ],
+  "commerce": {
+    "sourceFile": "backend/src/controllers/projectContractController.js",
+    "contractEndpoint": "/api/projects/{projectId}/contract",
+    "paymentEndpoint": "/api/projects/{projectId}/contract/stages/{stageId}/payments",
+    "noContract": "code=0且data=null表示项目未建合同，401/403/404不等价于无合同",
+    "types": {
+      "ProjectContract": {
+        "sourceTable": "pms_project_contract",
+        "fields": {
+          "code": "contract_code",
+          "name": "contract_name",
+          "signedOn": "signed_date",
+          "amount": "contract_amount"
+        },
+        "relations": {
+          "contractProject": "project_id",
+          "supplier": "supplier_id"
+        }
+      },
+      "PaymentStage": {
+        "sourceTable": "pms_project_payment_stage",
+        "fields": {
+          "name": "stage_name",
+          "plannedAmount": "planned_amount",
+          "order": "sort_order"
+        },
+        "relations": {
+          "stageContract": "contract_id"
+        }
+      },
+      "PaymentRecord": {
+        "sourceTable": "pms_project_payment_record",
+        "fields": {
+          "amount": "payment_amount",
+          "paymentMonth": "payment_month取年月"
+        },
+        "relations": {
+          "recordStage": "stage_id",
+          "handler": "handler_id"
+        }
+      }
+    },
+    "summary": "仅从有效付款明细按分精度求和，与paid_amount/unpaid_amount核对；不累加接口汇总与明细",
+    "execution": "commerce.mjs"
+  },
+  "operations": {
+    "contractEndpoint": "/api/products/{productId}/maintenance-contracts",
+    "workOrderEndpoint": "/api/work-orders?product_id={productId}",
+    "execution": "operations.mjs",
+    "notes": [
+      "合同状态沿用接口计算结果；已续签不抹去原服务期限，不自行判定覆盖或履约。",
+      "工单只关联产品和接口明确返回的跟进人；不推定所属合同。",
+      "问题类型使用接口档案名称，不硬编码档案ID；提出人姓名不推定为用户ID。"
+    ],
+    "types": {
+      "MaintenanceContract": {
+        "sourceTable": "pms_product_maintenance_contract",
+        "sourceFile": "backend/src/controllers/productMaintenanceContractController.js",
+        "fields": {
+          "code": "contract_code",
+          "name": "contract_name",
+          "signedOn": "signed_date",
+          "amount": "contract_amount",
+          "serviceStartOn": "service_start_date",
+          "serviceEndOn": "service_end_date",
+          "terminationOn": "termination_date",
+          "terminationReason": "termination_reason",
+          "status": "status"
+        },
+        "enums": {
+          "status": {
+            "pending": "待生效",
+            "active": "生效中",
+            "expired": "已到期",
+            "renewed": "已续签",
+            "terminated": "已终止"
+          }
+        },
+        "relations": {
+          "belongsToProduct": "product_id",
+          "supplier": "supplier_id",
+          "previousContract": "previous_contract_id"
+        }
+      },
+      "WorkOrder": {
+        "sourceTable": "pms_work_order",
+        "sourceFile": "backend/src/controllers/workOrderController.js",
+        "fields": {
+          "problemType": "problem_type_name",
+          "description": "problem_desc",
+          "urgency": "urgency",
+          "submitterName": "submitter_name",
+          "submitterDepartment": "submitter_dept",
+          "submittedAt": "submit_time",
+          "expectedResolveAt": "expected_resolve_date",
+          "resolvedAt": "resolve_date",
+          "result": "result_desc",
+          "activationReason": "activation_reason",
+          "status": "status",
+          "pauseReason": "suspend_reason",
+          "pausedAt": "suspend_date"
+        },
+        "enums": {
+          "status": {
+            "0": "待处理",
+            "1": "处理中",
+            "2": "已解决",
+            "4": "已暂停",
+            "5": "被激活"
+          },
+          "urgency": {
+            "0": "低",
+            "1": "中",
+            "2": "高"
+          }
+        },
+        "relations": {
+          "belongsToProduct": "product_id",
+          "follower": "follower_id"
+        }
+      }
+    }
+  },
+  "delivery": {
+    "stageEndpoint": "/api/projects/{projectId}/stage-plan",
+    "bugEndpoint": "/api/bugs",
+    "execution": "delivery.mjs",
+    "notes": [
+      "阶段可选；事项状态不推导项目完成。",
+      "BUG只归属一个项目或需求；不随需求转项目自动迁移。",
+      "档案类型按接口名称读取；不把附件、历史或模板当作本体业务对象。"
+    ],
+    "types": {
+      "ProjectStage": {
+        "sourceTable": "pms_project_plan_stage",
+        "fields": {
+          "name": "name",
+          "description": "description",
+          "order": "sort_order"
+        },
+        "enums": {},
+        "relations": {
+          "stageProject": "project_id"
+        }
+      },
+      "KeyItem": {
+        "sourceTable": "pms_project_plan_item",
+        "fields": {
+          "name": "name",
+          "originalDueOn": "original_due_date",
+          "currentDueOn": "current_due_date",
+          "actualEndOn": "actual_end_date",
+          "deliveryRequirement": "delivery_requirement",
+          "status": "status",
+          "pauseReason": "pause_reason"
+        },
+        "enums": {
+          "status": {
+            "0": "未开始",
+            "1": "进行中",
+            "2": "已完成",
+            "3": "已暂停"
+          }
+        },
+        "relations": {
+          "itemStage": "stage_id",
+          "owner": "owner_id",
+          "collaborator": "collaborators[].id"
+        }
+      },
+      "Bug": {
+        "sourceTable": "pms_bug",
+        "fields": {
+          "name": "title",
+          "description": "description",
+          "bugType": "bug_type_name",
+          "severity": "severity",
+          "resolution": "resolution_name",
+          "resolvedOn": "resolved_date",
+          "closedOn": "closed_date",
+          "activationReason": "activation_reason",
+          "status": "status"
+        },
+        "enums": {
+          "status": {
+            "0": "新建",
+            "1": "已修复",
+            "2": "已关闭",
+            "3": "被激活"
+          },
+          "severity": {
+            "1": "低",
+            "2": "中",
+            "3": "高",
+            "4": "致命"
+          }
+        },
+        "relations": {
+          "belongsToProject": "source_type=1且仅project_id有值",
+          "belongsToRequirement": "source_type=2且仅requirement_id有值",
+          "assignee": "assignee_id"
+        }
+      }
+    }
+  }
+}

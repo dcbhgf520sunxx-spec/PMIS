@@ -11,13 +11,14 @@ const { buildExecutePayload } = require('../src/mcp/dispatcher')
 
 const allMenus = new Set(['/products', '/projects', '/requirements', '/tasks', '/bugs', '/work-orders'])
 
-test('public MCP catalog exposes 17 query tools and 21 action tools', () => {
+test('public MCP catalog exposes 18 query tools and 21 action tools', () => {
   const query = filterToolsForContext({ endpointType: 'query', allowedMenuPaths: allMenus })
   const action = filterToolsForContext({ endpointType: 'action', allowedMenuPaths: allMenus })
 
-  assert.equal(query.length, 17)
+  assert.equal(query.length, 18)
   assert.equal(action.length, 21)
   assert.deepEqual(query.map((tool) => tool.name), [
+    'sidm_standard_ontology_query',
     'global_search',
     'business_attachment_search',
     'product_search',
@@ -316,7 +317,7 @@ test('public action metadata describes operation branches and status-specific fi
 })
 
 test('every public tool and operation branch has complete metadata', () => {
-  assert.equal(publicToolCatalog.length, 41)
+  assert.equal(publicToolCatalog.length, 42)
   for (const tool of publicToolCatalog) {
     assert.ok(tool.title, `${tool.name}缺少标题`)
     assert.ok(tool.description, `${tool.name}缺少说明`)

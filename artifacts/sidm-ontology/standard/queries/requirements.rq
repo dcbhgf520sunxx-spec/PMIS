@@ -1,0 +1,7 @@
+PREFIX s: <urn:sidm:ontology:>
+SELECT ?requirement ?product ?status ?project WHERE {
+ ?requirement a s:Requirement ; s:belongsToProduct ?product .
+ OPTIONAL { ?requirement s:status ?status }
+ OPTIONAL { ?project s:sourceRequirement ?requirement }
+}
+ORDER BY ?requirement ?project

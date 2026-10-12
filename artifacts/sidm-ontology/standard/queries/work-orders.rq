@@ -1,0 +1,8 @@
+PREFIX s: <urn:sidm:ontology:>
+SELECT ?workOrder ?product ?status ?urgency ?follower WHERE {
+ ?workOrder a s:WorkOrder ; s:belongsToProduct ?product .
+ OPTIONAL { ?workOrder s:status ?status }
+ OPTIONAL { ?workOrder s:urgency ?urgency }
+ OPTIONAL { ?workOrder s:follower ?follower }
+}
+ORDER BY ?workOrder

@@ -36,7 +36,7 @@ const mapProjectHistoryItem = (item: ProjectHistoryItem): HistoryTimelineItem =>
 
 export function ProjectDetailPage() {
  const businessDay = useBusinessDay();
-  const { navigateWithReturn, returnToSource } = usePageReturnNavigation('/projects');
+  const { navigateWithReturn, returnToSource, backText } = usePageReturnNavigation('/projects');
   const params = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -84,7 +84,7 @@ export function ProjectDetailPage() {
       error={error}
       notFound={notFound}
       onRetry={() => setRevision((value) => value + 1)}
-      onBack={returnToSource}
+      onBack={returnToSource} backText={backText}
       sectionNavigation={{
         items: [
           { key: 'basic', title: '基本信息' },

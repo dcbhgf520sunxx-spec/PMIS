@@ -74,7 +74,7 @@ export function ProjectStagePlanPage(){
   const params=useParams();
   const location=useLocation();
   const navigate=useNavigate();
-  const {returnToSource}=usePageReturnNavigation('/projects');
+  const {returnToSource,backText}=usePageReturnNavigation('/projects');
   const {message}=App.useApp();
   const [stageForm]=Form.useForm<{name:string}>();
   const [plan,setPlan]=useState<Awaited<ReturnType<typeof getProjectStagePlan>>>();
@@ -309,7 +309,7 @@ export function ProjectStagePlanPage(){
   const openHistory=async(item:ProjectPlanItem)=>{if(!params.id)return;setHistoryModal({item,rows:await getProjectPlanAdjustments(params.id,item.id)});};
   const openFiles=async(item:ProjectPlanItem)=>{if(!params.id)return;setFileModal({item,files:await getProjectPlanFiles(params.id,item.id)});};
   return <>
-    <TemplateDetailPage title="项目详情" loading={loading} error={error} onRetry={refresh} onBack={returnToSource}
+    <TemplateDetailPage title="项目详情" loading={loading} error={error} onRetry={refresh} onBack={returnToSource} backText={backText}
       sectionNavigation={{items:[{key:'basic',title:'基本信息'},{key:'contract',title:'合同信息'},{key:'stage-plan',title:'阶段主计划'}],activeKey:'stage-plan',onChange:(key)=>{if(!params.id)return;if(key==='basic')navigate(`/projects/${params.id}${location.search}`);if(key==='contract')navigate(`/projects/${params.id}/contract-detail${location.search}`);}}}
       actions={<>
         <PermissionButton permission="project" onClick={()=>void openTemplate()}>套用模板</PermissionButton>

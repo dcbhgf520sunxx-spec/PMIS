@@ -26,7 +26,11 @@ export function appendReturnTo(target: string, returnTo: string) {
   return `${parsed.pathname}${parsed.search}${parsed.hash}`;
 }
 
-export function resolveReturnTo(search: string, fallback: string, allowedRouteBase = fallback) {
+export function resolveReturnTo(search: string, fallback: string, allowedRouteBase = fallback, allowedSourcePaths: readonly string[] = []) {
   const raw = new URLSearchParams(search).get('returnTo');
-  return sanitizeInternalReturnTo(raw, allowedRouteBase) || fallback;
+  const moduleSource = sanitizeInternalReturnTo(raw, allowedRouteBase);
+  if (moduleSource) return moduleSource;
+  const internalSource = sanitizeInternalReturnTo(raw);
+  if (internalSource && allowedSourcePaths.includes(new URL(internalSource, 'http://local').pathname)) return internalSource;
+  return fallback;
 }

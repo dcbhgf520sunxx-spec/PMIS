@@ -11,6 +11,7 @@
 }
 
 .admin-section-title.is-inline-extra-after-title.has-extra {
+  align-items: center;
   justify-content: space-between;
 }
 

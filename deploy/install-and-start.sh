@@ -189,6 +189,17 @@ tar \
   --exclude='node_modules' \
   --exclude='dist' \
   -C "$repo_dir" -cf - . | tar -C "$release_dir" -xf -
+# Only executable ontology sources enter the release. No captures, credentials,
+# local runtimes or teaching artifacts are copied.
+ontology_source="$repo_dir/artifacts/sidm-ontology"
+install -d "$release_dir/backend/ontology/standard/queries"
+for ontology_file in read-chain.mjs commerce.mjs delivery.mjs operations.mjs mapping.json; do
+  install -m 644 "$ontology_source/$ontology_file" "$release_dir/backend/ontology/$ontology_file"
+done
+for ontology_file in model-view-data.cjs answer.py snapshot.py import_graph.py reasoning.py verify.py sidm.ttl sidm.owl shapes.ttl requirements.txt requirements.lock.txt; do
+  install -m 644 "$ontology_source/standard/$ontology_file" "$release_dir/backend/ontology/standard/$ontology_file"
+done
+install -m 644 "$ontology_source/standard/queries/"*.rq "$release_dir/backend/ontology/standard/queries/"
 chown -R "$run_user:$run_group" "$release_dir"
 
 runuser -u "$run_user" -- env PATH="$(dirname "$node_bin"):$PATH" \

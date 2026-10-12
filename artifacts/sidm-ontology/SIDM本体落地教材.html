@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>SIDM 业务本体｜落地成果</title>
+  <style>
+    :root{--paper:#f6f7f5;--white:#fff;--ink:#19332f;--muted:#536662;--line:#dce5df;--green:#137665;--green-dark:#0d5a4d;--green-light:#e8f4ee;--amber:#aa681b;--amber-light:#fff5e6;--red:#a64b41;--red-light:#fff0ed;--navy:#193d51;--shadow:0 16px 42px rgba(24,54,43,.08);--radius:18px;--sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif}
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth;scroll-padding-top:28px}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.74;font-size:16px}
+    a{color:var(--green-dark);text-decoration-thickness:1px;text-underline-offset:3px}
+    button{font:inherit}
+    :focus-visible{outline:3px solid #f1b04c;outline-offset:3px;border-radius:5px}
+    .layout{display:grid;grid-template-columns:252px minmax(0,1fr);min-height:100vh;max-width:1680px;margin:auto}
+    .sidebar{position:sticky;top:0;height:100vh;background:#173e38;color:#ecf5ee;padding:31px 18px 24px 24px;overflow:auto}
+    .brand{padding:0 10px 24px;border-bottom:1px solid rgba(255,255,255,.19);margin-bottom:18px}
+    .brand-mark{width:32px;height:32px;border:1.5px solid #b6ddc8;border-radius:9px;display:grid;place-items:center;font-weight:800;letter-spacing:-1px;margin-bottom:13px;color:#d8f4e2}
+    .brand strong{display:block;font-size:17px;letter-spacing:.01em}
+    .brand small{display:block;color:#b5d0c2;margin-top:4px;font-size:12px}
+    .nav-label{font-size:11px;letter-spacing:.14em;color:#a8c5b5;margin:21px 10px 8px}
+    .sidebar nav a{display:block;color:#d2e7d9;text-decoration:none;padding:9px 11px;border-radius:10px;font-size:13px;line-height:1.35;margin:3px 0}
+    .sidebar nav a:hover,.sidebar nav a.active{background:#2e5a50;color:#fff}
+    .sidebar .side-note{font-size:12px;color:#bdd3c5;padding:15px 11px;border-top:1px solid rgba(255,255,255,.18);margin-top:26px;line-height:1.55}
+    .main{min-width:0;padding:0 46px 90px}
+    .wrap{max-width:1040px;margin:0 auto}
+    header.hero{padding:64px 0 37px;border-bottom:1px solid var(--line)}
+    .eyebrow{color:var(--green);font-size:13px;font-weight:750;letter-spacing:.12em;margin:0 0 15px}
+    h1{font-size:clamp(35px,4.3vw,58px);line-height:1.17;letter-spacing:-.055em;margin:0;max-width:850px;font-weight:800}
+    h1 span{color:var(--green)}
+    .lead{font-size:19px;color:#45615b;max-width:780px;line-height:1.72;margin:22px 0 23px}
+    .meta{display:flex;flex-wrap:wrap;gap:9px 18px;color:var(--muted);font-size:13px}
+    .meta b{color:var(--ink)}
+    .hero-note{background:#e9f2eb;border-left:4px solid var(--green);padding:18px 23px;border-radius:0 12px 12px 0;margin-top:31px;max-width:880px}
+    .hero-note strong{color:var(--green-dark)}
+    section.chapter{padding:51px 0 48px;border-bottom:1px solid var(--line)}
+    .chapter-head{display:flex;align-items:flex-start;gap:17px;margin-bottom:25px}
+    .chapter-num{flex:none;font-size:12px;font-weight:800;color:var(--green);border:1px solid #bad7c9;border-radius:999px;padding:4px 9px;margin-top:7px;line-height:1.2}
+    h2{font-size:clamp(25px,3vw,36px);line-height:1.28;letter-spacing:-.03em;margin:0 0 5px}
+    .chapter-desc{color:var(--muted);margin:0}
+    h3{font-size:20px;line-height:1.35;margin:30px 0 11px;letter-spacing:-.02em}
+    p{margin:10px 0 15px}
+    .thesis{font-size:20px;font-weight:700;line-height:1.62;max-width:840px;margin:0 0 27px}
+    .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin:21px 0}
+    .card{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:21px 21px 20px;box-shadow:0 2px 12px rgba(24,54,43,.025)}
+    .card h3{margin:0 0 8px;font-size:17px}
+    .card p{color:var(--muted);font-size:14px;margin:0;line-height:1.7}
+    .card .card-kicker{font-size:12px;color:var(--green);font-weight:750;letter-spacing:.08em;margin:0 0 9px}
+    .focus{background:var(--green-light);border:1px solid #c7dfd0;border-radius:var(--radius);padding:21px 24px;margin:22px 0}
+    .focus p:last-child,.warning p:last-child{margin-bottom:0}
+    .warning{background:var(--amber-light);border:1px solid #ead4ad;border-radius:var(--radius);padding:20px 23px;margin:21px 0}
+    .warning strong{color:#80521c}
+    .danger{background:var(--red-light);border:1px solid #edd2cb;border-radius:var(--radius);padding:18px 22px;margin:21px 0;color:#6c3430}
+    .graph{background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:24px;margin:25px 0 20px}
+    .graph h3{margin:0 0 5px}.graph > p{font-size:13px;color:var(--muted);margin:0 0 22px}
+    .graph-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:stretch}
+    .node{border:1px solid #bfd8c9;border-radius:13px;padding:13px 15px;background:#f2f8f4;min-height:75px}
+    .node strong{display:block;font-size:16px;line-height:1.3}.node small{display:block;color:var(--muted);font-size:12px;margin-top:4px}
+    .node.root{background:#1c6a59;color:#fff;border-color:#1c6a59}.node.root small{color:#d1ece1}
+    .node.pale{background:#f7f9f8}
+    .node.orange{background:#fff5e8;border-color:#edcc9a}
+    .graph-arrow{text-align:center;color:var(--green);font-size:13px;font-weight:700;margin:9px 0 12px}
+    .graph-foot{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+    .pill{font-size:12px;border-radius:999px;border:1px solid #d3e4d8;background:#f8fbf8;color:#416558;padding:5px 10px}
+    .cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+    .compare{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:23px}
+    .compare h3{margin:0 0 10px}.compare p{font-size:14px;color:var(--muted)}
+    .compare code,.inline-code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:#165c50;background:#eaf3ee;border-radius:5px;padding:1px 5px;font-size:.88em}
+    .equation{border:1px solid #d5e5d8;background:#fbfdfb;border-radius:14px;padding:17px 20px;font-size:15px;font-weight:700;margin:18px 0}
+    .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:15px;background:#fff;margin:20px 0}
+    table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.65}
+    th,td{padding:13px 17px;text-align:left;border-bottom:1px solid #e8eeea;vertical-align:top}
+    th{background:#f1f6f2;color:#3d5950;font-size:13px;white-space:nowrap}
+    tr:last-child td{border-bottom:0}
+    td:first-child{font-weight:700;color:#284a41;min-width:110px}
+    .track{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;margin:24px 0 15px}
+    .track-item{position:relative;background:#fff;border:1px solid #dbe8df;border-radius:12px;padding:12px 9px;min-height:106px;text-align:center}
+    .track-item:not(:last-child):after{content:"→";position:absolute;right:-10px;top:35px;color:var(--green);font-size:17px;font-weight:800;z-index:2}
+    .track-item b{display:block;color:var(--green-dark);font-size:13px}.track-item span{display:block;color:#61716d;font-size:11px;line-height:1.5;margin-top:5px}
+    .tabbar{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 14px}
+    .tabbar button{cursor:pointer;border:1px solid #cddbd2;background:#fff;color:#456158;padding:9px 13px;border-radius:9px;font-size:13px;font-weight:700}
+    .tabbar button[aria-selected="true"]{background:#176c5b;color:#fff;border-color:#176c5b}
+    .example-panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px 25px;box-shadow:var(--shadow)}
+    .example-panel[hidden]{display:none}
+    .example-panel h3{margin:0 0 8px}
+    .example-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:22px 0}
+    .example-step{background:#f4f8f5;border-radius:11px;padding:13px 14px;font-size:13px;line-height:1.6}
+    .example-step b{display:block;color:#176c5b;margin-bottom:4px}
+    .result{background:#e9f5ee;border-left:3px solid #1b8069;border-radius:0 8px 8px 0;padding:14px 17px;margin-top:15px;font-size:14px}
+    .result.amber{background:#fff5e8;border-color:#c48638}
+    .source-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:20px 0}
+    .source{background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px 15px;font-size:13px}
+    .source b{display:block;color:#1e4a3e;margin-bottom:3px}.source a{overflow-wrap:anywhere}
+    .mcp-grid{display:grid;grid-template-columns:1fr 1fr;gap:17px;margin:22px 0}
+    .mcp{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+    .mcp h3{margin:0 0 10px}.mcp .tag{font-size:11px;border-radius:50px;padding:3px 8px;background:#e8f3ec;color:#176c5b;display:inline-block;margin-bottom:11px;font-weight:750}
+    .mcp .tag.amber{background:#fff1d9;color:#8d5715}
+    .mcp-flow{padding:15px 18px;border-radius:13px;background:#edf4f0;border:1px solid #d9e8de;font-weight:700;font-size:14px;margin:15px 0}
+    .status-list{display:grid;gap:10px;margin:22px 0}
+    .status-item{display:grid;grid-template-columns:86px 1fr;gap:13px;align-items:start;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 17px;font-size:14px}
+    .status-item b{color:var(--green-dark)}.status-item.pending b{color:var(--amber)}
+    details{border:1px solid var(--line);border-radius:11px;background:#fff;margin:10px 0;overflow:hidden}
+    summary{cursor:pointer;font-weight:700;padding:14px 17px;list-style:none}
+    summary::-webkit-details-marker{display:none}summary:after{content:"＋";float:right;color:var(--green)}details[open] summary:after{content:"－"}details p{padding:0 17px 15px;margin:0;color:var(--muted);font-size:14px}
+    .ending{background:#173e38;color:#e9f4ed;padding:32px 34px;border-radius:20px;margin:40px 0 0}
+    .ending h2{color:#fff;font-size:25px}.ending p{color:#d4e9dc;margin-bottom:0}
+    .print-button{position:fixed;right:22px;bottom:20px;background:#176c5b;color:white;border:0;border-radius:999px;padding:11px 17px;box-shadow:0 9px 25px rgba(16,67,53,.22);font-weight:700;cursor:pointer;z-index:20}
+    .print-button:hover{background:#0d594a}
+    .mobile-top{display:none}
+    @media(max-width:1100px){.layout{grid-template-columns:210px minmax(0,1fr)}.main{padding:0 30px 70px}.sidebar{padding-left:13px}.track{grid-template-columns:repeat(4,1fr)}.track-item:not(:last-child):after{display:none}}
+    @media(max-width:760px){html{scroll-padding-top:65px}.layout{display:block}.sidebar{position:static;height:auto;padding:12px 15px;overflow:visible}.brand,.side-note,.nav-label{display:none!important}.sidebar nav{display:flex;gap:5px;overflow-x:auto;white-space:nowrap}.sidebar nav a{flex:none;font-size:12px;margin:0;padding:8px 10px}.main{padding:0 17px 70px}.hero{padding-top:39px!important}.lead{font-size:17px}.cards,.cols,.mcp-grid,.source-list{grid-template-columns:1fr}.graph-grid{grid-template-columns:1fr 1fr}.track{grid-template-columns:repeat(2,1fr)}.example-steps{grid-template-columns:1fr 1fr}.chapter{padding:39px 0!important}.status-item{grid-template-columns:75px 1fr}.print-button{position:static;display:block;margin:0 17px 20px auto;padding:9px 13px;font-size:12px}}
+    @media(max-width:460px){.graph-grid,.example-steps{grid-template-columns:1fr}.node{min-height:auto}.chapter-head{gap:11px}.chapter-num{margin-top:5px}.graph{padding:18px}.example-panel{padding:18px}.meta{font-size:12px}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+    @media print{@page{size:A4;margin:14mm}body{background:#fff;color:#000;font-size:11pt}.layout{display:block;max-width:none}.sidebar,.print-button,.tabbar{display:none!important}.main{padding:0}.wrap{max-width:none}.hero{padding:0 0 18px!important}.hero h1{font-size:30pt}.lead{font-size:13pt}.chapter{padding:23px 0!important;break-inside:avoid-page}.card,.graph,.compare,.example-panel,.mcp,.source,.status-item,.warning,.focus{box-shadow:none;break-inside:avoid}.example-panel[hidden]{display:block}.example-panel:before{content:"案例";font-weight:700;color:#165f50}.table-wrap{overflow:visible}a{color:#000;text-decoration:none}.print-button{display:none}}
+    .business-map{border:1px solid var(--line);border-radius:18px;background:#fff;overflow:hidden;margin:22px 0}
+    .business-root{background:var(--green-dark);color:white;padding:22px 24px;display:flex;align-items:center;gap:20px}.business-root strong{font-size:26px}.business-root span{font-size:14px;color:#d5ede6}
+    .business-lane{padding:20px 24px;border-bottom:1px solid var(--line)}.business-lane h3{font-size:16px;color:var(--green-dark);margin:0 0 12px}.commerce-lane{background:#fffcf6}
+    .business-line{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:9px 0;font-size:14px}.business-line b{background:var(--green-light);border:1px solid #cee4dc;border-radius:8px;padding:7px 12px}.business-line span{color:var(--muted);font-size:12px;white-space:nowrap}.business-line span:after{content:" →";color:var(--green)}.commerce-lane .business-line b{background:var(--amber-light);border-color:#ebdbbc}
+    .business-people{display:flex;gap:18px;align-items:start;padding:18px 24px;background:#f4f7f6;font-size:14px}.business-people strong{white-space:nowrap;color:var(--green-dark)}
+    .business-rules{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}.business-rules>div{border:1px solid var(--line);background:white;border-radius:12px;padding:17px}.business-rules b{color:var(--green-dark)}.business-rules p{font-size:14px;margin:7px 0 0}.business-source{font-size:14px;color:var(--muted)}
+    #business>h3{margin-top:32px}#business table td:first-child{min-width:105px}#business table td{vertical-align:top}
+    @media(max-width:760px){.business-rules{grid-template-columns:1fr}.business-root{display:block;padding:18px}.business-root span{display:block;margin-top:5px}.business-lane{padding:17px}.business-people{padding:17px}#business table{min-width:650px}}
+    #overview .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+    #overview .card:last-child{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 24px}
+    #overview .card:last-child h3{grid-column:1/-1;margin:0}
+    @media(max-width:760px){#overview .cards,#overview .card:last-child{grid-template-columns:1fr}}
+    .business-definition>h3{margin-top:36px;padding-top:14px;border-top:1px solid var(--line)}
+    .business-definition>h4{margin-top:25px;color:var(--green-dark)}
+    .business-definition>p,.business-definition>ul,.business-definition>ol{font-size:15px}
+    .business-definition li{margin:8px 0}.business-definition table td{font-size:14px}
+    #artifacts>h3{margin-top:30px;color:var(--green-dark)}
+    #artifacts table td{vertical-align:top;font-size:14px}#artifacts table td:first-child{width:25%;overflow-wrap:anywhere}#artifacts table td:nth-child(2){width:43%}
+    @media(max-width:760px){#artifacts table,#path table,#business table{min-width:650px}}
+    .mainline{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:22px 0}
+    .mainline a{display:block;border:1px solid var(--line);border-radius:12px;background:white;padding:16px 12px;text-align:center;color:var(--ink);text-decoration:none}.mainline b{display:block;font-size:19px;color:var(--green-dark)}.mainline span{font-size:13px;color:var(--muted)}
+    .stage-fields{display:grid;grid-template-columns:100px 1fr;border:1px solid var(--line);border-radius:14px;background:white;overflow:hidden;margin:20px 0}
+    .stage-fields dt,.stage-fields dd{padding:15px 18px;margin:0;border-bottom:1px solid var(--line);font-size:15px}.stage-fields dt{background:#edf5f1;font-weight:700;color:var(--green-dark)}.stage-fields dt:last-of-type,.stage-fields dd:last-of-type{border-bottom:0}.stage-fields dd p{margin:0 0 9px}.stage-fields dd p:last-child{margin:0}
+    .shared-example{padding:17px 20px;border-left:4px solid var(--green);background:var(--green-light);border-radius:0 12px 12px 0;margin:18px 0;font-size:15px}.shared-example b{color:var(--green-dark)}.shared-example p{margin:6px 0 0}
+    .output-file{margin:0;padding:0;list-style:none}.output-file li+li{margin-top:10px}.output-file a{font-weight:650}.output-file small{display:block;color:var(--muted);font-size:14px}.reading-note{font-size:14px;color:var(--muted)}
+    @media(max-width:760px){.mainline{grid-template-columns:repeat(2,minmax(0,1fr))}.mainline a:last-child{grid-column:1/-1}.stage-fields{grid-template-columns:76px 1fr}.stage-fields dt,.stage-fields dd{padding:12px;font-size:14px}}
+
+    /* Reading hierarchy: business context, five standard stages, application scope. */
+    body{background:#f4f6f4}.layout{grid-template-columns:232px minmax(0,1fr)}.main{padding:0 48px 72px}.wrap{max-width:1000px}
+    .sidebar{padding:26px 15px 22px;background:#173c36}.brand{padding-bottom:18px}.brand-mark{margin-bottom:10px}.nav-label{margin:10px 10px 6px}
+    .nav-group{font-size:10px;letter-spacing:.08em;color:#9abbb0;margin:19px 10px 7px}.nav-group.primary{color:#bce7d6}.sidebar nav a{padding:8px 10px;font-size:12px;margin:2px 0;border-radius:7px}.sidebar nav a.stage-link{color:#f0f7f3}.stage-link span{display:inline-grid;place-items:center;width:19px;height:19px;margin-right:6px;border:1px solid #537d6f;border-radius:5px;font-size:10px;color:#c5e8db}
+    header.hero{padding:44px 0 30px}h1{font-size:clamp(34px,3.7vw,49px);line-height:1.18}.lead{font-size:18px;max-width:900px;line-height:1.65;margin:19px 0 13px}.scope-line{font-size:13px;color:var(--muted);line-height:1.8;margin:0 0 20px;max-width:930px}.meta{font-size:12px;gap:8px 12px}.meta span{padding:4px 10px;background:#e9efeb;border-radius:6px}
+    section.chapter{padding:36px 0;border-bottom:1px solid #dbe4df}.chapter-head{gap:12px;margin-bottom:19px}h2{font-size:27px;letter-spacing:-.025em}.chapter-num{font-size:10px;margin-top:5px;padding:4px 8px}.chapter-desc{font-size:14px}
+    #path{padding:28px 0 30px}.mainline{margin:16px 0 18px;gap:10px}.mainline a{position:relative;background:#fff;border:1px solid #cbded4;padding:17px 9px 15px;border-radius:11px;transition:border-color .15s,background .15s}.mainline a:hover{background:#e8f3ed;border-color:#39806d}.mainline i{display:block;font-style:normal;color:#79988b;font-size:11px;margin-bottom:5px}.mainline b{font-size:19px}.mainline span{font-size:12px}.mainline a:not(:last-child):after{content:"→";position:absolute;right:-10px;top:42%;color:#51776a;z-index:1;font-size:14px;background:#f4f6f4}.reading-note,#path>p{font-size:13px;color:var(--muted)}
+    .card,.compare{box-shadow:none;border-radius:12px}.card{padding:19px}.card h3,.compare h3{font-size:16px}.card p,.compare p{font-size:14px}.cols{gap:12px}.cards{gap:12px}.status-item{font-size:14px;border-radius:10px;padding:13px 16px}
+    #overview .cards{margin:16px 0}.business-map{margin:18px 0;border-radius:13px}.business-root{padding:17px 20px}.business-root strong{font-size:23px}.business-lane{padding:15px 20px}.business-line{margin:7px 0}.business-line b{padding:6px 10px;font-size:13px}
+    section.core-stage{background:#fff;border:1px solid #d7e3dc;border-radius:16px;margin:20px 0;padding:26px 28px}.core-stage .chapter-num{background:#146b58;border-color:#146b58;color:#fff;border-radius:7px;font-size:12px;padding:7px 9px;margin-top:0}.core-stage h2{font-size:29px}.stage-fields{grid-template-columns:94px 1fr;margin:17px 0;border-radius:10px}.stage-fields dt,.stage-fields dd{font-size:14px;padding:13px 16px}.stage-fields dt{background:#f1f6f3}.output-file small{font-size:13px;line-height:1.7;margin-top:4px}.output-file a{font-size:14px}.output-file li+li{margin-top:13px}.shared-example{background:#f3f5f3;border-left:3px solid #9bb9ab;font-size:14px;padding:14px 16px;border-radius:0 8px 8px 0;margin-bottom:0}.shared-example b{font-size:12px;color:#52766a}.shared-example .reading-note{font-size:12px}
+    table{font-size:14px}th{background:#edf3ef;font-size:12px;padding:12px 14px}td{padding:13px 14px}#sparql table td:first-child{width:34%;overflow-wrap:anywhere}.table-wrap{border-radius:10px}.mcp-flow{font-size:14px;border-radius:10px}.print-button{font-size:12px;padding:10px 15px;box-shadow:0 4px 14px #173e3820}
+    @media(max-width:1100px) and (min-width:761px){.layout{grid-template-columns:210px minmax(0,1fr)}.main{padding:0 26px 60px}.core-stage h2{font-size:26px}}
+    @media(max-width:760px){.layout{display:block}.main{padding:0 16px 48px}.sidebar{padding:10px 12px;background:#173c36}.sidebar nav{gap:4px}.nav-group{display:none}.sidebar nav a{font-size:11px;padding:7px 9px}.stage-link span{width:16px;height:16px;margin-right:3px}.hero{padding-top:30px!important}.lead{font-size:16px}.scope-line{font-size:12px}.meta{gap:6px}.meta span{font-size:11px}section.chapter{padding:30px 0!important}h2{font-size:24px}.mainline{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}.mainline a{padding:12px 3px;border-radius:8px}.mainline a:last-child{grid-column:auto}.mainline b{font-size:clamp(11px,3.3vw,15px)}.mainline span{font-size:10px;line-height:1.4;display:block}.mainline i{font-size:10px}.mainline a:after{display:none}.core-stage{padding:19px 15px!important;border-radius:12px;margin:15px 0!important}.core-stage h2{font-size:23px}.stage-fields{grid-template-columns:66px 1fr}.stage-fields dt,.stage-fields dd{padding:11px 10px;font-size:13px}.shared-example{font-size:13px;padding:12px}.core-stage .chapter-head{gap:9px}.business-lane{padding:14px}.business-root{padding:16px}.business-people{padding:14px}.print-button{margin-top:16px}}
+    @media print{.nav-group{display:none}section.core-stage{margin:10px 0;padding:18px!important;background:#fff}.mainline{grid-template-columns:repeat(5,1fr)}.core-stage h2{font-size:20pt}.scope-line{font-size:10pt}.meta span{background:none}.mainline a:after{display:none}}
+
+    .content-layer{margin:32px 0 48px;border:1px solid #d6e0da;border-radius:18px;overflow:hidden;scroll-margin-top:24px;background:#fff}
+    .layer-head{display:flex;gap:20px;align-items:flex-start;padding:26px 28px;background:#e9efe9;border-bottom:1px solid #d6e0da}.layer-number{display:grid;place-items:center;flex:none;width:55px;height:55px;border-radius:12px;background:#fff;color:#517b66;font-size:23px;font-weight:750}.layer-kicker{font-size:11px;font-weight:700;letter-spacing:.1em;color:#60816c;margin:0 0 5px}.layer-head h2{font-size:31px;line-height:1.2;margin:0 0 8px}.layer-description{font-size:13px;color:#597066;margin:0;line-height:1.6}.layer-content{padding:0 28px 12px}.layer-content>section.chapter:last-child{border-bottom:0}
+    .content-layer.standard{border:2px solid #24745f;background:#edf4ef}.standard>.layer-head{background:#175d4b;border-bottom:0;color:white}.standard>.layer-head .layer-number{background:#ffffff1a;color:white;border:1px solid #ffffff3d}.standard>.layer-head h2{color:white}.standard>.layer-head .layer-kicker{color:#b2dbca}.standard>.layer-head .layer-description{color:#d1e8dd}.standard>.layer-content{padding:0 24px 20px}.standard #path{border-bottom:0;padding-top:25px}.standard #path .status-item{background:#f8fbf9}.standard .mainline a:not(:last-child):after{background:#edf4ef}.standard section.core-stage{margin:15px 0;padding:24px}
+    .application>.layer-head{background:#edf0f3}.application .layer-number{color:#506474}.application .layer-kicker{color:#647688}.application>.layer-content{background:#fff}.foundation #overview h2,.foundation #business h2,.application .chapter-head h2{font-size:23px}.foundation .chapter-num,.application .chapter-num{border:0;background:#eef3ef;color:#688273}.foundation .card,.foundation .compare{background:#fafcf9}.application .card,.application .compare{background:#f8fafb}
+    .sidebar nav a.layer-nav{display:block;margin:18px 0 5px;padding:7px 9px;background:#ffffff0b;color:#acd0bd;font-size:10px;letter-spacing:.04em;border-radius:5px}.sidebar nav a.layer-nav.primary{color:#e1f8ed;background:#ffffff15}.sidebar nav a.layer-nav:hover{background:#ffffff20}.sidebar nav a.layer-nav.active{background:#ffffff25;color:#fff}
+    @media(max-width:760px){.content-layer{margin:22px 0 28px;border-radius:13px;scroll-margin-top:12px}.layer-head{padding:20px 16px;gap:13px}.layer-number{width:40px;height:40px;font-size:18px;border-radius:9px}.layer-head h2{font-size:25px}.layer-description{font-size:12px}.layer-content{padding:0 13px 8px}.standard>.layer-content{padding:0 10px 12px}.standard section.core-stage{padding:18px 12px!important}.sidebar nav a.layer-nav{display:none}.foundation #overview h2,.foundation #business h2,.application .chapter-head h2{font-size:21px}.core-stage h2{font-size:21px}.core-stage .chapter-head{gap:8px}.mainline b{font-size:11px}.mainline span{font-size:9px}.mainline{gap:4px}.stage-fields{grid-template-columns:60px 1fr}.stage-fields dt,.stage-fields dd{padding:10px 8px}.scope-line{line-height:1.7}}
+    @media print{.content-layer{break-inside:auto;border:1px solid #aaa;margin:20px 0}.layer-head{break-after:avoid;background:#eee!important;color:#000!important}.standard>.layer-head h2,.standard>.layer-head .layer-kicker,.standard>.layer-head .layer-description{color:#000}.standard>.layer-head .layer-number{color:#000;border-color:#aaa}.layer-content,.standard>.layer-content{padding:0 12px}.standard{background:#fff!important}.core-stage{break-inside:avoid-page}.layer-head h2{font-size:23pt}}
+  </style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" aria-label="内容目录">
+    <div class="brand"><div class="brand-mark">S</div><strong>SIDM 业务本体</strong><small>一条主线，对应全部成果</small></div>
+    <div class="nav-label">阅读导航</div>
+    <nav id="toc">
+      <a class="nav-group layer-nav" href="#foundation-layer">01 业务基础</a>
+      <a href="#overview">当前成果</a>
+      <a href="#business">核心关系与口径</a>
+      <a class="nav-group primary layer-nav" href="#standard-layer">02 标准建设主线</a>
+      <a href="#path">五环节总览</a>
+      <a class="stage-link" href="#owl"><span>1</span> OWL · 定义业务</a>
+      <a class="stage-link" href="#rdf"><span>2</span> RDF · 连接记录</a>
+      <a class="stage-link" href="#hermit"><span>3</span> HermiT · 推导关系</a>
+      <a class="stage-link" href="#shacl"><span>4</span> SHACL · 检查数据</a>
+      <a class="stage-link" href="#sparql"><span>5</span> SPARQL · 查询答案</a>
+      <a class="nav-group layer-nav" href="#application-layer">03 应用与范围</a>
+      <a href="#capabilities">可用能力</a>
+      <a href="#agents">智能体接入与分工</a>
+      <a href="#status">使用范围</a>
+    </nav>
+    <div class="side-note">本地版本 · 2026-10-09<br>本体 1.0.2</div>
+  </aside>
+  <main class="main"><div class="wrap">
+    <header class="hero">
+      <p class="eyebrow">SIDM 业务本体</p>
+      <h1>从业务定义<br><span>到有依据的答案</span></h1>
+      <p class="lead">将SIDM真实记录连接起来，推导关联、检查问题，向智能体提供需求与项目、未完成工作、项目合同付款、产品运维合同和工单的查询答案及依据。</p>
+      <p class="scope-line">统一产品、需求、项目、项目阶段、关键事项、任务（含子任务）、BUG、项目合同、付款阶段、付款记录、产品运维合同、运维工单、供应商和人员这14类业务对象的含义、关系、数量、责任、属性和状态。</p>
+      <div class="meta"><span><b>对象：</b>14类</span><span><b>关系：</b>20种直接关系、2种推导关系</span><span><b>版本：</b>1.0.2 · 本地可用</span></div>
+    </header>
+
+    <div class="content-layer foundation" id="foundation-layer" aria-labelledby="foundation-layer-title"><header class="layer-head"><span class="layer-number">01</span><div><p class="layer-kicker">业务依据</p><h2 id="foundation-layer-title">业务基础</h2><p class="layer-description">范围、对象、核心关系与已确认业务口径。</p></div></header><div class="layer-content"><section class="chapter" id="overview">
+      <div class="chapter-head"><span class="chapter-num">总览</span><div><h2>当前成果</h2></div></div>
+      <div class="cards">
+        <div class="card"><h3>统一业务定义</h3><p>完整定义产品、需求、项目、项目阶段、关键事项、任务（含子任务）、BUG、项目合同、付款阶段、付款记录、产品运维合同、运维工单、供应商和人员共14类对象；明确业务含义、直接归属、来源与转化、包含与拆分、供应商关系、人员角色及续签关系，并规定数量、关键属性、状态和共同规则。</p></div>
+        <div class="card"><h3>关联真实记录</h3><p>按当前员工权限读取选定产品及项目范围内的SIDM记录，形成可查询的关系网；保留记录标识、来源环境、接口、读取时间和范围。</p></div>
+        <div class="card"><h3>支持智能体查询</h3>
+          <p><b>需求与项目：</b>产品下的需求、需求状态及关联项目。</p>
+          <p><b>未完成工作：</b>未完成任务、子任务、关键事项及尚未关闭BUG，包含状态分类和责任人员。</p>
+          <p><b>项目合同付款：</b>合同金额、阶段计划金额、已登记付款、待付余额、付款情况和读取完整性。</p>
+          <p><b>产品运维合同：</b>合同状态、金额、服务期间、供应商、续签及按录入即付款表达的金额与状态。</p>
+          <p><b>运维工单：</b>产品工单、当前状态、紧急程度和跟进人。</p>
+          <p><b>查询依据：</b>对象标识、来源、读取时间和范围，以及每条答案的校验状态与相关问题。</p>
+        </div>
+      </div>
+      <div class="cols"><div class="compare"><h3>本体与关系网</h3><p>本体定义对象、关系和逻辑；真实记录按这套定义形成实例关系网。两者分别是业务模型与具体事实。</p></div><div class="compare"><h3>当前数字孪生范围</h3><p>按需读取、生成和查询局部业务关系网；尚未建成全量持续同步、长期保存并可点击浏览的图谱平台。</p></div></div>
+    </section><section class="chapter" id="business">
+      <div class="chapter-head"><span class="chapter-num">依据</span><div><h2>核心业务关系与口径</h2></div></div>
+<p class="reading-note"><a href="SIDM本体关系图.html">打开交互本体关系图 ↗</a> · 查看当前OWL模型中的对象、关系和属性。</p>
+<div class="business-map">
+        <div class="business-root"><strong>产品</strong><span>需求、建设项目和持续运维的共同归属</span></div>
+        <div class="business-lane"><h3>建设实施</h3>
+          <div class="business-line"><b>产品</b><span>承载</span><b>需求</b><span>可转化为</span><b>项目</b></div>
+          <div class="business-line"><b>产品</b><span>承载</span><b>项目</b></div>
+          <div class="business-line"><b>需求或项目</b><span>安排</span><b>任务</b><span>可拆分为</span><b>子任务</b></div>
+          <div class="business-line"><b>需求或项目</b><span>关联</span><b>BUG</b></div>
+          <div class="business-line"><b>项目</b><span>可建立</span><b>项目阶段</b><span>包含</span><b>关键事项</b></div>
+        </div>
+        <div class="business-lane commerce-lane"><h3>项目商务</h3>
+          <div class="business-line"><b>项目</b><span>可有</span><b>项目合同</b><span>划分</span><b>付款阶段</b><span>归集</span><b>付款记录</b></div>
+          <div class="business-line"><b>项目合同</b><span>签约方</span><b>供应商</b></div>
+        </div>
+        <div class="business-lane"><h3>产品运维</h3>
+          <div class="business-line"><b>产品</b><span>可有</span><b>产品运维合同</b><span>服务方</span><b>供应商</b></div>
+          <div class="business-line"><b>新运维合同</b><span>续签自</span><b>原运维合同</b></div>
+          <div class="business-line"><b>产品</b><span>问题处理</span><b>运维工单</b></div>
+        </div>
+        <div class="business-people"><strong>人员</strong><span>按具体对象承担负责人、成员、协作人、处理人、跟进人、经办人或提出人。</span></div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>关键口径</th><th>已确认定义</th></tr></thead><tbody>
+        <tr><td>需求与项目</td><td>一条需求可以不转项目；最多一个项目。每个项目只有一个来源需求，二者属于同一产品。</td></tr>
+        <tr><td>项目与合同</td><td>项目可以没有合同，最多一份项目合同；项目阶段可选。项目阶段包含关键事项，合同划分付款阶段，两个阶段不是同一种对象。</td></tr>
+        <tr><td>工作归属</td><td>任务、BUG只直接归属需求或项目之一，不因转项目自动改挂；主子任务归属一致，当前支持两层；主任务完成时子任务须全部完成。</td></tr>
+        <tr><td>项目付款</td><td>OA审批并实际付款后登记付款明细，按阶段和合同汇总已付及待付金额。</td></tr>
+        <tr><td>运维合同</td><td>按前后续签管理，不采用并行合同；新合同关联原合同并分别保留服务期间，工单归属产品，不按日期自动绑定合同；录入即表示已付款，金额取合同金额，无单独付款阶段和明细。</td></tr>
+        <tr><td>人员与状态</td><td>责任按具体对象确定。各对象的计划、实际日期和状态分别保留，不用关联对象的状态替代。</td></tr>
+      </tbody></table></div>
+      <ul class="output-file"><li><a href="../../docs/SIDM业务骨架.md">SIDM业务骨架.md</a><small>存放：完整对象定义、业务关系、数量、人员角色、属性、状态与共同规则。用途：确认业务口径，作为五个环节的共同依据。</small></li></ul>
+    </section></div></div>
+<div class="content-layer standard" id="standard-layer" aria-labelledby="standard-layer-title"><header class="layer-head"><span class="layer-number">02</span><div><p class="layer-kicker">核心路径</p><h2 id="standard-layer-title">标准建设主线</h2><p class="layer-description">OWL定义业务，RDF连接记录，HermiT推导关系，SHACL检查数据，SPARQL查询答案。</p></div></header><div class="layer-content"><section class="chapter" id="path">
+      <div class="chapter-head"><span class="chapter-num">主线</span><div><h2>建设路径与成果对应</h2></div></div>
+      <div class="mainline" aria-label="五个标准环节">
+        <a href="#owl"><i>1</i><b>OWL</b><span>定义业务</span></a>
+        <a href="#rdf"><i>2</i><b>RDF</b><span>连接真实记录</span></a>
+        <a href="#hermit"><i>3</i><b>HermiT</b><span>推导关系</span></a>
+        <a href="#shacl"><i>4</i><b>SHACL</b><span>检查数据</span></a>
+        <a href="#sparql"><i>5</i><b>SPARQL</b><span>查询答案</span></a>
+      </div>
+      <p>业务骨架是这五个环节的共同依据，MCP是智能体使用这些能力的入口。交付物直接列在所属环节下。</p>
+      <div class="status-item"><b>分工</b><span>OWL是定义语言；RDF是关系数据；HermiT是推理程序；SHACL是数据检查标准；SPARQL是查询语言。</span></div>
+    </section><section class="chapter core-stage" id="owl">
+      <div class="chapter-head"><span class="chapter-num">01</span><div><h2>OWL：定义业务</h2></div></div>
+      <dl class="stage-fields">
+        <dt>做什么</dt><dd>把已确认的业务对象、关系和逻辑，写成机器可读取的正式模型。</dd>
+        <dt>输入</dt><dd>业务骨架中的14类对象、直接关系、可推导关系和明确的逻辑约束。</dd>
+        <dt>得到什么</dt><dd>统一的业务模型。它规定对象类别和关系含义，不存放SIDM的全部真实记录。</dd>
+        <dt>交付物</dt><dd><ul class="output-file"><li><a href="standard/sidm.ttl">sidm.ttl</a><small>存放：OWL类别、关系、属性、逻辑公理、业务注释及版本，使用Turtle格式。用途：维护正式本体主文件。</small></li><li><a href="standard/sidm.owl">sidm.owl</a><small>存放：同一模型的RDF/XML格式。用途：供标准工具加载，并与主文件核对等价；不是第二套业务定义。</small></li></ul></dd>
+      </dl>
+      <div class="shared-example"><b>同一个例子 · 先有规则</b><p>任务属于项目，项目归属产品；可以沿着项目，得到任务关联的产品。</p></div>
+    </section><section class="chapter core-stage" id="rdf">
+      <div class="chapter-head"><span class="chapter-num">02</span><div><h2>RDF：连接真实记录</h2></div></div>
+      <dl class="stage-fields">
+        <dt>做什么</dt><dd>按业务模型，把授权读取的具体记录表示成“对象—关系—对象或数值”。</dd>
+        <dt>输入</dt><dd>选定产品及项目范围内的SIDM记录、字段对照和来源信息。</dd>
+        <dt>得到什么</dt><dd>原始RDF实例图：有具体记录、属性和直接关系，保留来源环境、记录ID、接口、读取时间与范围。</dd>
+        <dt>交付物</dt><dd><p><b>原始RDF实例图 · asserted.ttl</b>：查询时生成，承载本次读取的具体事实。业务数据变化后需要重新读取，不是一份固定的全量本体文件。</p><p class="reading-note">实例图及后续推理、校验、答案文件在运行时生成，实时MCP调用使用临时工作目录；不是固定的全量数据文件。接口字段对照和采集程序负责准备数据。</p></dd>
+      </dl>
+      <div class="shared-example"><b>同一个例子 · 放入记录</b><p>任务甲 → 属于 → 项目乙<br>项目乙 → 归属 → 产品丙<br>任务甲 → 状态 → 处理中</p><p class="reading-note">甲、乙、丙为示意名称，仅展示关系形式，不代表实际查询结果。</p></div>
+    </section><section class="chapter core-stage" id="hermit">
+      <div class="chapter-head"><span class="chapter-num">03</span><div><h2>HermiT：推导关系</h2></div></div>
+      <dl class="stage-fields">
+        <dt>做什么</dt><dd>按OWL逻辑检查矛盾，并找出原始事实能够推导出的关系。</dd>
+        <dt>输入</dt><dd>OWL模型和原始RDF实例图。</dd>
+        <dt>得到什么</dt><dd>逻辑检查结果，以及保留原始事实并加入推导关联的RDF图。</dd>
+        <dt>交付物</dt><dd><p><b>推理后的RDF图 · inferred.ttl</b>：存放原始关系与推导关系，供后续查询使用。</p><p><b>推理报告 · hermit.log</b>：存放逻辑一致性、矛盾与执行信息，供复核使用。</p><p class="reading-note">HermiT是运行程序；上述图和报告才是它的输出。</p></dd>
+      </dl>
+      <div class="shared-example"><b>同一个例子 · 得到关联</b><p>任务甲 → 关联产品 → 产品丙</p><p>任务甲仍直接属于项目乙，不因此改为直接属于产品丙，也不补造来源需求。</p></div>
+    </section><section class="chapter core-stage" id="shacl">
+      <div class="chapter-head"><span class="chapter-num">04</span><div><h2>SHACL：检查数据</h2></div></div>
+      <dl class="stage-fields">
+        <dt>做什么</dt><dd>检查记录是否满足必要关系、唯一归属、数量、状态、日期和金额要求。</dd>
+        <dt>输入</dt><dd>原始RDF实例图和SHACL检查规则。使用原始数据，避免推导结果掩盖缺项。</dd>
+        <dt>得到什么</dt><dd>数据校验结论和问题清单；每个问题关联具体对象与违反的要求。</dd>
+        <dt>交付物</dt><dd><ul class="output-file"><li><a href="standard/shapes.ttl">shapes.ttl</a><small>存放：必要关系、归属、数量、主子任务、状态、日期和金额约束。用途：统一执行数据检查。</small></li><li><b>数据校验报告 · shacl.ttl / shacl.txt</b><small>存放：是否通过、问题对象和违规内容。用途：标明答案中需要核实的数据问题。</small></li></ul></dd>
+      </dl>
+      <div class="shared-example"><b>同一个例子 · 检查缺项</b><p>如果项目乙没有记录来源需求，报告“项目乙缺少来源需求”。任务甲关联产品丙的关系可以成立，同时项目乙存在数据缺项。</p></div>
+    </section><section class="chapter core-stage" id="sparql">
+      <div class="chapter-head"><span class="chapter-num">05</span><div><h2>SPARQL：查询答案</h2></div></div>
+      <dl class="stage-fields">
+        <dt>做什么</dt><dd>按照确定的问题，从关系图中查出业务答案。</dd>
+        <dt>输入</dt><dd>原始及推理后的RDF数据、查询语句、产品或项目范围。</dd>
+        <dt>得到什么</dt><dd>需求与项目、未完成工作、合同及阶段付款、运维合同和工单的结果。工具结合校验报告，为每条答案标记相关问题。</dd>
+        <dt>交付物</dt><dd><b>七份查询文件</b>：存放SPARQL语句，负责不同业务问题；运行后得到结构化查询结果，并由工具整理到answer.json。</dd>
+      </dl>
+      <div class="table-wrap"><table><thead><tr><th>查询文件</th><th>存放内容与用途</th></tr></thead><tbody>
+        <tr><td><a href="standard/queries/requirements.rq">requirements.rq</a></td><td>产品需求、需求状态及关联项目查询；查清需求与项目的来源关系。</td></tr>
+        <tr><td><a href="standard/queries/inferred-product.rq">inferred-product.rq</a></td><td>工作对象关联产品查询；读取HermiT推导得到的产品关系。</td></tr>
+        <tr><td><a href="standard/queries/open-work.rq">open-work.rq</a></td><td>未完成任务、子任务、关键事项及尚未关闭BUG查询；返回状态分类与责任人员。</td></tr>
+        <tr><td><a href="standard/queries/payments.rq">payments.rq</a></td><td>项目合同金额、已读取付款合计、完整性、已付及待付查询；按登记明细汇总合同付款。</td></tr>
+        <tr><td><a href="standard/queries/stage-payments.rq">stage-payments.rq</a></td><td>付款阶段的计划、已付、待付、付款情况及完整性查询；查看分阶段付款。</td></tr>
+        <tr><td><a href="standard/queries/maintenance-contracts.rq">maintenance-contracts.rq</a></td><td>运维合同状态、金额、服务期间、供应商、续签及付款口径查询；按“录入即付款”表达有效合同金额与付款状态。</td></tr>
+        <tr><td><a href="standard/queries/work-orders.rq">work-orders.rq</a></td><td>产品工单状态、紧急程度和跟进人查询；查看产品问题处理情况。</td></tr>
+      </tbody></table></div>
+      <div class="shared-example"><b>同一个例子 · 回答问题</b><p>查询“产品丙有哪些未完成任务”，可以沿着关联产品找到“任务甲，处理中”。同时保留项目乙缺少来源需求的相关问题。</p></div>
+    </section></div></div>
+<div class="content-layer application" id="application-layer" aria-labelledby="application-layer-title"><header class="layer-head"><span class="layer-number">03</span><div><p class="layer-kicker">使用能力</p><h2 id="application-layer-title">应用与范围</h2><p class="layer-description">查询能力、智能体接入分工及当前使用边界。</p></div></header><div class="layer-content"><section class="chapter" id="capabilities">
+      <div class="chapter-head"><span class="chapter-num">能力</span><div><h2>可用能力</h2></div></div>
+      <div class="table-wrap"><table><thead><tr><th>查询内容</th><th>返回结果</th></tr></thead><tbody>
+        <tr><td>产品需求与项目</td><td>产品下的需求、关联项目及项目来源。</td></tr>
+        <tr><td>项目未完成工作</td><td>指定项目的未完成任务、子任务、关键事项及尚未关闭的BUG；包含状态分类和责任人员。</td></tr>
+        <tr><td>项目合同与付款</td><td>合同金额、各付款阶段的计划金额、已读取付款合计、完整性、已登记付款、待付余额及付款情况。</td></tr>
+        <tr><td>产品运维</td><td>运维合同状态、金额、服务期间、供应商、续签关系及按录入即付款表达的已付款金额；产品工单包含状态、紧急程度和跟进人。</td></tr>
+        <tr><td>关系推导</td><td>通过项目关联任务与产品；从需求查找其关联项目。</td></tr>
+        <tr><td>数据检查</td><td>缺少必要关系、归属冲突、任务完成状态不一致、续签日期及付款金额问题。</td></tr>
+      </tbody></table></div>
+      <div class="cols">
+        <div class="compare"><h3>答案有依据</h3><p>保留原记录 ID、来源接口、读取时间和查询范围。</p></div>
+        <div class="compare"><h3>问题单独标明</h3><p>每条答案标记“通过已执行校验”或“异常待核实”，并列出相关数据问题。</p></div>
+      </div>
+    </section><section class="chapter" id="agents">
+      <div class="chapter-head"><span class="chapter-num">使用</span><div><h2>智能体通过MCP使用整条链</h2></div></div>
+      <div class="mcp-flow">用户提问 → 智能体确定产品或项目 → Query MCP调用本体服务 → 返回答案、查询范围和数据问题</div>
+      <div class="cols"><div class="compare"><h3>Query MCP：查</h3><p>工具为 <code>sidm_standard_ontology_query</code>。使用当前员工权限读取SIDM数据，并调用上述标准组件；智能体整理返回结果。</p></div><div class="compare"><h3>Action MCP：改</h3><p>业务数据修改继续通过Action MCP，经过预览、用户确认和执行。本体查询工具只读。</p></div></div>
+      <div class="cards"><div class="card"><h3>智能体</h3><p>理解提问、确定范围、选择工具，将返回结果整理为业务答案。</p></div><div class="card"><h3>本体服务</h3><p>装载业务模型，关联数据，运行标准推理、数据检查和查询，标记相关异常。</p></div><div class="card"><h3>SIDM</h3><p>保存业务记录，按员工身份和模块权限提供数据，执行原有业务规则并留下审计。</p></div></div>
+      <div class="status-item"><b>本机入口</b><span>Codex另有独立本体MCP复核入口，使用同一标准引擎。SIDM正式接法仍是Query负责查询，Action负责写入。</span></div>
+      <ul class="output-file"><li><a href="standard/Query-MCP接入说明.md">Query-MCP接入说明.md</a><small>存放：工具参数、输出、权限、错误、审计及智能体使用约定。用途：将标准本体查询接入智能体。</small></li></ul>
+      <div class="status-item"><b>运行关系</b><span>OWL模型供装载与推理使用；SHACL检查原始图；SPARQL查询原始事实与推导关联。五项有各自分工，不是把同一份文件依次改成五种格式。</span></div>
+    </section><section class="chapter" id="status">
+      <div class="chapter-head"><span class="chapter-num">范围</span><div><h2>当前可用到哪里</h2></div></div>
+      <div class="status-list">
+        <div class="status-item"><b>本地可用</b><span>业务模型、授权数据映射、HermiT推理、SHACL检查、SPARQL查询，以及现有Query MCP和本机Codex调用入口。</span></div>
+        <div class="status-item"><b>数据范围</b><span>按需生成选定产品范围的关系图。未建设全量持续同步和可点击浏览的图谱平台。</span></div>
+        <div class="status-item"><b>答案边界</b><span>项目付款按登记明细计算；运维合同按录入即已付款表达。金额不代替银行凭证，校验通过只覆盖已建立的规则。</span></div>
+        <div class="status-item"><b>已知缺项</b><span>产品2的4个历史项目未记录来源需求，保留缺项提示。</span></div>
+        <div class="status-item pending"><b>尚未验证</b><span>正式平台完整身份接入、多用户实际调用及生产运行环境。最近一次实时复核因本机登录凭据失效未完成。</span></div>
+        <div class="status-item pending"><b>尚未发布</b><span>正式环境未部署，本轮成果未提交Git。</span></div>
+      </div>
+    </section></div></div>
+
+  </div></main>
+</div>
+<button class="print-button" type="button" id="printButton" aria-label="打印或保存为 PDF">打印 / 保存 PDF</button>
+<script>
+ document.getElementById('printButton').addEventListener('click',()=>window.print());
+ if('IntersectionObserver' in window){
+  const links=[...document.querySelectorAll('#toc a')];
+  const observer=new IntersectionObserver(entries=>{
+   const visible=entries.filter(e=>e.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];if(!visible)return;
+   links.forEach(link=>link.classList.toggle('active',link.getAttribute('href')==='#'+visible.target.id));
+  },{rootMargin:'-15% 0px -70% 0px',threshold:[0,.1,.5]});
+  document.querySelectorAll('.chapter').forEach(section=>observer.observe(section));
+ }
+</script>
+</body>
+</html>

@@ -2,6 +2,8 @@ import type { ProColumns } from '@ant-design/pro-components';
 import { useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
+  appendReturnTo,
+  resolveReturnTo,
   AdminButton,
   AdminSegmented,
   AdminTextAction,
@@ -41,6 +43,12 @@ export function DetailTemplateDemo() {
   const [demoState, setDemoState] = useState<'normal' | 'loading' | 'error' | 'notFound'>('normal');
   const [relatedTableMode, setRelatedTableMode] = useState<RelatedTableMode>('display');
   const [navigationMode, setNavigationMode] = useState<NavigationMode>('anchor');
+  const [returnSourceMode, setReturnSourceMode] = useState<'module' | 'twin'>('module');
+  const demoSource = returnSourceMode === 'twin' ? '/digital-twin?product=78&kind=orders&page=2' : '/work-orders?view=mine&page=2';
+  const demoDetail = appendReturnTo('/work-orders/95', demoSource);
+  const demoReturn = resolveReturnTo(new URL(demoDetail, 'http://local').search, '/work-orders', '/work-orders', ['/digital-twin']);
+  const [relatedPage, setRelatedPage] = useState(1);
+  const [relatedPageSize, setRelatedPageSize] = useState(1);
   const activePage: DemoPage = new URLSearchParams(location.search).get('detailDemoPage') === 'permissions'
     ? 'permissions'
     : 'basic';
@@ -105,14 +113,18 @@ export function DetailTemplateDemo() {
           ]}
         />
       </TemplateDetailSection>
+      <TemplateDetailSection title="来源返回" sectionKey="return-source" extra={<AdminSegmented value={returnSourceMode} options={[{ label: '模块列表', value: 'module' }, { label: '数字孪生', value: 'twin' }]} onChange={value => setReturnSourceMode(value as 'module' | 'twin')} />}>
+        <DetailMetaList columns={1} items={[{ label: '详情返回目标', value: demoReturn, longText: true }, { label: '返回规则', value: '保留来源产品、分类和分页；跨模块仅允许数字孪生完整路径，其他地址回退到模块列表。', longText: true }]} />
+      </TemplateDetailSection>
       <TemplateDetailTableSection<RelatedRecord>
         title="关联数据"
         sectionKey="related"
         summary={relatedTableMode === 'empty' ? '共 0 条' : '已完成 1 / 共 2 条'}
         extra={relatedTableMode === 'managed' ? <AdminButton size="small" type="primary">新增关联记录</AdminButton> : undefined}
+        pagination={{ current: relatedPage, pageSize: relatedPageSize, pageSizeOptions: [1, 2], total: relatedTableMode === 'empty' ? 0 : relatedRecords.length, onChange: (page, size) => { setRelatedPage(size === relatedPageSize ? page : 1); setRelatedPageSize(size); } }}
         table={{
           columns: relatedColumns,
-          dataSource: relatedTableMode === 'empty' ? [] : relatedRecords,
+          dataSource: relatedTableMode === 'empty' ? [] : relatedRecords.slice((relatedPage - 1) * relatedPageSize, relatedPage * relatedPageSize),
           scroll: { x: 1100 }
         }}
       />

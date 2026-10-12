@@ -1,0 +1,587 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix s: <urn:sidm:ontology:> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+s:BugShape a sh:NodeShape ;
+    sh:closed true ;
+    sh:ignoredProperties ( rdf:type s:sourceId s:sourceEnvironment s:sourceCapturedAt s:sourceEndpoint s:sourceSnapshot s:paymentsComplete ) ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:name ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:description ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:bugType ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:severity ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:resolution ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:resolvedOn ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:closedOn ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:activationReason ],
+        [ sh:datatype xsd:string ;
+            sh:in ( "新建" "已修复" "已关闭" "被激活" "新建"^^xsd:string "已修复"^^xsd:string "已关闭"^^xsd:string "被激活"^^xsd:string ) ;
+            sh:maxCount 1 ;
+            sh:path s:status ],
+        [ sh:class s:Person ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:path s:assignee ],
+        [ sh:class s:Requirement ;
+            sh:maxCount 1 ;
+            sh:minCount 0 ;
+            sh:path s:belongsToRequirement ],
+        [ sh:class s:Project ;
+            sh:maxCount 1 ;
+            sh:minCount 0 ;
+            sh:path s:belongsToProject ] ;
+    sh:targetClass s:Bug ;
+    sh:xone ( [ sh:property [ sh:maxCount 1 ;
+                        sh:minCount 1 ;
+                        sh:path s:belongsToRequirement ],
+                    [ sh:maxCount 0 ;
+                        sh:path s:belongsToProject ] ] [ sh:property [ sh:maxCount 1 ;
+                        sh:minCount 1 ;
+                        sh:path s:belongsToProject ],
+                    [ sh:maxCount 0 ;
+                        sh:path s:belongsToRequirement ] ] ) .
+
+s:KeyItemShape a sh:NodeShape ;
+    sh:closed true ;
+    sh:ignoredProperties ( rdf:type s:sourceId s:sourceEnvironment s:sourceCapturedAt s:sourceEndpoint s:sourceSnapshot s:paymentsComplete ) ;
+    sh:property [ sh:class s:ProjectStage ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:path s:itemStage ],
+        [ sh:class s:Person ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:path s:owner ],
+        [ sh:class s:Person ;
+            sh:minCount 0 ;
+            sh:path s:collaborator ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:name ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:originalDueOn ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:currentDueOn ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:actualEndOn ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:deliveryRequirement ],
+        [ sh:datatype xsd:string ;
+            sh:in ( "未开始" "进行中" "已完成" "已暂停" "未开始"^^xsd:string "进行中"^^xsd:string "已完成"^^xsd:string "已暂停"^^xsd:string ) ;
+            sh:maxCount 1 ;
+            sh:path s:status ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:pauseReason ] ;
+    sh:targetClass s:KeyItem .
+
+s:MaintenanceContractShape a sh:NodeShape ;
+    sh:closed true ;
+    sh:ignoredProperties ( rdf:type s:sourceId s:sourceEnvironment s:sourceCapturedAt s:sourceEndpoint s:sourceSnapshot s:paymentsComplete ) ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:code ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:name ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:signedOn ],
+        [ sh:datatype xsd:decimal ;
+            sh:maxCount 1 ;
+            sh:minExclusive 0 ;
+            sh:path s:amount ;
+            sh:pattern "^[0-9]+(\\.[0-9]{1,2})?$" ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:serviceStartOn ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:serviceEndOn ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:terminationOn ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:terminationReason ],
+        [ sh:datatype xsd:string ;
+            sh:in ( "待生效" "生效中" "已到期" "已续签" "已终止" "待生效"^^xsd:string "生效中"^^xsd:string "已到期"^^xsd:string "已续签"^^xsd:string "已终止"^^xsd:string ) ;
+            sh:maxCount 1 ;
+            sh:path s:status ],
+        [ sh:class s:Supplier ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:path s:supplier ],
+        [ sh:class s:MaintenanceContract ;
+            sh:maxCount 1 ;
+            sh:minCount 0 ;
+            sh:path s:previousContract ],
+        [ sh:minCount 1 ;
+            sh:path s:amount ],
+        [ sh:minCount 1 ;
+            sh:path s:serviceStartOn ],
+        [ sh:minCount 1 ;
+            sh:path s:serviceEndOn ],
+        [ sh:class s:Product ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:path s:belongsToProduct ] ;
+    sh:sparql s:RenewalCycle,
+        s:RenewalDates,
+        s:RenewalProduct,
+        s:ServiceOrder ;
+    sh:targetClass s:MaintenanceContract .
+
+s:PaymentRecordShape a sh:NodeShape ;
+    sh:closed true ;
+    sh:ignoredProperties ( rdf:type s:sourceId s:sourceEnvironment s:sourceCapturedAt s:sourceEndpoint s:sourceSnapshot s:paymentsComplete ) ;
+    sh:property [ sh:datatype xsd:decimal ;
+            sh:maxCount 1 ;
+            sh:minExclusive 0 ;
+            sh:path s:amount ;
+            sh:pattern "^[0-9]+(\\.[0-9]{1,2})?$" ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:paymentMonth ;
+            sh:pattern "^[0-9]{4}-(0[1-9]|1[0-2])$" ],
+        [ sh:class s:PaymentStage ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:path s:recordStage ],
+        [ sh:minCount 1 ;
+            sh:path s:amount ],
+        [ sh:class s:Person ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:path s:handler ] ;
+    sh:targetClass s:PaymentRecord .
+
+s:PaymentStageShape a sh:NodeShape ;
+    sh:closed true ;
+    sh:ignoredProperties ( rdf:type s:sourceId s:sourceEnvironment s:sourceCapturedAt s:sourceEndpoint s:sourceSnapshot s:paymentsComplete ) ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:name ],
+        [ sh:datatype xsd:decimal ;
+            sh:maxCount 1 ;
+            sh:minExclusive 0 ;
+            sh:path s:plannedAmount ;
+            sh:pattern "^[0-9]+(\\.[0-9]{1,2})?$" ],
+        [ sh:datatype xsd:integer ;
+            sh:maxCount 1 ;
+            sh:path s:order ],
+        [ sh:class s:ProjectContract ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:path s:stageContract ],
+        [ sh:minCount 1 ;
+            sh:path s:plannedAmount ] ;
+    sh:sparql s:Overpayment ;
+    sh:targetClass s:PaymentStage .
+
+s:PersonShape a sh:NodeShape ;
+    sh:closed true ;
+    sh:ignoredProperties ( rdf:type s:sourceId s:sourceEnvironment s:sourceCapturedAt s:sourceEndpoint s:sourceSnapshot s:paymentsComplete ) ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:name ] ;
+    sh:targetClass s:Person .
+
+s:ProductShape a sh:NodeShape ;
+    sh:closed true ;
+    sh:ignoredProperties ( rdf:type s:sourceId s:sourceEnvironment s:sourceCapturedAt s:sourceEndpoint s:sourceSnapshot s:paymentsComplete ) ;
+    sh:property [ sh:class s:Person ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:path s:owner ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:name ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:description ] ;
+    sh:targetClass s:Product .
+
+s:ProjectContractShape a sh:NodeShape ;
+    sh:closed true ;
+    sh:ignoredProperties ( rdf:type s:sourceId s:sourceEnvironment s:sourceCapturedAt s:sourceEndpoint s:sourceSnapshot s:paymentsComplete ) ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:code ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:name ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:signedOn ],
+        [ sh:datatype xsd:decimal ;
+            sh:maxCount 1 ;
+            sh:minExclusive 0 ;
+            sh:path s:amount ;
+            sh:pattern "^[0-9]+(\\.[0-9]{1,2})?$" ],
+        [ sh:class s:Project ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:path s:contractProject ],
+        [ sh:class s:Supplier ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:path s:supplier ],
+        [ sh:minCount 1 ;
+            sh:path s:amount ],
+        [ sh:class s:PaymentStage ;
+            sh:minCount 1 ;
+            sh:path [ sh:inversePath s:stageContract ] ] ;
+    sh:sparql s:PlanTotal ;
+    sh:targetClass s:ProjectContract .
+
+s:ProjectShape a sh:NodeShape ;
+    sh:closed true ;
+    sh:ignoredProperties ( rdf:type s:sourceId s:sourceEnvironment s:sourceCapturedAt s:sourceEndpoint s:sourceSnapshot s:paymentsComplete ) ;
+    sh:property [ sh:class s:Product ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:path s:belongsToProduct ],
+        [ sh:class s:Person ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:path s:owner ],
+        [ sh:class s:Person ;
+            sh:minCount 0 ;
+            sh:path s:member ],
+        [ sh:class s:Requirement ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:path s:sourceRequirement ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:name ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:description ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:priority ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:startOn ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:expectedEndOn ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:actualEndOn ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:progress ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:risk ],
+        [ sh:datatype xsd:string ;
+            sh:in ( "未开始" "进行中" "已完成" "已暂停" "未开始"^^xsd:string "进行中"^^xsd:string "已完成"^^xsd:string "已暂停"^^xsd:string ) ;
+            sh:maxCount 1 ;
+            sh:path s:status ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:pauseReason ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:pausedAt ] ;
+    sh:sparql s:SameProduct ;
+    sh:targetClass s:Project .
+
+s:ProjectStageShape a sh:NodeShape ;
+    sh:closed true ;
+    sh:ignoredProperties ( rdf:type s:sourceId s:sourceEnvironment s:sourceCapturedAt s:sourceEndpoint s:sourceSnapshot s:paymentsComplete ) ;
+    sh:property [ sh:class s:Project ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:path s:stageProject ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:name ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:description ],
+        [ sh:datatype xsd:integer ;
+            sh:maxCount 1 ;
+            sh:path s:order ] ;
+    sh:targetClass s:ProjectStage .
+
+s:RequirementShape a sh:NodeShape ;
+    sh:closed true ;
+    sh:ignoredProperties ( rdf:type s:sourceId s:sourceEnvironment s:sourceCapturedAt s:sourceEndpoint s:sourceSnapshot s:paymentsComplete ) ;
+    sh:property [ sh:class s:Product ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:path s:belongsToProduct ],
+        [ sh:class s:Person ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:path s:owner ],
+        [ sh:class s:Person ;
+            sh:maxCount 1 ;
+            sh:minCount 0 ;
+            sh:path s:submitter ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:name ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:description ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:requirementType ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:submitterName ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:submitterDepartment ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:submittedOn ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:priority ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:startOn ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:expectedEndOn ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:actualEndOn ],
+        [ sh:datatype xsd:string ;
+            sh:in ( "上会评估" "需求上会" "上会通过" "过会未通过" "提报评估" "需求审批" "审批通过" "审批未通过" "需求验证" "预研通过" "预研不通过" "需求整理" "实施中" "试运行" "已完成" "已完成未使用" "暂停" "已转项目" "上会评估"^^xsd:string "需求上会"^^xsd:string "上会通过"^^xsd:string "过会未通过"^^xsd:string "提报评估"^^xsd:string "需求审批"^^xsd:string "审批通过"^^xsd:string "审批未通过"^^xsd:string "需求验证"^^xsd:string "预研通过"^^xsd:string "预研不通过"^^xsd:string "需求整理"^^xsd:string "实施中"^^xsd:string "试运行"^^xsd:string "已完成"^^xsd:string "已完成未使用"^^xsd:string "暂停"^^xsd:string "已转项目"^^xsd:string ) ;
+            sh:maxCount 1 ;
+            sh:path s:status ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:pauseReason ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:pausedAt ] ;
+    sh:targetClass s:Requirement .
+
+s:SupplierShape a sh:NodeShape ;
+    sh:closed true ;
+    sh:ignoredProperties ( rdf:type s:sourceId s:sourceEnvironment s:sourceCapturedAt s:sourceEndpoint s:sourceSnapshot s:paymentsComplete ) ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:name ] ;
+    sh:targetClass s:Supplier .
+
+s:TaskShape a sh:NodeShape ;
+    sh:closed true ;
+    sh:ignoredProperties ( rdf:type s:sourceId s:sourceEnvironment s:sourceCapturedAt s:sourceEndpoint s:sourceSnapshot s:paymentsComplete ) ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:in ( "待处理" "处理中" "已完成" "已暂停" "待处理"^^xsd:string "处理中"^^xsd:string "已完成"^^xsd:string "已暂停"^^xsd:string ) ;
+            sh:maxCount 1 ;
+            sh:path s:status ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:pauseReason ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:pausedAt ],
+        [ sh:class s:Task ;
+            sh:maxCount 1 ;
+            sh:minCount 0 ;
+            sh:path s:parentTask ],
+        [ sh:class s:Person ;
+            sh:minCount 1 ;
+            sh:path s:taskOwner ],
+        [ sh:class s:Requirement ;
+            sh:maxCount 1 ;
+            sh:minCount 0 ;
+            sh:path s:belongsToRequirement ],
+        [ sh:class s:Project ;
+            sh:maxCount 1 ;
+            sh:minCount 0 ;
+            sh:path s:belongsToProject ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:name ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:description ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:taskType ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:priority ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:startOn ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:expectedEndOn ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:actualEndOn ] ;
+    sh:sparql s:TaskCycle ;
+    sh:targetClass s:Task ;
+    sh:xone ( [ sh:property [ sh:maxCount 1 ;
+                        sh:minCount 1 ;
+                        sh:path s:belongsToRequirement ],
+                    [ sh:maxCount 0 ;
+                        sh:path s:belongsToProject ] ] [ sh:property [ sh:maxCount 1 ;
+                        sh:minCount 1 ;
+                        sh:path s:belongsToProject ],
+                    [ sh:maxCount 0 ;
+                        sh:path s:belongsToRequirement ] ] ) .
+
+s:WorkOrderShape a sh:NodeShape ;
+    sh:closed true ;
+    sh:ignoredProperties ( rdf:type s:sourceId s:sourceEnvironment s:sourceCapturedAt s:sourceEndpoint s:sourceSnapshot s:paymentsComplete ) ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:problemType ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:description ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:urgency ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:submitterName ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:submitterDepartment ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:submittedAt ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:expectedResolveAt ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:resolvedAt ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:result ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:activationReason ],
+        [ sh:datatype xsd:string ;
+            sh:in ( "待处理" "处理中" "已解决" "已暂停" "被激活" "待处理"^^xsd:string "处理中"^^xsd:string "已解决"^^xsd:string "已暂停"^^xsd:string "被激活"^^xsd:string ) ;
+            sh:maxCount 1 ;
+            sh:path s:status ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:path s:pauseReason ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:path s:pausedAt ],
+        [ sh:class s:Person ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:path s:follower ],
+        [ sh:class s:Product ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:path s:belongsToProduct ],
+        [ sh:class s:Person ;
+            sh:maxCount 1 ;
+            sh:minCount 0 ;
+            sh:path s:submitter ] ;
+    sh:targetClass s:WorkOrder .
+
+s:Overpayment a sh:SPARQLConstraint ;
+    sh:message "已登记付款不能超过阶段计划"@zh ;
+    sh:select """PREFIX s: <urn:sidm:ontology:>
+SELECT $this WHERE { { SELECT $this (SUM(?v) AS ?total) WHERE { ?record s:recordStage $this ; s:amount ?v . } GROUP BY $this } $this s:plannedAmount ?amount . FILTER(?total > ?amount) }""" .
+
+s:PlanTotal a sh:SPARQLConstraint ;
+    sh:message "付款阶段计划合计必须等于合同金额"@zh ;
+    sh:select """PREFIX s: <urn:sidm:ontology:>
+SELECT $this WHERE { { SELECT $this (SUM(?v) AS ?total) WHERE { ?stage s:stageContract $this ; s:plannedAmount ?v . } GROUP BY $this } $this s:amount ?amount . FILTER(?total != ?amount) }""" .
+
+s:RenewalCycle a sh:SPARQLConstraint ;
+    sh:message "续签关系不能循环"@zh ;
+    sh:select """PREFIX s: <urn:sidm:ontology:>
+SELECT $this WHERE { $this s:previousContract+ $this . }""" .
+
+s:RenewalDates a sh:SPARQLConstraint ;
+    sh:message "新合同服务开始必须晚于原合同有效结束日期（提前终止时采用终止日期）"@zh ;
+    sh:select """PREFIX s: <urn:sidm:ontology:>
+SELECT $this WHERE { $this s:serviceStartOn ?a ; s:previousContract ?previous . ?previous s:serviceEndOn ?end . OPTIONAL { ?previous s:terminationOn ?termination } BIND(COALESCE(?termination, ?end) AS ?b) FILTER(?a <= ?b) }""" .
+
+s:RenewalProduct a sh:SPARQLConstraint ;
+    sh:message "续签合同须属于同一产品"@zh ;
+    sh:select """PREFIX s: <urn:sidm:ontology:>
+SELECT $this WHERE { $this s:belongsToProduct ?p ; s:previousContract/s:belongsToProduct ?q . FILTER(?p != ?q) }""" .
+
+s:SameProduct a sh:SPARQLConstraint ;
+    sh:message "项目与来源需求必须属于同一产品"@zh ;
+    sh:select """PREFIX s: <urn:sidm:ontology:>
+SELECT $this WHERE { $this s:belongsToProduct ?p ; s:sourceRequirement/s:belongsToProduct ?q . FILTER(?p != ?q) }""" .
+
+s:ServiceOrder a sh:SPARQLConstraint ;
+    sh:message "服务结束日期不能早于开始日期"@zh ;
+    sh:select """PREFIX s: <urn:sidm:ontology:>
+SELECT $this WHERE { $this s:serviceStartOn ?a ; s:serviceEndOn ?b . FILTER(?b < ?a) }""" .
+
+s:TaskCycle a sh:SPARQLConstraint ;
+    sh:message "主子任务不能循环"@zh ;
+    sh:select """PREFIX s: <urn:sidm:ontology:>
+SELECT $this WHERE { $this s:parentTask+ $this . }""" .
+
+
+# Current SIDM cardinalities live in SHACL, not permanent OWL restrictions.
+s:RequirementShape sh:property [ sh:path [ sh:inversePath s:sourceRequirement ] ; sh:maxCount 1 ; sh:message "当前SIDM一条需求至多对应一个项目"@zh ] ;
+ sh:property [ sh:path s:requirementType ; sh:in ( "上会立项" "需求提报" "预研" "直接实施" "上会立项"^^xsd:string "需求提报"^^xsd:string "预研"^^xsd:string "直接实施"^^xsd:string ) ] ;
+ sh:sparql s:RequirementPathStatus .
+s:ProjectShape sh:property [ sh:path [ sh:inversePath s:contractProject ] ; sh:maxCount 1 ; sh:message "当前SIDM一个项目至多一份项目合同"@zh ] .
+s:MaintenanceContractShape sh:property [ sh:path [ sh:inversePath s:previousContract ] ; sh:maxCount 1 ; sh:message "当前SIDM运维合同续签链不能分叉"@zh ] ; sh:sparql s:TerminationFacts .
+s:TaskShape sh:sparql s:TaskSource, s:TaskDepth, s:TaskCompletion .
+
+s:TerminationFacts a sh:SPARQLConstraint ; sh:message "终止日期须在服务期间内，终止日期、原因及已终止状态须一致"@zh ; sh:select """PREFIX s: <urn:sidm:ontology:>
+SELECT $this WHERE {
+ OPTIONAL { $this s:terminationOn ?date }
+ OPTIONAL { $this s:terminationReason ?reason }
+ OPTIONAL { $this s:status ?status }
+ OPTIONAL { $this s:serviceStartOn ?start }
+ OPTIONAL { $this s:serviceEndOn ?end }
+ FILTER((BOUND(?date) && (!BOUND(?reason) || STRLEN(STR(?reason))=0 || !BOUND(?status) || ?status!="已终止" || ?date<?start || ?date>?end))
+ || (BOUND(?reason) && STRLEN(STR(?reason))>0 && !BOUND(?date))
+ || (?status="已终止" && !BOUND(?date)))
+}""" .
+s:TaskSource a sh:SPARQLConstraint ; sh:message "子任务必须与主任务直接归属同一个需求或项目"@zh ; sh:select """PREFIX s: <urn:sidm:ontology:>
+SELECT $this WHERE { $this s:parentTask ?parent .
+ { $this s:belongsToProject ?target . FILTER NOT EXISTS { ?parent s:belongsToProject ?target } }
+ UNION { $this s:belongsToRequirement ?target . FILTER NOT EXISTS { ?parent s:belongsToRequirement ?target } } }""" .
+s:TaskDepth a sh:SPARQLConstraint ; sh:message "当前SIDM仅支持主任务与子任务两层"@zh ; sh:select """PREFIX s: <urn:sidm:ontology:>
+SELECT $this WHERE { $this s:parentTask/s:parentTask ?grandparent . }""" .
+s:TaskCompletion a sh:SPARQLConstraint ; sh:message "主任务完成时，其子任务必须均已完成"@zh ; sh:select """PREFIX s: <urn:sidm:ontology:>
+SELECT $this WHERE { $this s:status ?parentStatus . FILTER(STR(?parentStatus)="已完成") ?child s:parentTask $this . OPTIONAL { ?child s:status ?status } FILTER(!BOUND(?status) || ?status!="已完成") }""" .
+s:RequirementPathStatus a sh:SPARQLConstraint ; sh:message "需求前期状态必须适用于对应需求类型"@zh ; sh:select """PREFIX s: <urn:sidm:ontology:>
+SELECT $this WHERE { $this s:requirementType ?type ; s:status ?status .
+ FILTER(STR(?status) IN ("上会评估","需求上会","上会通过","过会未通过","提报评估","需求审批","审批通过","审批未通过","需求验证","预研通过","预研不通过"))
+ FILTER(!((?type="上会立项" && STR(?status) IN ("上会评估","需求上会","上会通过","过会未通过"))
+ || (?type="需求提报" && STR(?status) IN ("提报评估","需求审批","审批通过","审批未通过"))
+ || (?type="预研" && STR(?status) IN ("需求验证","预研通过","预研不通过")))) }""" .

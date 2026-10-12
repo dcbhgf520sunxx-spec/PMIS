@@ -1,0 +1,5338 @@
+{
+  "meta": {
+    "dataset": "SIDM-LOCAL-TWIN-DEMO-20261009",
+    "simulation": true,
+    "currency": "CNY",
+    "timezone": "Asia/Shanghai",
+    "as_of": "2026-10-09",
+    "snapshots": [
+      "2026-09-30",
+      "2026-10-08",
+      "2026-10-09"
+    ],
+    "description": "标讯通全链路虚构演示样本，仅用于本地数据库；人员映射到已有本地账号。"
+  },
+  "people": [
+    {
+      "id": "U1",
+      "name": "李明",
+      "role": "产品负责人"
+    },
+    {
+      "id": "U2",
+      "name": "陈宇",
+      "role": "研发负责人"
+    },
+    {
+      "id": "U3",
+      "name": "王琳",
+      "role": "项目负责人"
+    },
+    {
+      "id": "U4",
+      "name": "赵敏",
+      "role": "运维负责人"
+    },
+    {
+      "id": "U5",
+      "name": "刘洋",
+      "role": "测试负责人"
+    },
+    {
+      "id": "U6",
+      "name": "张悦",
+      "role": "商务经办人"
+    },
+    {
+      "id": "U7",
+      "name": "周航",
+      "role": "前端工程师"
+    },
+    {
+      "id": "U8",
+      "name": "孙琪",
+      "role": "业务分析师"
+    }
+  ],
+  "suppliers": [
+    {
+      "id": "V1",
+      "name": "华辰数字科技（模拟）"
+    },
+    {
+      "id": "V2",
+      "name": "云拓信息服务（模拟）"
+    }
+  ],
+  "products": [
+    {
+      "id": "PROD-001",
+      "name": "标讯通",
+      "description": "企业招采情报、订阅提醒、分析研判与服务运营平台",
+      "owner_id": "U1",
+      "status": 1,
+      "created_at": "2023-12-01T09:00:00+08:00"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "title": "智能标讯检索升级",
+      "product_id": "PROD-001",
+      "owner_id": "U3",
+      "requirement_type": 4,
+      "priority": 2,
+      "status": 36,
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "采购业务部（模拟）",
+      "submit_date": "2026-08-10",
+      "created_at": "2026-08-10T09:00:00+08:00",
+      "expected_end_date": "2026-11-30",
+      "pause_reason": "",
+      "completion_status": "",
+      "description": "围绕标讯通的智能标讯检索升级场景开展建设，涵盖业务确认、交付验证和跟进。",
+      "status_initial": 30
+    },
+    {
+      "id": "REQ-002",
+      "title": "订阅中心重构",
+      "product_id": "PROD-001",
+      "owner_id": "U3",
+      "requirement_type": 2,
+      "priority": 2,
+      "status": 36,
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "采购业务部（模拟）",
+      "submit_date": "2026-06-10",
+      "created_at": "2026-06-10T09:00:00+08:00",
+      "expected_end_date": "2026-11-30",
+      "pause_reason": "",
+      "completion_status": "",
+      "description": "围绕标讯通的订阅中心重构场景开展建设，涵盖业务确认、交付验证和跟进。",
+      "status_initial": 10
+    },
+    {
+      "id": "REQ-003",
+      "title": "招采分析看板",
+      "product_id": "PROD-001",
+      "owner_id": "U3",
+      "requirement_type": 1,
+      "priority": 2,
+      "status": 36,
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "采购业务部（模拟）",
+      "submit_date": "2026-02-01",
+      "created_at": "2026-02-01T09:00:00+08:00",
+      "expected_end_date": "2026-11-30",
+      "pause_reason": "",
+      "completion_status": "",
+      "description": "围绕标讯通的招采分析看板场景开展建设，涵盖业务确认、交付验证和跟进。",
+      "status_initial": 0
+    },
+    {
+      "id": "REQ-004",
+      "title": "企业账号统一认证",
+      "product_id": "PROD-001",
+      "owner_id": "U3",
+      "requirement_type": 2,
+      "priority": 2,
+      "status": 36,
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "采购业务部（模拟）",
+      "submit_date": "2026-03-01",
+      "created_at": "2026-03-01T09:00:00+08:00",
+      "expected_end_date": "2026-11-30",
+      "pause_reason": "",
+      "completion_status": "",
+      "description": "围绕标讯通的企业账号统一认证场景开展建设，涵盖业务确认、交付验证和跟进。",
+      "status_initial": 10
+    },
+    {
+      "id": "REQ-005",
+      "title": "移动端体验适配",
+      "product_id": "PROD-001",
+      "owner_id": "U3",
+      "requirement_type": 4,
+      "priority": 2,
+      "status": 36,
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "采购业务部（模拟）",
+      "submit_date": "2026-08-25",
+      "created_at": "2026-08-25T09:00:00+08:00",
+      "expected_end_date": "2026-11-30",
+      "pause_reason": "",
+      "completion_status": "",
+      "description": "围绕标讯通的移动端体验适配场景开展建设，涵盖业务确认、交付验证和跟进。",
+      "status_initial": 30
+    },
+    {
+      "id": "REQ-006",
+      "title": "AI招采研判试点",
+      "product_id": "PROD-001",
+      "owner_id": "U3",
+      "requirement_type": 3,
+      "priority": 2,
+      "status": 36,
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "采购业务部（模拟）",
+      "submit_date": "2026-09-18",
+      "created_at": "2026-09-18T09:00:00+08:00",
+      "expected_end_date": "2026-11-30",
+      "pause_reason": "",
+      "completion_status": "",
+      "description": "围绕标讯通的AI招采研判试点场景开展建设，涵盖业务确认、交付验证和跟进。",
+      "status_initial": 20
+    },
+    {
+      "id": "REQ-007",
+      "title": "订阅提醒优化",
+      "product_id": "PROD-001",
+      "owner_id": "U8",
+      "requirement_type": 4,
+      "priority": 1,
+      "status": 31,
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "采购业务部（模拟）",
+      "submit_date": "2026-08-12",
+      "created_at": "2026-08-12T09:00:00+08:00",
+      "expected_end_date": "2026-10-30",
+      "pause_reason": "",
+      "completion_status": "",
+      "description": "围绕标讯通的订阅提醒优化场景开展建设，涵盖业务确认、交付验证和跟进。",
+      "status_initial": 30
+    },
+    {
+      "id": "REQ-008",
+      "title": "企业画像标签优化",
+      "product_id": "PROD-001",
+      "owner_id": "U8",
+      "requirement_type": 2,
+      "priority": 1,
+      "status": 12,
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "采购业务部（模拟）",
+      "submit_date": "2026-09-05",
+      "created_at": "2026-09-05T09:00:00+08:00",
+      "expected_end_date": "2026-10-30",
+      "pause_reason": "",
+      "completion_status": "",
+      "description": "围绕标讯通的企业画像标签优化场景开展建设，涵盖业务确认、交付验证和跟进。",
+      "status_initial": 10
+    },
+    {
+      "id": "REQ-009",
+      "title": "竞争对手动态订阅",
+      "product_id": "PROD-001",
+      "owner_id": "U8",
+      "requirement_type": 2,
+      "priority": 1,
+      "status": 11,
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "采购业务部（模拟）",
+      "submit_date": "2026-09-21",
+      "created_at": "2026-09-21T09:00:00+08:00",
+      "expected_end_date": "2026-10-30",
+      "pause_reason": "",
+      "completion_status": "",
+      "description": "围绕标讯通的竞争对手动态订阅场景开展建设，涵盖业务确认、交付验证和跟进。",
+      "status_initial": 10
+    },
+    {
+      "id": "REQ-010",
+      "title": "招标文件智能摘要",
+      "product_id": "PROD-001",
+      "owner_id": "U8",
+      "requirement_type": 3,
+      "priority": 1,
+      "status": 20,
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "采购业务部（模拟）",
+      "submit_date": "2026-09-28",
+      "created_at": "2026-09-28T09:00:00+08:00",
+      "expected_end_date": "2026-10-30",
+      "pause_reason": "",
+      "completion_status": "",
+      "description": "围绕标讯通的招标文件智能摘要场景开展建设，涵盖业务确认、交付验证和跟进。",
+      "status_initial": 20
+    },
+    {
+      "id": "REQ-011",
+      "title": "区域商机热力分析",
+      "product_id": "PROD-001",
+      "owner_id": "U8",
+      "requirement_type": 1,
+      "priority": 1,
+      "status": 1,
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "采购业务部（模拟）",
+      "submit_date": "2026-09-15",
+      "created_at": "2026-09-15T09:00:00+08:00",
+      "expected_end_date": "2026-10-30",
+      "pause_reason": "",
+      "completion_status": "",
+      "description": "围绕标讯通的区域商机热力分析场景开展建设，涵盖业务确认、交付验证和跟进。",
+      "status_initial": 0
+    },
+    {
+      "id": "REQ-012",
+      "title": "中标结果自动归档",
+      "product_id": "PROD-001",
+      "owner_id": "U8",
+      "requirement_type": 4,
+      "priority": 1,
+      "status": 33,
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "采购业务部（模拟）",
+      "submit_date": "2026-07-03",
+      "created_at": "2026-07-03T09:00:00+08:00",
+      "expected_end_date": "2026-10-30",
+      "pause_reason": "",
+      "completion_status": "演示功能已完成并验证。",
+      "description": "围绕标讯通的中标结果自动归档场景开展建设，涵盖业务确认、交付验证和跟进。",
+      "status_initial": 30,
+      "actual_end_date": "2026-07-09"
+    },
+    {
+      "id": "REQ-013",
+      "title": "同名企业去重",
+      "product_id": "PROD-001",
+      "owner_id": "U8",
+      "requirement_type": 4,
+      "priority": 1,
+      "status": 32,
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "采购业务部（模拟）",
+      "submit_date": "2026-08-06",
+      "created_at": "2026-08-06T09:00:00+08:00",
+      "expected_end_date": "2026-10-30",
+      "pause_reason": "",
+      "completion_status": "",
+      "description": "围绕标讯通的同名企业去重场景开展建设，涵盖业务确认、交付验证和跟进。",
+      "status_initial": 30
+    },
+    {
+      "id": "REQ-014",
+      "title": "移动端消息回执",
+      "product_id": "PROD-001",
+      "owner_id": "U8",
+      "requirement_type": 2,
+      "priority": 1,
+      "status": 35,
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "采购业务部（模拟）",
+      "submit_date": "2026-09-01",
+      "created_at": "2026-09-01T09:00:00+08:00",
+      "expected_end_date": "2026-10-30",
+      "pause_reason": "等待消息通道接入方案确认",
+      "completion_status": "",
+      "description": "围绕标讯通的移动端消息回执场景开展建设，涵盖业务确认、交付验证和跟进。",
+      "status_initial": 10,
+      "pause_date": "2026-09-09",
+      "status_before_pause": 31
+    },
+    {
+      "id": "REQ-015",
+      "title": "导出模板统一",
+      "product_id": "PROD-001",
+      "owner_id": "U8",
+      "requirement_type": 4,
+      "priority": 1,
+      "status": 30,
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "采购业务部（模拟）",
+      "submit_date": "2026-09-23",
+      "created_at": "2026-09-23T09:00:00+08:00",
+      "expected_end_date": "2026-10-30",
+      "pause_reason": "",
+      "completion_status": "",
+      "description": "围绕标讯通的导出模板统一场景开展建设，涵盖业务确认、交付验证和跟进。",
+      "status_initial": 30
+    },
+    {
+      "id": "REQ-016",
+      "title": "异常公告追踪",
+      "product_id": "PROD-001",
+      "owner_id": "U8",
+      "requirement_type": 3,
+      "priority": 1,
+      "status": 21,
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "采购业务部（模拟）",
+      "submit_date": "2026-08-19",
+      "created_at": "2026-08-19T09:00:00+08:00",
+      "expected_end_date": "2026-10-30",
+      "pause_reason": "",
+      "completion_status": "",
+      "description": "围绕标讯通的异常公告追踪场景开展建设，涵盖业务确认、交付验证和跟进。",
+      "status_initial": 20
+    },
+    {
+      "id": "REQ-017",
+      "title": "历史数据补齐",
+      "product_id": "PROD-001",
+      "owner_id": "U8",
+      "requirement_type": 4,
+      "priority": 1,
+      "status": 34,
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "采购业务部（模拟）",
+      "submit_date": "2026-05-01",
+      "created_at": "2026-05-01T09:00:00+08:00",
+      "expected_end_date": "2026-10-30",
+      "pause_reason": "",
+      "completion_status": "已完成开发，业务暂未启用",
+      "description": "围绕标讯通的历史数据补齐场景开展建设，涵盖业务确认、交付验证和跟进。",
+      "status_initial": 30,
+      "actual_end_date": "2026-05-07"
+    },
+    {
+      "id": "REQ-018",
+      "title": "采购人关系洞察",
+      "product_id": "PROD-001",
+      "owner_id": "U8",
+      "requirement_type": 1,
+      "priority": 1,
+      "status": 0,
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "采购业务部（模拟）",
+      "submit_date": "2026-10-08",
+      "created_at": "2026-10-08T09:00:00+08:00",
+      "expected_end_date": "2026-10-30",
+      "pause_reason": "",
+      "completion_status": "",
+      "description": "围绕标讯通的采购人关系洞察场景开展建设，涵盖业务确认、交付验证和跟进。",
+      "status_initial": 0
+    }
+  ],
+  "projects": [
+    {
+      "id": "PRJ-001",
+      "name": "检索升级一期",
+      "product_id": "PROD-001",
+      "requirement_id": "REQ-001",
+      "owner_id": "U2",
+      "member_ids": [
+        "U1",
+        "U2",
+        "U3",
+        "U5",
+        "U7"
+      ],
+      "status": 1,
+      "status_initial": 0,
+      "start_date": "2026-09-01",
+      "expected_end_date": "2026-10-15",
+      "actual_end_date": null,
+      "suspend_date": null,
+      "suspend_reason": "",
+      "progress_text_initial": "项目尚未开始",
+      "risk_text_initial": "",
+      "progress_text": "按计划推进交付",
+      "risk_text": "检索联调计划调整，项目交付影响待确认",
+      "created_at": "2026-09-01T09:00:00+08:00"
+    },
+    {
+      "id": "PRJ-002",
+      "name": "订阅中心重构项目",
+      "product_id": "PROD-001",
+      "requirement_id": "REQ-002",
+      "owner_id": "U3",
+      "member_ids": [
+        "U1",
+        "U2",
+        "U3",
+        "U5",
+        "U7"
+      ],
+      "status": 1,
+      "status_initial": 0,
+      "start_date": "2026-07-01",
+      "expected_end_date": "2026-10-20",
+      "actual_end_date": null,
+      "suspend_date": null,
+      "suspend_reason": "",
+      "progress_text_initial": "项目尚未开始",
+      "risk_text_initial": "",
+      "progress_text": "按计划推进交付",
+      "risk_text": "",
+      "created_at": "2026-07-01T09:00:00+08:00"
+    },
+    {
+      "id": "PRJ-003",
+      "name": "招采分析看板建设",
+      "product_id": "PROD-001",
+      "requirement_id": "REQ-003",
+      "owner_id": "U2",
+      "member_ids": [
+        "U1",
+        "U2",
+        "U3",
+        "U5",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "start_date": "2026-03-01",
+      "expected_end_date": "2026-06-30",
+      "actual_end_date": "2026-06-30",
+      "suspend_date": null,
+      "suspend_reason": "",
+      "progress_text_initial": "项目尚未开始",
+      "risk_text_initial": "",
+      "progress_text": "已完成业务验收",
+      "risk_text": "",
+      "created_at": "2026-03-01T09:00:00+08:00"
+    },
+    {
+      "id": "PRJ-004",
+      "name": "统一认证建设",
+      "product_id": "PROD-001",
+      "requirement_id": "REQ-004",
+      "owner_id": "U3",
+      "member_ids": [
+        "U1",
+        "U2",
+        "U3",
+        "U5",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "start_date": "2026-04-01",
+      "expected_end_date": "2026-07-31",
+      "actual_end_date": "2026-07-31",
+      "suspend_date": null,
+      "suspend_reason": "",
+      "progress_text_initial": "项目尚未开始",
+      "risk_text_initial": "",
+      "progress_text": "已完成业务验收",
+      "risk_text": "",
+      "created_at": "2026-04-01T09:00:00+08:00"
+    },
+    {
+      "id": "PRJ-005",
+      "name": "移动端适配项目",
+      "product_id": "PROD-001",
+      "requirement_id": "REQ-005",
+      "owner_id": "U2",
+      "member_ids": [
+        "U1",
+        "U2",
+        "U3",
+        "U5",
+        "U7"
+      ],
+      "status": 3,
+      "status_initial": 0,
+      "start_date": "2026-09-10",
+      "expected_end_date": "2026-11-05",
+      "actual_end_date": null,
+      "suspend_date": "2026-10-07",
+      "suspend_reason": "外部消息网关未完成联调，暂停移动端适配",
+      "progress_text_initial": "项目尚未开始",
+      "risk_text_initial": "",
+      "progress_text": "等待外部依赖恢复",
+      "risk_text": "",
+      "created_at": "2026-09-10T09:00:00+08:00"
+    },
+    {
+      "id": "PRJ-006",
+      "name": "AI研判试点项目",
+      "product_id": "PROD-001",
+      "requirement_id": "REQ-006",
+      "owner_id": "U3",
+      "member_ids": [
+        "U1",
+        "U2",
+        "U3",
+        "U5",
+        "U7"
+      ],
+      "status": 0,
+      "status_initial": 0,
+      "start_date": "2026-10-08",
+      "expected_end_date": "2026-12-20",
+      "actual_end_date": null,
+      "suspend_date": null,
+      "suspend_reason": "",
+      "progress_text_initial": "项目尚未开始",
+      "risk_text_initial": "",
+      "progress_text": "按计划推进交付",
+      "risk_text": "",
+      "created_at": "2026-10-08T09:00:00+08:00"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "TASK-1-1",
+      "name": "业务方案与接口设计",
+      "source_type": 1,
+      "project_id": "PRJ-001",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U3"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-10-15",
+      "expected_end_date_initial": "2026-10-15",
+      "actual_end_date": "2026-09-26",
+      "pause_reason": "",
+      "created_at": "2026-09-01T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "TASK-1-2",
+      "name": "核心功能开发",
+      "source_type": 1,
+      "project_id": "PRJ-001",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U2",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-10-15",
+      "expected_end_date_initial": "2026-10-15",
+      "actual_end_date": "2026-09-26",
+      "pause_reason": "",
+      "created_at": "2026-09-01T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "SUB-1-1",
+      "name": "后端服务实现",
+      "source_type": 1,
+      "project_id": "PRJ-001",
+      "requirement_id": null,
+      "parent_task_id": "TASK-1-2",
+      "owner_ids": [
+        "U2"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-09-26",
+      "actual_end_date": "2026-09-26",
+      "created_at": "2026-09-01T09:00:00+08:00",
+      "description": "核心功能开发的子任务，与父任务保持相同业务归属。"
+    },
+    {
+      "id": "SUB-1-2",
+      "name": "前端页面开发",
+      "source_type": 1,
+      "project_id": "PRJ-001",
+      "requirement_id": null,
+      "parent_task_id": "TASK-1-2",
+      "owner_ids": [
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-09-26",
+      "actual_end_date": "2026-09-26",
+      "created_at": "2026-09-01T09:00:00+08:00",
+      "description": "核心功能开发的子任务，与父任务保持相同业务归属。"
+    },
+    {
+      "id": "SUB-1-3",
+      "name": "接口自测",
+      "source_type": 1,
+      "project_id": "PRJ-001",
+      "requirement_id": null,
+      "parent_task_id": "TASK-1-2",
+      "owner_ids": [
+        "U2"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-09-26",
+      "actual_end_date": "2026-09-26",
+      "created_at": "2026-09-01T09:00:00+08:00",
+      "description": "核心功能开发的子任务，与父任务保持相同业务归属。"
+    },
+    {
+      "id": "TASK-1-3",
+      "name": "检索结果联调",
+      "source_type": 1,
+      "project_id": "PRJ-001",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U2"
+      ],
+      "status": 1,
+      "status_initial": 0,
+      "expected_end_date": "2026-10-12",
+      "expected_end_date_initial": "2026-10-10",
+      "actual_end_date": null,
+      "pause_reason": "",
+      "created_at": "2026-09-01T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "TASK-1-4",
+      "name": "业务验收准备",
+      "source_type": 1,
+      "project_id": "PRJ-001",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U3"
+      ],
+      "status": 0,
+      "status_initial": 0,
+      "expected_end_date": "2026-10-15",
+      "expected_end_date_initial": "2026-10-15",
+      "actual_end_date": null,
+      "pause_reason": "",
+      "created_at": "2026-09-01T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "TASK-2-1",
+      "name": "业务方案与接口设计",
+      "source_type": 1,
+      "project_id": "PRJ-002",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U3"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-10-20",
+      "expected_end_date_initial": "2026-10-20",
+      "actual_end_date": "2026-09-26",
+      "pause_reason": "",
+      "created_at": "2026-07-01T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "TASK-2-2",
+      "name": "核心功能开发",
+      "source_type": 1,
+      "project_id": "PRJ-002",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U2",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-10-20",
+      "expected_end_date_initial": "2026-10-20",
+      "actual_end_date": "2026-09-26",
+      "pause_reason": "",
+      "created_at": "2026-07-01T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "SUB-2-1",
+      "name": "后端服务实现",
+      "source_type": 1,
+      "project_id": "PRJ-002",
+      "requirement_id": null,
+      "parent_task_id": "TASK-2-2",
+      "owner_ids": [
+        "U2"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-09-26",
+      "actual_end_date": "2026-09-26",
+      "created_at": "2026-07-01T09:00:00+08:00",
+      "description": "核心功能开发的子任务，与父任务保持相同业务归属。"
+    },
+    {
+      "id": "SUB-2-2",
+      "name": "前端页面开发",
+      "source_type": 1,
+      "project_id": "PRJ-002",
+      "requirement_id": null,
+      "parent_task_id": "TASK-2-2",
+      "owner_ids": [
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-09-26",
+      "actual_end_date": "2026-09-26",
+      "created_at": "2026-07-01T09:00:00+08:00",
+      "description": "核心功能开发的子任务，与父任务保持相同业务归属。"
+    },
+    {
+      "id": "SUB-2-3",
+      "name": "接口自测",
+      "source_type": 1,
+      "project_id": "PRJ-002",
+      "requirement_id": null,
+      "parent_task_id": "TASK-2-2",
+      "owner_ids": [
+        "U2"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-09-26",
+      "actual_end_date": "2026-09-26",
+      "created_at": "2026-07-01T09:00:00+08:00",
+      "description": "核心功能开发的子任务，与父任务保持相同业务归属。"
+    },
+    {
+      "id": "TASK-2-3",
+      "name": "订阅规则联调",
+      "source_type": 1,
+      "project_id": "PRJ-002",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U2"
+      ],
+      "status": 1,
+      "status_initial": 0,
+      "expected_end_date": "2026-10-10",
+      "expected_end_date_initial": "2026-10-10",
+      "actual_end_date": null,
+      "pause_reason": "",
+      "created_at": "2026-07-01T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "TASK-2-4",
+      "name": "业务验收准备",
+      "source_type": 1,
+      "project_id": "PRJ-002",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U3"
+      ],
+      "status": 0,
+      "status_initial": 0,
+      "expected_end_date": "2026-10-20",
+      "expected_end_date_initial": "2026-10-20",
+      "actual_end_date": null,
+      "pause_reason": "",
+      "created_at": "2026-07-01T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "TASK-3-1",
+      "name": "业务方案与接口设计",
+      "source_type": 1,
+      "project_id": "PRJ-003",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U3"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-06-30",
+      "expected_end_date_initial": "2026-06-30",
+      "actual_end_date": "2026-06-30",
+      "pause_reason": "",
+      "created_at": "2026-03-01T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "TASK-3-2",
+      "name": "核心功能开发",
+      "source_type": 1,
+      "project_id": "PRJ-003",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U2",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-06-30",
+      "expected_end_date_initial": "2026-06-30",
+      "actual_end_date": "2026-06-30",
+      "pause_reason": "",
+      "created_at": "2026-03-01T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "SUB-3-1",
+      "name": "后端服务实现",
+      "source_type": 1,
+      "project_id": "PRJ-003",
+      "requirement_id": null,
+      "parent_task_id": "TASK-3-2",
+      "owner_ids": [
+        "U2"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-06-30",
+      "actual_end_date": "2026-06-30",
+      "created_at": "2026-03-01T09:00:00+08:00",
+      "description": "核心功能开发的子任务，与父任务保持相同业务归属。"
+    },
+    {
+      "id": "SUB-3-2",
+      "name": "前端页面开发",
+      "source_type": 1,
+      "project_id": "PRJ-003",
+      "requirement_id": null,
+      "parent_task_id": "TASK-3-2",
+      "owner_ids": [
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-06-30",
+      "actual_end_date": "2026-06-30",
+      "created_at": "2026-03-01T09:00:00+08:00",
+      "description": "核心功能开发的子任务，与父任务保持相同业务归属。"
+    },
+    {
+      "id": "SUB-3-3",
+      "name": "接口自测",
+      "source_type": 1,
+      "project_id": "PRJ-003",
+      "requirement_id": null,
+      "parent_task_id": "TASK-3-2",
+      "owner_ids": [
+        "U2"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-06-30",
+      "actual_end_date": "2026-06-30",
+      "created_at": "2026-03-01T09:00:00+08:00",
+      "description": "核心功能开发的子任务，与父任务保持相同业务归属。"
+    },
+    {
+      "id": "TASK-3-3",
+      "name": "看板指标联调",
+      "source_type": 1,
+      "project_id": "PRJ-003",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U2"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-10-10",
+      "expected_end_date_initial": "2026-10-10",
+      "actual_end_date": "2026-06-30",
+      "pause_reason": "",
+      "created_at": "2026-03-01T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "TASK-3-4",
+      "name": "业务验收准备",
+      "source_type": 1,
+      "project_id": "PRJ-003",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U3"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-06-30",
+      "expected_end_date_initial": "2026-06-30",
+      "actual_end_date": "2026-06-30",
+      "pause_reason": "",
+      "created_at": "2026-03-01T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "TASK-4-1",
+      "name": "业务方案与接口设计",
+      "source_type": 1,
+      "project_id": "PRJ-004",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U3"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-07-31",
+      "expected_end_date_initial": "2026-07-31",
+      "actual_end_date": "2026-07-31",
+      "pause_reason": "",
+      "created_at": "2026-04-01T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "TASK-4-2",
+      "name": "核心功能开发",
+      "source_type": 1,
+      "project_id": "PRJ-004",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U2",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-07-31",
+      "expected_end_date_initial": "2026-07-31",
+      "actual_end_date": "2026-07-31",
+      "pause_reason": "",
+      "created_at": "2026-04-01T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "SUB-4-1",
+      "name": "后端服务实现",
+      "source_type": 1,
+      "project_id": "PRJ-004",
+      "requirement_id": null,
+      "parent_task_id": "TASK-4-2",
+      "owner_ids": [
+        "U2"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-07-31",
+      "actual_end_date": "2026-07-31",
+      "created_at": "2026-04-01T09:00:00+08:00",
+      "description": "核心功能开发的子任务，与父任务保持相同业务归属。"
+    },
+    {
+      "id": "SUB-4-2",
+      "name": "前端页面开发",
+      "source_type": 1,
+      "project_id": "PRJ-004",
+      "requirement_id": null,
+      "parent_task_id": "TASK-4-2",
+      "owner_ids": [
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-07-31",
+      "actual_end_date": "2026-07-31",
+      "created_at": "2026-04-01T09:00:00+08:00",
+      "description": "核心功能开发的子任务，与父任务保持相同业务归属。"
+    },
+    {
+      "id": "SUB-4-3",
+      "name": "接口自测",
+      "source_type": 1,
+      "project_id": "PRJ-004",
+      "requirement_id": null,
+      "parent_task_id": "TASK-4-2",
+      "owner_ids": [
+        "U2"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-07-31",
+      "actual_end_date": "2026-07-31",
+      "created_at": "2026-04-01T09:00:00+08:00",
+      "description": "核心功能开发的子任务，与父任务保持相同业务归属。"
+    },
+    {
+      "id": "TASK-4-3",
+      "name": "认证流程联调",
+      "source_type": 1,
+      "project_id": "PRJ-004",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U2"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-10-10",
+      "expected_end_date_initial": "2026-10-10",
+      "actual_end_date": "2026-07-31",
+      "pause_reason": "",
+      "created_at": "2026-04-01T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "TASK-4-4",
+      "name": "业务验收准备",
+      "source_type": 1,
+      "project_id": "PRJ-004",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U3"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-07-31",
+      "expected_end_date_initial": "2026-07-31",
+      "actual_end_date": "2026-07-31",
+      "pause_reason": "",
+      "created_at": "2026-04-01T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "TASK-5-1",
+      "name": "业务方案与接口设计",
+      "source_type": 1,
+      "project_id": "PRJ-005",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U3"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-11-05",
+      "expected_end_date_initial": "2026-11-05",
+      "actual_end_date": "2026-09-26",
+      "pause_reason": "",
+      "created_at": "2026-09-10T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "TASK-5-2",
+      "name": "核心功能开发",
+      "source_type": 1,
+      "project_id": "PRJ-005",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U2",
+        "U7"
+      ],
+      "status": 3,
+      "status_initial": 0,
+      "expected_end_date": "2026-11-05",
+      "expected_end_date_initial": "2026-11-05",
+      "actual_end_date": null,
+      "pause_reason": "项目暂停，工作同步暂停",
+      "created_at": "2026-09-10T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "TASK-5-3",
+      "name": "消息通道联调",
+      "source_type": 1,
+      "project_id": "PRJ-005",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U2"
+      ],
+      "status": 3,
+      "status_initial": 0,
+      "expected_end_date": "2026-10-10",
+      "expected_end_date_initial": "2026-10-10",
+      "actual_end_date": null,
+      "pause_reason": "项目暂停，工作同步暂停",
+      "created_at": "2026-09-10T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "TASK-5-4",
+      "name": "业务验收准备",
+      "source_type": 1,
+      "project_id": "PRJ-005",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U3"
+      ],
+      "status": 3,
+      "status_initial": 0,
+      "expected_end_date": "2026-11-05",
+      "expected_end_date_initial": "2026-11-05",
+      "actual_end_date": null,
+      "pause_reason": "项目暂停，工作同步暂停",
+      "created_at": "2026-09-10T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "TASK-6-1",
+      "name": "业务方案与接口设计",
+      "source_type": 1,
+      "project_id": "PRJ-006",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U3"
+      ],
+      "status": 0,
+      "status_initial": 0,
+      "expected_end_date": "2026-12-20",
+      "expected_end_date_initial": "2026-12-20",
+      "actual_end_date": null,
+      "pause_reason": "",
+      "created_at": "2026-10-08T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "TASK-6-2",
+      "name": "核心功能开发",
+      "source_type": 1,
+      "project_id": "PRJ-006",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U2",
+        "U7"
+      ],
+      "status": 0,
+      "status_initial": 0,
+      "expected_end_date": "2026-12-20",
+      "expected_end_date_initial": "2026-12-20",
+      "actual_end_date": null,
+      "pause_reason": "",
+      "created_at": "2026-10-08T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "TASK-6-3",
+      "name": "研判接口联调",
+      "source_type": 1,
+      "project_id": "PRJ-006",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U2"
+      ],
+      "status": 0,
+      "status_initial": 0,
+      "expected_end_date": "2026-10-10",
+      "expected_end_date_initial": "2026-10-10",
+      "actual_end_date": null,
+      "pause_reason": "",
+      "created_at": "2026-10-08T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "TASK-6-4",
+      "name": "业务验收准备",
+      "source_type": 1,
+      "project_id": "PRJ-006",
+      "requirement_id": null,
+      "parent_task_id": null,
+      "owner_ids": [
+        "U3"
+      ],
+      "status": 0,
+      "status_initial": 0,
+      "expected_end_date": "2026-12-20",
+      "expected_end_date_initial": "2026-12-20",
+      "actual_end_date": null,
+      "pause_reason": "",
+      "created_at": "2026-10-08T09:00:00+08:00",
+      "description": "按项目业务范围完成设计、开发、验证与交付。"
+    },
+    {
+      "id": "REQ-TASK-1",
+      "name": "检索业务口径确认",
+      "source_type": 2,
+      "project_id": null,
+      "requirement_id": "REQ-001",
+      "parent_task_id": null,
+      "owner_ids": [
+        "U8"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "expected_end_date": "2026-08-20",
+      "actual_end_date": "2026-08-20",
+      "created_at": "2026-08-10T09:00:00+08:00",
+      "description": "已转项目需求上的原有任务仍归属于需求，不自动移入项目。"
+    },
+    {
+      "id": "REQ-TASK-2",
+      "name": "订阅提醒规则梳理",
+      "source_type": 2,
+      "project_id": null,
+      "requirement_id": "REQ-008",
+      "parent_task_id": null,
+      "owner_ids": [
+        "U8"
+      ],
+      "status": 1,
+      "status_initial": 0,
+      "expected_end_date": "2026-10-20",
+      "actual_end_date": null,
+      "created_at": "2026-09-05T09:00:00+08:00",
+      "description": "需求直接实施或评估工作。"
+    },
+    {
+      "id": "REQ-TASK-3",
+      "name": "画像标签字典",
+      "source_type": 2,
+      "project_id": null,
+      "requirement_id": "REQ-009",
+      "parent_task_id": null,
+      "owner_ids": [
+        "U8"
+      ],
+      "status": 0,
+      "status_initial": 0,
+      "expected_end_date": "2026-10-20",
+      "actual_end_date": null,
+      "created_at": "2026-09-21T09:00:00+08:00",
+      "description": "需求直接实施或评估工作。"
+    },
+    {
+      "id": "REQ-TASK-4",
+      "name": "竞争对手样例整理",
+      "source_type": 2,
+      "project_id": null,
+      "requirement_id": "REQ-010",
+      "parent_task_id": null,
+      "owner_ids": [
+        "U8"
+      ],
+      "status": 1,
+      "status_initial": 0,
+      "expected_end_date": "2026-10-20",
+      "actual_end_date": null,
+      "created_at": "2026-09-28T09:00:00+08:00",
+      "description": "需求直接实施或评估工作。"
+    },
+    {
+      "id": "REQ-TASK-5",
+      "name": "摘要效果验证",
+      "source_type": 2,
+      "project_id": null,
+      "requirement_id": "REQ-011",
+      "parent_task_id": null,
+      "owner_ids": [
+        "U8"
+      ],
+      "status": 0,
+      "status_initial": 0,
+      "expected_end_date": "2026-10-20",
+      "actual_end_date": null,
+      "created_at": "2026-09-15T09:00:00+08:00",
+      "description": "需求直接实施或评估工作。"
+    },
+    {
+      "id": "REQ-TASK-6",
+      "name": "区域商机指标确认",
+      "source_type": 2,
+      "project_id": null,
+      "requirement_id": "REQ-012",
+      "parent_task_id": null,
+      "owner_ids": [
+        "U8"
+      ],
+      "status": 1,
+      "status_initial": 0,
+      "expected_end_date": "2026-10-20",
+      "actual_end_date": null,
+      "created_at": "2026-07-03T09:00:00+08:00",
+      "description": "需求直接实施或评估工作。"
+    }
+  ],
+  "bugs": [
+    {
+      "id": "BUG-1-1",
+      "title": "检索排序异常",
+      "source_type": 1,
+      "project_id": "PRJ-001",
+      "requirement_id": null,
+      "assignee_id": "U7",
+      "severity": 3,
+      "status": 2,
+      "status_initial": 0,
+      "resolved_date": "2026-09-30",
+      "closed_date": "2026-09-30",
+      "activation_reason": "",
+      "created_at": "2026-09-01T09:00:00+08:00",
+      "description": "演示环境复现与处理记录。"
+    },
+    {
+      "id": "BUG-1-2",
+      "title": "大批量检索超时",
+      "source_type": 1,
+      "project_id": "PRJ-001",
+      "requirement_id": null,
+      "assignee_id": "U2",
+      "severity": 2,
+      "status": 0,
+      "status_initial": 0,
+      "resolved_date": null,
+      "closed_date": null,
+      "activation_reason": "",
+      "created_at": "2026-09-01T09:00:00+08:00",
+      "description": "演示环境复现与处理记录。"
+    },
+    {
+      "id": "BUG-2-1",
+      "title": "订阅去重遗漏",
+      "source_type": 1,
+      "project_id": "PRJ-002",
+      "requirement_id": null,
+      "assignee_id": "U7",
+      "severity": 3,
+      "status": 0,
+      "status_initial": 0,
+      "resolved_date": null,
+      "closed_date": null,
+      "activation_reason": "",
+      "created_at": "2026-07-01T09:00:00+08:00",
+      "description": "演示环境复现与处理记录。"
+    },
+    {
+      "id": "BUG-2-2",
+      "title": "消息发送重复",
+      "source_type": 1,
+      "project_id": "PRJ-002",
+      "requirement_id": null,
+      "assignee_id": "U2",
+      "severity": 2,
+      "status": 3,
+      "status_initial": 0,
+      "resolved_date": "2026-09-29",
+      "closed_date": null,
+      "activation_reason": "复测同一规则仍出现重复消息",
+      "created_at": "2026-07-01T09:00:00+08:00",
+      "description": "演示环境复现与处理记录。"
+    },
+    {
+      "id": "BUG-3-1",
+      "title": "趋势图日期偏移",
+      "source_type": 1,
+      "project_id": "PRJ-003",
+      "requirement_id": null,
+      "assignee_id": "U7",
+      "severity": 3,
+      "status": 2,
+      "status_initial": 0,
+      "resolved_date": "2026-06-30",
+      "closed_date": "2026-06-30",
+      "activation_reason": "",
+      "created_at": "2026-03-01T09:00:00+08:00",
+      "description": "演示环境复现与处理记录。"
+    },
+    {
+      "id": "BUG-3-2",
+      "title": "导出金额精度",
+      "source_type": 1,
+      "project_id": "PRJ-003",
+      "requirement_id": null,
+      "assignee_id": "U2",
+      "severity": 2,
+      "status": 2,
+      "status_initial": 0,
+      "resolved_date": "2026-06-30",
+      "closed_date": "2026-06-30",
+      "activation_reason": "",
+      "created_at": "2026-03-01T09:00:00+08:00",
+      "description": "演示环境复现与处理记录。"
+    },
+    {
+      "id": "BUG-4-1",
+      "title": "登录回跳失效",
+      "source_type": 1,
+      "project_id": "PRJ-004",
+      "requirement_id": null,
+      "assignee_id": "U7",
+      "severity": 3,
+      "status": 2,
+      "status_initial": 0,
+      "resolved_date": "2026-07-31",
+      "closed_date": "2026-07-31",
+      "activation_reason": "",
+      "created_at": "2026-04-01T09:00:00+08:00",
+      "description": "演示环境复现与处理记录。"
+    },
+    {
+      "id": "BUG-4-2",
+      "title": "账号退出残留",
+      "source_type": 1,
+      "project_id": "PRJ-004",
+      "requirement_id": null,
+      "assignee_id": "U2",
+      "severity": 2,
+      "status": 2,
+      "status_initial": 0,
+      "resolved_date": "2026-07-31",
+      "closed_date": "2026-07-31",
+      "activation_reason": "",
+      "created_at": "2026-04-01T09:00:00+08:00",
+      "description": "演示环境复现与处理记录。"
+    },
+    {
+      "id": "BUG-5-1",
+      "title": "窄屏按钮遮挡",
+      "source_type": 1,
+      "project_id": "PRJ-005",
+      "requirement_id": null,
+      "assignee_id": "U7",
+      "severity": 3,
+      "status": 0,
+      "status_initial": 0,
+      "resolved_date": null,
+      "closed_date": null,
+      "activation_reason": "",
+      "created_at": "2026-09-10T09:00:00+08:00",
+      "description": "演示环境复现与处理记录。"
+    },
+    {
+      "id": "BUG-5-2",
+      "title": "消息回执丢失",
+      "source_type": 1,
+      "project_id": "PRJ-005",
+      "requirement_id": null,
+      "assignee_id": "U2",
+      "severity": 2,
+      "status": 0,
+      "status_initial": 0,
+      "resolved_date": null,
+      "closed_date": null,
+      "activation_reason": "",
+      "created_at": "2026-09-10T09:00:00+08:00",
+      "description": "演示环境复现与处理记录。"
+    },
+    {
+      "id": "REQ-BUG-1",
+      "title": "同名企业匹配错误",
+      "source_type": 2,
+      "project_id": null,
+      "requirement_id": "REQ-013",
+      "assignee_id": "U2",
+      "severity": 2,
+      "status": 0,
+      "status_initial": 0,
+      "created_at": "2026-09-28T09:00:00+08:00",
+      "description": "需求直接归属的缺陷，不挂接项目。"
+    },
+    {
+      "id": "REQ-BUG-2",
+      "title": "提醒时间区间遗漏",
+      "source_type": 2,
+      "project_id": null,
+      "requirement_id": "REQ-007",
+      "assignee_id": "U2",
+      "severity": 2,
+      "status": 0,
+      "status_initial": 0,
+      "created_at": "2026-09-28T09:00:00+08:00",
+      "description": "需求直接归属的缺陷，不挂接项目。"
+    }
+  ],
+  "planStages": [
+    {
+      "id": "STG-1-1",
+      "project_id": "PRJ-001",
+      "name": "需求与方案",
+      "sort_order": 1,
+      "created_at": "2026-09-01T09:00:00+08:00"
+    },
+    {
+      "id": "STG-1-2",
+      "project_id": "PRJ-001",
+      "name": "开发与验证",
+      "sort_order": 2,
+      "created_at": "2026-09-01T09:00:00+08:00"
+    },
+    {
+      "id": "STG-1-3",
+      "project_id": "PRJ-001",
+      "name": "交付与验收",
+      "sort_order": 3,
+      "created_at": "2026-09-01T09:00:00+08:00"
+    },
+    {
+      "id": "STG-2-1",
+      "project_id": "PRJ-002",
+      "name": "需求与方案",
+      "sort_order": 1,
+      "created_at": "2026-07-01T09:00:00+08:00"
+    },
+    {
+      "id": "STG-2-2",
+      "project_id": "PRJ-002",
+      "name": "开发与验证",
+      "sort_order": 2,
+      "created_at": "2026-07-01T09:00:00+08:00"
+    },
+    {
+      "id": "STG-2-3",
+      "project_id": "PRJ-002",
+      "name": "交付与验收",
+      "sort_order": 3,
+      "created_at": "2026-07-01T09:00:00+08:00"
+    },
+    {
+      "id": "STG-3-1",
+      "project_id": "PRJ-003",
+      "name": "需求与方案",
+      "sort_order": 1,
+      "created_at": "2026-03-01T09:00:00+08:00"
+    },
+    {
+      "id": "STG-3-2",
+      "project_id": "PRJ-003",
+      "name": "开发与验证",
+      "sort_order": 2,
+      "created_at": "2026-03-01T09:00:00+08:00"
+    },
+    {
+      "id": "STG-3-3",
+      "project_id": "PRJ-003",
+      "name": "交付与验收",
+      "sort_order": 3,
+      "created_at": "2026-03-01T09:00:00+08:00"
+    },
+    {
+      "id": "STG-4-1",
+      "project_id": "PRJ-004",
+      "name": "需求与方案",
+      "sort_order": 1,
+      "created_at": "2026-04-01T09:00:00+08:00"
+    },
+    {
+      "id": "STG-4-2",
+      "project_id": "PRJ-004",
+      "name": "开发与验证",
+      "sort_order": 2,
+      "created_at": "2026-04-01T09:00:00+08:00"
+    },
+    {
+      "id": "STG-4-3",
+      "project_id": "PRJ-004",
+      "name": "交付与验收",
+      "sort_order": 3,
+      "created_at": "2026-04-01T09:00:00+08:00"
+    },
+    {
+      "id": "STG-5-1",
+      "project_id": "PRJ-005",
+      "name": "需求与方案",
+      "sort_order": 1,
+      "created_at": "2026-09-10T09:00:00+08:00"
+    },
+    {
+      "id": "STG-5-2",
+      "project_id": "PRJ-005",
+      "name": "开发与验证",
+      "sort_order": 2,
+      "created_at": "2026-09-10T09:00:00+08:00"
+    },
+    {
+      "id": "STG-5-3",
+      "project_id": "PRJ-005",
+      "name": "交付与验收",
+      "sort_order": 3,
+      "created_at": "2026-09-10T09:00:00+08:00"
+    },
+    {
+      "id": "STG-6-1",
+      "project_id": "PRJ-006",
+      "name": "需求与方案",
+      "sort_order": 1,
+      "created_at": "2026-10-08T09:00:00+08:00"
+    },
+    {
+      "id": "STG-6-2",
+      "project_id": "PRJ-006",
+      "name": "开发与验证",
+      "sort_order": 2,
+      "created_at": "2026-10-08T09:00:00+08:00"
+    },
+    {
+      "id": "STG-6-3",
+      "project_id": "PRJ-006",
+      "name": "交付与验收",
+      "sort_order": 3,
+      "created_at": "2026-10-08T09:00:00+08:00"
+    }
+  ],
+  "planItems": [
+    {
+      "id": "ITEM-1-1",
+      "stage_id": "STG-1-1",
+      "name": "业务范围确认",
+      "owner_id": "U2",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-09-25",
+      "current_due_date": "2026-09-25",
+      "current_due_date_initial": "2026-09-25",
+      "actual_end_date": "2026-09-25",
+      "requires_delivery_file": false,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-09-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-1-2",
+      "stage_id": "STG-1-1",
+      "name": "技术方案评审",
+      "owner_id": "U5",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-09-25",
+      "current_due_date": "2026-09-25",
+      "current_due_date_initial": "2026-09-25",
+      "actual_end_date": "2026-09-25",
+      "requires_delivery_file": true,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-09-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-1-3",
+      "stage_id": "STG-1-2",
+      "name": "核心功能开发",
+      "owner_id": "U2",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-10-10",
+      "current_due_date": "2026-10-10",
+      "current_due_date_initial": "2026-10-10",
+      "actual_end_date": "2026-09-25",
+      "requires_delivery_file": false,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-09-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-1-4",
+      "stage_id": "STG-1-2",
+      "name": "集成联调验证",
+      "owner_id": "U5",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 1,
+      "status_initial": 0,
+      "original_due_date": "2026-10-10",
+      "current_due_date": "2026-10-12",
+      "current_due_date_initial": "2026-10-10",
+      "actual_end_date": null,
+      "requires_delivery_file": true,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-09-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-1-5",
+      "stage_id": "STG-1-3",
+      "name": "试运行验证",
+      "owner_id": "U2",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 0,
+      "status_initial": 0,
+      "original_due_date": "2026-10-15",
+      "current_due_date": "2026-10-15",
+      "current_due_date_initial": "2026-10-15",
+      "actual_end_date": null,
+      "requires_delivery_file": false,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-09-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-1-6",
+      "stage_id": "STG-1-3",
+      "name": "业务验收",
+      "owner_id": "U5",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 0,
+      "status_initial": 0,
+      "original_due_date": "2026-10-15",
+      "current_due_date": "2026-10-15",
+      "current_due_date_initial": "2026-10-15",
+      "actual_end_date": null,
+      "requires_delivery_file": true,
+      "delivery_requirement": "验收清单与业务签认记录",
+      "pause_reason": "",
+      "created_at": "2026-09-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-2-1",
+      "stage_id": "STG-2-1",
+      "name": "业务范围确认",
+      "owner_id": "U2",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-09-25",
+      "current_due_date": "2026-09-25",
+      "current_due_date_initial": "2026-09-25",
+      "actual_end_date": "2026-09-25",
+      "requires_delivery_file": false,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-07-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-2-2",
+      "stage_id": "STG-2-1",
+      "name": "技术方案评审",
+      "owner_id": "U5",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-09-25",
+      "current_due_date": "2026-09-25",
+      "current_due_date_initial": "2026-09-25",
+      "actual_end_date": "2026-09-25",
+      "requires_delivery_file": true,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-07-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-2-3",
+      "stage_id": "STG-2-2",
+      "name": "核心功能开发",
+      "owner_id": "U2",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-10-10",
+      "current_due_date": "2026-10-10",
+      "current_due_date_initial": "2026-10-10",
+      "actual_end_date": "2026-09-25",
+      "requires_delivery_file": false,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-07-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-2-4",
+      "stage_id": "STG-2-2",
+      "name": "集成联调验证",
+      "owner_id": "U5",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-10-10",
+      "current_due_date": "2026-10-10",
+      "current_due_date_initial": "2026-10-10",
+      "actual_end_date": "2026-09-25",
+      "requires_delivery_file": true,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-07-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-2-5",
+      "stage_id": "STG-2-3",
+      "name": "试运行验证",
+      "owner_id": "U2",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 0,
+      "status_initial": 0,
+      "original_due_date": "2026-10-20",
+      "current_due_date": "2026-10-20",
+      "current_due_date_initial": "2026-10-20",
+      "actual_end_date": null,
+      "requires_delivery_file": false,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-07-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-2-6",
+      "stage_id": "STG-2-3",
+      "name": "业务验收",
+      "owner_id": "U5",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 0,
+      "status_initial": 0,
+      "original_due_date": "2026-10-20",
+      "current_due_date": "2026-10-20",
+      "current_due_date_initial": "2026-10-20",
+      "actual_end_date": null,
+      "requires_delivery_file": true,
+      "delivery_requirement": "验收清单与业务签认记录",
+      "pause_reason": "",
+      "created_at": "2026-07-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-3-1",
+      "stage_id": "STG-3-1",
+      "name": "业务范围确认",
+      "owner_id": "U2",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-03-30",
+      "current_due_date": "2026-03-30",
+      "current_due_date_initial": "2026-03-30",
+      "actual_end_date": "2026-03-30",
+      "requires_delivery_file": false,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-03-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-3-2",
+      "stage_id": "STG-3-1",
+      "name": "技术方案评审",
+      "owner_id": "U5",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-03-30",
+      "current_due_date": "2026-03-30",
+      "current_due_date_initial": "2026-03-30",
+      "actual_end_date": "2026-03-30",
+      "requires_delivery_file": true,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-03-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-3-3",
+      "stage_id": "STG-3-2",
+      "name": "核心功能开发",
+      "owner_id": "U2",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-05-15",
+      "current_due_date": "2026-05-15",
+      "current_due_date_initial": "2026-05-15",
+      "actual_end_date": "2026-05-15",
+      "requires_delivery_file": false,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-03-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-3-4",
+      "stage_id": "STG-3-2",
+      "name": "集成联调验证",
+      "owner_id": "U5",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-05-15",
+      "current_due_date": "2026-05-15",
+      "current_due_date_initial": "2026-05-15",
+      "actual_end_date": "2026-05-15",
+      "requires_delivery_file": true,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-03-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-3-5",
+      "stage_id": "STG-3-3",
+      "name": "试运行验证",
+      "owner_id": "U2",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-06-30",
+      "current_due_date": "2026-06-30",
+      "current_due_date_initial": "2026-06-30",
+      "actual_end_date": "2026-06-30",
+      "requires_delivery_file": false,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-03-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-3-6",
+      "stage_id": "STG-3-3",
+      "name": "业务验收",
+      "owner_id": "U5",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-06-30",
+      "current_due_date": "2026-06-30",
+      "current_due_date_initial": "2026-06-30",
+      "actual_end_date": "2026-06-30",
+      "requires_delivery_file": true,
+      "delivery_requirement": "验收清单与业务签认记录",
+      "pause_reason": "",
+      "created_at": "2026-03-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-4-1",
+      "stage_id": "STG-4-1",
+      "name": "业务范围确认",
+      "owner_id": "U2",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-04-30",
+      "current_due_date": "2026-04-30",
+      "current_due_date_initial": "2026-04-30",
+      "actual_end_date": "2026-04-30",
+      "requires_delivery_file": false,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-04-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-4-2",
+      "stage_id": "STG-4-1",
+      "name": "技术方案评审",
+      "owner_id": "U5",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-04-30",
+      "current_due_date": "2026-04-30",
+      "current_due_date_initial": "2026-04-30",
+      "actual_end_date": "2026-04-30",
+      "requires_delivery_file": true,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-04-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-4-3",
+      "stage_id": "STG-4-2",
+      "name": "核心功能开发",
+      "owner_id": "U2",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-06-15",
+      "current_due_date": "2026-06-15",
+      "current_due_date_initial": "2026-06-15",
+      "actual_end_date": "2026-06-15",
+      "requires_delivery_file": false,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-04-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-4-4",
+      "stage_id": "STG-4-2",
+      "name": "集成联调验证",
+      "owner_id": "U5",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-06-15",
+      "current_due_date": "2026-06-15",
+      "current_due_date_initial": "2026-06-15",
+      "actual_end_date": "2026-06-15",
+      "requires_delivery_file": true,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-04-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-4-5",
+      "stage_id": "STG-4-3",
+      "name": "试运行验证",
+      "owner_id": "U2",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-07-31",
+      "current_due_date": "2026-07-31",
+      "current_due_date_initial": "2026-07-31",
+      "actual_end_date": "2026-07-31",
+      "requires_delivery_file": false,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-04-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-4-6",
+      "stage_id": "STG-4-3",
+      "name": "业务验收",
+      "owner_id": "U5",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-07-31",
+      "current_due_date": "2026-07-31",
+      "current_due_date_initial": "2026-07-31",
+      "actual_end_date": "2026-07-31",
+      "requires_delivery_file": true,
+      "delivery_requirement": "验收清单与业务签认记录",
+      "pause_reason": "",
+      "created_at": "2026-04-01T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-5-1",
+      "stage_id": "STG-5-1",
+      "name": "业务范围确认",
+      "owner_id": "U2",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-09-25",
+      "current_due_date": "2026-09-25",
+      "current_due_date_initial": "2026-09-25",
+      "actual_end_date": "2026-09-25",
+      "requires_delivery_file": false,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "项目整体暂停",
+      "created_at": "2026-09-10T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-5-2",
+      "stage_id": "STG-5-1",
+      "name": "技术方案评审",
+      "owner_id": "U5",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 2,
+      "status_initial": 0,
+      "original_due_date": "2026-09-25",
+      "current_due_date": "2026-09-25",
+      "current_due_date_initial": "2026-09-25",
+      "actual_end_date": "2026-09-25",
+      "requires_delivery_file": true,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "项目整体暂停",
+      "created_at": "2026-09-10T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-5-3",
+      "stage_id": "STG-5-2",
+      "name": "核心功能开发",
+      "owner_id": "U2",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 3,
+      "status_initial": 0,
+      "original_due_date": "2026-10-10",
+      "current_due_date": "2026-10-10",
+      "current_due_date_initial": "2026-10-10",
+      "actual_end_date": null,
+      "requires_delivery_file": false,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "项目整体暂停",
+      "created_at": "2026-09-10T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-5-4",
+      "stage_id": "STG-5-2",
+      "name": "集成联调验证",
+      "owner_id": "U5",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 3,
+      "status_initial": 0,
+      "original_due_date": "2026-10-10",
+      "current_due_date": "2026-10-10",
+      "current_due_date_initial": "2026-10-10",
+      "actual_end_date": null,
+      "requires_delivery_file": true,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "项目整体暂停",
+      "created_at": "2026-09-10T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-5-5",
+      "stage_id": "STG-5-3",
+      "name": "试运行验证",
+      "owner_id": "U2",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 3,
+      "status_initial": 0,
+      "original_due_date": "2026-11-05",
+      "current_due_date": "2026-11-05",
+      "current_due_date_initial": "2026-11-05",
+      "actual_end_date": null,
+      "requires_delivery_file": false,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "项目整体暂停",
+      "created_at": "2026-09-10T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-5-6",
+      "stage_id": "STG-5-3",
+      "name": "业务验收",
+      "owner_id": "U5",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 3,
+      "status_initial": 0,
+      "original_due_date": "2026-11-05",
+      "current_due_date": "2026-11-05",
+      "current_due_date_initial": "2026-11-05",
+      "actual_end_date": null,
+      "requires_delivery_file": true,
+      "delivery_requirement": "验收清单与业务签认记录",
+      "pause_reason": "项目整体暂停",
+      "created_at": "2026-09-10T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-6-1",
+      "stage_id": "STG-6-1",
+      "name": "业务范围确认",
+      "owner_id": "U2",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 0,
+      "status_initial": 0,
+      "original_due_date": "2026-10-25",
+      "current_due_date": "2026-10-25",
+      "current_due_date_initial": "2026-10-25",
+      "actual_end_date": null,
+      "requires_delivery_file": false,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-10-08T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-6-2",
+      "stage_id": "STG-6-1",
+      "name": "技术方案评审",
+      "owner_id": "U5",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 0,
+      "status_initial": 0,
+      "original_due_date": "2026-10-25",
+      "current_due_date": "2026-10-25",
+      "current_due_date_initial": "2026-10-25",
+      "actual_end_date": null,
+      "requires_delivery_file": true,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-10-08T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-6-3",
+      "stage_id": "STG-6-2",
+      "name": "核心功能开发",
+      "owner_id": "U2",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 0,
+      "status_initial": 0,
+      "original_due_date": "2026-11-25",
+      "current_due_date": "2026-11-25",
+      "current_due_date_initial": "2026-11-25",
+      "actual_end_date": null,
+      "requires_delivery_file": false,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-10-08T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-6-4",
+      "stage_id": "STG-6-2",
+      "name": "集成联调验证",
+      "owner_id": "U5",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 0,
+      "status_initial": 0,
+      "original_due_date": "2026-11-25",
+      "current_due_date": "2026-11-25",
+      "current_due_date_initial": "2026-11-25",
+      "actual_end_date": null,
+      "requires_delivery_file": true,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-10-08T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-6-5",
+      "stage_id": "STG-6-3",
+      "name": "试运行验证",
+      "owner_id": "U2",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 0,
+      "status_initial": 0,
+      "original_due_date": "2026-12-20",
+      "current_due_date": "2026-12-20",
+      "current_due_date_initial": "2026-12-20",
+      "actual_end_date": null,
+      "requires_delivery_file": false,
+      "delivery_requirement": "评审结论或测试报告",
+      "pause_reason": "",
+      "created_at": "2026-10-08T09:00:00+08:00"
+    },
+    {
+      "id": "ITEM-6-6",
+      "stage_id": "STG-6-3",
+      "name": "业务验收",
+      "owner_id": "U5",
+      "collaborator_ids": [
+        "U3",
+        "U7"
+      ],
+      "status": 0,
+      "status_initial": 0,
+      "original_due_date": "2026-12-20",
+      "current_due_date": "2026-12-20",
+      "current_due_date_initial": "2026-12-20",
+      "actual_end_date": null,
+      "requires_delivery_file": true,
+      "delivery_requirement": "验收清单与业务签认记录",
+      "pause_reason": "",
+      "created_at": "2026-10-08T09:00:00+08:00"
+    }
+  ],
+  "contracts": [
+    {
+      "id": "CT-1",
+      "project_id": "PRJ-001",
+      "name": "检索升级一期建设合同",
+      "contract_code": "DEMO-2026-1",
+      "supplier_id": "V1",
+      "signed_date": "2026-09-01",
+      "contract_amount": 200000,
+      "created_at": "2026-09-01T09:00:00+08:00"
+    },
+    {
+      "id": "CT-2",
+      "project_id": "PRJ-002",
+      "name": "订阅中心重构项目建设合同",
+      "contract_code": "DEMO-2026-2",
+      "supplier_id": "V1",
+      "signed_date": "2026-07-01",
+      "contract_amount": 360000,
+      "created_at": "2026-07-01T09:00:00+08:00"
+    },
+    {
+      "id": "CT-3",
+      "project_id": "PRJ-003",
+      "name": "招采分析看板建设合同",
+      "contract_code": "DEMO-2026-3",
+      "supplier_id": "V1",
+      "signed_date": "2026-03-01",
+      "contract_amount": 480000,
+      "created_at": "2026-03-01T09:00:00+08:00"
+    },
+    {
+      "id": "CT-4",
+      "project_id": "PRJ-004",
+      "name": "统一认证建设合同",
+      "contract_code": "DEMO-2026-4",
+      "supplier_id": "V1",
+      "signed_date": "2026-04-01",
+      "contract_amount": 300000,
+      "created_at": "2026-04-01T09:00:00+08:00"
+    },
+    {
+      "id": "CT-5",
+      "project_id": "PRJ-005",
+      "name": "移动端适配项目建设合同",
+      "contract_code": "DEMO-2026-5",
+      "supplier_id": "V2",
+      "signed_date": "2026-09-10",
+      "contract_amount": 160000,
+      "created_at": "2026-09-10T09:00:00+08:00"
+    }
+  ],
+  "paymentStages": [
+    {
+      "id": "PAY-STG-1-1",
+      "contract_id": "CT-1",
+      "stage_name": "启动款",
+      "planned_amount": 50000,
+      "sort_order": 1,
+      "created_at": "2026-09-01T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-STG-1-2",
+      "contract_id": "CT-1",
+      "stage_name": "进度款",
+      "planned_amount": 100000,
+      "sort_order": 2,
+      "created_at": "2026-09-01T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-STG-1-3",
+      "contract_id": "CT-1",
+      "stage_name": "验收款",
+      "planned_amount": 50000,
+      "sort_order": 3,
+      "created_at": "2026-09-01T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-STG-2-1",
+      "contract_id": "CT-2",
+      "stage_name": "启动款",
+      "planned_amount": 90000,
+      "sort_order": 1,
+      "created_at": "2026-07-01T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-STG-2-2",
+      "contract_id": "CT-2",
+      "stage_name": "进度款",
+      "planned_amount": 180000,
+      "sort_order": 2,
+      "created_at": "2026-07-01T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-STG-2-3",
+      "contract_id": "CT-2",
+      "stage_name": "验收款",
+      "planned_amount": 90000,
+      "sort_order": 3,
+      "created_at": "2026-07-01T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-STG-3-1",
+      "contract_id": "CT-3",
+      "stage_name": "启动款",
+      "planned_amount": 120000,
+      "sort_order": 1,
+      "created_at": "2026-03-01T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-STG-3-2",
+      "contract_id": "CT-3",
+      "stage_name": "进度款",
+      "planned_amount": 240000,
+      "sort_order": 2,
+      "created_at": "2026-03-01T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-STG-3-3",
+      "contract_id": "CT-3",
+      "stage_name": "验收款",
+      "planned_amount": 120000,
+      "sort_order": 3,
+      "created_at": "2026-03-01T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-STG-4-1",
+      "contract_id": "CT-4",
+      "stage_name": "启动款",
+      "planned_amount": 75000,
+      "sort_order": 1,
+      "created_at": "2026-04-01T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-STG-4-2",
+      "contract_id": "CT-4",
+      "stage_name": "进度款",
+      "planned_amount": 150000,
+      "sort_order": 2,
+      "created_at": "2026-04-01T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-STG-4-3",
+      "contract_id": "CT-4",
+      "stage_name": "验收款",
+      "planned_amount": 75000,
+      "sort_order": 3,
+      "created_at": "2026-04-01T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-STG-5-1",
+      "contract_id": "CT-5",
+      "stage_name": "启动款",
+      "planned_amount": 40000,
+      "sort_order": 1,
+      "created_at": "2026-09-10T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-STG-5-2",
+      "contract_id": "CT-5",
+      "stage_name": "进度款",
+      "planned_amount": 80000,
+      "sort_order": 2,
+      "created_at": "2026-09-10T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-STG-5-3",
+      "contract_id": "CT-5",
+      "stage_name": "验收款",
+      "planned_amount": 40000,
+      "sort_order": 3,
+      "created_at": "2026-09-10T09:00:00+08:00"
+    }
+  ],
+  "payments": [
+    {
+      "id": "PAY-001",
+      "name": "2026-10 · 启动款 · 5万元",
+      "stage_id": "PAY-STG-1-1",
+      "payment_amount": 50000,
+      "payment_month": "2026-10-01",
+      "handler_id": "U6",
+      "remark": "启动款",
+      "created_at": "2026-10-08T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-002",
+      "name": "2026-07 · 启动款 · 9万元",
+      "stage_id": "PAY-STG-2-1",
+      "payment_amount": 90000,
+      "payment_month": "2026-07-01",
+      "handler_id": "U6",
+      "remark": "启动款",
+      "created_at": "2026-07-03T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-003",
+      "name": "2026-10 · 进度款第一笔 · 9万元",
+      "stage_id": "PAY-STG-2-2",
+      "payment_amount": 90000,
+      "payment_month": "2026-10-01",
+      "handler_id": "U6",
+      "remark": "进度款第一笔",
+      "created_at": "2026-10-07T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-004",
+      "name": "2026-03 · 启动款 · 12万元",
+      "stage_id": "PAY-STG-3-1",
+      "payment_amount": 120000,
+      "payment_month": "2026-03-01",
+      "handler_id": "U6",
+      "remark": "启动款",
+      "created_at": "2026-03-10T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-005",
+      "name": "2026-05 · 进度款第一笔 · 10万元",
+      "stage_id": "PAY-STG-3-2",
+      "payment_amount": 100000,
+      "payment_month": "2026-05-01",
+      "handler_id": "U6",
+      "remark": "进度款第一笔",
+      "created_at": "2026-05-01T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-006",
+      "name": "2026-05 · 进度款第二笔 · 14万元",
+      "stage_id": "PAY-STG-3-2",
+      "payment_amount": 140000,
+      "payment_month": "2026-05-01",
+      "handler_id": "U6",
+      "remark": "进度款第二笔",
+      "created_at": "2026-05-20T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-007",
+      "name": "2026-06 · 验收款 · 12万元",
+      "stage_id": "PAY-STG-3-3",
+      "payment_amount": 120000,
+      "payment_month": "2026-06-01",
+      "handler_id": "U6",
+      "remark": "验收款",
+      "created_at": "2026-06-30T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-008",
+      "name": "2026-04 · 启动款 · 7.5万元",
+      "stage_id": "PAY-STG-4-1",
+      "payment_amount": 75000,
+      "payment_month": "2026-04-01",
+      "handler_id": "U6",
+      "remark": "启动款",
+      "created_at": "2026-04-05T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-009",
+      "name": "2026-06 · 进度款第一笔 · 7.5万元",
+      "stage_id": "PAY-STG-4-2",
+      "payment_amount": 75000,
+      "payment_month": "2026-06-01",
+      "handler_id": "U6",
+      "remark": "进度款第一笔",
+      "created_at": "2026-06-01T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-010",
+      "name": "2026-07 · 进度款第二笔 · 7.5万元",
+      "stage_id": "PAY-STG-4-2",
+      "payment_amount": 75000,
+      "payment_month": "2026-07-01",
+      "handler_id": "U6",
+      "remark": "进度款第二笔",
+      "created_at": "2026-07-01T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-011",
+      "name": "2026-07 · 验收款 · 7.5万元",
+      "stage_id": "PAY-STG-4-3",
+      "payment_amount": 75000,
+      "payment_month": "2026-07-01",
+      "handler_id": "U6",
+      "remark": "验收款",
+      "created_at": "2026-07-31T09:00:00+08:00"
+    },
+    {
+      "id": "PAY-012",
+      "name": "2026-09 · 启动款 · 4万元",
+      "stage_id": "PAY-STG-5-1",
+      "payment_amount": 40000,
+      "payment_month": "2026-09-01",
+      "handler_id": "U6",
+      "remark": "启动款",
+      "created_at": "2026-09-12T09:00:00+08:00"
+    }
+  ],
+  "maintenance": [
+    {
+      "id": "MC-1",
+      "product_id": "PROD-001",
+      "name": "标讯通 2024 年度维保",
+      "contract_code": "DEMO-MC-2024",
+      "previous_contract_id": null,
+      "supplier_id": "V2",
+      "contract_amount": 80000,
+      "signed_date": "2023-12-20",
+      "service_start_date": "2024-01-01",
+      "service_end_date": "2024-12-31",
+      "created_at": "2023-12-20T09:00:00+08:00",
+      "remark": "维保合同登记即表示已付款，独立于项目付款。"
+    },
+    {
+      "id": "MC-2",
+      "product_id": "PROD-001",
+      "name": "标讯通 2025 年度维保",
+      "contract_code": "DEMO-MC-2025",
+      "previous_contract_id": "MC-1",
+      "supplier_id": "V2",
+      "contract_amount": 100000,
+      "signed_date": "2024-12-20",
+      "service_start_date": "2025-01-01",
+      "service_end_date": "2025-12-31",
+      "created_at": "2024-12-20T09:00:00+08:00",
+      "remark": "维保合同登记即表示已付款，独立于项目付款。"
+    },
+    {
+      "id": "MC-3",
+      "product_id": "PROD-001",
+      "name": "标讯通 2026 年度维保",
+      "contract_code": "DEMO-MC-2026",
+      "previous_contract_id": "MC-2",
+      "supplier_id": "V2",
+      "contract_amount": 120000,
+      "signed_date": "2025-12-20",
+      "service_start_date": "2026-01-01",
+      "service_end_date": "2026-12-31",
+      "created_at": "2025-12-20T09:00:00+08:00",
+      "remark": "维保合同登记即表示已付款，独立于项目付款。"
+    },
+    {
+      "id": "MC-4",
+      "product_id": "PROD-001",
+      "name": "标讯通 2027 年度维保",
+      "contract_code": "DEMO-MC-2027",
+      "previous_contract_id": "MC-3",
+      "supplier_id": "V2",
+      "contract_amount": 140000,
+      "signed_date": "2026-10-08",
+      "service_start_date": "2027-01-01",
+      "service_end_date": "2027-12-31",
+      "created_at": "2026-10-08T09:00:00+08:00",
+      "remark": "维保合同登记即表示已付款，独立于项目付款。"
+    }
+  ],
+  "orders": [
+    {
+      "id": "WO-001",
+      "product_id": "PROD-001",
+      "problem_desc": "订阅消息延迟",
+      "status": 1,
+      "status_initial": 0,
+      "urgency": 2,
+      "follower_id": "U4",
+      "expected_resolve_date": "2026-10-10",
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "业务使用部门（模拟）",
+      "created_at": "2026-10-08T09:00:00+08:00",
+      "result_desc": "",
+      "resolve_date": null,
+      "activation_reason": "",
+      "suspend_reason": "",
+      "description": "产品使用过程中的服务请求，直接归属于产品，不按服务日期匹配维保合同。"
+    },
+    {
+      "id": "WO-002",
+      "product_id": "PROD-001",
+      "problem_desc": "登录验证码偶发超时",
+      "status": 1,
+      "status_initial": 0,
+      "urgency": 1,
+      "follower_id": "U4",
+      "expected_resolve_date": "2026-10-08",
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "业务使用部门（模拟）",
+      "created_at": "2026-09-28T09:00:00+08:00",
+      "result_desc": "",
+      "resolve_date": null,
+      "activation_reason": "",
+      "suspend_reason": "",
+      "description": "产品使用过程中的服务请求，直接归属于产品，不按服务日期匹配维保合同。"
+    },
+    {
+      "id": "WO-003",
+      "product_id": "PROD-001",
+      "problem_desc": "导出下载失败",
+      "status": 0,
+      "status_initial": 0,
+      "urgency": 1,
+      "follower_id": "U4",
+      "expected_resolve_date": "2026-10-12",
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "业务使用部门（模拟）",
+      "created_at": "2026-10-09T09:00:00+08:00",
+      "result_desc": "",
+      "resolve_date": null,
+      "activation_reason": "",
+      "suspend_reason": "",
+      "description": "产品使用过程中的服务请求，直接归属于产品，不按服务日期匹配维保合同。"
+    },
+    {
+      "id": "WO-004",
+      "product_id": "PROD-001",
+      "problem_desc": "分析图表加载慢",
+      "status": 2,
+      "status_initial": 0,
+      "urgency": 1,
+      "follower_id": "U4",
+      "expected_resolve_date": "2026-09-25",
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "业务使用部门（模拟）",
+      "created_at": "2026-09-20T09:00:00+08:00",
+      "result_desc": "演示问题已解决，业务验证通过。",
+      "resolve_date": "2026-09-25",
+      "activation_reason": "",
+      "suspend_reason": "",
+      "description": "产品使用过程中的服务请求，直接归属于产品，不按服务日期匹配维保合同。"
+    },
+    {
+      "id": "WO-005",
+      "product_id": "PROD-001",
+      "problem_desc": "账号权限申请",
+      "status": 2,
+      "status_initial": 0,
+      "urgency": 0,
+      "follower_id": "U4",
+      "expected_resolve_date": "2026-09-24",
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "业务使用部门（模拟）",
+      "created_at": "2026-09-21T09:00:00+08:00",
+      "result_desc": "演示问题已解决，业务验证通过。",
+      "resolve_date": "2026-09-24",
+      "activation_reason": "",
+      "suspend_reason": "",
+      "description": "产品使用过程中的服务请求，直接归属于产品，不按服务日期匹配维保合同。"
+    },
+    {
+      "id": "WO-006",
+      "product_id": "PROD-001",
+      "problem_desc": "重复订阅通知",
+      "status": 5,
+      "status_initial": 0,
+      "urgency": 2,
+      "follower_id": "U4",
+      "expected_resolve_date": "2026-10-10",
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "业务使用部门（模拟）",
+      "created_at": "2026-09-22T09:00:00+08:00",
+      "result_desc": "模拟前次处置完成，用户反馈复发后重新激活。",
+      "resolve_date": "2026-09-24T09:00:00+08:00",
+      "activation_reason": "用户反馈仍有重复消息，重新激活处理",
+      "suspend_reason": "",
+      "description": "产品使用过程中的服务请求，直接归属于产品，不按服务日期匹配维保合同。"
+    },
+    {
+      "id": "WO-007",
+      "product_id": "PROD-001",
+      "problem_desc": "移动端消息未送达",
+      "status": 4,
+      "status_initial": 0,
+      "urgency": 1,
+      "follower_id": "U4",
+      "expected_resolve_date": "2026-10-15",
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "业务使用部门（模拟）",
+      "created_at": "2026-09-26T09:00:00+08:00",
+      "result_desc": "",
+      "resolve_date": null,
+      "activation_reason": "",
+      "suspend_reason": "等待运营商回执接口联调",
+      "description": "产品使用过程中的服务请求，直接归属于产品，不按服务日期匹配维保合同。"
+    },
+    {
+      "id": "WO-008",
+      "product_id": "PROD-001",
+      "problem_desc": "历史公告缺失",
+      "status": 2,
+      "status_initial": 0,
+      "urgency": 1,
+      "follower_id": "U4",
+      "expected_resolve_date": "2026-09-17",
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "业务使用部门（模拟）",
+      "created_at": "2026-09-10T09:00:00+08:00",
+      "result_desc": "演示问题已解决，业务验证通过。",
+      "resolve_date": "2026-09-17",
+      "activation_reason": "",
+      "suspend_reason": "",
+      "description": "产品使用过程中的服务请求，直接归属于产品，不按服务日期匹配维保合同。"
+    },
+    {
+      "id": "WO-009",
+      "product_id": "PROD-001",
+      "problem_desc": "服务接口偶发错误",
+      "status": 2,
+      "status_initial": 0,
+      "urgency": 2,
+      "follower_id": "U4",
+      "expected_resolve_date": "2026-08-12",
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "业务使用部门（模拟）",
+      "created_at": "2026-08-11T09:00:00+08:00",
+      "result_desc": "演示问题已解决，业务验证通过。",
+      "resolve_date": "2026-08-12",
+      "activation_reason": "",
+      "suspend_reason": "",
+      "description": "产品使用过程中的服务请求，直接归属于产品，不按服务日期匹配维保合同。"
+    },
+    {
+      "id": "WO-010",
+      "product_id": "PROD-001",
+      "problem_desc": "周报指标显示异常",
+      "status": 2,
+      "status_initial": 0,
+      "urgency": 0,
+      "follower_id": "U4",
+      "expected_resolve_date": "2026-07-05",
+      "submitter_name": "演示业务代表",
+      "submitter_dept": "业务使用部门（模拟）",
+      "created_at": "2026-07-04T09:00:00+08:00",
+      "result_desc": "演示问题已解决，业务验证通过。",
+      "resolve_date": "2026-07-05",
+      "activation_reason": "",
+      "suspend_reason": "",
+      "description": "产品使用过程中的服务请求，直接归属于产品，不按服务日期匹配维保合同。"
+    }
+  ],
+  "followups": [
+    {
+      "id": "FOLLOW-1",
+      "project_id": "PRJ-001",
+      "requirement_id": null,
+      "task_id": null,
+      "content": "跟进核心功能与测试进展。",
+      "creator_id": "U3",
+      "created_at": "2026-10-07T09:00:00+08:00"
+    },
+    {
+      "id": "FOLLOW-2",
+      "project_id": "PRJ-002",
+      "requirement_id": null,
+      "task_id": null,
+      "content": "跟进核心功能与测试进展。",
+      "creator_id": "U3",
+      "created_at": "2026-10-07T09:00:00+08:00"
+    },
+    {
+      "id": "FOLLOW-3",
+      "project_id": "PRJ-003",
+      "requirement_id": null,
+      "task_id": null,
+      "content": "业务已验收，交付资料归档完成。",
+      "creator_id": "U3",
+      "created_at": "2026-06-30T09:00:00+08:00"
+    },
+    {
+      "id": "FOLLOW-4",
+      "project_id": "PRJ-004",
+      "requirement_id": null,
+      "task_id": null,
+      "content": "业务已验收，交付资料归档完成。",
+      "creator_id": "U3",
+      "created_at": "2026-07-31T09:00:00+08:00"
+    },
+    {
+      "id": "FOLLOW-5",
+      "project_id": "PRJ-005",
+      "requirement_id": null,
+      "task_id": null,
+      "content": "外部联调未就绪，申请项目暂停。",
+      "creator_id": "U3",
+      "created_at": "2026-10-07T09:00:00+08:00"
+    },
+    {
+      "id": "FOLLOW-6",
+      "project_id": "PRJ-006",
+      "requirement_id": null,
+      "task_id": null,
+      "content": "准备项目启动会与方案评审。",
+      "creator_id": "U3",
+      "created_at": "2026-10-08T09:00:00+08:00"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "DOC-001",
+      "kind": "planItems",
+      "target_id": "ITEM-1-2",
+      "name": "技术方案评审记录（模拟）.md",
+      "created_at": "2026-09-25T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 技术方案评审记录\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n项目：检索升级一期\n\n检查结果：演示场景通过。\n\n责任人：王琳；验证人：刘洋。\n\n结论仅用于展示证据关联。"
+    },
+    {
+      "id": "DOC-002",
+      "kind": "contracts",
+      "target_id": "CT-1",
+      "name": "检索升级一期合同摘要（模拟）.md",
+      "created_at": "2026-09-01T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 检索升级一期合同摘要\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n合同金额：200000元\n\n阶段安排：启动25%、进度50%、验收25%。\n\n合同、金额与签署信息均为虚构。"
+    },
+    {
+      "id": "DOC-003",
+      "kind": "planItems",
+      "target_id": "ITEM-2-2",
+      "name": "技术方案评审记录（模拟）.md",
+      "created_at": "2026-09-25T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 技术方案评审记录\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n项目：订阅中心重构项目\n\n检查结果：演示场景通过。\n\n责任人：王琳；验证人：刘洋。\n\n结论仅用于展示证据关联。"
+    },
+    {
+      "id": "DOC-004",
+      "kind": "planItems",
+      "target_id": "ITEM-2-4",
+      "name": "集成联调验证记录（模拟）.md",
+      "created_at": "2026-09-25T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 集成联调验证记录\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n项目：订阅中心重构项目\n\n检查结果：演示场景通过。\n\n责任人：王琳；验证人：刘洋。\n\n结论仅用于展示证据关联。"
+    },
+    {
+      "id": "DOC-005",
+      "kind": "contracts",
+      "target_id": "CT-2",
+      "name": "订阅中心重构项目合同摘要（模拟）.md",
+      "created_at": "2026-07-01T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 订阅中心重构项目合同摘要\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n合同金额：360000元\n\n阶段安排：启动25%、进度50%、验收25%。\n\n合同、金额与签署信息均为虚构。"
+    },
+    {
+      "id": "DOC-006",
+      "kind": "planItems",
+      "target_id": "ITEM-3-2",
+      "name": "技术方案评审记录（模拟）.md",
+      "created_at": "2026-03-30T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 技术方案评审记录\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n项目：招采分析看板建设\n\n检查结果：演示场景通过。\n\n责任人：王琳；验证人：刘洋。\n\n结论仅用于展示证据关联。"
+    },
+    {
+      "id": "DOC-007",
+      "kind": "planItems",
+      "target_id": "ITEM-3-4",
+      "name": "集成联调验证记录（模拟）.md",
+      "created_at": "2026-05-15T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 集成联调验证记录\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n项目：招采分析看板建设\n\n检查结果：演示场景通过。\n\n责任人：王琳；验证人：刘洋。\n\n结论仅用于展示证据关联。"
+    },
+    {
+      "id": "DOC-008",
+      "kind": "planItems",
+      "target_id": "ITEM-3-6",
+      "name": "业务验收记录（模拟）.md",
+      "created_at": "2026-06-30T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 业务验收记录\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n项目：招采分析看板建设\n\n检查结果：演示场景通过。\n\n责任人：王琳；验证人：刘洋。\n\n结论仅用于展示证据关联。"
+    },
+    {
+      "id": "DOC-009",
+      "kind": "contracts",
+      "target_id": "CT-3",
+      "name": "招采分析看板建设合同摘要（模拟）.md",
+      "created_at": "2026-03-01T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 招采分析看板建设合同摘要\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n合同金额：480000元\n\n阶段安排：启动25%、进度50%、验收25%。\n\n合同、金额与签署信息均为虚构。"
+    },
+    {
+      "id": "DOC-010",
+      "kind": "planItems",
+      "target_id": "ITEM-4-2",
+      "name": "技术方案评审记录（模拟）.md",
+      "created_at": "2026-04-30T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 技术方案评审记录\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n项目：统一认证建设\n\n检查结果：演示场景通过。\n\n责任人：王琳；验证人：刘洋。\n\n结论仅用于展示证据关联。"
+    },
+    {
+      "id": "DOC-011",
+      "kind": "planItems",
+      "target_id": "ITEM-4-4",
+      "name": "集成联调验证记录（模拟）.md",
+      "created_at": "2026-06-15T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 集成联调验证记录\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n项目：统一认证建设\n\n检查结果：演示场景通过。\n\n责任人：王琳；验证人：刘洋。\n\n结论仅用于展示证据关联。"
+    },
+    {
+      "id": "DOC-012",
+      "kind": "planItems",
+      "target_id": "ITEM-4-6",
+      "name": "业务验收记录（模拟）.md",
+      "created_at": "2026-07-31T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 业务验收记录\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n项目：统一认证建设\n\n检查结果：演示场景通过。\n\n责任人：王琳；验证人：刘洋。\n\n结论仅用于展示证据关联。"
+    },
+    {
+      "id": "DOC-013",
+      "kind": "contracts",
+      "target_id": "CT-4",
+      "name": "统一认证建设合同摘要（模拟）.md",
+      "created_at": "2026-04-01T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 统一认证建设合同摘要\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n合同金额：300000元\n\n阶段安排：启动25%、进度50%、验收25%。\n\n合同、金额与签署信息均为虚构。"
+    },
+    {
+      "id": "DOC-014",
+      "kind": "planItems",
+      "target_id": "ITEM-5-2",
+      "name": "技术方案评审记录（模拟）.md",
+      "created_at": "2026-09-25T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 技术方案评审记录\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n项目：移动端适配项目\n\n检查结果：演示场景通过。\n\n责任人：王琳；验证人：刘洋。\n\n结论仅用于展示证据关联。"
+    },
+    {
+      "id": "DOC-015",
+      "kind": "contracts",
+      "target_id": "CT-5",
+      "name": "移动端适配项目合同摘要（模拟）.md",
+      "created_at": "2026-09-10T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 移动端适配项目合同摘要\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n合同金额：160000元\n\n阶段安排：启动25%、进度50%、验收25%。\n\n合同、金额与签署信息均为虚构。"
+    },
+    {
+      "id": "DOC-016",
+      "kind": "maintenance",
+      "target_id": "MC-1",
+      "name": "2024年度维保摘要（模拟）.md",
+      "created_at": "2023-12-20T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 2024年度维保摘要\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n年度：2024\n\n登记金额：8万元\n\n服务范围：平台巡检、问题响应、消息通道维护。\n\n首期合同。"
+    },
+    {
+      "id": "DOC-017",
+      "kind": "maintenance",
+      "target_id": "MC-2",
+      "name": "2025年度维保摘要（模拟）.md",
+      "created_at": "2024-12-20T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 2025年度维保摘要\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n年度：2025\n\n登记金额：10万元\n\n服务范围：平台巡检、问题响应、消息通道维护。\n\n续签自：MC-1。"
+    },
+    {
+      "id": "DOC-018",
+      "kind": "maintenance",
+      "target_id": "MC-3",
+      "name": "2026年度维保摘要（模拟）.md",
+      "created_at": "2025-12-20T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 2026年度维保摘要\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n年度：2026\n\n登记金额：12万元\n\n服务范围：平台巡检、问题响应、消息通道维护。\n\n续签自：MC-2。"
+    },
+    {
+      "id": "DOC-019",
+      "kind": "maintenance",
+      "target_id": "MC-4",
+      "name": "2027年度维保摘要（模拟）.md",
+      "created_at": "2026-10-08T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 2027年度维保摘要\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n年度：2027\n\n登记金额：14万元\n\n服务范围：平台巡检、问题响应、消息通道维护。\n\n续签自：MC-3。"
+    },
+    {
+      "id": "DOC-020",
+      "kind": "requirements",
+      "target_id": "REQ-001",
+      "name": "检索口径确认（模拟）.md",
+      "created_at": "2026-08-20T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 检索口径确认\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n需求来源：REQ-001\n\n字段口径与检索样例已完成演示确认。"
+    },
+    {
+      "id": "DOC-021",
+      "kind": "projects",
+      "target_id": "PRJ-003",
+      "name": "看板项目验收（模拟）.md",
+      "created_at": "2026-06-30T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 看板项目验收\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n演示验收结论：指标口径、权限与导出流程通过。\n\n不代表实际业务验收。"
+    },
+    {
+      "id": "DOC-022",
+      "kind": "projects",
+      "target_id": "PRJ-004",
+      "name": "认证项目验收（模拟）.md",
+      "created_at": "2026-07-31T09:00:00+08:00",
+      "uploader_id": "U5",
+      "content": "# 认证项目验收\n\n> 本文件为虚构演示证据，不代表真实审批、验收或签署。\n\n演示验收结论：登录、授权与退出验证通过。"
+    }
+  ],
+  "events": [
+    {
+      "id": "EV-001",
+      "kind": "products",
+      "target_id": "PROD-001",
+      "at": "2023-12-01T09:00:00+08:00",
+      "title": "创建：标讯通",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-158",
+      "kind": "maintenance",
+      "target_id": "MC-1",
+      "at": "2023-12-20T09:00:00+08:00",
+      "title": "创建：首期维保",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-159",
+      "kind": "maintenance",
+      "target_id": "MC-2",
+      "at": "2024-12-20T09:00:00+08:00",
+      "title": "创建：续签年度维保",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-160",
+      "kind": "maintenance",
+      "target_id": "MC-3",
+      "at": "2025-12-20T09:00:00+08:00",
+      "title": "创建：续签年度维保",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-004",
+      "kind": "requirements",
+      "target_id": "REQ-003",
+      "at": "2026-02-01T09:00:00+08:00",
+      "title": "创建：招采分析看板",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-188",
+      "kind": "requirements",
+      "target_id": "REQ-003",
+      "at": "2026-02-03T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 1
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-189",
+      "kind": "requirements",
+      "target_id": "REQ-003",
+      "at": "2026-02-05T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-190",
+      "kind": "requirements",
+      "target_id": "REQ-003",
+      "at": "2026-02-07T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 30
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-005",
+      "kind": "requirements",
+      "target_id": "REQ-004",
+      "at": "2026-03-01T09:00:00+08:00",
+      "title": "创建：企业账号统一认证",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-063",
+      "kind": "projects",
+      "target_id": "PRJ-003",
+      "at": "2026-03-01T09:00:00+08:00",
+      "title": "创建：招采分析看板建设",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-064",
+      "kind": "requirements",
+      "target_id": "REQ-003",
+      "at": "2026-03-01T09:00:00+08:00",
+      "title": "需求转项目",
+      "patch": {
+        "status": 36
+      },
+      "actor_id": "U3"
+    },
+    {
+      "id": "EV-065",
+      "kind": "projects",
+      "target_id": "PRJ-003",
+      "at": "2026-03-01T09:00:00+08:00",
+      "title": "项目开始",
+      "patch": {
+        "status": 1,
+        "progress_text": "按计划推进交付"
+      },
+      "actor_id": "U3"
+    },
+    {
+      "id": "EV-073",
+      "kind": "contracts",
+      "target_id": "CT-3",
+      "at": "2026-03-01T09:00:00+08:00",
+      "title": "创建：招采分析看板建设建设合同",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-074",
+      "kind": "tasks",
+      "target_id": "TASK-3-1",
+      "at": "2026-03-01T09:00:00+08:00",
+      "title": "创建：业务方案与接口设计",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-076",
+      "kind": "tasks",
+      "target_id": "TASK-3-2",
+      "at": "2026-03-01T09:00:00+08:00",
+      "title": "创建：核心功能开发",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-081",
+      "kind": "tasks",
+      "target_id": "TASK-3-3",
+      "at": "2026-03-01T09:00:00+08:00",
+      "title": "创建：检索结果联调",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-083",
+      "kind": "tasks",
+      "target_id": "TASK-3-4",
+      "at": "2026-03-01T09:00:00+08:00",
+      "title": "创建：业务验收准备",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-085",
+      "kind": "bugs",
+      "target_id": "BUG-3-1",
+      "at": "2026-03-01T09:00:00+08:00",
+      "title": "创建：缺陷记录",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-087",
+      "kind": "bugs",
+      "target_id": "BUG-3-2",
+      "at": "2026-03-01T09:00:00+08:00",
+      "title": "创建：缺陷记录",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-191",
+      "kind": "requirements",
+      "target_id": "REQ-004",
+      "at": "2026-03-03T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 11
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-192",
+      "kind": "requirements",
+      "target_id": "REQ-004",
+      "at": "2026-03-05T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 12
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-193",
+      "kind": "requirements",
+      "target_id": "REQ-004",
+      "at": "2026-03-07T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 30
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-145",
+      "kind": "payments",
+      "target_id": "PAY-004",
+      "at": "2026-03-10T09:00:00+08:00",
+      "title": "登记付款 12 万元",
+      "patch": {},
+      "actor_id": "U6"
+    },
+    {
+      "id": "EV-067",
+      "kind": "planItems",
+      "target_id": "ITEM-3-1",
+      "at": "2026-03-30T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-068",
+      "kind": "planItems",
+      "target_id": "ITEM-3-2",
+      "at": "2026-03-30T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-089",
+      "kind": "projects",
+      "target_id": "PRJ-004",
+      "at": "2026-04-01T09:00:00+08:00",
+      "title": "创建：统一认证建设",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-090",
+      "kind": "requirements",
+      "target_id": "REQ-004",
+      "at": "2026-04-01T09:00:00+08:00",
+      "title": "需求转项目",
+      "patch": {
+        "status": 36
+      },
+      "actor_id": "U3"
+    },
+    {
+      "id": "EV-091",
+      "kind": "projects",
+      "target_id": "PRJ-004",
+      "at": "2026-04-01T09:00:00+08:00",
+      "title": "项目开始",
+      "patch": {
+        "status": 1,
+        "progress_text": "按计划推进交付"
+      },
+      "actor_id": "U3"
+    },
+    {
+      "id": "EV-099",
+      "kind": "contracts",
+      "target_id": "CT-4",
+      "at": "2026-04-01T09:00:00+08:00",
+      "title": "创建：统一认证建设建设合同",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-100",
+      "kind": "tasks",
+      "target_id": "TASK-4-1",
+      "at": "2026-04-01T09:00:00+08:00",
+      "title": "创建：业务方案与接口设计",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-102",
+      "kind": "tasks",
+      "target_id": "TASK-4-2",
+      "at": "2026-04-01T09:00:00+08:00",
+      "title": "创建：核心功能开发",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-107",
+      "kind": "tasks",
+      "target_id": "TASK-4-3",
+      "at": "2026-04-01T09:00:00+08:00",
+      "title": "创建：检索结果联调",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-109",
+      "kind": "tasks",
+      "target_id": "TASK-4-4",
+      "at": "2026-04-01T09:00:00+08:00",
+      "title": "创建：业务验收准备",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-111",
+      "kind": "bugs",
+      "target_id": "BUG-4-1",
+      "at": "2026-04-01T09:00:00+08:00",
+      "title": "创建：缺陷记录",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-113",
+      "kind": "bugs",
+      "target_id": "BUG-4-2",
+      "at": "2026-04-01T09:00:00+08:00",
+      "title": "创建：缺陷记录",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-149",
+      "kind": "payments",
+      "target_id": "PAY-008",
+      "at": "2026-04-05T09:00:00+08:00",
+      "title": "登记付款 7.5 万元",
+      "patch": {},
+      "actor_id": "U6"
+    },
+    {
+      "id": "EV-093",
+      "kind": "planItems",
+      "target_id": "ITEM-4-1",
+      "at": "2026-04-30T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-094",
+      "kind": "planItems",
+      "target_id": "ITEM-4-2",
+      "at": "2026-04-30T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-018",
+      "kind": "requirements",
+      "target_id": "REQ-017",
+      "at": "2026-05-01T09:00:00+08:00",
+      "title": "创建：历史数据补齐",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-146",
+      "kind": "payments",
+      "target_id": "PAY-005",
+      "at": "2026-05-01T09:00:00+08:00",
+      "title": "登记付款 10 万元",
+      "patch": {},
+      "actor_id": "U6"
+    },
+    {
+      "id": "EV-211",
+      "kind": "requirements",
+      "target_id": "REQ-017",
+      "at": "2026-05-03T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 31
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-212",
+      "kind": "requirements",
+      "target_id": "REQ-017",
+      "at": "2026-05-05T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 32
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-213",
+      "kind": "requirements",
+      "target_id": "REQ-017",
+      "at": "2026-05-07T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 34
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-069",
+      "kind": "planItems",
+      "target_id": "ITEM-3-3",
+      "at": "2026-05-15T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-070",
+      "kind": "planItems",
+      "target_id": "ITEM-3-4",
+      "at": "2026-05-15T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-147",
+      "kind": "payments",
+      "target_id": "PAY-006",
+      "at": "2026-05-20T09:00:00+08:00",
+      "title": "登记付款 14 万元",
+      "patch": {},
+      "actor_id": "U6"
+    },
+    {
+      "id": "EV-150",
+      "kind": "payments",
+      "target_id": "PAY-009",
+      "at": "2026-06-01T09:00:00+08:00",
+      "title": "登记付款 7.5 万元",
+      "patch": {},
+      "actor_id": "U6"
+    },
+    {
+      "id": "EV-003",
+      "kind": "requirements",
+      "target_id": "REQ-002",
+      "at": "2026-06-10T09:00:00+08:00",
+      "title": "创建：订阅中心重构",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-185",
+      "kind": "requirements",
+      "target_id": "REQ-002",
+      "at": "2026-06-12T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 11
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-186",
+      "kind": "requirements",
+      "target_id": "REQ-002",
+      "at": "2026-06-14T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 12
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-095",
+      "kind": "planItems",
+      "target_id": "ITEM-4-3",
+      "at": "2026-06-15T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-096",
+      "kind": "planItems",
+      "target_id": "ITEM-4-4",
+      "at": "2026-06-15T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-187",
+      "kind": "requirements",
+      "target_id": "REQ-002",
+      "at": "2026-06-16T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 30
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-066",
+      "kind": "projects",
+      "target_id": "PRJ-003",
+      "at": "2026-06-30T09:00:00+08:00",
+      "title": "业务验收完成，项目结束",
+      "patch": {
+        "status": 2,
+        "progress_text": "已完成业务验收"
+      },
+      "actor_id": "U3"
+    },
+    {
+      "id": "EV-071",
+      "kind": "planItems",
+      "target_id": "ITEM-3-5",
+      "at": "2026-06-30T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-072",
+      "kind": "planItems",
+      "target_id": "ITEM-3-6",
+      "at": "2026-06-30T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-075",
+      "kind": "tasks",
+      "target_id": "TASK-3-1",
+      "at": "2026-06-30T09:00:00+08:00",
+      "title": "任务状态更新",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-077",
+      "kind": "tasks",
+      "target_id": "TASK-3-2",
+      "at": "2026-06-30T09:00:00+08:00",
+      "title": "任务状态更新",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-078",
+      "kind": "tasks",
+      "target_id": "SUB-3-1",
+      "at": "2026-06-30T09:00:00+08:00",
+      "title": "子任务完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-079",
+      "kind": "tasks",
+      "target_id": "SUB-3-2",
+      "at": "2026-06-30T09:00:00+08:00",
+      "title": "子任务完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-080",
+      "kind": "tasks",
+      "target_id": "SUB-3-3",
+      "at": "2026-06-30T09:00:00+08:00",
+      "title": "子任务完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-082",
+      "kind": "tasks",
+      "target_id": "TASK-3-3",
+      "at": "2026-06-30T09:00:00+08:00",
+      "title": "任务状态更新",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-084",
+      "kind": "tasks",
+      "target_id": "TASK-3-4",
+      "at": "2026-06-30T09:00:00+08:00",
+      "title": "任务状态更新",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-086",
+      "kind": "bugs",
+      "target_id": "BUG-3-1",
+      "at": "2026-06-30T09:00:00+08:00",
+      "title": "缺陷关闭",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-088",
+      "kind": "bugs",
+      "target_id": "BUG-3-2",
+      "at": "2026-06-30T09:00:00+08:00",
+      "title": "缺陷关闭",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-148",
+      "kind": "payments",
+      "target_id": "PAY-007",
+      "at": "2026-06-30T09:00:00+08:00",
+      "title": "登记付款 12 万元",
+      "patch": {},
+      "actor_id": "U6"
+    },
+    {
+      "id": "EV-041",
+      "kind": "projects",
+      "target_id": "PRJ-002",
+      "at": "2026-07-01T09:00:00+08:00",
+      "title": "创建：订阅中心重构项目",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-042",
+      "kind": "requirements",
+      "target_id": "REQ-002",
+      "at": "2026-07-01T09:00:00+08:00",
+      "title": "需求转项目",
+      "patch": {
+        "status": 36
+      },
+      "actor_id": "U3"
+    },
+    {
+      "id": "EV-043",
+      "kind": "projects",
+      "target_id": "PRJ-002",
+      "at": "2026-07-01T09:00:00+08:00",
+      "title": "项目开始",
+      "patch": {
+        "status": 1,
+        "progress_text": "按计划推进交付"
+      },
+      "actor_id": "U3"
+    },
+    {
+      "id": "EV-048",
+      "kind": "contracts",
+      "target_id": "CT-2",
+      "at": "2026-07-01T09:00:00+08:00",
+      "title": "创建：订阅中心重构项目建设合同",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-049",
+      "kind": "tasks",
+      "target_id": "TASK-2-1",
+      "at": "2026-07-01T09:00:00+08:00",
+      "title": "创建：业务方案与接口设计",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-051",
+      "kind": "tasks",
+      "target_id": "TASK-2-2",
+      "at": "2026-07-01T09:00:00+08:00",
+      "title": "创建：核心功能开发",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-056",
+      "kind": "tasks",
+      "target_id": "TASK-2-3",
+      "at": "2026-07-01T09:00:00+08:00",
+      "title": "创建：检索结果联调",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-058",
+      "kind": "tasks",
+      "target_id": "TASK-2-4",
+      "at": "2026-07-01T09:00:00+08:00",
+      "title": "创建：业务验收准备",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-059",
+      "kind": "bugs",
+      "target_id": "BUG-2-1",
+      "at": "2026-07-01T09:00:00+08:00",
+      "title": "创建：缺陷记录",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-060",
+      "kind": "bugs",
+      "target_id": "BUG-2-2",
+      "at": "2026-07-01T09:00:00+08:00",
+      "title": "创建：缺陷记录",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-151",
+      "kind": "payments",
+      "target_id": "PAY-010",
+      "at": "2026-07-01T09:00:00+08:00",
+      "title": "登记付款 7.5 万元",
+      "patch": {},
+      "actor_id": "U6"
+    },
+    {
+      "id": "EV-013",
+      "kind": "requirements",
+      "target_id": "REQ-012",
+      "at": "2026-07-03T09:00:00+08:00",
+      "title": "创建：中标结果自动归档",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-143",
+      "kind": "payments",
+      "target_id": "PAY-002",
+      "at": "2026-07-03T09:00:00+08:00",
+      "title": "登记付款 9 万元",
+      "patch": {},
+      "actor_id": "U6"
+    },
+    {
+      "id": "EV-180",
+      "kind": "orders",
+      "target_id": "WO-010",
+      "at": "2026-07-04T09:00:00+08:00",
+      "title": "创建：周报指标显示异常",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-181",
+      "kind": "orders",
+      "target_id": "WO-010",
+      "at": "2026-07-05T09:00:00+08:00",
+      "title": "工单解决",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U4"
+    },
+    {
+      "id": "EV-201",
+      "kind": "requirements",
+      "target_id": "REQ-012",
+      "at": "2026-07-05T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 31
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-202",
+      "kind": "requirements",
+      "target_id": "REQ-012",
+      "at": "2026-07-07T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 32
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-203",
+      "kind": "requirements",
+      "target_id": "REQ-012",
+      "at": "2026-07-09T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 33
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-092",
+      "kind": "projects",
+      "target_id": "PRJ-004",
+      "at": "2026-07-31T09:00:00+08:00",
+      "title": "业务验收完成，项目结束",
+      "patch": {
+        "status": 2,
+        "progress_text": "已完成业务验收"
+      },
+      "actor_id": "U3"
+    },
+    {
+      "id": "EV-097",
+      "kind": "planItems",
+      "target_id": "ITEM-4-5",
+      "at": "2026-07-31T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-098",
+      "kind": "planItems",
+      "target_id": "ITEM-4-6",
+      "at": "2026-07-31T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-101",
+      "kind": "tasks",
+      "target_id": "TASK-4-1",
+      "at": "2026-07-31T09:00:00+08:00",
+      "title": "任务状态更新",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-103",
+      "kind": "tasks",
+      "target_id": "TASK-4-2",
+      "at": "2026-07-31T09:00:00+08:00",
+      "title": "任务状态更新",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-104",
+      "kind": "tasks",
+      "target_id": "SUB-4-1",
+      "at": "2026-07-31T09:00:00+08:00",
+      "title": "子任务完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-105",
+      "kind": "tasks",
+      "target_id": "SUB-4-2",
+      "at": "2026-07-31T09:00:00+08:00",
+      "title": "子任务完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-106",
+      "kind": "tasks",
+      "target_id": "SUB-4-3",
+      "at": "2026-07-31T09:00:00+08:00",
+      "title": "子任务完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-108",
+      "kind": "tasks",
+      "target_id": "TASK-4-3",
+      "at": "2026-07-31T09:00:00+08:00",
+      "title": "任务状态更新",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-110",
+      "kind": "tasks",
+      "target_id": "TASK-4-4",
+      "at": "2026-07-31T09:00:00+08:00",
+      "title": "任务状态更新",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-112",
+      "kind": "bugs",
+      "target_id": "BUG-4-1",
+      "at": "2026-07-31T09:00:00+08:00",
+      "title": "缺陷关闭",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-114",
+      "kind": "bugs",
+      "target_id": "BUG-4-2",
+      "at": "2026-07-31T09:00:00+08:00",
+      "title": "缺陷关闭",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-152",
+      "kind": "payments",
+      "target_id": "PAY-011",
+      "at": "2026-07-31T09:00:00+08:00",
+      "title": "登记付款 7.5 万元",
+      "patch": {},
+      "actor_id": "U6"
+    },
+    {
+      "id": "EV-014",
+      "kind": "requirements",
+      "target_id": "REQ-013",
+      "at": "2026-08-06T09:00:00+08:00",
+      "title": "创建：同名企业去重",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-204",
+      "kind": "requirements",
+      "target_id": "REQ-013",
+      "at": "2026-08-08T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 31
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-002",
+      "kind": "requirements",
+      "target_id": "REQ-001",
+      "at": "2026-08-10T09:00:00+08:00",
+      "title": "创建：智能标讯检索升级",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-205",
+      "kind": "requirements",
+      "target_id": "REQ-013",
+      "at": "2026-08-10T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 32
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-178",
+      "kind": "orders",
+      "target_id": "WO-009",
+      "at": "2026-08-11T09:00:00+08:00",
+      "title": "创建：服务接口偶发错误",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-008",
+      "kind": "requirements",
+      "target_id": "REQ-007",
+      "at": "2026-08-12T09:00:00+08:00",
+      "title": "创建：订阅提醒优化",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-179",
+      "kind": "orders",
+      "target_id": "WO-009",
+      "at": "2026-08-12T09:00:00+08:00",
+      "title": "工单解决",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U4"
+    },
+    {
+      "id": "EV-196",
+      "kind": "requirements",
+      "target_id": "REQ-007",
+      "at": "2026-08-14T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 31
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-017",
+      "kind": "requirements",
+      "target_id": "REQ-016",
+      "at": "2026-08-19T09:00:00+08:00",
+      "title": "创建：异常公告追踪",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-154",
+      "kind": "tasks",
+      "target_id": "REQ-TASK-1",
+      "at": "2026-08-20T09:00:00+08:00",
+      "title": "需求任务状态更新",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-210",
+      "kind": "requirements",
+      "target_id": "REQ-016",
+      "at": "2026-08-21T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 21
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-006",
+      "kind": "requirements",
+      "target_id": "REQ-005",
+      "at": "2026-08-25T09:00:00+08:00",
+      "title": "创建：移动端体验适配",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-015",
+      "kind": "requirements",
+      "target_id": "REQ-014",
+      "at": "2026-09-01T09:00:00+08:00",
+      "title": "创建：移动端消息回执",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-020",
+      "kind": "projects",
+      "target_id": "PRJ-001",
+      "at": "2026-09-01T09:00:00+08:00",
+      "title": "创建：检索升级一期",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-021",
+      "kind": "requirements",
+      "target_id": "REQ-001",
+      "at": "2026-09-01T09:00:00+08:00",
+      "title": "需求转项目",
+      "patch": {
+        "status": 36
+      },
+      "actor_id": "U3"
+    },
+    {
+      "id": "EV-022",
+      "kind": "projects",
+      "target_id": "PRJ-001",
+      "at": "2026-09-01T09:00:00+08:00",
+      "title": "项目开始",
+      "patch": {
+        "status": 1,
+        "progress_text": "按计划推进交付"
+      },
+      "actor_id": "U3"
+    },
+    {
+      "id": "EV-027",
+      "kind": "contracts",
+      "target_id": "CT-1",
+      "at": "2026-09-01T09:00:00+08:00",
+      "title": "创建：检索升级一期建设合同",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-028",
+      "kind": "tasks",
+      "target_id": "TASK-1-1",
+      "at": "2026-09-01T09:00:00+08:00",
+      "title": "创建：业务方案与接口设计",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-030",
+      "kind": "tasks",
+      "target_id": "TASK-1-2",
+      "at": "2026-09-01T09:00:00+08:00",
+      "title": "创建：核心功能开发",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-035",
+      "kind": "tasks",
+      "target_id": "TASK-1-3",
+      "at": "2026-09-01T09:00:00+08:00",
+      "title": "创建：检索结果联调",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-037",
+      "kind": "tasks",
+      "target_id": "TASK-1-4",
+      "at": "2026-09-01T09:00:00+08:00",
+      "title": "创建：业务验收准备",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-038",
+      "kind": "bugs",
+      "target_id": "BUG-1-1",
+      "at": "2026-09-01T09:00:00+08:00",
+      "title": "创建：缺陷记录",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-040",
+      "kind": "bugs",
+      "target_id": "BUG-1-2",
+      "at": "2026-09-01T09:00:00+08:00",
+      "title": "创建：缺陷记录",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-206",
+      "kind": "requirements",
+      "target_id": "REQ-014",
+      "at": "2026-09-03T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 11
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-009",
+      "kind": "requirements",
+      "target_id": "REQ-008",
+      "at": "2026-09-05T09:00:00+08:00",
+      "title": "创建：企业画像标签优化",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-207",
+      "kind": "requirements",
+      "target_id": "REQ-014",
+      "at": "2026-09-05T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 12
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-197",
+      "kind": "requirements",
+      "target_id": "REQ-008",
+      "at": "2026-09-07T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 11
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-208",
+      "kind": "requirements",
+      "target_id": "REQ-014",
+      "at": "2026-09-07T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 31
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-198",
+      "kind": "requirements",
+      "target_id": "REQ-008",
+      "at": "2026-09-09T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 12
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-209",
+      "kind": "requirements",
+      "target_id": "REQ-014",
+      "at": "2026-09-09T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 35
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-115",
+      "kind": "projects",
+      "target_id": "PRJ-005",
+      "at": "2026-09-10T09:00:00+08:00",
+      "title": "创建：移动端适配项目",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-116",
+      "kind": "requirements",
+      "target_id": "REQ-005",
+      "at": "2026-09-10T09:00:00+08:00",
+      "title": "需求转项目",
+      "patch": {
+        "status": 36
+      },
+      "actor_id": "U3"
+    },
+    {
+      "id": "EV-117",
+      "kind": "projects",
+      "target_id": "PRJ-005",
+      "at": "2026-09-10T09:00:00+08:00",
+      "title": "项目开始",
+      "patch": {
+        "status": 1,
+        "progress_text": "按计划推进交付"
+      },
+      "actor_id": "U3"
+    },
+    {
+      "id": "EV-125",
+      "kind": "contracts",
+      "target_id": "CT-5",
+      "at": "2026-09-10T09:00:00+08:00",
+      "title": "创建：移动端适配项目建设合同",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-126",
+      "kind": "tasks",
+      "target_id": "TASK-5-1",
+      "at": "2026-09-10T09:00:00+08:00",
+      "title": "创建：业务方案与接口设计",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-128",
+      "kind": "tasks",
+      "target_id": "TASK-5-2",
+      "at": "2026-09-10T09:00:00+08:00",
+      "title": "创建：核心功能开发",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-130",
+      "kind": "tasks",
+      "target_id": "TASK-5-3",
+      "at": "2026-09-10T09:00:00+08:00",
+      "title": "创建：检索结果联调",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-132",
+      "kind": "tasks",
+      "target_id": "TASK-5-4",
+      "at": "2026-09-10T09:00:00+08:00",
+      "title": "创建：业务验收准备",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-134",
+      "kind": "bugs",
+      "target_id": "BUG-5-1",
+      "at": "2026-09-10T09:00:00+08:00",
+      "title": "创建：缺陷记录",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-135",
+      "kind": "bugs",
+      "target_id": "BUG-5-2",
+      "at": "2026-09-10T09:00:00+08:00",
+      "title": "创建：缺陷记录",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-176",
+      "kind": "orders",
+      "target_id": "WO-008",
+      "at": "2026-09-10T09:00:00+08:00",
+      "title": "创建：历史公告缺失",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-153",
+      "kind": "payments",
+      "target_id": "PAY-012",
+      "at": "2026-09-12T09:00:00+08:00",
+      "title": "登记付款 4 万元",
+      "patch": {},
+      "actor_id": "U6"
+    },
+    {
+      "id": "EV-012",
+      "kind": "requirements",
+      "target_id": "REQ-011",
+      "at": "2026-09-15T09:00:00+08:00",
+      "title": "创建：区域商机热力分析",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-177",
+      "kind": "orders",
+      "target_id": "WO-008",
+      "at": "2026-09-17T09:00:00+08:00",
+      "title": "工单解决",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U4"
+    },
+    {
+      "id": "EV-200",
+      "kind": "requirements",
+      "target_id": "REQ-011",
+      "at": "2026-09-17T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 1
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-007",
+      "kind": "requirements",
+      "target_id": "REQ-006",
+      "at": "2026-09-18T09:00:00+08:00",
+      "title": "创建：AI招采研判试点",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-167",
+      "kind": "orders",
+      "target_id": "WO-004",
+      "at": "2026-09-20T09:00:00+08:00",
+      "title": "创建：分析图表加载慢",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-194",
+      "kind": "requirements",
+      "target_id": "REQ-006",
+      "at": "2026-09-20T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 21
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-010",
+      "kind": "requirements",
+      "target_id": "REQ-009",
+      "at": "2026-09-21T09:00:00+08:00",
+      "title": "创建：竞争对手动态订阅",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-169",
+      "kind": "orders",
+      "target_id": "WO-005",
+      "at": "2026-09-21T09:00:00+08:00",
+      "title": "创建：账号权限申请",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-171",
+      "kind": "orders",
+      "target_id": "WO-006",
+      "at": "2026-09-22T09:00:00+08:00",
+      "title": "创建：重复订阅通知",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-195",
+      "kind": "requirements",
+      "target_id": "REQ-006",
+      "at": "2026-09-22T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 30
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-016",
+      "kind": "requirements",
+      "target_id": "REQ-015",
+      "at": "2026-09-23T09:00:00+08:00",
+      "title": "创建：导出模板统一",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-199",
+      "kind": "requirements",
+      "target_id": "REQ-009",
+      "at": "2026-09-23T09:00:00+08:00",
+      "title": "需求状态推进",
+      "patch": {
+        "status": 11
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-170",
+      "kind": "orders",
+      "target_id": "WO-005",
+      "at": "2026-09-24T09:00:00+08:00",
+      "title": "工单解决",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U4"
+    },
+    {
+      "id": "EV-172",
+      "kind": "orders",
+      "target_id": "WO-006",
+      "at": "2026-09-24T09:00:00+08:00",
+      "title": "工单解决",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U4"
+    },
+    {
+      "id": "EV-023",
+      "kind": "planItems",
+      "target_id": "ITEM-1-1",
+      "at": "2026-09-25T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-024",
+      "kind": "planItems",
+      "target_id": "ITEM-1-2",
+      "at": "2026-09-25T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-025",
+      "kind": "planItems",
+      "target_id": "ITEM-1-3",
+      "at": "2026-09-25T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-044",
+      "kind": "planItems",
+      "target_id": "ITEM-2-1",
+      "at": "2026-09-25T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-045",
+      "kind": "planItems",
+      "target_id": "ITEM-2-2",
+      "at": "2026-09-25T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-046",
+      "kind": "planItems",
+      "target_id": "ITEM-2-3",
+      "at": "2026-09-25T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-047",
+      "kind": "planItems",
+      "target_id": "ITEM-2-4",
+      "at": "2026-09-25T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-119",
+      "kind": "planItems",
+      "target_id": "ITEM-5-1",
+      "at": "2026-09-25T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-120",
+      "kind": "planItems",
+      "target_id": "ITEM-5-2",
+      "at": "2026-09-25T09:00:00+08:00",
+      "title": "关键事项完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-168",
+      "kind": "orders",
+      "target_id": "WO-004",
+      "at": "2026-09-25T09:00:00+08:00",
+      "title": "工单解决",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U4"
+    },
+    {
+      "id": "EV-029",
+      "kind": "tasks",
+      "target_id": "TASK-1-1",
+      "at": "2026-09-26T09:00:00+08:00",
+      "title": "任务状态更新",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-031",
+      "kind": "tasks",
+      "target_id": "TASK-1-2",
+      "at": "2026-09-26T09:00:00+08:00",
+      "title": "任务状态更新",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-032",
+      "kind": "tasks",
+      "target_id": "SUB-1-1",
+      "at": "2026-09-26T09:00:00+08:00",
+      "title": "子任务完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-033",
+      "kind": "tasks",
+      "target_id": "SUB-1-2",
+      "at": "2026-09-26T09:00:00+08:00",
+      "title": "子任务完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-034",
+      "kind": "tasks",
+      "target_id": "SUB-1-3",
+      "at": "2026-09-26T09:00:00+08:00",
+      "title": "子任务完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-050",
+      "kind": "tasks",
+      "target_id": "TASK-2-1",
+      "at": "2026-09-26T09:00:00+08:00",
+      "title": "任务状态更新",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-052",
+      "kind": "tasks",
+      "target_id": "TASK-2-2",
+      "at": "2026-09-26T09:00:00+08:00",
+      "title": "任务状态更新",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-053",
+      "kind": "tasks",
+      "target_id": "SUB-2-1",
+      "at": "2026-09-26T09:00:00+08:00",
+      "title": "子任务完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-054",
+      "kind": "tasks",
+      "target_id": "SUB-2-2",
+      "at": "2026-09-26T09:00:00+08:00",
+      "title": "子任务完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-055",
+      "kind": "tasks",
+      "target_id": "SUB-2-3",
+      "at": "2026-09-26T09:00:00+08:00",
+      "title": "子任务完成",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-127",
+      "kind": "tasks",
+      "target_id": "TASK-5-1",
+      "at": "2026-09-26T09:00:00+08:00",
+      "title": "任务状态更新",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-174",
+      "kind": "orders",
+      "target_id": "WO-007",
+      "at": "2026-09-26T09:00:00+08:00",
+      "title": "创建：移动端消息未送达",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-011",
+      "kind": "requirements",
+      "target_id": "REQ-010",
+      "at": "2026-09-28T09:00:00+08:00",
+      "title": "创建：招标文件智能摘要",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-026",
+      "kind": "planItems",
+      "target_id": "ITEM-1-4",
+      "at": "2026-09-28T09:00:00+08:00",
+      "title": "关键事项状态更新",
+      "patch": {
+        "status": 1
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-036",
+      "kind": "tasks",
+      "target_id": "TASK-1-3",
+      "at": "2026-09-28T09:00:00+08:00",
+      "title": "任务状态更新",
+      "patch": {
+        "status": 1
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-057",
+      "kind": "tasks",
+      "target_id": "TASK-2-3",
+      "at": "2026-09-28T09:00:00+08:00",
+      "title": "任务状态更新",
+      "patch": {
+        "status": 1
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-164",
+      "kind": "orders",
+      "target_id": "WO-002",
+      "at": "2026-09-28T09:00:00+08:00",
+      "title": "创建：登录验证码偶发超时",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-165",
+      "kind": "orders",
+      "target_id": "WO-002",
+      "at": "2026-09-28T09:00:00+08:00",
+      "title": "工单开始处理",
+      "patch": {
+        "status": 1
+      },
+      "actor_id": "U4"
+    },
+    {
+      "id": "EV-061",
+      "kind": "bugs",
+      "target_id": "BUG-2-2",
+      "at": "2026-09-29T09:00:00+08:00",
+      "title": "缺陷已修复",
+      "patch": {
+        "status": 1
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-155",
+      "kind": "tasks",
+      "target_id": "REQ-TASK-2",
+      "at": "2026-09-29T09:00:00+08:00",
+      "title": "需求任务状态更新",
+      "patch": {
+        "status": 1
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-156",
+      "kind": "tasks",
+      "target_id": "REQ-TASK-4",
+      "at": "2026-09-29T09:00:00+08:00",
+      "title": "需求任务状态更新",
+      "patch": {
+        "status": 1
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-157",
+      "kind": "tasks",
+      "target_id": "REQ-TASK-6",
+      "at": "2026-09-29T09:00:00+08:00",
+      "title": "需求任务状态更新",
+      "patch": {
+        "status": 1
+      },
+      "actor_id": "U8"
+    },
+    {
+      "id": "EV-039",
+      "kind": "bugs",
+      "target_id": "BUG-1-1",
+      "at": "2026-09-30T09:00:00+08:00",
+      "title": "缺陷关闭",
+      "patch": {
+        "status": 2
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-118",
+      "kind": "projects",
+      "target_id": "PRJ-005",
+      "at": "2026-10-07T09:00:00+08:00",
+      "title": "项目暂停：外部网关联调未完成",
+      "patch": {
+        "status": 3,
+        "progress_text": "等待外部依赖恢复"
+      },
+      "actor_id": "U3"
+    },
+    {
+      "id": "EV-121",
+      "kind": "planItems",
+      "target_id": "ITEM-5-3",
+      "at": "2026-10-07T09:00:00+08:00",
+      "title": "关键事项状态更新",
+      "patch": {
+        "status": 3
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-122",
+      "kind": "planItems",
+      "target_id": "ITEM-5-4",
+      "at": "2026-10-07T09:00:00+08:00",
+      "title": "关键事项状态更新",
+      "patch": {
+        "status": 3
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-123",
+      "kind": "planItems",
+      "target_id": "ITEM-5-5",
+      "at": "2026-10-07T09:00:00+08:00",
+      "title": "关键事项状态更新",
+      "patch": {
+        "status": 3
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-124",
+      "kind": "planItems",
+      "target_id": "ITEM-5-6",
+      "at": "2026-10-07T09:00:00+08:00",
+      "title": "关键事项状态更新",
+      "patch": {
+        "status": 3
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-129",
+      "kind": "tasks",
+      "target_id": "TASK-5-2",
+      "at": "2026-10-07T09:00:00+08:00",
+      "title": "任务状态更新",
+      "patch": {
+        "status": 3
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-131",
+      "kind": "tasks",
+      "target_id": "TASK-5-3",
+      "at": "2026-10-07T09:00:00+08:00",
+      "title": "任务状态更新",
+      "patch": {
+        "status": 3
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-133",
+      "kind": "tasks",
+      "target_id": "TASK-5-4",
+      "at": "2026-10-07T09:00:00+08:00",
+      "title": "任务状态更新",
+      "patch": {
+        "status": 3
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-144",
+      "kind": "payments",
+      "target_id": "PAY-003",
+      "at": "2026-10-07T09:00:00+08:00",
+      "title": "登记付款 9 万元",
+      "patch": {},
+      "actor_id": "U6"
+    },
+    {
+      "id": "EV-175",
+      "kind": "orders",
+      "target_id": "WO-007",
+      "at": "2026-10-07T09:00:00+08:00",
+      "title": "工单暂停：等待接口联调",
+      "patch": {
+        "status": 4
+      },
+      "actor_id": "U4"
+    },
+    {
+      "id": "EV-019",
+      "kind": "requirements",
+      "target_id": "REQ-018",
+      "at": "2026-10-08T09:00:00+08:00",
+      "title": "创建：采购人关系洞察",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-062",
+      "kind": "bugs",
+      "target_id": "BUG-2-2",
+      "at": "2026-10-08T09:00:00+08:00",
+      "title": "复测失败，缺陷被激活",
+      "patch": {
+        "status": 3
+      },
+      "actor_id": "U5"
+    },
+    {
+      "id": "EV-136",
+      "kind": "projects",
+      "target_id": "PRJ-006",
+      "at": "2026-10-08T09:00:00+08:00",
+      "title": "创建：AI研判试点项目",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-137",
+      "kind": "requirements",
+      "target_id": "REQ-006",
+      "at": "2026-10-08T09:00:00+08:00",
+      "title": "需求转项目",
+      "patch": {
+        "status": 36
+      },
+      "actor_id": "U3"
+    },
+    {
+      "id": "EV-138",
+      "kind": "tasks",
+      "target_id": "TASK-6-1",
+      "at": "2026-10-08T09:00:00+08:00",
+      "title": "创建：业务方案与接口设计",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-139",
+      "kind": "tasks",
+      "target_id": "TASK-6-2",
+      "at": "2026-10-08T09:00:00+08:00",
+      "title": "创建：核心功能开发",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-140",
+      "kind": "tasks",
+      "target_id": "TASK-6-3",
+      "at": "2026-10-08T09:00:00+08:00",
+      "title": "创建：检索结果联调",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-141",
+      "kind": "tasks",
+      "target_id": "TASK-6-4",
+      "at": "2026-10-08T09:00:00+08:00",
+      "title": "创建：业务验收准备",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-142",
+      "kind": "payments",
+      "target_id": "PAY-001",
+      "at": "2026-10-08T09:00:00+08:00",
+      "title": "登记付款 5 万元",
+      "patch": {},
+      "actor_id": "U6"
+    },
+    {
+      "id": "EV-161",
+      "kind": "maintenance",
+      "target_id": "MC-4",
+      "at": "2026-10-08T09:00:00+08:00",
+      "title": "创建：续签年度维保",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-162",
+      "kind": "orders",
+      "target_id": "WO-001",
+      "at": "2026-10-08T09:00:00+08:00",
+      "title": "创建：订阅消息延迟",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-163",
+      "kind": "orders",
+      "target_id": "WO-001",
+      "at": "2026-10-08T09:00:00+08:00",
+      "title": "工单开始处理",
+      "patch": {
+        "status": 1
+      },
+      "actor_id": "U4"
+    },
+    {
+      "id": "EV-166",
+      "kind": "orders",
+      "target_id": "WO-003",
+      "at": "2026-10-09T09:00:00+08:00",
+      "title": "创建：导出下载失败",
+      "patch": {},
+      "actor_id": "U1"
+    },
+    {
+      "id": "EV-173",
+      "kind": "orders",
+      "target_id": "WO-006",
+      "at": "2026-10-09T09:00:00+08:00",
+      "title": "用户反馈复发，工单被激活",
+      "patch": {
+        "status": 5
+      },
+      "actor_id": "U4"
+    },
+    {
+      "id": "EV-182",
+      "kind": "projects",
+      "target_id": "PRJ-001",
+      "at": "2026-10-09T09:00:00+08:00",
+      "title": "记录交付关注：联调计划调整",
+      "patch": {
+        "risk_text": "检索联调计划调整，项目交付影响待确认"
+      },
+      "actor_id": "U3"
+    },
+    {
+      "id": "EV-183",
+      "kind": "tasks",
+      "target_id": "TASK-1-3",
+      "at": "2026-10-09T09:00:00+08:00",
+      "title": "检索结果联调计划后移 2 天",
+      "patch": {
+        "expected_end_date": "2026-10-12"
+      },
+      "actor_id": "U2"
+    },
+    {
+      "id": "EV-184",
+      "kind": "planItems",
+      "target_id": "ITEM-1-4",
+      "at": "2026-10-09T09:00:00+08:00",
+      "title": "集成联调关键事项调整至 10月12日",
+      "patch": {
+        "current_due_date": "2026-10-12"
+      },
+      "actor_id": "U3"
+    }
+  ]
+}

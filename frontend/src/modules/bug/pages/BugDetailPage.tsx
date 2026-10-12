@@ -12,7 +12,7 @@ import { BusinessAttachmentField } from '../../../components/business/BusinessAt
 
 type Option = { label: string; value: string };
 export function BugDetailPage() {
-  const { navigateWithReturn, returnToSource } = usePageReturnNavigation('/bugs'); const params = useParams(); const { message } = App.useApp();
+  const { navigateWithReturn, returnToSource, backText } = usePageReturnNavigation('/bugs'); const params = useParams(); const { message } = App.useApp();
   const [row, setRow] = useState<BugRecord>(); const [history, setHistory] = useState<any[]>([]); const [resolutions, setResolutions] = useState<Option[]>([]); const [users, setUsers] = useState<Option[]>([]);
   const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [notFound, setNotFound] = useState(false); const [revision, setRevision] = useState(0);
   const neighbors = useDetailNeighbors({ id: params.id, moduleKey: 'bug', routeBase: '/bugs', fetchNeighbors: getBugNeighbors });
@@ -35,7 +35,7 @@ export function BugDetailPage() {
     return () => { cancelled = true; };
   }, [params.id, revision]);
   const date = (value: any) => value?.format?.('YYYY-MM-DD');
-  return <TemplateDetailPage title="BUG详情" loading={loading} error={error} notFound={notFound} onRetry={() => setRevision((value) => value + 1)} onBack={returnToSource}
+  return <TemplateDetailPage title="BUG详情" loading={loading} error={error} notFound={notFound} onRetry={() => setRevision((value) => value + 1)} onBack={returnToSource} backText={backText}
     titleCenter={<DetailNeighborNav placement="title" loading={neighbors.loading} prevId={neighbors.prevId} nextId={neighbors.nextId} ordinal={neighbors.ordinal} total={neighbors.total} onNavigate={neighbors.navigateNeighbor} />}
     actions={row ? <><PermissionButton permission="bug" type="primary" onClick={() => navigateWithReturn(`/bugs/${row.id}/edit`)}>编辑</PermissionButton><PermissionButton permission="bug" onClick={() => navigateWithReturn(`/bugs/${row.id}/copy`)}>复制</PermissionButton><DeleteConfirmAction entityName="BUG" targetName={row.title} onConfirm={async () => { await deleteBug(row.id); returnToSource(); }}>删除</DeleteConfirmAction></> : null}
     statusSection={row ? { items: [{ label: 'Bug状态', value: renderBugStatus(row.status), wide: true }, { label: '严重程度', value: renderBugSeverity(row.severity), wide: true }] } : null}

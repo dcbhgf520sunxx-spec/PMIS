@@ -1,0 +1,4 @@
+rdflib==7.1.4
+pyshacl==0.30.1
+owlready2==0.48
+owlrl==7.1.4
