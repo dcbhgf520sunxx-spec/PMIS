@@ -99,7 +99,7 @@ def execute(source,product_id,project_id,output):
  result={
  'execution':{'engine':'OWL 2 + HermiT + SHACL + SPARQL','executedAt':datetime.now(timezone.utc).isoformat(),'capturedAt':raw['capturedAt'],'sourceTransport':raw['sourceTransport'],'sourceSha256':hashlib.sha256(Path(source).read_bytes()).hexdigest(),'readCount':len(raw['calls']),'consistency':'non-transactional-read','productId':str(product_id),'projectId':str(project_id) if project_id else None,'filesSha256':{str(p.relative_to(ROOT.parent)):hashlib.sha256(p.read_bytes()).hexdigest() for p in files}},
  'validation':validation,'reasoning':reasoning,'issues':issues,'answers':annotate_answers(data,{'requirements':requirements,'projectOpenWork':work,'projectPayments':payments,'stagePayments':stage_payments,'maintenanceContracts':maintenance,'workOrders':orders},issues),'objects':labels,
- 'limitations':[('本次工具调用实时授权读取；不代表线上平台已接入' if raw['sourceTransport'] in ('authorized-rest','authorized-controller') else '本轮授权读取的固定快照，非调用时重新读取；不代表线上平台已接入'),'各请求不在同一数据库事务内；项目付款按登记明细汇总，运维合同按录入即已付款的业务口径表达，不代替银行凭证','每条答案附相关校验状态；异常待核实的金额仅是登记数据计算，不作为已核对结论；不自动补全来源关系',('本轮读取运维合同和工单；不推断工单所属合同' if 'operations' in raw else '本轮未读取运维合同和工单')]}
+ 'limitations':[('本次结果来自SIDM当前账号授权范围内的实时读取；采集时间和产品、项目查询范围见execution' if raw['sourceTransport'] in ('authorized-rest','authorized-controller') else '本次结果来自SIDM授权读取的固定快照，并非本次调用时重新读取的实时数据；快照采集时间和产品、项目查询范围见execution'),'各请求不在同一数据库事务内；项目付款按登记明细汇总，运维合同按录入即已付款的业务口径表达，不代替银行凭证','每条答案附相关校验状态；异常待核实的金额仅是登记数据计算，不作为已核对结论；不自动补全来源关系',('本轮读取运维合同和工单；不推断工单所属合同' if 'operations' in raw else '本轮未读取运维合同和工单')]}
  write(output/'answer.json',result)
  return result
 if __name__=='__main__':

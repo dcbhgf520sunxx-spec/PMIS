@@ -18,6 +18,8 @@
 
 “通过已执行校验”只表示该答案相关的数据通过当前已建模约束，不表示全部业务事实完整，也不证明OA或银行付款。跨控制器读取不是单个数据库事务。
 
+结果备注只说明本次数据来源和业务限制，不判断平台是否上线。实时授权读取与固定快照分别标明；采集时间及产品、项目查询范围由 `execution.capturedAt`、`execution.productId`、`execution.projectId` 提供。快照结果不能当作调用时实时数据。
+
 ## 运行环境与发布准备
 
 开发默认使用 `artifacts/sidm-ontology/standard/.venv/bin/python`。发布脚本只把必需的OWL、SHACL、Python、SPARQL与传输映射源文件复制到发布目录 `backend/ontology/`，不复制教材、真实数据、登录令牌、虚拟环境或本机Java。
