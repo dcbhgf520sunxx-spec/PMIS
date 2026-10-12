@@ -140,6 +140,7 @@ fi
 run_group=$(id -gn "$run_user")
 
 install -d -m 755 "$app_root" "$app_root/releases" "$app_root/shared"
+install -d -m 700 -o "$run_user" -g "$run_group" "$app_root/shared/model-secrets"
 install -d -o "$run_user" -g "$run_group" -m 755 \
   "$app_root/shared/uploads" \
   "$app_root/shared/private-uploads" \
@@ -186,6 +187,7 @@ tar \
   --exclude='./artifacts' \
   --exclude='./tmp' \
   --exclude='./backend/.env' \
+  --exclude='./backend/.secrets' \
   --exclude='node_modules' \
   --exclude='dist' \
   -C "$repo_dir" -cf - . | tar -C "$release_dir" -xf -
@@ -251,6 +253,7 @@ Group=$run_group
 WorkingDirectory=$app_root/current/backend
 Environment=NODE_ENV=production
 Environment=PMIS_PRIVATE_UPLOAD_ROOT=$app_root/shared/private-uploads
+Environment=PMIS_MODEL_KEY_FILE=$app_root/shared/model-secrets/llm.key
 EnvironmentFile=$shared_env
 ExecStart=$node_bin $app_root/current/backend/src/server.js
 Restart=always

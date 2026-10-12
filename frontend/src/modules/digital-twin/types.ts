@@ -64,6 +64,7 @@ export type TwinSnapshot = {
     attention: TwinRecord[];
 };
 export type TwinAiSummary = {
+    provider: string;
     text: string;
     model: string;
     generatedAt: string;

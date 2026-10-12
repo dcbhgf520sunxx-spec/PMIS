@@ -16,6 +16,6 @@ export async function getTwinSnapshot(productId: string, signal?: AbortSignal): 
     return { ...data, product: { ...data.product, id: String(data.product.id) }, records: data.records.map(convert), attention: data.attention.map(convert) };
 }
 export async function getTwinAiSummary(productId: string, signal?: AbortSignal, force = false): Promise<TwinAiSummary> {
-    return unwrap(request.post(`/digital-twin/${encodeURIComponent(productId)}/summary`, { force }, { signal, timeout: 35000 }),
-        objectContract<TwinAiSummary>(['text', 'model', 'generatedAt', 'sourceAsOf', 'updatedCount', 'sourceRevision']));
+    return unwrap(request.post(`/digital-twin/${encodeURIComponent(productId)}/summary`, { force }, { signal, timeout: 75000 }),
+        objectContract<TwinAiSummary>(['text', 'model', 'provider', 'generatedAt', 'sourceAsOf', 'updatedCount', 'sourceRevision']));
 }

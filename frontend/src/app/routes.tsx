@@ -22,6 +22,9 @@ function withRouteSuspense(element: ReactNode) {
 
 const BusinessOntologyPage = lazy(() => import('../modules/business-ontology/pages/BusinessOntologyPage').then((module) => ({ default: module.BusinessOntologyPage })));
 const DigitalTwinPage = lazy(() => import('../modules/digital-twin/pages/DigitalTwinPage').then((module) => ({ default: module.DigitalTwinPage })));
+const ModelConnectionListPage = lazy(() => import('../modules/model-center/pages/ModelConnectionListPage').then(module => ({ default: module.ModelConnectionListPage })));
+const ModelConnectionFormPage = lazy(() => import('../modules/model-center/pages/ModelConnectionFormPage').then(module => ({ default: module.ModelConnectionFormPage })));
+const ModelConnectionDetailPage = lazy(() => import('../modules/model-center/pages/ModelConnectionDetailPage').then(module => ({ default: module.ModelConnectionDetailPage })));
 
 const HomePage = lazy(() =>
   import('../modules/home/pages/HomePage').then((module) => ({
@@ -189,6 +192,10 @@ export const routes: RouteObject[] = [
       { path: 'roles/:id/edit', element: withRouteSuspense(<RoleFormPage mode="edit" />) },
       { path: 'roles/:id', element: withRouteSuspense(<RoleDetailPage />) },
       { path: 'archive', element: withRouteSuspense(<ArchivePage />) },
+      { path: 'model-connections', element: withRouteSuspense(<ModelConnectionListPage />) },
+      { path: 'model-connections/new', element: withRouteSuspense(<ModelConnectionFormPage />) },
+      { path: 'model-connections/:id', element: withRouteSuspense(<ModelConnectionDetailPage />) },
+      { path: 'model-connections/:id/edit', element: withRouteSuspense(<ModelConnectionFormPage />) },
       { path: 'integrations', element: withRouteSuspense(<OpenClientListPage />) },
       { path: 'integrations/legacy', element: withRouteSuspense(<IntegrationPage />) },
       { path: 'integrations/clients/new', element: withRouteSuspense(<OpenClientFormPage />) },

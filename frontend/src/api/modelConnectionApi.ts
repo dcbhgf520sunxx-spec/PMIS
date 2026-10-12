@@ -1,0 +1,16 @@
+import { request, unwrap } from './requestClient';
+import { arrayContract, objectContract } from './responseContract';
+export type ModelConnection = { id: string; name: string; provider: string; baseUrl: string; modelName: string; enabled: number; isDefault: number; keyConfigured: boolean; timeoutSeconds: number; creatorName: string; updaterName: string; createdAt: string; updatedAt: string };
+export type ModelValues = { name: string; provider: string; baseUrl: string; modelName: string; apiKey?: string; timeoutSeconds: number };
+type RawConnection = { id: number; name: string; provider: string; base_url: string; model_name: string; enabled: number; is_default: number; key_configured: boolean; timeout_seconds: number; creator_name: string | null; updater_name: string | null; created_at: string; updated_at: string };
+const contract = objectContract<RawConnection>(['id','name','provider','base_url','model_name','enabled','is_default','key_configured','timeout_seconds','creator_name','updater_name','created_at','updated_at']);
+const time = (value: string) => value.slice(0,19).replace('T',' ');
+const convert = (row: RawConnection): ModelConnection => ({ id: String(row.id), name: row.name, provider: row.provider, baseUrl: row.base_url, modelName: row.model_name, enabled: Number(row.enabled), isDefault: Number(row.is_default), keyConfigured: row.key_configured, timeoutSeconds: row.timeout_seconds, creatorName: row.creator_name || '', updaterName: row.updater_name || '', createdAt: time(row.created_at), updatedAt: time(row.updated_at) });
+const base = '/model-connections';
+export const listModelConnections = async (signal?: AbortSignal) => (await unwrap(request.get(base,{signal}),arrayContract(contract))).map(convert);
+export const getModelConnection = async (id: string) => convert(await unwrap(request.get(`${base}/${encodeURIComponent(id)}`),contract));
+export const saveModelConnection = async (id: string | undefined, body: ModelValues) => convert(await unwrap(id ? request.put(`${base}/${encodeURIComponent(id)}`,body) : request.post(base,body),contract));
+const nullContract = (value: unknown): value is null => value === null;
+export const setModelConnectionStatus = (id: string, enabled: number) => unwrap(request.patch(`${base}/${encodeURIComponent(id)}/status`,{enabled}),nullContract);
+export const setDefaultModelConnection = (id: string) => unwrap(request.post(`${base}/${encodeURIComponent(id)}/default`,{}),nullContract);
+export const testModelConnection = (id: string, signal?: AbortSignal) => unwrap(request.post(`${base}/${encodeURIComponent(id)}/test`,{},{signal,timeout:75000}),objectContract<{success: boolean; elapsedMs: number; model: string}>(['success','elapsedMs','model']));
