@@ -60,6 +60,17 @@ test('手动重新生成跳过缓存，并发点击合并，自动读取复用�
   assert.equal(calls, 2);
   assert.equal((await generate('u', '1')).text, '总结2');
 });
+test('默认模型版本变化立即使总结缓存失效，停用默认模型拒绝旧结果', async () => {
+  let connection = {revision:'one',model:'m1',provider:'自定义模型'}; let calls = 0;
+  const generate = createSummaryService({readSnapshot:async () => snapshot(),readConnection:async () => {
+    if (!connection) throw Object.assign(new Error('没有默认模型'),{status:503});
+    return connection;
+  },complete:async (_evidence,config) => {calls++; return {text:config.model,model:config.model};}});
+  assert.equal((await generate('u','1')).text,'m1'); await generate('u','1'); assert.equal(calls,1);
+  connection = {...connection,revision:'two',model:'m2'};
+  assert.equal((await generate('u','1')).text,'m2'); assert.equal(calls,2);
+  connection = null; await assert.rejects(generate('u','1'),{status:503}); assert.equal(calls,2);
+});
 test('数据库的短时区偏移和微秒时间不会漏掉最近7天记录', () => {
   const data = snapshot();
   data.records = [record('outside', '2026-10-05 11:59:59+08'), record('edge', '2026-10-05 12:00:00+08'), record('latest', '2026-10-12 12:00:00.123456+08')];

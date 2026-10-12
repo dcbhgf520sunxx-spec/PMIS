@@ -11,6 +11,7 @@ WorkingDirectory=/opt/pmis/current/backend
 Environment=NODE_ENV=production
 Environment=LD_LIBRARY_PATH=/opt/rh/devtoolset-11/root/usr/lib64
 Environment=PMIS_PRIVATE_UPLOAD_ROOT=/opt/pmis/shared/private-uploads
+Environment=PMIS_MODEL_KEY_FILE=/opt/pmis/shared/model-secrets/llm.key
 EnvironmentFile=/opt/pmis/shared/backend.env
 ExecStart=/opt/node-v22.23.1/bin/node /opt/pmis/current/backend/src/server.js
 Restart=always

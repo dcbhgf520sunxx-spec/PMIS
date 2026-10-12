@@ -109,6 +109,10 @@ const businessMenuItems: AdminMenuItems = [
       {
         key: '/access-logs',
         label: '访问日志'
+      },
+      {
+        key: '/model-connections',
+        label: '模型中心'
       }
     ]
   },
