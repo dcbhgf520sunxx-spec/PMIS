@@ -150,6 +150,7 @@ test('detail results publish currently allowed next statuses with labels', () =>
   assert.deepEqual(result.allowed_statuses, [
     { value: 1, label: '处理中' },
     { value: 3, label: '已暂停' },
+      { value: 4, label: '已关闭' },
   ])
 })
 

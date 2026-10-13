@@ -2,10 +2,19 @@
 from pathlib import Path
 from rdflib import Graph,Namespace,RDF,RDFS,OWL,URIRef
 from rdflib.collection import Collection
-import json,hashlib
+import json,hashlib,re
 ROOT=Path(__file__).resolve().parent
 S=Namespace('urn:sidm:ontology:');SH=Namespace('http://www.w3.org/ns/shacl#')
 g=Graph().parse(ROOT/'sidm.ttl');sh=Graph().parse(ROOT/'shapes.ttl')
+mapping=json.loads((ROOT.parent/'mapping.json').read_text())
+type_specs={t:spec for group in [mapping,mapping['delivery'],mapping['commerce'],mapping['operations']] for t,spec in group['types'].items()}
+def status_labels(class_id):
+ return {label:code for code,label in type_specs.get(class_id,{}).get('enums',{}).get('status',{}).items()}
+def status_text(text,class_id):
+ codes=status_labels(class_id)
+ if not codes:return text
+ # Match longer labels first, so 已完成未使用 remains a single status.
+ return re.sub('|'.join(re.escape(label) for label in sorted(codes,key=len,reverse=True)),lambda m:codes[m[0]]+' · '+m[0],text)
 def key(u):return str(u).split(':')[-1]
 def domains(u):
  if isinstance(u,URIRef):return [key(u)]
@@ -79,7 +88,10 @@ for c in sorted(g.subjects(RDF.type,OWL.Class),key=str):
     datatype=sh.value(ps,SH.datatype)
     if datatype:limits.append('数据类型：'+{'string':'文字','date':'日期','dateTime':'日期与时间','decimal':'金额数值','integer':'整数'}.get(str(datatype).split('#')[-1],str(datatype).split('#')[-1]))
     values=sh.value(ps,SH['in'])
-    if values:limits.append('允许值：'+'、'.join(str(x) for x in Collection(sh,values)))
+    if values:
+     names=list(dict.fromkeys(str(x) for x in Collection(sh,values)))
+     codes=status_labels(key(c)) if key(prop)=='status' else {}
+     limits.append('允许值：'+'、'.join((codes[name]+' · '+name) if name in codes else name for name in names))
     if limits:checks.append({'label':labels(prop),'text':'；'.join(limits)})
   for check in sh.objects(shape,SH.sparql):
    for message in sh.objects(check,SH.message):rules.append(str(message))
@@ -90,11 +102,11 @@ assert len(objects)==14
 for c in classes:
  name=class_names.get(c['id'],c['label'])
  assert name in objects, name
- state_name='项目、关键事项' if c['id'] in ('Project','KeyItem') else name
+ state_name=name
  attr_name='供应商、人员' if c['id'] in ('Supplier','Person') else name
  c['business']={'meaning':objects[name][0],'connections':objects[name][1],
-  'attributes':attributes.get(attr_name,''),'states':states.get(state_name,''),
-  'earlyStates':early_states if c['id']=='Requirement' else [],
+  'attributes':attributes.get(attr_name,''),'states':status_text(states.get(state_name,''),c['id']),
+  'earlyStates':[[row[0],status_text(row[1],c['id'])] for row in early_states] if c['id']=='Requirement' else [],
   'quantities':[quantities[q] for q in quantity_groups[c['id']]],
   'roles':[{'role':r[0],'meaning':r[2] if c['id'] in ('Task','Person') else r[2].split('；任务允许')[0]} for r in roles if c['id']=='Person' or c['label'] in r[1].replace('、',',').split(',') or (c['id']=='Task' and '任务' in r[1].replace('、',',').split(','))],
   'boundary':boundaries[c['id']]}

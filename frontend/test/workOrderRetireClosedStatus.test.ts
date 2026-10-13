@@ -9,29 +9,30 @@ async function loadRules() {
   }
 }
 
-test('运维工单现行状态取消已关闭', async () => {
+test('运维工单现行状态包含已关闭', async () => {
   const rules = await loadRules();
 
-  assert.deepEqual(rules?.activeWorkOrderStatuses, [0, 1, 2, 4, 5]);
+  assert.deepEqual(rules?.activeWorkOrderStatuses, [0, 1, 2, 3, 4, 5]);
 });
 
-test('待处理可以直接解决且所有现行流转都不包含已关闭', async () => {
+test('待处理可以直接解决且现行流转支持关闭及恢复', async () => {
   const rules = await loadRules();
 
   assert.deepEqual(rules?.statusTransitions, {
-    0: [1, 2, 4],
-    1: [2, 4],
-    2: [4, 5],
-    4: [0, 1, 2],
+    0: [1, 2, 4, 3],
+    1: [2, 4, 3],
+    2: [4, 5, 3],
+    3: [0, 1, 2, 4],
+    4: [0, 1, 2, 3],
     5: [2]
   });
   assert.equal(
     Object.values(rules?.statusTransitions || {}).some((targets) => targets.includes(3)),
-    false
+    true
   );
 });
 
-test('状态变更请求不再发送关闭时间', async () => {
+test('状态变更请求支持关闭时间及原因', async () => {
   const rules = await loadRules();
 
   assert.equal(typeof rules?.buildStatusPayload, 'function');
@@ -41,6 +42,8 @@ test('状态变更请求不再发送关闭时间', async () => {
     closedAt: { format: () => '2026-07-28' }
   }), {
     status: 2,
+    closeDate: '2026-07-28',
+    closeReason: undefined,
     resolveDate: '2026-07-27',
     suspendDate: undefined,
     suspendReason: undefined,

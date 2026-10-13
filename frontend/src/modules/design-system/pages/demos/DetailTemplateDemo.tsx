@@ -109,7 +109,11 @@ export function DetailTemplateDemo() {
             { label: '工号', value: '10086' },
             { label: '姓名', value: '张三' },
             { label: '手机号', value: '13800000000' },
-            { label: '所属角色', value: '系统管理员 / 业务管理员 / 运维管理员 / 数据管理员 / 审计管理员 / 安全管理员', aggregate: true }
+            { label: '所属角色', value: '系统管理员 / 业务管理员 / 运维管理员 / 数据管理员 / 审计管理员 / 安全管理员', aggregate: true },
+            { label: '暂停时间', value: '2026-10-13', startRow: true },
+            { label: '暂停原因', value: '等待业务资料补齐。\n补齐后继续处理，时间占一格、原因占三格。', span: 3, longText: true },
+            { label: '关闭时间', value: '-', startRow: true },
+            { label: '关闭原因', value: '-', span: 3, longText: true }
           ]}
         />
       </TemplateDetailSection>

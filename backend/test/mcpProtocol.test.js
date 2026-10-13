@@ -773,7 +773,7 @@ test('status action schemas expose the exact conditional business fields', () =>
   assert.ok(bugProperties.activation_reason)
   assert.equal(bugProperties.resolve_date, undefined)
   assert.equal(bugProperties.close_date, undefined)
-  assert.deepEqual(taskProperties.status.enum, [0, 1, 2, 3])
+  assert.deepEqual(taskProperties.status.enum, [0, 1, 2, 3, 4])
   assert.deepEqual(bugProperties.status.enum, [0, 1, 2, 3])
   assert.equal(stageProperties.files, undefined)
   assert.match(stageProperties.status.description, /stage_delivery_upload/)

@@ -49,7 +49,7 @@ test('fixed business enums publish exact values and Chinese mappings', () => {
     ['project_search', 'query', 'priority', [0, 1, 2], '0=低，1=中，2=高'],
     ['task_search', 'query', 'priority', [0, 1, 2], '0=低，1=中，2=高'],
     ['task_search', 'query', 'source_type', [1, 2], '1=项目，2=需求'],
-    ['task_search', 'query', 'status', [0, 1, 2, 3], '0=待处理'],
+    ['task_search', 'query', 'status', [0, 1, 2, 3, 4], '0=待处理'],
     ['requirement_search', 'query', 'requirement_type', [1, 2, 3, 4], '1=上会立项'],
     ['bug_search', 'query', 'severity', [1, 2, 3, 4], '4=致命'],
     ['work_order_search', 'query', 'urgency', [0, 1, 2], '1=中'],
@@ -277,6 +277,7 @@ test('query results include readable labels next to business codes', () => {
     allowed_statuses: [
       { value: 1, label: '处理中' },
       { value: 3, label: '已暂停' },
+      { value: 4, label: '已关闭' },
     ],
   })
 })

@@ -2,10 +2,11 @@ const { validateActualBusinessDate } = require('./actualBusinessDateRules')
 const { BUSINESS_FIELD_LIMITS } = require('./businessFieldRules')
 
 const WORK_ORDER_STATUS_TRANSITIONS = {
-  0: [1, 2, 4],
-  1: [2, 4],
-  2: [4, 5],
-  4: [0, 1, 2],
+  0: [1, 2, 4, 3],
+  1: [2, 4, 3],
+  2: [4, 5, 3],
+  3: [0, 1, 2, 4],
+  4: [0, 1, 2, 3],
   5: [2]
 }
 
@@ -15,10 +16,14 @@ function allowedWorkOrderStatuses(status) {
 
 function resolveWorkOrderResultFields(status, body = {}, old = {}) {
   const target = Number(status)
+  if (target === 3) {
+    return { resolveDate: old.resolve_date || null, closeDate: body.close_date || null, closeReason: String(body.close_reason || '').trim(), resultDesc: old.result_desc || null, suspendDate: null, suspendReason: null }
+  }
   if (target === 5) {
     return {
       resolveDate: old.resolve_date || null,
-      closeDate: old.close_date || null,
+      closeDate: Number(old.status) === 3 ? null : old.close_date || null,
+      closeReason: null,
       resultDesc: old.result_desc || null,
       suspendDate: null,
       suspendReason: null,
@@ -28,7 +33,8 @@ function resolveWorkOrderResultFields(status, body = {}, old = {}) {
   if (target === 4) {
     return {
       resolveDate: old.resolve_date || null,
-      closeDate: old.close_date || null,
+      closeDate: Number(old.status) === 3 ? null : old.close_date || null,
+      closeReason: null,
       resultDesc: old.result_desc || null,
       suspendDate: body.suspend_date || null,
       suspendReason: String(body.suspend_reason || '').trim()
@@ -37,7 +43,8 @@ function resolveWorkOrderResultFields(status, body = {}, old = {}) {
   if (target === 2) {
     return {
       resolveDate: body.resolve_date || null,
-      closeDate: old.close_date || null,
+      closeDate: Number(old.status) === 3 ? null : old.close_date || null,
+      closeReason: null,
       resultDesc: body.result_desc ? String(body.result_desc).trim() : null,
       suspendDate: null,
       suspendReason: null
@@ -45,7 +52,8 @@ function resolveWorkOrderResultFields(status, body = {}, old = {}) {
   }
   return {
     resolveDate: null,
-    closeDate: old.close_date || null,
+    closeDate: Number(old.status) === 3 ? null : old.close_date || null,
+    closeReason: null,
     resultDesc: null,
     suspendDate: null,
     suspendReason: null
@@ -63,6 +71,10 @@ function validateWorkOrderResultFields(status, values, today) {
   if (target === 4 && !values.suspendDate) return '暂停工单时必须填写暂停时间'
   if (target === 4 && !values.suspendReason) return '暂停工单时必须填写暂停原因'
   if (target === 4 && values.suspendReason.length > BUSINESS_FIELD_LIMITS.pauseReason) return `暂停原因不能超过${BUSINESS_FIELD_LIMITS.pauseReason}字`
+  if (target === 3 && !values.closeDate) return '关闭工单时必须填写关闭时间'
+  if (target === 3 && !values.closeReason) return '关闭工单时必须填写关闭原因'
+  if (target === 3 && values.closeReason.length > BUSINESS_FIELD_LIMITS.pauseReason) return `关闭原因不能超过${BUSINESS_FIELD_LIMITS.pauseReason}字`
+  if (target === 3) return validateActualBusinessDate(values.closeDate, '关闭时间', today) || ''
   return ''
 }
 

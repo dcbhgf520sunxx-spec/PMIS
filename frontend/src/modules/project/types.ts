@@ -1,10 +1,11 @@
-export type ProjectStatus = 0 | 1 | 2 | 3;
+export type ProjectStatus = 0 | 1 | 2 | 3 | 4;
 export type ProjectPriority = 0 | 1 | 2;
 export type ProjectMember = { id: string; name: string };
 export type ProjectRecord = {
   id: string; name: string; description: string; productId: string; productName: string; requirementId: string; requirementName: string; requirementType?: import('../requirement/types').RequirementType;
   ownerId: string; ownerName: string; memberIds: string[]; members: ProjectMember[];
   priority: ProjectPriority; status: ProjectStatus; isOverdue: boolean; overdueDays?: number; startDate: string; expectedEndDate: string;
+  closeDate?: string; closeReason?: string;
   previousStatus?: ProjectStatus;
   actualEndDate: string; suspendDate: string; suspendReason: string; progressText: string; riskText: string;
   creatorName: string; updaterName: string; createdAt: string; updatedAt: string;

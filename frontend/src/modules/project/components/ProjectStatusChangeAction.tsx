@@ -19,8 +19,8 @@ type Props = Omit<
   onConfirm: (target: ProjectStatus, values: StatusFlowModalFormValues) => Promise<void> | void;
 };
 
-const tones: Record<ProjectStatus, StatusChangeOption<ProjectStatus>['tone']> = { 0: 'normal', 1: 'normal', 2: 'success', 3: 'danger' };
-const tagTones: Record<ProjectStatus, 'pending' | 'processing' | 'success' | 'error'> = { 0: 'pending', 1: 'processing', 2: 'success', 3: 'error' };
+const tones: Record<ProjectStatus, StatusChangeOption<ProjectStatus>['tone']> = { 0: 'normal', 1: 'normal', 2: 'success', 3: 'danger', 4: 'danger' };
+const tagTones: Record<ProjectStatus, 'pending' | 'processing' | 'success' | 'error'> = { 0: 'pending', 1: 'processing', 2: 'success', 3: 'error', 4: 'error' };
 
 export function renderProjectStatus(status: ProjectStatus) {
   return <StatusTag status={tagTones[status]} text={projectStatusLabels[status]} />;
@@ -47,6 +47,16 @@ export function ProjectStatusChangeAction({ project, ...props }: Props) {
               </AdminFormItem>
               <AdminFormItem name="suspendReason" label="暂停原因" rules={[{ required: true, whitespace: true, message: '请输入暂停原因' }, { max: 200, message: '暂停原因最多200字符' }]}>
                 <AdminTextArea rows={3} maxLength={200} showCount placeholder="请输入暂停原因" />
+              </AdminFormItem>
+            </>
+          ) : null}
+          {target === 4 ? (
+            <>
+              <AdminFormItem name="closeDate" label="关闭时间" rules={[{ required: true, message: '请选择关闭时间' }]}>
+                <AdminDatePicker placeholder="请选择关闭时间" />
+              </AdminFormItem>
+              <AdminFormItem name="closeReason" label="关闭原因" rules={[{ required: true, whitespace: true, message: '请输入关闭原因' }, { max: 200, message: '关闭原因最多200字符' }]}>
+                <AdminTextArea rows={3} maxLength={200} showCount placeholder="请输入关闭原因" />
               </AdminFormItem>
             </>
           ) : null}

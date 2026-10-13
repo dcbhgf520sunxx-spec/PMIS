@@ -102,7 +102,7 @@ CREATE 的 data：
 
 初始优先级固定低（0），初始状态由需求路径决定：1→0、2→10、3→20、4→30。不接受新增时指定 priority 或 status。
 
-UPDATE 允许上述所有字段，至少传一个，只修改传入字段。未传保持不变；只有标注 null 的字段可以清空。需求进入实施路径状态30–35后，不允许修改需求路径；其他状态变更路径会重置对应初始状态。状态不能通过 UPDATE 修改，开放接口不支持修改优先级。
+UPDATE 允许上述所有字段，至少传一个，只修改传入字段。未传保持不变；只有标注 null 的字段可以清空。需求进入实施路径状态30–37后，不允许修改需求路径；其他状态变更路径会重置对应初始状态。状态不能通过 UPDATE 修改，开放接口不支持修改优先级。
 
 CHANGE_STATUS：`data.status` 必填，附加字段按目标状态填写，其余附加字段不能传。
 
@@ -112,10 +112,11 @@ CHANGE_STATUS：`data.status` 必填，附加字段按目标状态填写，其�
 | 10 / 11 / 12 / 13 | 提报评估 / 需求审批 / 审批通过 / 审批未通过 |
 | 20 / 21 / 22 | 需求验证 / 预研通过 / 预研不通过 |
 | 30 / 31 / 32 | 需求整理 / 实施中 / 试运行 |
-| 33 / 34 / 35 | 已完成 / 已完成未使用 / 暂停 |
+| 33 / 34 / 35 / 36 / 37 | 已完成 / 已完成未使用 / 暂停 / 已转项目 / 已关闭 |
 
 - 33、34：必填 actualEndDate（实际完成日期，不晚于今天）、completionStatus（完成情况，1–200字符）。
-- 35：必填 pauseDate（暂停日期）。
+- 35：必填 pauseDate（暂停日期）、pauseReason（暂停原因，1–200字符）。
+- 37：必填 closeDate（关闭日期，不晚于今天）、closeReason（关闭原因，1–200字符）。36由项目关联流程维护，不能通过 CHANGE_STATUS 修改。
 - 其他：仅传 status。
 - 允许的流转受当前路径和状态约束，先 QUERY 查看 allowedStatuses。
 
@@ -137,13 +138,14 @@ DELETE 为软删除；已关联项目或仍有未删除任务/Bug 的需求不�
 
 初始状态固定为0待处理。UPDATE 可修改上表字段，至少传一项，未传保持不变；工单字段不能用 null 清空。处置结果和实际修复日期通过状态变更提交。
 
-CHANGE_STATUS 的 data.status 为0待处理、1处理中、2已解决、4已暂停、5被激活。
+CHANGE_STATUS 的 data.status 为0待处理、1处理中、2已解决、3已关闭、4已暂停、5被激活。
 
 - 2：必填 resolveDate（实际修复日期，不晚于今天）、resultDescription（处置结果，基础富文本，受单次 JSON 请求体8MB上限约束）。
-- 4：必填 suspendDate（暂停日期）。
+- 3：必填 closeDate（关闭日期，不晚于今天）、closeReason（关闭原因，1–200字符）。
+- 4：必填 suspendDate（暂停日期）、suspendReason（暂停原因，1–200字符）。
 - 5：必填 activationReason（激活原因，1–100字符）。
 - 0、1：仅传 status。
-- 允许流转：0→1/2/4，1→2/4，2→4/5，4→0/1/2，5→2。
+- 允许流转：0→1/2/4/3，1→2/4/3，2→4/5/3，3→0/1/2/4，4→0/1/2/3，5→2。
 
 DELETE 为软删除，关联附件同时标记删除。新请求重复删除返回 ALREADY_DELETED。
 
@@ -180,7 +182,7 @@ QUERY 不传 idempotencyKey，返回 data 包含：operation、result、sourceRe
     "title": "示例需求",
     "status": 31,
     "statusLabel": "实施中",
-    "allowedStatuses": [{"value":32,"label":"试运行"},{"value":35,"label":"暂停"}],
+    "allowedStatuses": [{"value":32,"label":"试运行"},{"value":35,"label":"暂停"},{"value":37,"label":"已关闭"}],
     "creator": {"employeeNo":"EMP001","name":"示例人员"},
     "updater": {"employeeNo":"EMP002","name":"更新人员"},
     "createdAt": "2026-09-07T09:00:00+08:00",

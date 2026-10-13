@@ -12,12 +12,12 @@ test('富文本清洗会继续处理未知父标签提升出来的子节点', ()
 
 test('工单状态支持待处理直接解决、暂停恢复及已解决工单重新激活', () => {
   const rules = read('../src/modules/work-order/workOrderStatusRules.ts');
-  assert.match(rules, /0:\s*\[1,\s*2,\s*4\]/);
-  assert.match(rules, /1:\s*\[2,\s*4\]/);
-  assert.match(rules, /2:\s*\[4,\s*5\]/);
-  assert.match(rules, /4:\s*\[0,\s*1,\s*2\]/);
+  assert.match(rules, /0:\s*\[1,\s*2,\s*4,\s*3\]/);
+  assert.match(rules, /1:\s*\[2,\s*4,\s*3\]/);
+  assert.match(rules, /2:\s*\[4,\s*5,\s*3\]/);
+  assert.match(rules, /4:\s*\[0,\s*1,\s*2,\s*3\]/);
   assert.match(rules, /5:\s*\[2\]/);
-  assert.doesNotMatch(rules, /3:\s*\[/);
+  assert.match(rules, /3:\s*\[0,\s*1,\s*2,\s*4\]/);
 });
 
 test('用户角色聚合列接入真实服务端排序', () => {

@@ -7,6 +7,8 @@ export type DetailMetaItem = {
   label: string;
   value: ReactNode;
   wide?: boolean;
+  span?: 1 | 2 | 3 | 4;
+  startRow?: boolean;
   aggregate?: boolean;
   longText?: boolean;
 };
@@ -26,7 +28,11 @@ export function DetailMetaList({ items, columns = 4 }: DetailMetaListProps) {
         const valueClassName = item.longText ? 'is-long-text' : shouldClamp ? 'is-clamped' : undefined;
         const valueNode = <dd className={valueClassName}>{value}</dd>;
         return (
-          <div className={item.wide ? 'admin-detail-meta-list__item is-wide' : 'admin-detail-meta-list__item'} key={item.label}>
+          <div className={[
+            'admin-detail-meta-list__item',
+            item.wide ? 'is-wide' : item.span ? `is-span-${Math.min(item.span, columns)}` : undefined,
+            item.startRow ? 'is-row-start' : undefined
+          ].filter(Boolean).join(' ')} key={item.label}>
             <dt>{item.label}</dt>
             {shouldClamp ? <Tooltip title={value}>{valueNode}</Tooltip> : valueNode}
           </div>

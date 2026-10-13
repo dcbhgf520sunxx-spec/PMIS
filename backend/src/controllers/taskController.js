@@ -9,13 +9,13 @@ const { allowedTaskStatuses, validateTaskStatusChange, resolveTaskStatusFields, 
 const { DEFAULT_PRIORITY, parsePriority } = require('../services/priorityRules')
 const { softDeleteBusinessAttachments } = require('../services/businessAttachmentService')
 
-const DETAIL_FIELD_ORDER = ['name', 'description', 'parent_task_id', 'source_type', 'project_id', 'requirement_id', 'owner_id', 'owner_ids', 'task_type', 'priority', 'status', 'is_overdue', 'start_date', 'expected_end_date', 'actual_end_date', 'suspend_date', 'suspend_reason', 'follow_up_content']
+const DETAIL_FIELD_ORDER = ['name', 'description', 'parent_task_id', 'source_type', 'project_id', 'requirement_id', 'owner_id', 'owner_ids', 'task_type', 'priority', 'status', 'is_overdue', 'start_date', 'expected_end_date', 'actual_end_date', 'suspend_date', 'suspend_reason', 'close_date', 'close_reason', 'follow_up_content']
 const HISTORY_FIELD_LABELS = {
   name: '任务名称', description: '任务描述', parent_task_id: '所属主任务', source_type: '关联类型', project_id: '关联项目', requirement_id: '关联需求',
   owner_id: '负责人', owner_ids: '负责人', task_type: '任务类型', priority: '优先级', status: '任务状态', is_overdue: '逾期状态',
-  start_date: '启动时间', expected_end_date: '预计完成时间', actual_end_date: '实际完成时间', suspend_date: '暂停时间', suspend_reason: '暂停原因', follow_up_content: '跟进内容'
+  start_date: '启动时间', expected_end_date: '预计完成时间', actual_end_date: '实际完成时间', suspend_date: '暂停时间', suspend_reason: '暂停原因', close_date: '关闭时间', close_reason: '关闭原因', follow_up_content: '跟进内容'
 }
-const HISTORY_DATE_FIELDS = new Set(['start_date', 'expected_end_date', 'actual_end_date', 'suspend_date'])
+const HISTORY_DATE_FIELDS = new Set(['start_date', 'expected_end_date', 'actual_end_date', 'suspend_date', 'close_date'])
 const ownerNamesSql = `(SELECT STRING_AGG(owner_user.real_name,'、' ORDER BY task_owner.sort_order,task_owner.user_id) FROM pms_task_owner task_owner JOIN pms_user owner_user ON owner_user.id=task_owner.user_id WHERE task_owner.task_id=t.id)`
 const fields = `t.*,${overdue.fields},COALESCE((SELECT JSON_AGG(JSON_BUILD_OBJECT('id',owner_user.id,'name',owner_user.real_name) ORDER BY task_owner.sort_order,task_owner.user_id) FROM pms_task_owner task_owner JOIN pms_user owner_user ON owner_user.id=task_owner.user_id WHERE task_owner.task_id=t.id),'[]'::json) owners,COALESCE(${ownerNamesSql},'') owner_names,creator.real_name creator_name,updater.real_name updater_name,project.name project_name,requirement.title requirement_name,archive.name task_type_name,parent.name parent_task_name,(SELECT COUNT(*)::INTEGER FROM pms_task child WHERE child.parent_task_id=t.id AND child.is_deleted=0)child_count,(SELECT COUNT(*)::INTEGER FROM pms_task child WHERE child.parent_task_id=t.id AND child.is_deleted=0 AND child.status=2)completed_child_count,CASE WHEN t.status=3 THEN(SELECT old_value::INTEGER FROM pms_op_log l WHERE l.module='任务' AND l.target_id=t.id AND l.action='状态变更' AND l.field_name='status' AND l.new_value='3' ORDER BY l.created_at DESC LIMIT 1)END previous_status`
 const taskJoins = ` FROM pms_task t LEFT JOIN pms_user creator ON creator.id=t.creator_id LEFT JOIN pms_user updater ON updater.id=t.updater_id LEFT JOIN pms_project project ON project.id=t.project_id LEFT JOIN pms_requirement requirement ON requirement.id=t.requirement_id JOIN pms_archive archive ON archive.id=t.task_type LEFT JOIN pms_task parent ON parent.id=t.parent_task_id`
@@ -412,7 +412,7 @@ exports.batchAssign = async (req, res) => {
 
 exports.toggleStatus = async (req, res) => {
   try {
-    const old = await db.prepare(`SELECT t.id,t.name,t.parent_task_id,t.status,t.is_overdue,t.expected_end_date,t.actual_end_date,t.suspend_date,t.suspend_reason,parent.status parent_status,CASE WHEN t.status=3 THEN(SELECT old_value::INTEGER FROM pms_op_log l WHERE l.module='任务' AND l.target_id=t.id AND l.action='状态变更' AND l.field_name='status' AND l.new_value='3' ORDER BY l.created_at DESC LIMIT 1)END previous_status FROM pms_task t LEFT JOIN pms_task parent ON parent.id=t.parent_task_id WHERE t.id=? AND t.is_deleted=0`).get(req.params.id)
+    const old = await db.prepare(`SELECT t.id,t.name,t.parent_task_id,t.status,t.is_overdue,t.expected_end_date,t.actual_end_date,t.suspend_date,t.suspend_reason,t.close_date,t.close_reason,parent.status parent_status,CASE WHEN t.status=3 THEN(SELECT old_value::INTEGER FROM pms_op_log l WHERE l.module='任务' AND l.target_id=t.id AND l.action='状态变更' AND l.field_name='status' AND l.new_value='3' ORDER BY l.created_at DESC LIMIT 1)END previous_status FROM pms_task t LEFT JOIN pms_task parent ON parent.id=t.parent_task_id WHERE t.id=? AND t.is_deleted=0`).get(req.params.id)
     if (!old) return fail(res, 404, 404, '任务不存在')
     const target = Number(req.body.status)
     if (!allowedTaskStatuses(old.status, old.previous_status).includes(target)) return fail(res, 400, 400, '不允许执行该状态流转')
@@ -426,7 +426,7 @@ exports.toggleStatus = async (req, res) => {
     if (validationError) return fail(res, 400, 400, validationError)
     const nextFields = resolveTaskStatusFields(old, target, req.body)
     const overdue = calculateTaskOverdue(old.expected_end_date, target)
-    await db.prepare('UPDATE pms_task SET status=?,actual_end_date=?,suspend_date=?,suspend_reason=?,is_overdue=?,updater_id=?,updated_at=NOW()WHERE id=?').run(target, nextFields.actualEndDate, nextFields.suspendDate, nextFields.suspendReason, overdue, req.user.id, req.params.id)
+    await db.prepare('UPDATE pms_task SET status=?,actual_end_date=?,suspend_date=?,suspend_reason=?,close_date=?,close_reason=?,is_overdue=?,updater_id=?,updated_at=NOW()WHERE id=?').run(target, nextFields.actualEndDate, nextFields.suspendDate, nextFields.suspendReason, nextFields.closeDate, nextFields.closeReason, overdue, req.user.id, req.params.id)
     const changes = []
     function addChange(field, oldVal, newVal) {
       if (String(oldVal ?? '') !== String(newVal ?? '')) changes.push({ field, oldVal, newVal })
@@ -435,6 +435,8 @@ exports.toggleStatus = async (req, res) => {
     addChange('actual_end_date', old.actual_end_date, nextFields.actualEndDate)
     addChange('suspend_date', old.suspend_date, nextFields.suspendDate)
     addChange('suspend_reason', old.suspend_reason, nextFields.suspendReason)
+    addChange('close_date', old.close_date, nextFields.closeDate)
+    addChange('close_reason', old.close_reason, nextFields.closeReason)
     addChange('is_overdue', old.is_overdue, overdue)
     if (changes.length) await db.writeLogs(req.user.id, '状态变更', '任务', req.params.id, changes, req.ip, old.name)
     let allSubtasksCompleted = false
@@ -467,7 +469,10 @@ exports.remove = async (req, res) => {
 
 exports.history = async (req, res) => {
   try {
-    const logs = await db.prepare("SELECT l.id,l.operation_id,l.action,l.field_name,l.old_value,l.new_value,l.created_at,COALESCE(u.real_name,'-')operator FROM pms_op_log l LEFT JOIN pms_user u ON u.id=l.user_id WHERE l.module='任务' AND l.target_id=? ORDER BY l.created_at DESC").all(req.params.id)
+    const rawLogs = await db.prepare("SELECT l.id,l.operation_id,l.action,l.field_name,l.old_value,l.new_value,l.created_at,COALESCE(u.real_name,'-')operator FROM pms_op_log l LEFT JOIN pms_user u ON u.id=l.user_id WHERE l.module='任务' AND l.target_id=? ORDER BY l.created_at DESC").all(req.params.id)
+    // 旧参数误写产生的字段名不是业务原因；保留原始审计，只排除确定的错误展示条目。
+    const logs = rawLogs.filter((log) => !(log.action === '状态变更' && log.field_name === 'suspend_reason'
+      && log.old_value === 'close_date' && log.new_value === 'close_reason'))
     const ids = (field) => [...new Set(logs.filter((log) => log.field_name === field).flatMap((log) => [log.old_value, log.new_value]).map(Number).filter(Number.isFinite))]
     const loadLookup = async (field, sql) => {
       const values = ids(field)
@@ -485,7 +490,7 @@ exports.history = async (req, res) => {
     const valueLookups = {
       source_type: new Map([['1', '项目'], ['2', '需求']]), project_id: projects, requirement_id: requirements, parent_task_id: parents, task_type: taskTypes,
       owner_id: owners,
-      priority: new Map([['0', '低'], ['1', '中'], ['2', '高']]), status: new Map([['0', '待处理'], ['1', '处理中'], ['2', '已完成'], ['3', '已暂停']]),
+      priority: new Map([['0', '低'], ['1', '中'], ['2', '高']]), status: new Map([['0', '待处理'], ['1', '处理中'], ['2', '已完成'], ['3', '已暂停'], ['4', '已关闭']]),
       is_overdue: new Map([['0', '未逾期'], ['1', '已逾期']])
     }
     ok(res, groupOperationLogs(logs, DETAIL_FIELD_ORDER).map((group) => ({

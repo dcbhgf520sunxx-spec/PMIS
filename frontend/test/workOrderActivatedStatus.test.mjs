@@ -8,9 +8,9 @@ test('工单前端声明被激活状态及流转矩阵', () => {
   const types = read('src/modules/work-order/types.ts');
   const helpers = read('src/modules/work-order/helpers.tsx');
   const rules = read('src/modules/work-order/workOrderStatusRules.ts');
-  assert.match(types, /0 \| 1 \| 2 \| 4 \| 5/);
+  assert.match(types, /0 \| 1 \| 2 \| 3 \| 4 \| 5/);
   assert.match(helpers, /被激活/);
-  assert.match(rules, /2:\s*\[4,\s*5\]/);
+  assert.match(rules, /2:\s*\[4,\s*5,\s*3\]/);
   assert.match(rules, /5:\s*\[2\]/);
 });
 

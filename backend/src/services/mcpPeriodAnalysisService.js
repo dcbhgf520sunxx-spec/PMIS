@@ -43,7 +43,7 @@ const RECORD_QUERIES = {
       ARRAY_REMOVE(ARRAY[p.owner_id,p.creator_id] || COALESCE((SELECT ARRAY_AGG(member.user_id ORDER BY member.user_id)
         FROM pms_project_member member WHERE member.project_id=p.id),'{}'::BIGINT[]),NULL) person_ids,
       p.expected_end_date plan_date,p.actual_end_date actual_date,p.suspend_date pause_date,
-      p.created_at,${overdueSql('project', {alias:'p'}).fields},(p.status=3) is_paused,(p.status=2) is_completed,
+      p.close_date,p.created_at,${overdueSql('project', {alias:'p'}).fields},(p.status=3) is_paused,(p.status=2) is_completed,
       FALSE parent_project_paused,FALSE required_delivery,0 delivery_count
     FROM pms_project p
     JOIN pms_product product ON product.id=p.product_id
@@ -58,7 +58,7 @@ const RECORD_QUERIES = {
       ARRAY_REMOVE(ARRAY[r.owner_id],NULL) business_role_ids,
       ARRAY_REMOVE(ARRAY[r.owner_id,r.creator_id],NULL) person_ids,
       r.expected_end_date plan_date,r.actual_end_date actual_date,r.pause_date,
-      r.created_at,${overdueSql('requirement', {alias:'r'}).fields},(r.status=35) is_paused,
+      r.close_date,r.created_at,${overdueSql('requirement', {alias:'r'}).fields},(r.status=35) is_paused,
       (r.status IN (33,34)) is_completed,FALSE parent_project_paused,FALSE required_delivery,0 delivery_count
     FROM pms_requirement r
     JOIN pms_product product ON product.id=r.product_id
@@ -77,7 +77,7 @@ const RECORD_QUERIES = {
         FROM pms_project_plan_item_collaborator c WHERE c.plan_item_id=item.id),'{}'::BIGINT[]),NULL) person_ids,
       item.current_due_date plan_date,item.actual_end_date actual_date,item.created_at,
       ${overdueSql('stage_plan', {alias:'item',parentAlias:'project'}).fields},
-      (item.status=3) is_paused,(item.status=2) is_completed,(project.status=3) parent_project_paused,
+      (item.status=3) is_paused,(item.status=2) is_completed,(project.status IN (3,4)) parent_project_paused,
       (item.requires_delivery_file=1) required_delivery,
       (SELECT COUNT(*)::INTEGER FROM pms_project_plan_delivery_file f
         WHERE f.plan_item_id=item.id AND f.is_current=1 AND f.is_void=0) delivery_count
@@ -96,7 +96,7 @@ const RECORD_QUERIES = {
       owners.owner_id,owners.owner_name,COALESCE(owners.owner_ids,'{}'::BIGINT[]) owner_ids,
       COALESCE(owners.owner_ids,'{}'::BIGINT[]) business_role_ids,
       ARRAY_REMOVE(COALESCE(owners.owner_ids,'{}'::BIGINT[]) || ARRAY[t.creator_id],NULL) person_ids,
-      t.expected_end_date plan_date,t.actual_end_date actual_date,t.suspend_date pause_date,t.created_at,${overdueSql('task', {alias:'t'}).fields},
+      t.expected_end_date plan_date,t.actual_end_date actual_date,t.suspend_date pause_date,t.close_date,t.created_at,${overdueSql('task', {alias:'t'}).fields},
       (t.status=3) is_paused,(t.status=2) is_completed,FALSE parent_project_paused,
       FALSE required_delivery,0 delivery_count,t.parent_task_id
     FROM pms_task t
@@ -130,7 +130,7 @@ const RECORD_QUERIES = {
       w.creator_id,w.updater_id,owner.real_name owner_name,ARRAY[w.follower_id] owner_ids,
       ARRAY_REMOVE(ARRAY[w.follower_id],NULL) business_role_ids,
       ARRAY_REMOVE(ARRAY[w.follower_id,w.creator_id],NULL) person_ids,w.expected_resolve_date::DATE plan_date,
-      w.resolve_date::DATE actual_date,w.suspend_date::DATE pause_date,w.created_at,${overdueSql('work_order', {alias:'w'}).fields},(w.status=4) is_paused,
+      w.resolve_date::DATE actual_date,w.suspend_date::DATE pause_date,w.close_date,w.created_at,${overdueSql('work_order', {alias:'w'}).fields},(w.status=4) is_paused,
       (w.status=2) is_completed,FALSE parent_project_paused,FALSE required_delivery,0 delivery_count
     FROM pms_work_order w
     JOIN pms_product product ON product.id=w.product_id
@@ -480,6 +480,10 @@ function isCompletedStatus(type, status) {
   return BUSINESS_TYPES[type]?.completed.includes(Number(status)) || false
 }
 
+function isClosedStatus(type, status) {
+  return ({ project: 4, task: 4, requirement: 37, work_order: 3 })[type] === Number(status)
+}
+
 function isPausedStatus(type, status) {
   return BUSINESS_TYPES[type]?.paused.includes(Number(status)) || false
 }
@@ -487,6 +491,8 @@ function isPausedStatus(type, status) {
 function statusEvent(type, oldStatus, newStatus) {
   const oldValue = Number(oldStatus)
   const newValue = Number(newStatus)
+  if (isClosedStatus(type, newValue)) return null
+  if (isClosedStatus(type, oldValue) && !isCompletedStatus(type, newValue) && !isPausedStatus(type, newValue)) return 'resumed'
   if (isCompletedStatus(type, newValue) && !isCompletedStatus(type, oldValue)) return 'completed'
   if (isPausedStatus(type, newValue) && !isPausedStatus(type, oldValue)) return 'paused'
   if (isPausedStatus(type, oldValue) && !isPausedStatus(type, newValue)) return 'resumed'
@@ -506,6 +512,7 @@ function operationKey(log) {
 }
 
 function statusDateField(type, status) {
+  if (isClosedStatus(type, status)) return 'close_date'
   if (isPausedStatus(type, status)) return type === 'requirement' ? 'pause_date' : type === 'stage_plan' ? null : 'suspend_date'
   if (type === 'bug' && Number(status) === 1) return 'resolved_date'
   if (isCompletedStatus(type, status)) return type === 'bug' ? 'closed_date' : type === 'work_order' ? 'resolve_date' : 'actual_end_date'
@@ -586,14 +593,14 @@ function historicalOverdueDates(record, history, cutoffDate) {
   if (entered > cutoffDate || history?.inconsistent) return []
   let transitions = [...(history?.transitions || [])]
   if (!transitions.length) {
-    const date = record.is_completed ? record.actual_date : record.is_paused ? record.pause_date : null
+    const date = record.is_completed ? record.actual_date : record.is_paused ? record.pause_date : isClosedStatus(record.business_type, record.status) ? dateOnly(record.close_date) : null
     if (date) transitions = [{ date, status: record.status, previous_status: null }]
-    else if (record.is_completed || record.is_paused
+    else if (record.is_completed || record.is_paused || isClosedStatus(record.business_type, record.status)
       || (record.business_type === 'requirement' && calculateRequirementOverdue(record.plan_date, record.status, cutoffDate) === null)) return []
   }
   transitions.sort((a, b) => a.date.localeCompare(b.date)
     || number(a.log?.log_id) - number(b.log?.log_id))
-  const eligible = (status) => !isCompletedStatus(record.business_type, status) && !isPausedStatus(record.business_type, status)
+  const eligible = (status) => !isCompletedStatus(record.business_type, status) && !isPausedStatus(record.business_type, status) && !isClosedStatus(record.business_type, status)
     && (record.business_type !== 'requirement' || calculateRequirementOverdue(record.plan_date, status, cutoffDate) !== null)
   let status = transitions[0]?.previous_status ?? (transitions.length ? null : record.status)
   // A completion/pause dated the day after the deadline does not undo that
@@ -625,7 +632,7 @@ function createEvents(records, logs, cutoffDate, eventTimeBasis = 'actual', hist
     'expected_end_date', 'expected_resolve_date', 'current_due_date', 'priority', 'severity', 'urgency',
   ])
   const isImportantChange = log => importantFields.has(log.field_name)
-    || (log.field_name === 'status' && ['paused', 'resumed'].includes(statusEvent(log.business_type, log.old_value, log.new_value)))
+    || (log.field_name === 'status' && (['paused', 'resumed'].includes(statusEvent(log.business_type, log.old_value, log.new_value)) || isClosedStatus(log.business_type, log.new_value)))
   const eventDate = log => eventTimeBasis === 'actual'
     ? transitionsByLog.get(log)?.date || dateOnly(log.created_at) : dateOnly(log.created_at)
   for (const log of logs) {
@@ -759,7 +766,7 @@ function selectPlanRecords(records, planPeriod, completionCutoff, logs = [], cut
   const selected = { planned: [], completed: [], pending: [], unknown: [] }
   if (!planPeriod) return selected
   for (const record of records) {
-    if (isRejectedRequirement(record) || isTransferredRequirement(record) || record.is_paused || record.parent_project_paused || !dateInPeriod(record.plan_date, planPeriod)) continue
+    if (isRejectedRequirement(record) || isTransferredRequirement(record) || isClosedStatus(record.business_type, record.status) || record.is_paused || record.parent_project_paused || !dateInPeriod(record.plan_date, planPeriod)) continue
     const state = completionStateAt(record, completionCutoff, histories.get(historyKey(record.business_type, record.id)), cutoffDate)
     if (state.completed && state.date < planPeriod.start_date) continue
     selected.planned.push(record)
@@ -1055,7 +1062,7 @@ function selectRiskItems(records, cutoffDate, riskPeriod, metric) {
   }
   const selectors = {
     overdue: record => currentOverdue(record, cutoffDate),
-    due_soon: record => !isTransferredRequirement(record) && !record.is_completed && !record.is_paused && !record.parent_project_paused
+    due_soon: record => !isTransferredRequirement(record) && !record.is_completed && !record.is_paused && !isClosedStatus(record.business_type, record.status) && !record.parent_project_paused
       && !isRejectedRequirement(record)
       && dateInPeriod(record.plan_date, period),
     paused: record => record.is_paused,

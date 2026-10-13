@@ -15,6 +15,31 @@ test('业务本体展示读取标准模型，覆盖对象、关系、推导依�
   assert.match(model.relations.find(r => r.id === 'sourceRequirement').quantity, /至多对应一个项目/)
   assert.equal(model.records, undefined)
 })
+test('本体状态说明与检查值集展示真实编码，需求前期状态完整且值集不重复', async () => {
+  const model = await readOntologyModel(root)
+  const requirement = model.classes.find(c => c.id === 'Requirement')
+  assert.equal(requirement.business.earlyStates[0][1], '0 · 上会评估、1 · 需求上会、2 · 上会通过、3 · 过会未通过')
+  assert.equal(requirement.business.earlyStates[1][1], '10 · 提报评估、11 · 需求审批、12 · 审批通过、13 · 审批未通过')
+  assert.match(requirement.business.states, /34 · 已完成未使用/)
+  assert.match(requirement.business.states, /36 · 已转项目/)
+  for (const [type, value] of [['Requirement', '0 · 上会评估'], ['Project', '2 · 已完成'], ['KeyItem', '2 · 已完成'], ['Task', '0 · 待处理'], ['Bug', '2 · 已关闭'], ['WorkOrder', '5 · 被激活'], ['MaintenanceContract', 'active · 生效中']]) {
+    const object = model.classes.find(c => c.id === type)
+    assert.ok((object.business.states + object.business.earlyStates.flat().join(' ')).includes(value), `${type}的状态说明缺少编码`)
+    const check = object.checks.find(c => c.label === '状态')
+    assert.ok(check.text.includes(value), `${type}的状态检查缺少编码`)
+    const values = check.text.split('允许值：')[1].split('、')
+    assert.equal(values.length, new Set(values).size, `${type}的状态值集重复`)
+  }
+})
+test('本体展示关闭编码与业务保持一致，关键事项不增加关闭状态', async () => {
+  const model = await readOntologyModel(root)
+  for (const [type, code] of [['Requirement', 37], ['Project', 4], ['Task', 4], ['WorkOrder', 3]]) {
+    const object = model.classes.find(c => c.id === type)
+    assert.ok(object.business.states.includes(`${code} · 已关闭`), type)
+    assert.ok(object.checks.find(c => c.label === '状态').text.includes(`${code} · 已关闭`), type)
+  }
+  assert.ok(!model.classes.find(c => c.id === 'KeyItem').business.states.includes('已关闭'))
+})
 test('标准模型变化后拒绝展示旧定义，缺少生成文件不返回伪造模型', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sidm-ontology-view-'))
   try {

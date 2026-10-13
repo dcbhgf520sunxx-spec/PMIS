@@ -6,13 +6,13 @@ try {
   rules = require('../src/services/workOrderStatusRules')
 } catch {}
 
-test('工单取消已关闭并允许待处理直接解决', () => {
+test('工单支持已关闭并允许待处理直接解决', () => {
   assert.equal(typeof rules.allowedWorkOrderStatuses, 'function')
-  assert.deepEqual(rules.allowedWorkOrderStatuses(0), [1, 2, 4])
-  assert.deepEqual(rules.allowedWorkOrderStatuses(1), [2, 4])
-  assert.deepEqual(rules.allowedWorkOrderStatuses(2), [4, 5])
-  assert.deepEqual(rules.allowedWorkOrderStatuses(3), [])
-  assert.deepEqual(rules.allowedWorkOrderStatuses(4), [0, 1, 2])
+  assert.deepEqual(rules.allowedWorkOrderStatuses(0), [1, 2, 4, 3])
+  assert.deepEqual(rules.allowedWorkOrderStatuses(1), [2, 4, 3])
+  assert.deepEqual(rules.allowedWorkOrderStatuses(2), [4, 5, 3])
+  assert.deepEqual(rules.allowedWorkOrderStatuses(3), [0, 1, 2, 4])
+  assert.deepEqual(rules.allowedWorkOrderStatuses(4), [0, 1, 2, 3])
   assert.deepEqual(rules.allowedWorkOrderStatuses(5), [2])
 })
 
@@ -22,6 +22,7 @@ test('进入暂停保留已有结果和历史关闭时间，恢复后只清理�
   assert.deepEqual(rules.resolveWorkOrderResultFields(4, { suspend_date: '2026-07-18', suspend_reason: ' 等待配件 ' }, old), {
     resolveDate: '2026-07-16',
     closeDate: '2026-07-17',
+    closeReason: null,
     resultDesc: '旧结果',
     suspendDate: '2026-07-18',
     suspendReason: '等待配件'
@@ -33,6 +34,7 @@ test('进入暂停保留已有结果和历史关闭时间，恢复后只清理�
     assert.deepEqual(rules.resolveWorkOrderResultFields(status, {}, old), {
       resolveDate: null,
       closeDate: '2026-07-17',
+    closeReason: null,
       resultDesc: null,
       suspendDate: null,
       suspendReason: null
@@ -52,6 +54,7 @@ test('解决工单保留历史关闭时间并要求新的修复信息', () => {
   assert.deepEqual(values, {
     resolveDate: '2026-07-20',
     closeDate: '2026-07-19',
+    closeReason: null,
     resultDesc: '重新处理完成',
     suspendDate: null,
     suspendReason: null
@@ -79,6 +82,7 @@ test('激活工单只必填激活原因并沿用原预计完成时间', () => {
   assert.deepEqual(values, {
     resolveDate: '2026-07-20',
     closeDate: '2026-07-21',
+    closeReason: null,
     resultDesc: '上次处置结果',
     suspendDate: null,
     suspendReason: null,

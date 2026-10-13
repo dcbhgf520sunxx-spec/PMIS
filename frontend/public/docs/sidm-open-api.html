@@ -133,7 +133,7 @@ Content-Type: application/json</pre>
 <tr><td>expectedEndDate</td><td>预计完成日期</td><td>string/null</td><td>否</td><td>预计完成日期</td></tr>
 </tbody></table></div>
 <p>初始优先级为低（0）；初始状态由 requirementType 决定：1→0、2→10、3→20、4→30。新增不能指定 status 或 priority。</p>
-<p>UPDATE 允许上表字段，至少传一项，只修改传入字段；未传保持不变，仅标注 null 的字段可清空。进入实施路径状态 30–35 后不允许修改需求路径，其他状态修改路径会重置到对应初始状态。状态使用专门动作；开放接口不支持修改优先级。</p>
+<p>UPDATE 允许上表字段，至少传一项，只修改传入字段；未传保持不变，仅标注 null 的字段可清空。进入实施路径状态 30–37 后不允许修改需求路径，其他状态修改路径会重置到对应初始状态。状态使用专门动作；开放接口不支持修改优先级。</p>
 <h3>新增示例</h3>
 <pre data-resource="requirement">{
   "operation": "CREATE", "sourceRecordId": "REQ-001",
@@ -150,14 +150,14 @@ Content-Type: application/json</pre>
 <tr><td>10 / 11 / 12 / 13</td><td>提报评估 / 需求审批 / 审批通过 / 审批未通过</td></tr>
 <tr><td>20 / 21 / 22</td><td>需求验证 / 预研通过 / 预研不通过</td></tr>
 <tr><td>30 / 31 / 32</td><td>需求整理 / 实施中 / 试运行</td></tr>
-<tr><td>33 / 34 / 35</td><td>已完成 / 已完成未使用 / 暂停</td></tr>
+<tr><td>33 / 34 / 35 / 36 / 37</td><td>已完成 / 已完成未使用 / 暂停 / 已转项目 / 已关闭</td></tr>
 </tbody></table></div>
 <p>CHANGE_STATUS 必传 data.status；先 QUERY 查看 allowedStatuses，只能选择当前允许的目标。</p>
-<ul><li>目标 33、34：还须传 actualEndDate（实际完成日期，不晚于今天）和 completionStatus（完成情况，1–200 字符）。</li><li>目标 35：还须传 pauseDate（暂停日期）。</li><li>其他目标只传 status，不接受与该状态无关的附加字段。</li></ul>
+<ul><li>目标 33、34：还须传 actualEndDate（实际完成日期，不晚于今天）和 completionStatus（完成情况，1–200 字符）。</li><li>目标 35：还须传 pauseDate（暂停日期）和 pauseReason（暂停原因，1–200 字符）。</li><li>目标 37：还须传 closeDate（关闭日期，不晚于今天）和 closeReason（关闭原因，1–200 字符）。目标36由项目关联流程维护，不能直接变更。</li><li>其他目标只传 status，不接受与该状态无关的附加字段。</li></ul>
 <pre data-resource="requirement">{
   "operation": "CHANGE_STATUS", "sourceRecordId": "REQ-001",
   "operatorEmployeeNo": "EMP001", "idempotencyKey": "REQ-001-STATUS-001",
-  "data": {"status": 35, "pauseDate": "2026-09-07"}
+  "data": {"status": 35, "pauseDate": "2026-09-07", "pauseReason": "等待资源"}
 }</pre>
 <p>DELETE 不允许删除已关联项目或仍有未删除任务/Bug 的需求。</p>
 
@@ -189,10 +189,11 @@ Content-Type: application/json</pre>
 <div class="table"><table><thead><tr><th>目标状态</th><th>名称</th><th>必填附加字段</th></tr></thead><tbody>
 <tr><td>0 / 1</td><td>待处理 / 处理中</td><td>无，只传 status</td></tr>
 <tr><td>2</td><td>已解决</td><td>resolveDate：实际修复日期，不晚于今天；resultDescription：非空处置结果，基础富文本，受单次 JSON 请求体8MB上限约束</td></tr>
-<tr><td>4</td><td>已暂停</td><td>suspendDate：暂停日期</td></tr>
+<tr><td>3</td><td>已关闭</td><td>closeDate：关闭日期，不晚于今天；closeReason：关闭原因，1–200 字符</td></tr>
+<tr><td>4</td><td>已暂停</td><td>suspendDate：暂停日期；suspendReason：暂停原因，1–200 字符</td></tr>
 <tr><td>5</td><td>被激活</td><td>activationReason：激活原因，1–100 字符</td></tr>
 </tbody></table></div>
-<p>允许流转：0→1/2/4，1→2/4，2→4/5，4→0/1/2，5→2。不要传与目标状态无关的附加字段。DELETE 同时软删除关联附件；使用新请求号重复删除返回 ALREADY_DELETED。</p>
+<p>允许流转：0→1/2/4/3，1→2/4/3，2→4/5/3，3→0/1/2/4，4→0/1/2/3，5→2。不要传与目标状态无关的附加字段。DELETE 同时软删除关联附件；使用新请求号重复删除返回 ALREADY_DELETED。</p>
 
 <h2 id="query">6. 查询与修改示例</h2>
 <pre data-resource="requirement">{
@@ -219,7 +220,7 @@ Content-Type: application/json</pre>
     "title": "示例需求",
     "status": 31,
     "statusLabel": "实施中",
-    "allowedStatuses": [{"value":32,"label":"试运行"},{"value":35,"label":"暂停"}],
+    "allowedStatuses": [{"value":32,"label":"试运行"},{"value":35,"label":"暂停"},{"value":37,"label":"已关闭"}],
     "creator": {"employeeNo":"EMP001","name":"示例人员"},
     "updater": {"employeeNo":"EMP002","name":"更新人员"},
     "createdAt": "2026-09-07T09:00:00+08:00",
@@ -228,7 +229,7 @@ Content-Type: application/json</pre>
   "requestId": "本次追踪号"
 }</pre>
 <p>可选空值为 null，业务日期格式为 YYYY-MM-DD，创建时间和更新时间为带时区时间。</p>
-<p>allowedStatuses 示例：<code>[{"value":31,"label":"实施中"},{"value":35,"label":"暂停"}]</code>。它不是全部状态清单，而是该记录当前允许变更的目标。</p>
+<p>allowedStatuses 示例：<code>[{"value":31,"label":"实施中"},{"value":35,"label":"暂停"},{"value":37,"label":"已关闭"}]</code>。它不是全部状态清单，而是该记录当前允许变更的目标。</p>
 <h3>只修改一个字段</h3>
 <pre data-resource="requirement">{
   "operation": "UPDATE", "sourceRecordId": "REQ-001",
