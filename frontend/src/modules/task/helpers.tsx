@@ -9,6 +9,7 @@ export function renderTaskStatus(status: TaskStatus) {
   if (status === 0) return <StatusTag status="pending" text="待处理" />;
   if (status === 1) return <StatusTag status="processing" text="处理中" />;
   if (status === 2) return <StatusTag status="success" text="已完成" />;
+  if (status === 4) return <StatusTag status="disabled" text="已关闭" />;
   return <StatusTag status="disabled" text="已暂停" />;
 }
 

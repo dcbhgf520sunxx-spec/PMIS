@@ -37,9 +37,9 @@ test('active project is overdue after expected end date', () => {
 })
 
 test('project status transitions allow every state to pause and pause to every other state', () => {
-  assert.deepEqual(allowedProjectStatuses(0), [1, 3])
-  assert.deepEqual(allowedProjectStatuses(1), [2, 3])
-  assert.deepEqual(allowedProjectStatuses(2), [3])
-  assert.deepEqual(allowedProjectStatuses(3, 1), [0, 1, 2])
-  assert.deepEqual(allowedProjectStatuses(3), [0, 1, 2])
+  assert.deepEqual(allowedProjectStatuses(0), [1, 3, 4])
+  assert.deepEqual(allowedProjectStatuses(1), [2, 3, 4])
+  assert.deepEqual(allowedProjectStatuses(2), [3, 4])
+  assert.deepEqual(allowedProjectStatuses(3, 1), [0, 1, 2, 4])
+  assert.deepEqual(allowedProjectStatuses(3), [0, 1, 2, 4])
 })

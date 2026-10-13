@@ -39,6 +39,21 @@ function call(data = fixture(), args = {}, ctx = context, now = NOW) {
     business_types: [...new Set(data.rows.map(item => item.business_type))], ...args }, ctx, data.database, now)
 }
 
+test('可恢复关闭属于状态调整，不算完成、暂停或重新打开，且排除计划和临期候选', async () => {
+  const data = fixture([row({ status: 4, close_date: '2026-09-04', actual_date: '2026-09-03', plan_date: '2026-09-05' })], [
+    log({ field_name: 'status', old_value: '2', new_value: '4', action: '状态变更' }),
+    log({ log_id: 2, field_name: 'close_date', old_value: null, new_value: '2026-09-04', action: '状态变更' }),
+  ])
+  const result = await call(data, { plan_period: period('2026-09-01', '2026-09-06') })
+  assert.equal(result.period_flows.total.completed, 0)
+  assert.equal(result.period_flows.total.paused, 0)
+  assert.equal(result.period_flows.total.reopened, 0)
+  assert.equal(result.period_flows.total.important_adjustments, 1)
+  assert.equal(result.plan_outlook.total.planned, 0)
+  assert.equal(result.current_stock.total.overdue, 0)
+  assert.equal(result.risk_candidates.due_soon.total, 0)
+})
+
 test('部分BUG历史漏掉关闭事件时披露流量不完整，不把零完成标成可信全量', async () => {
   const data = fixture([row({ business_type: 'bug', status: 2, is_completed: true, plan_date: null,
     actual_date: '2026-09-04', resolved_date: '2026-09-02' })],

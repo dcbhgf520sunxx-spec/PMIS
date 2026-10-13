@@ -53,7 +53,7 @@ test('关键事项只保留四状态并在暂停时填写原因', () => {
   const types = read('src/modules/project/types.ts');
 
   assert.match(types, /ProjectPlanItemStatus = 0 \| 1 \| 2 \| 3/);
-  assert.doesNotMatch(types, /\| 4/);
+  assert.doesNotMatch(types.match(/export type ProjectPlanItemStatus = [^;]+/)[0], /\| 4/);
   assert.doesNotMatch(action, /取消|重新打开/);
   assert.match(action, /label:'进行中',value:1/);
   assert.match(action, /name="pauseReason"[\s\S]*暂停原因[\s\S]*required/);

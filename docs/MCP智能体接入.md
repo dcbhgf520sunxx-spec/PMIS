@@ -433,7 +433,7 @@ Query MCP 用来查找目标、读取当前值和确认可选业务数据；Acti
 
 - `period_flows`：期间新增、完成、重要调整、暂停、恢复、修复、关闭、激活及进入逾期等流量。
 - `current_stock`：`data_cutoff` 时点的当前未完成、进行中、暂停和逾期存量。驳回需求（3、13、22）仍属于记录总量，但不计入在办未完成，也不算成功完成。
-- `plan_outlook`：按当前有效计划日期统计计划区间；区间开始前已经提前完成的记录不计入计划数，`completed` 统计截至 `completion_cutoff` 具有实际完成依据且未在截止日前重新打开的事项，`pending = planned - completed`。驳回需求、暂停事项及暂停项目下的阶段关键事项不计入。历史完成依据不足的事项保守计入待完成，并通过 `coverage.plan_completion_unknown_count`、`plan_completion_complete` 说明，不推定已完成。
+- `plan_outlook`：按当前有效计划日期统计计划区间；区间开始前已经提前完成的记录不计入计划数，`completed` 统计截至 `completion_cutoff` 具有实际完成依据且未在截止日前重新打开的事项，`pending = planned - completed`。驳回需求、暂停或可恢复关闭事项及暂停/关闭项目下的阶段关键事项不计入。历史完成依据不足的事项保守计入待完成，并通过 `coverage.plan_completion_unknown_count`、`plan_completion_complete` 说明，不推定已完成。
 - 状态日志缺失但当前状态及实际业务日期足以证明的完成、修复或暂停，仅在 `actual` 口径补入，`date_source=current_business_date_without_status_log`、`recorded_date=null`；`recorded` 口径不虚构登记日。重新激活后残留的完成日期不能直接算作完成。
 - `group_by` 中的 `status`、`priority` 使用“业务类型:代码”分组键及中文标签，不把不同业务的同代码状态混为一组。其他分组键保持原有含义。
 - 阶段关键事项的操作人关联及变化统计排除阶段容器操作，防止独立编号相同时串用历史。公开调用未命中任何有权限的业务类型时明确返回 `MCP_PERMISSION_DENIED`，不返回看似统计成功的全零结果。
@@ -522,7 +522,7 @@ MCP 初始化、工具发现、查询、操作预览、操作执行和资源读�
 
 ### 统一逾期计算
 
-项目、需求、任务、工单、阶段关键事项的当前逾期统一由 `overdueRules` 提供对象计算和 SQL 表达式。查询、筛选、数量和排序不依赖持久化逾期缓存，搜索结果增加 `overdue_days`（上海自然日差，未逾期为 0）。需求终态的 `is_overdue` 保持空值；其他业务沿用 0。工单暂停状态 4 不计逾期，父项目暂停时阶段事项不计当前逾期。无计划日期不计逾期。
+项目、需求、任务、工单、阶段关键事项的当前逾期统一由 `overdueRules` 提供对象计算和 SQL 表达式。查询、筛选、数量和排序不依赖持久化逾期缓存，搜索结果增加 `overdue_days`（上海自然日差，未逾期为 0）。需求终态的 `is_overdue` 保持空值；其他业务沿用 0。工单暂停状态 4 不计逾期，父项目暂停或关闭时阶段事项不计当前逾期。无计划日期不计逾期。
 
 写入、外部同步及缓存刷新复用相同规则；缓存刷新使用上海时区，不写虚构的人工编辑历史。期间进入逾期仍结合历史状态推导，不以当前值替代历史事实。运维合同复用自然日差，但保留续签、终止及提醒节点规则。
 
@@ -541,3 +541,7 @@ Query工具 `sidm_standard_ontology_query` 接受正整数 `product_id` 和可�
 后台只读调用业务控制器，随后执行标准OWL/RDF、Java HermiT、SHACL与SPARQL。每条答案附 `validationStatus` 和 `validationIssues`；异常待核实不得作为已核对结论，SIDM已登记付款不证明OA或银行状态。未知与无权不按零处理，失败不回退历史快照。运行环境缺失返回 `MCP_ONTOLOGY_UNAVAILABLE`，参数、权限与执行失败沿用明确MCP错误契约。
 
 智能体配置、完整Schema、运行环境及验证边界见[标准本体Query接入说明](../artifacts/sidm-ontology/standard/Query-MCP接入说明.md)。本机SDK真实数据调用与审计已验证；正式平台HTTP凭据与员工号密文握手、生产发布尚未验证。当前新增能力不修改业务数据，无数据库迁移。
+
+### 可恢复关闭操作
+
+需求 `status=37`、项目/任务 `status=4`、工单 `status=3` 为“已关闭”，上述状态变更工具均要求 `close_date`（合法的 YYYY-MM-DD，不晚于当天）和 `close_reason`（非空、最多200字）。对应 Query 搜索、详情、统计和历史均支持该状态及中文标签。关闭操作沿用各自暂停的权限、来源状态和恢复范围，不计当前逾期、不算成功完成；暂停与关闭可互相切换。工单被激活状态5仍仅能先转已解决，与原暂停入口规则保持一致。阶段关键事项自身仍为原四状态，所属项目关闭时同暂停排除当前逾期。Bug 状态和关闭后激活规则不变。需求已转项目状态36仍禁止普通状态变更；删除或换绑项目的 `requirement_release` 可选择37，并需相同关闭字段。Action 继续保持 Query → preview → 用户确认 → 原参数 execute → Query 回读，无新增菜单或权限。关闭字段退出关闭时清空，历史操作保留。

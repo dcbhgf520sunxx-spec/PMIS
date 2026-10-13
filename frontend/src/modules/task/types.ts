@@ -1,4 +1,4 @@
-export type TaskStatus = 0 | 1 | 2 | 3;
+export type TaskStatus = 0 | 1 | 2 | 3 | 4;
 export type TaskPriority = 0 | 1 | 2;
 export type TaskOwner = { id: string; name: string };
 
@@ -22,6 +22,7 @@ export type TaskRecord = {
   taskTypeName: string;
   priority: TaskPriority;
   status: TaskStatus;
+  closeDate?: string; closeReason?: string;
   previousStatus?: TaskStatus;
   isOverdue: boolean; overdueDays?: number;
   startTime: string;

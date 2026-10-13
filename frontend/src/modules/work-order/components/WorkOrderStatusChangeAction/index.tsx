@@ -28,6 +28,7 @@ const toneByStatus: Record<WorkOrderStatus, StatusChangeOption<WorkOrderStatus>[
   0: 'normal',
   1: 'normal',
   2: 'success',
+  3: 'danger',
   4: 'danger',
   5: 'danger'
 };
@@ -76,6 +77,27 @@ export function WorkOrderStatusChangeAction({
                 ]}
               >
                 <AdminTextArea rows={3} maxLength={200} showCount placeholder="请输入暂停原因" />
+              </AdminFormItem>
+            </>
+          ) : null}
+          {target === 3 ? (
+            <>
+              <AdminFormItem
+                name="closedAt"
+                label="关闭时间"
+                rules={[{ required: true, message: '请选择关闭时间' }]}
+              >
+                <AdminDatePicker placeholder="请选择关闭时间" />
+              </AdminFormItem>
+              <AdminFormItem
+                name="closeReason"
+                label="关闭原因"
+                rules={[
+                  { required: true, whitespace: true, message: '请输入关闭原因' },
+                  { max: 200, message: '关闭原因最多200字符' }
+                ]}
+              >
+                <AdminTextArea rows={3} maxLength={200} showCount placeholder="请输入关闭原因" />
               </AdminFormItem>
             </>
           ) : null}

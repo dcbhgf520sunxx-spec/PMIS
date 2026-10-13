@@ -60,9 +60,9 @@ test('invalid analysis combinations return exact machine-readable field errors',
       && error.fieldErrors.metric === 'BUG不支持逾期数量统计'
   )
   await assert.rejects(
-    () => analyzeBusinessData({ domain: 'work_order', metric: 'count', status: 3 }, {}),
+    () => analyzeBusinessData({ domain: 'work_order', metric: 'count', status: 9 }, {}),
     (error) => error.code === 'MCP_ARGUMENT_INVALID'
-      && error.fieldErrors.status === '工单状态可选值为：0、1、2、4、5'
+      && error.fieldErrors.status === '工单状态可选值为：0、1、2、3、4、5'
   )
 })
 

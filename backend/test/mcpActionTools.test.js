@@ -981,7 +981,7 @@ test('status preview rejects illegal task transitions before creating a ticket',
       },
     }),
     (error) => error.code === 'MCP_BUSINESS_VALIDATION'
-      && error.fieldErrors.status === '当前状态：待处理(0)；允许变更为：处理中(1)、已暂停(3)'
+      && error.fieldErrors.status === '当前状态：待处理(0)；允许变更为：处理中(1)、已暂停(3)、已关闭(4)'
   )
   assert.equal(ticketCreated, false)
 })

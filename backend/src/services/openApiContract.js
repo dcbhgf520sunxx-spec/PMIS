@@ -21,7 +21,7 @@ const fields = {
   submitTime: date,
   status: z.number().int(),
   actualEndDate: date, completionStatus: text(LIMITS.requirementCompletionStatus), pauseDate: date,
-  pauseReason: text(LIMITS.pauseReason),
+  pauseReason: text(LIMITS.pauseReason), closeDate: date, closeReason: text(LIMITS.pauseReason),
   resolveDate: date, resultDescription: rich.refine((s) => !!s.trim()),
   suspendDate: date, suspendReason: text(LIMITS.pauseReason), activationReason: text(LIMITS.activationReason), attachmentId: z.number().int().positive(),
 }
@@ -30,8 +30,8 @@ const maps = {
   work_order: { problemDescription: 'problem_desc', productName: 'product_id', problemTypeCode: 'problem_type', followerEmployeeNo: 'follower_id', urgency: 'urgency', expectedResolveDate: 'expected_resolve_date', submitterName: 'submitter_name', submitterDept: 'submitter_dept', submitTime: 'submit_time' },
 }
 const statusMaps = {
-  requirement: { status: 'status', actualEndDate: 'actual_end_date', completionStatus: 'completion_status', pauseDate: 'pause_date', pauseReason: 'pause_reason' },
-  work_order: { status: 'status', resolveDate: 'resolve_date', resultDescription: 'result_desc', suspendDate: 'suspend_date', suspendReason: 'suspend_reason', activationReason: 'activation_reason' },
+  requirement: { closeDate: 'close_date', closeReason: 'close_reason', status: 'status', actualEndDate: 'actual_end_date', completionStatus: 'completion_status', pauseDate: 'pause_date', pauseReason: 'pause_reason' },
+  work_order: { closeDate: 'close_date', closeReason: 'close_reason', status: 'status', resolveDate: 'resolve_date', resultDescription: 'result_desc', suspendDate: 'suspend_date', suspendReason: 'suspend_reason', activationReason: 'activation_reason' },
 }
 const required = {
   requirement: ['title', 'requirementType', 'productName', 'ownerEmployeeNo', 'submitterName', 'submitDate'],
@@ -66,8 +66,8 @@ function parseInput(resource, input) {
   }
   if (b.operation === 'CHANGE_STATUS') {
     const extra = resource === 'requirement'
-      ? ({33:['actualEndDate','completionStatus'],34:['actualEndDate','completionStatus'],35:['pauseDate','pauseReason']}[parsed.data.status] || [])
-      : ({2:['resolveDate','resultDescription'],4:['suspendDate','suspendReason'],5:['activationReason']}[parsed.data.status] || [])
+      ? ({33:['actualEndDate','completionStatus'],34:['actualEndDate','completionStatus'],35:['pauseDate','pauseReason'],37:['closeDate','closeReason']}[parsed.data.status] || [])
+      : ({2:['resolveDate','resultDescription'],3:['closeDate','closeReason'],4:['suspendDate','suspendReason'],5:['activationReason']}[parsed.data.status] || [])
     for (const key of extra) if (parsed.data[key] === undefined) throw error('请补充状态变更字段',400,{[key]:['该目标状态必填']})
     for (const key of Object.keys(parsed.data)) if (key !== 'status' && !extra.includes(key)) throw error('该目标状态不接受此字段',400,{[key]:['请删除不适用的字段']})
   }

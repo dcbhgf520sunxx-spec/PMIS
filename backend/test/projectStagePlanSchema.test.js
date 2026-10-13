@@ -73,7 +73,7 @@ test('关键事项移除取消状态并新增暂停原因字段', () => {
 
   assert.match(schema, /pause_reason VARCHAR\(200\)/)
   assert.match(schema, /status IN \(0,1,2,3\)/)
-  assert.doesNotMatch(schema, /status IN \(0,1,2,3,4\)/)
+  assert.doesNotMatch(schema.match(/CREATE TABLE IF NOT EXISTS pms_project_plan_item \([\s\S]*?\n\);/)[0], /status IN \(0,1,2,3,4\)/)
   assert.match(migration, /ADD COLUMN IF NOT EXISTS pause_reason VARCHAR\(200\)/)
   assert.match(migration, /UPDATE pms_project_plan_item[\s\S]*SET[\s\S]*is_deleted = 1[\s\S]*WHERE status = 4/)
   assert.match(migration, /DROP CONSTRAINT IF EXISTS ck_project_plan_item_status/)

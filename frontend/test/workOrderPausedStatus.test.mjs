@@ -8,19 +8,21 @@ test('工单前端声明已暂停状态及现行流转矩阵', () => {
   const types = read('src/modules/work-order/types.ts');
   const helpers = read('src/modules/work-order/helpers.tsx');
   const rules = read('src/modules/work-order/workOrderStatusRules.ts');
-  assert.match(types, /0 \| 1 \| 2 \| 4 \| 5/);
+  assert.match(types, /0 \| 1 \| 2 \| 3 \| 4 \| 5/);
   assert.match(helpers, /已暂停/);
-  assert.match(rules, /0:\s*\[1,\s*2,\s*4\]/);
-  assert.match(rules, /1:\s*\[2,\s*4\]/);
-  assert.match(rules, /2:\s*\[4,\s*5\]/);
-  assert.match(rules, /4:\s*\[0,\s*1,\s*2\]/);
+  assert.match(rules, /0:\s*\[1,\s*2,\s*4,\s*3\]/);
+  assert.match(rules, /1:\s*\[2,\s*4,\s*3\]/);
+  assert.match(rules, /2:\s*\[4,\s*5,\s*3\]/);
+  assert.match(rules, /4:\s*\[0,\s*1,\s*2,\s*3\]/);
 });
 
-test('工单状态弹窗不再提供关闭字段', () => {
+test('工单状态弹窗提供关闭时间和原因', () => {
   const action = read('src/modules/work-order/components/WorkOrderStatusChangeAction/index.tsx');
   assert.match(action, /实际修复时间/);
   assert.match(action, /处置结果/);
-  assert.doesNotMatch(action, /closedAt|关闭时间|target === 3/);
+  assert.match(action, /closedAt/);
+  assert.match(action, /关闭原因/);
+  assert.match(action, /target === 3/);
 });
 
 test('工单进入暂停时必填暂停时间并提交到接口', () => {

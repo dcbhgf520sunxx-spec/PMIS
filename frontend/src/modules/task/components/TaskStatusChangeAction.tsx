@@ -9,10 +9,11 @@ export function TaskStatusChangeAction({ task, ...props }: Props) {
     {...props}
     current={task.status}
     currentValue={taskStatusLabels[task.status]}
-    options={allowedTaskStatuses(task).map((value) => ({ value, label: taskStatusLabels[value], tone: value === 3 ? 'danger' : value === 2 ? 'success' : 'normal' }))}
+    options={allowedTaskStatuses(task).map((value) => ({ value, label: taskStatusLabels[value], tone: [3, 4].includes(value) ? 'danger' : value === 2 ? 'success' : 'normal' }))}
     renderExtra={(target) => <>
       {target === 2 ? <AdminFormItem name="actualEndTime" label="实际完成时间" rules={[{ required: true, message: '请选择实际完成时间' }]}><AdminDatePicker /></AdminFormItem> : null}
       {target === 3 ? <><AdminFormItem name="suspendTime" label="暂停时间" rules={[{ required: true, message: '请选择暂停时间' }]}><AdminDatePicker /></AdminFormItem><AdminFormItem name="suspendReason" label="暂停原因" rules={[{ required: true, whitespace: true, message: '请输入暂停原因' }, { max: 200, message: '暂停原因最多200字符' }]}><AdminTextArea rows={3} maxLength={200} showCount placeholder="请输入暂停原因" /></AdminFormItem></> : null}
+          {target === 4 ? <><AdminFormItem name="closeDate" label="关闭时间" rules={[{ required: true, message: '请选择关闭时间' }]}><AdminDatePicker /></AdminFormItem><AdminFormItem name="closeReason" label="关闭原因" rules={[{ required: true, whitespace: true, message: '请输入关闭原因' }, { max: 200, message: '关闭原因最多200字符' }]}><AdminTextArea rows={3} maxLength={200} showCount placeholder="请输入关闭原因" /></AdminFormItem></> : null}
     </>}
   />;
 }

@@ -10,10 +10,10 @@ const {
 } = require('../src/services/taskRules')
 
 test('任务暂停后可以恢复到任意其他状态', () => {
-  assert.deepEqual(allowedTaskStatuses(0), [1, 3])
-  assert.deepEqual(allowedTaskStatuses(1), [2, 3])
-  assert.deepEqual(allowedTaskStatuses(2), [3])
-  assert.deepEqual(allowedTaskStatuses(3, 1), [0, 1, 2])
+  assert.deepEqual(allowedTaskStatuses(0), [1, 3, 4])
+  assert.deepEqual(allowedTaskStatuses(1), [2, 3, 4])
+  assert.deepEqual(allowedTaskStatuses(2), [3, 4])
+  assert.deepEqual(allowedTaskStatuses(3, 1), [0, 1, 2, 4])
 })
 
 test('完成和暂停要求对应时间', () => {
@@ -29,14 +29,14 @@ test('完成和暂停要求对应时间', () => {
 
 test('暂停任务恢复时按目标状态清理时间字段', () => {
   assert.deepEqual(resolveTaskStatusFields({ status: 2, actual_end_date: '2026-01-01', suspend_date: null, suspend_reason: null }, 3, { suspend_date: '2026-07-13', suspend_reason: ' 等待资源 ' }), {
-    actualEndDate: '2026-01-01', suspendDate: '2026-07-13', suspendReason: '等待资源'
+    actualEndDate: '2026-01-01', suspendDate: '2026-07-13', suspendReason: '等待资源', closeDate: null, closeReason: null
   })
   const paused = { status: 3, actual_end_date: '2026-01-01', suspend_date: '2026-07-13', suspend_reason: '等待资源' }
   assert.deepEqual(resolveTaskStatusFields(paused, 1, {}), {
-    actualEndDate: null, suspendDate: null, suspendReason: null
+    actualEndDate: null, suspendDate: null, suspendReason: null, closeDate: null, closeReason: null
   })
   assert.deepEqual(resolveTaskStatusFields(paused, 2, { actual_end_date: '2026-07-14' }), {
-    actualEndDate: '2026-07-14', suspendDate: null, suspendReason: null
+    actualEndDate: '2026-07-14', suspendDate: null, suspendReason: null, closeDate: null, closeReason: null
   })
 })
 

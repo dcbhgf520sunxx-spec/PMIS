@@ -435,7 +435,7 @@ test('business analysis metadata publishes exact domain and metric compatibility
   const requirement = schema.oneOf.find((branch) => branch.properties.domain.const === 'requirement')
 
   assert.deepEqual(contract.properties.metric.enum, ['count', 'amount_sum'])
-  assert.deepEqual(workOrder.properties.status.enum, [0, 1, 2, 4, 5])
+  assert.deepEqual(workOrder.properties.status.enum, [0, 1, 2, 3, 4, 5])
   assert.ok(requirement.properties.status.enum.includes(35))
   assert.doesNotThrow(() => require('../src/mcp/dispatcher').validateToolArguments(
     getToolDefinition('business_analyze', 'query'),

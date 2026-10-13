@@ -1,10 +1,10 @@
 const { getShanghaiDateText, businessDateText, calendarDaysBetween } = require('../utils/date')
 
 const POLICIES = Object.freeze({
-  project: { excluded: [2, 3], field: 'expected_end_date', inactive: 0 },
-  requirement: { excluded: [3, 13, 22, 33, 34, 35, 36], field: 'expected_end_date', inactive: null },
-  task: { excluded: [2, 3], field: 'expected_end_date', inactive: 0 },
-  work_order: { excluded: [2, 4], field: 'expected_resolve_date', inactive: 0, timestamp: true },
+  project: { excluded: [2, 3, 4], field: 'expected_end_date', inactive: 0 },
+  requirement: { excluded: [3, 13, 22, 33, 34, 35, 36, 37], field: 'expected_end_date', inactive: null },
+  task: { excluded: [2, 3, 4], field: 'expected_end_date', inactive: 0 },
+  work_order: { excluded: [2, 3, 4], field: 'expected_resolve_date', inactive: 0, timestamp: true },
   stage_plan: { excluded: [2, 3], field: 'current_due_date', inactive: 0 },
 })
 function policyFor(type) {
@@ -13,7 +13,7 @@ function policyFor(type) {
 }
 function calculateOverdue(type, { date, status, parentStatus }, today = getShanghaiDateText()) {
   const policy = policyFor(type)
-  if (policy.excluded.includes(Number(status)) || (type === 'stage_plan' && Number(parentStatus) === 3)) {
+  if (policy.excluded.includes(Number(status)) || (type === 'stage_plan' && [3, 4].includes(Number(parentStatus)))) {
     return { isOverdue: policy.inactive, overdueDays: 0 }
   }
   const due = businessDateText(date, Boolean(policy.timestamp))
@@ -27,7 +27,7 @@ function overdueSql(type, { alias = '', parentAlias } = {}) {
   const prefix = alias ? `${alias}.` : ''
   const today = "(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai')::date"
   const date = policy.timestamp ? `(${prefix}${policy.field} AT TIME ZONE 'Asia/Shanghai')::date` : `${prefix}${policy.field}`
-  const active = `${prefix}status NOT IN (${policy.excluded.join(',')})${type === 'stage_plan' && parentAlias ? ` AND ${parentAlias}.status <> 3` : ''}`
+  const active = `${prefix}status NOT IN (${policy.excluded.join(',')})${type === 'stage_plan' && parentAlias ? ` AND ${parentAlias}.status NOT IN (3,4)` : ''}`
   const predicate = `(${active} AND ${date} IS NOT NULL AND ${date} < ${today})`
   const flag = `(CASE WHEN NOT (${active}) THEN ${policy.inactive === null ? 'NULL' : '0'} WHEN ${date} < ${today} THEN 1 ELSE 0 END)`
   const days = `(CASE WHEN ${predicate} THEN (${today} - ${date}) ELSE 0 END)`

@@ -97,17 +97,17 @@ const TARGET_LABELS = {
 }
 const STATUS_LABELS = {
   product: { 0: '停用', 1: '启用' },
-  project: { 0: '未开始', 1: '进行中', 2: '已完成', 3: '已暂停' },
+  project: { 0: '未开始', 1: '进行中', 2: '已完成', 3: '已暂停', 4: '已关闭' },
   requirement: {
     0: '上会评估', 1: '需求上会', 2: '上会通过', 3: '过会未通过',
     10: '提报评估', 11: '需求审批', 12: '审批通过', 13: '审批未通过',
     20: '需求验证', 21: '预研通过', 22: '预研不通过',
     30: '需求整理', 31: '实施中', 32: '试运行', 33: '已完成',
-    34: '已完成未使用', 35: '暂停', 36: '已转项目',
+    34: '已完成未使用', 35: '暂停', 36: '已转项目', 37: '已关闭',
   },
-  task: { 0: '待处理', 1: '处理中', 2: '已完成', 3: '已暂停' },
+  task: { 0: '待处理', 1: '处理中', 2: '已完成', 3: '已暂停', 4: '已关闭' },
   bug: { 0: '新建', 1: '已修复', 2: '已关闭', 3: '被激活' },
-  work_order: { 0: '待处理', 1: '处理中', 2: '已解决', 4: '已暂停', 5: '被激活' },
+  work_order: { 0: '待处理', 1: '处理中', 2: '已解决', 3: '已关闭', 4: '已暂停', 5: '被激活' },
   stage_item: { 0: '未开始', 1: '进行中', 2: '已完成', 3: '已暂停' },
 }
 const PREVIEW_ENUM_LABELS = {
@@ -458,7 +458,7 @@ async function validateStatusAction(name, args, database = db) {
     const allowed = allowedProjectStatuses(row.status)
     if (!allowed.includes(target)) rejectTransition('project', row.status, allowed)
     const message = validateProjectStatusChange(target, args)
-    if (message) throw businessValidationError(target === 2 ? 'actual_end_date' : !args.suspend_date ? 'suspend_date' : 'suspend_reason', message)
+    if (message) throw businessValidationError(target === 2 ? 'actual_end_date' : target === 4 ? (!args.close_date ? 'close_date' : 'close_reason') : !args.suspend_date ? 'suspend_date' : 'suspend_reason', message)
     return
   }
 
@@ -472,7 +472,7 @@ async function validateStatusAction(name, args, database = db) {
         ? 'actual_end_date'
         : !String(args.completion_status || '').trim() && [33, 34].includes(target)
           ? 'completion_status'
-          : !args.pause_date ? 'pause_date' : 'pause_reason'
+          : target === 37 ? (!args.close_date ? 'close_date' : 'close_reason') : !args.pause_date ? 'pause_date' : 'pause_reason'
       throw businessValidationError(field, message)
     }
     return
@@ -502,7 +502,7 @@ async function validateStatusAction(name, args, database = db) {
       throw businessValidationError('status', '主任务已完成，请先调整主任务状态')
     }
     const message = validateTaskStatusChange(target, args)
-    if (message) throw businessValidationError(target === 2 ? 'actual_end_date' : !args.suspend_date ? 'suspend_date' : 'suspend_reason', message)
+    if (message) throw businessValidationError(target === 2 ? 'actual_end_date' : target === 4 ? (!args.close_date ? 'close_date' : 'close_reason') : !args.suspend_date ? 'suspend_date' : 'suspend_reason', message)
     return
   }
 
@@ -537,7 +537,7 @@ async function validateStatusAction(name, args, database = db) {
     if (message) {
       const field = target === 2
         ? (!args.resolve_date ? 'resolve_date' : 'result_desc')
-        : target === 4 ? (!args.suspend_date ? 'suspend_date' : 'suspend_reason') : 'activation_reason'
+        : target === 3 ? (!args.close_date ? 'close_date' : 'close_reason') : target === 4 ? (!args.suspend_date ? 'suspend_date' : 'suspend_reason') : 'activation_reason'
       throw businessValidationError(field, message)
     }
     return

@@ -3,10 +3,10 @@ const test = require('node:test')
 const { analyzeBusinessData } = require('../src/services/mcpAnalysisService')
 
 const domains = [
-  { domain: 'project', plan: 'expected_end_date', excluded: [2, 3] },
-  { domain: 'requirement', plan: 'expected_end_date', excluded: [3, 13, 22, 33, 34, 35, 36] },
-  { domain: 'task', plan: 'expected_end_date', excluded: [2, 3] },
-  { domain: 'work_order', plan: 'expected_resolve_date', excluded: [2, 4] },
+  { domain: 'project', plan: 'expected_end_date', excluded: [2, 3, 4] },
+  { domain: 'requirement', plan: 'expected_end_date', excluded: [3, 13, 22, 33, 34, 35, 36, 37] },
+  { domain: 'task', plan: 'expected_end_date', excluded: [2, 3, 4] },
+  { domain: 'work_order', plan: 'expected_resolve_date', excluded: [2, 3, 4] },
 ]
 
 for (const { domain, plan, excluded } of domains) {

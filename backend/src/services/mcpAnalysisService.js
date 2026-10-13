@@ -8,18 +8,18 @@ const DOMAINS = {
     metrics: ['count', 'status_distribution'], deleted: true,
   },
   project: {
-    label: '项目', table: 'pms_project', date: 'created_at', status: 'status', statuses: [0, 1, 2, 3],
+    label: '项目', table: 'pms_project', date: 'created_at', status: 'status', statuses: [0, 1, 2, 3, 4],
     overdue: overdueSql('project').predicate,
     metrics: ['count', 'overdue_count', 'status_distribution'], deleted: true,
   },
   requirement: {
     label: '需求', table: 'pms_requirement', date: 'created_at', status: 'status',
-    statuses: [0, 1, 2, 3, 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 33, 34, 35, 36],
+    statuses: [0, 1, 2, 3, 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 33, 34, 35, 36, 37],
     overdue: overdueSql('requirement').predicate,
     metrics: ['count', 'overdue_count', 'status_distribution'], deleted: true,
   },
   task: {
-    label: '任务', table: 'pms_task', date: 'created_at', status: 'status', statuses: [0, 1, 2, 3],
+    label: '任务', table: 'pms_task', date: 'created_at', status: 'status', statuses: [0, 1, 2, 3, 4],
     overdue: overdueSql('task').predicate,
     metrics: ['count', 'overdue_count', 'status_distribution'], deleted: true,
   },
@@ -28,7 +28,7 @@ const DOMAINS = {
     metrics: ['count', 'status_distribution'], deleted: true,
   },
   work_order: {
-    label: '工单', table: 'pms_work_order', date: 'created_at', status: 'status', statuses: [0, 1, 2, 4, 5],
+    label: '工单', table: 'pms_work_order', date: 'created_at', status: 'status', statuses: [0, 1, 2, 3, 4, 5],
     overdue: overdueSql('work_order').predicate,
     metrics: ['count', 'overdue_count', 'status_distribution'], deleted: true,
   },

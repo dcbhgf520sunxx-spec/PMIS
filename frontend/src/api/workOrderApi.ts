@@ -23,6 +23,7 @@ type WorkOrderResponse = {
   expected_resolve_date?: string;
   resolve_date?: string;
   close_date?: string;
+  close_reason?: string;
   suspend_date?: string;
   suspend_reason?: string;
   submitter_name: string;
@@ -74,6 +75,8 @@ export type WorkOrderFormPayload = {
 
 export type WorkOrderStatusPayload = {
   status: WorkOrderStatus;
+  closeDate?: string | null;
+  closeReason?: string | null;
   resolveDate?: string | null;
   suspendDate?: string | null;
   suspendReason?: string | null;
@@ -107,6 +110,7 @@ export function toWorkOrderRecord(row: WorkOrderResponse): WorkOrderRecord {
     resolveDate: row.resolve_date ? dateText(row.resolve_date).slice(0, 10) : undefined,
     closeDate: row.close_date ? dateText(row.close_date).slice(0, 10) : undefined,
     suspendDate: row.suspend_date ? dateText(row.suspend_date).slice(0, 10) : undefined,
+    closeReason: row.close_reason,
     suspendReason: row.suspend_reason,
     resultDesc: row.result_desc,
     activationReason: row.activation_reason,
@@ -200,6 +204,8 @@ export async function updateWorkOrderStatus(id: string, payload: WorkOrderStatus
     ? { status: payload }
     : {
       status: payload.status,
+      close_date: payload.closeDate,
+      close_reason: payload.closeReason,
       resolve_date: payload.resolveDate,
       suspend_date: payload.suspendDate,
       suspend_reason: payload.suspendReason,
