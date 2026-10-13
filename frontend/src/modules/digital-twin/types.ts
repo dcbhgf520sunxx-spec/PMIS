@@ -72,4 +72,5 @@ export type TwinAiSummary = {
     updatedCount: number;
     sourceRevision: string;
 };
-export const kindNames: Record<string, string> = { products: '产品', requirements: '需求', projects: '项目', tasks: '任务', bugs: '缺陷', planStages: '项目阶段', planItems: '关键事项', contracts: '项目合同', paymentStages: '付款阶段', payments: '付款记录', maintenance: '维保合同', orders: '工单' };
+// 与侧栏菜单顺序一致，子对象紧跟所属业务模块；更新分类和对象选项共用此顺序。
+export const kindNames: Record<string, string> = { products: '产品', maintenance: '维保合同', requirements: '需求', projects: '项目', planStages: '项目阶段', planItems: '关键事项', contracts: '项目合同', paymentStages: '付款阶段', payments: '付款记录', tasks: '任务', bugs: '缺陷', orders: '工单' };
