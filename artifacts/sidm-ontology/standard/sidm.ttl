@@ -6,9 +6,53 @@
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 
 
-<urn:sidm:ontology> a owl:Ontology ; owl:versionIRI <urn:sidm:ontology:version:1.0.2> ;
- rdfs:label "SIDM业务本体"@zh ; owl:versionInfo "1.0.2" ;
+<urn:sidm:ontology> a owl:Ontology ; owl:versionIRI <urn:sidm:ontology:version:1.0.3> ;
+ rdfs:label "SIDM业务本体"@zh ; owl:versionInfo "1.0.3" ;
  rdfs:comment "正式OWL 2 DL模型；基于已确认业务骨架。缺失信息采用开放世界语义，数据完整性由SHACL检查。"@zh .
+
+# 已确认的个人考核口径；注释定义不新增业务字段，也不改变业务状态或SHACL写入约束。
+s:completionRule a owl:AnnotationProperty ; rdfs:label "本类单据的完成判定"@zh .
+s:completionFormula a owl:AnnotationProperty ; rdfs:label "计算公式"@zh .
+s:completionScope a owl:AnnotationProperty ; rdfs:label "统计范围"@zh .
+s:completionOwnership a owl:AnnotationProperty ; rdfs:label "个人归属"@zh .
+s:completionPeriod a owl:AnnotationProperty ; rdfs:label "考核期与归期"@zh .
+s:completionEvidence a owl:AnnotationProperty ; rdfs:label "结果与证据"@zh .
+
+<urn:sidm:ontology>
+ s:completionFormula "完成率＝本期已完成单据数 ÷ 本期纳入统计的单据数 × 100%。按单据类别分别统计，部分完成不折算完成数量，也不平均单据进度；没有符合条件的单据时显示“—”。"@zh ;
+ s:completionScope "先排除不参与的单据，再判断完成或未完成，并按个人责任范围与考核期筛选。需求、项目或主任务关闭，其下属工作退出统计；恢复后重新筛选，记录和状态保留。暂停不退出统计。产品、供应商、项目合同、付款阶段、付款记录、产品运维合同不计算完成率。"@zh ;
+ s:completionOwnership "只按当前责任角色统计：需求、项目、关键事项取当前负责人，任务取当前负责人名单，BUG取当前处理人，工单取当前跟进人。历史责任人不追溯，完成后换人也按当前责任人统计；多人负责分别计入各自个人统计。协作人、普通成员、提出人、创建人不自动计入。主子任务合为一个任务类别，个人去重规则见任务说明。"@zh ;
+ s:completionPeriod """按最新计划完成日期归期，不使用原定日期；无计划日期不计入，BUG除外。
+当期包括本期计划完成的工作，以及期初已逾期但仍未完成的工作。遗留工作进入当期分母，完成则进入分子，未完成继续结转下一期；关闭排除规则照常适用。
+BUG当期范围为期初尚未关闭的，以及本期新增或重新激活的；同一BUG每期只计一次。
+已结束考核期按期末判断完成；未结束考核期按统计当天判断，后来完成不倒算到前期。"""@zh ;
+ s:completionEvidence "结果保留完成数、统计数及对应单据清单。历史完成结果、需求有效结论和BUG重新激活须有业务日期或历史记录支持；数据不足标记“待核实”，不以更新时间推定完成。当前状态快照与未完成工作清单不能直接代替个人历史考核统计。本体中的口径说明不表示已经实现自动计算或通过数据校验。"@zh .
+
+s:Requirement s:completionRule """上会立项、需求提报、预研需求：按各自路径得出有效结论，通过或未通过均算完成；得出结论后，后续实施、试运行或暂停仍算完成。
+重新评估、重新审批或重新预研后，原结论不再作为完成依据，按新一轮结论重新判断；有效结论须有业务日期或历史记录支持，资料不足标记“待核实”。
+直接实施需求：已完成或已完成未使用算完成；尚未完成（包括暂停）算未完成。
+已转项目：需求转交算完成，关联项目独立统计，不据此认定项目实施已完成。
+需求已关闭不参与，其下属工作退出统计；恢复后重新筛选。"""@zh .
+s:Project s:completionRule """按项目自身状态判断：已完成算完成，未开始、进行中、已暂停算未完成。
+项目已关闭或来源需求已关闭不参与；项目下属工作同样退出统计，恢复后重新筛选。"""@zh .
+s:Task s:completionRule """无子任务的任务及子任务：已完成算完成，待处理、处理中、已暂停算未完成，已关闭不参与。
+有子任务的主任务：所有未关闭子任务均已完成才算完成；存在未关闭且尚未完成的子任务算未完成，不增加主任务完成确认。
+主任务关闭，或全部子任务关闭时，主任务不参与；主任务关闭，其下属子任务也退出统计。上级需求或项目关闭同样退出统计，恢复后重新筛选。
+主任务和子任务合为一个任务类别，按个人去重：只负责主任务则统计主任务；只负责子任务则统计本人负责的子任务；同时负责主任务和其中的子任务，只统计本人负责的子任务。"""@zh .
+s:ProjectStage s:completionRule """阶段内全部关键事项已完成才算完成；有事项尚未完成（包括暂停）算未完成。没有事项或上级关闭不参与。
+项目阶段无独立负责人及计划完成日期，仅按事项汇总判定，不自动推定个人考核归属。"""@zh .
+s:KeyItem s:completionRule "已完成算完成；未开始、进行中、已暂停算未完成；上级项目或来源需求关闭不参与。个人统计取当前负责人，归期取当前计划完成日期，不使用原定日期。"@zh .
+s:Bug s:completionRule """已关闭算完成；新建、已修复、被激活算未完成。BUG关闭表示缺陷处理完成，与任务、项目等取消关闭的含义不同。
+所属需求或项目关闭不参与，所属项目的来源需求关闭同样退出统计。
+没有计划完成日期，不推定到期日；按期初未关闭、本期新增或重新激活纳入，同一BUG每期只计一次，重新激活须有历史证据。"""@zh .
+s:WorkOrder s:completionRule "已解决算完成；待处理、处理中、已暂停、被激活算未完成；已关闭不参与。个人统计取当前跟进人，按预计解决时间归期。"@zh .
+s:Product s:completionRule "产品不计算完成率。"@zh .
+s:Supplier s:completionRule "供应商不计算完成率。"@zh .
+s:ProjectContract s:completionRule "项目合同不计算完成率；付款情况按合同与付款记录口径另行分析。"@zh .
+s:PaymentStage s:completionRule "付款阶段不计算完成率；付款阶段与项目实施阶段分别定义。"@zh .
+s:PaymentRecord s:completionRule "付款记录不计算完成率。"@zh .
+s:MaintenanceContract s:completionRule "产品运维合同不计算完成率。"@zh .
+s:Person s:completionRule "人员是个人统计的归属维度，不作为单据计入完成率。仅计当前承担责任的单据，普通成员或协作身份不自动计入。"@zh .
 
 
 s:Product a owl:Class ; rdfs:label "产品"@zh ; rdfs:comment "持续建设、使用和维护的数字化对象"@zh .
@@ -21,7 +65,9 @@ s:ProjectStage a owl:Class ; rdfs:label "项目阶段"@zh ; rdfs:comment "按需
 
 s:KeyItem a owl:Class ; rdfs:label "关键事项"@zh ; rdfs:comment "阶段内需要关注的重要工作节点"@zh .
 
-s:Task a owl:Class ; rdfs:label "任务及子任务"@zh ; rdfs:comment "具体执行工作及其拆分；子任务仍是任务，通过父任务关系表达"@zh .
+s:Task a owl:Class ; rdfs:label "任务及子任务"@zh ; rdfs:comment "具体执行工作及其拆分；项目/需求任务关联对应对象，日常任务独立存在；子任务继承主任务的关联类型和对象"@zh .
+
+s:sourceType a owl:DatatypeProperty ; rdfs:label "任务关联类型"@zh ; rdfs:domain s:Task ; rdfs:range xsd:string ; rdfs:comment "项目、需求、日常任务；日常任务不关联项目或需求"@zh .
 
 s:Bug a owl:Class ; rdfs:label "BUG"@zh ; rdfs:comment "建设过程中的软件缺陷记录"@zh .
 

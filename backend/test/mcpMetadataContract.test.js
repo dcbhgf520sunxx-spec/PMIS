@@ -7,7 +7,7 @@ const { normalizeToolError } = require('../src/mcp/createServer')
 const { decorateQueryResult } = require('../src/mcp/queryTools')
 
 test('every MCP tool publishes described input fields and an output schema', () => {
-  assert.equal(toolCatalog.length, 88)
+  assert.equal(toolCatalog.length, 89)
   for (const tool of toolCatalog) {
     assert.ok(tool.description, `${tool.name}缺少工具说明`)
     assert.ok(tool.outputSchema, `${tool.name}缺少输出Schema`)
@@ -48,7 +48,7 @@ test('fixed business enums publish exact values and Chinese mappings', () => {
   const cases = [
     ['project_search', 'query', 'priority', [0, 1, 2], '0=低，1=中，2=高'],
     ['task_search', 'query', 'priority', [0, 1, 2], '0=低，1=中，2=高'],
-    ['task_search', 'query', 'source_type', [1, 2], '1=项目，2=需求'],
+    ['task_search', 'query', 'source_type', [1, 2, 3], '1=项目，2=需求，3=日常任务'],
     ['task_search', 'query', 'status', [0, 1, 2, 3, 4], '0=待处理'],
     ['requirement_search', 'query', 'requirement_type', [1, 2, 3, 4], '1=上会立项'],
     ['bug_search', 'query', 'severity', [1, 2, 3, 4], '4=致命'],

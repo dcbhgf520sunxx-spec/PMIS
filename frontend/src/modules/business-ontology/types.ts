@@ -1,5 +1,5 @@
 export type OntologyClass = {
-  id: string; label: string; comments: string[];
+  id: string; label: string; comments: string[]; completionRules: string[];
   attributes: { id: string; label: string; datatype: string }[];
   rules: string[]; checks: { label: string; text: string }[];
   business: {
@@ -15,5 +15,6 @@ export type OntologyRelation = {
 export type OntologyModel = {
   version: string; sha256: string; shapesSha256: string; businessSha256: string;
   classes: OntologyClass[]; relations: OntologyRelation[];
+  completionPolicy: { label: string; text: string }[];
 };
 export type OntologyLink = OntologyRelation & { source: string; target: string };

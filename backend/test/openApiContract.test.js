@@ -1,7 +1,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const { parseInput,requestHash } = require('../src/services/openApiContract')
-const base = {operation:'CREATE',sourceRecordId:'r1',operatorEmployeeNo:'001',idempotencyKey:'k1',data:{title:'测试',requirementType:4,productName:'产品',ownerEmployeeNo:'001',submitterName:'张三',submitDate:'2026-09-07'}}
+const base = {operation:'CREATE',sourceRecordId:'r1',operatorEmployeeNo:'001',idempotencyKey:'k1',data:{title:'测试',requirementType:4,productName:'产品',ownerEmployeeNo:'001',submitterName:'张三',submitDate:'2026-09-07',expectedEndDate:'2026-09-30'}}
 test('开放接口完成情况最多200字符',() => {
   const input={...base,operation:'CHANGE_STATUS',data:{status:33,actualEndDate:'2026-07-12',completionStatus:'好'.repeat(200)}}
   assert.equal(parseInput('requirement',input).data.completionStatus.length,200)
@@ -21,8 +21,8 @@ test('开放契约拒绝未知字段、伪造创建人、无效日期和标题�
   assert.throws(() => parseInput('requirement',{...base,foo:1}))
 })
 test('部分更新只允许明确字段；必填不可清空，可选日期可以清空',() => {
-  const update = {...base,operation:'UPDATE',data:{expectedEndDate:null}}
-  assert.equal(parseInput('requirement',update).data.expectedEndDate,null)
+  const update = {...base,operation:'UPDATE',data:{startDate:null}}
+  assert.equal(parseInput('requirement',update).data.startDate,null)
   assert.throws(() => parseInput('requirement',{...update,data:{title:null}}))
   assert.throws(() => parseInput('requirement',{...update,data:{}}))
 })

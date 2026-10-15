@@ -112,7 +112,7 @@ const STATUS_LABELS = {
 }
 const PREVIEW_ENUM_LABELS = {
   priority: { 0: '低', 1: '中', 2: '高' },
-  source_type: { 1: '项目', 2: '需求' },
+  source_type: { 1: '项目', 2: '需求', 3: '日常任务' },
   requirement_type: { 1: '上会立项', 2: '需求提报', 3: '预研', 4: '直接实施' },
   severity: { 1: '低', 2: '中', 3: '高', 4: '致命' },
   urgency: { 0: '低', 1: '中', 2: '高' },

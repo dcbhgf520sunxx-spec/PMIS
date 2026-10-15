@@ -98,7 +98,7 @@ CREATE 的 data：
 | submitterDept | string/null | 否 | 提出组织，最长100字符，可空字符串 |
 | submitDate | string | 是 | 提出日期 |
 | startDate | string/null | 否 | 启动日期 |
-| expectedEndDate | string/null | 否 | 预计完成日期 |
+| expectedEndDate | string | 是 | 预计完成日期；更新时可省略以保留原日期，但不能清空 |
 
 初始优先级固定低（0），初始状态由需求路径决定：1→0、2→10、3→20、4→30。不接受新增时指定 priority 或 status。
 

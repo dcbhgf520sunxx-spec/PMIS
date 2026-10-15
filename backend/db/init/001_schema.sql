@@ -467,7 +467,7 @@ END $$;
 CREATE TABLE IF NOT EXISTS pms_task (
   id BIGSERIAL PRIMARY KEY, name VARCHAR(200) NOT NULL, description TEXT,
   parent_task_id BIGINT REFERENCES pms_task(id) ON DELETE RESTRICT,
-  source_type SMALLINT NOT NULL CHECK (source_type IN (1,2)),
+  source_type SMALLINT NOT NULL CHECK (source_type IN (1,2,3)),
   project_id BIGINT REFERENCES pms_project(id) ON DELETE RESTRICT,
   requirement_id BIGINT REFERENCES pms_requirement(id) ON DELETE RESTRICT,
   task_type BIGINT NOT NULL REFERENCES pms_archive(id) ON DELETE RESTRICT,
@@ -481,7 +481,7 @@ CREATE TABLE IF NOT EXISTS pms_task (
   updater_id BIGINT REFERENCES pms_user(id) ON DELETE SET NULL,
   is_deleted SMALLINT NOT NULL DEFAULT 0 CHECK (is_deleted IN (0,1)),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CHECK ((source_type=1 AND project_id IS NOT NULL AND requirement_id IS NULL) OR (source_type=2 AND requirement_id IS NOT NULL AND project_id IS NULL))
+  CONSTRAINT pms_task_source_target_check CHECK ((source_type=1 AND project_id IS NOT NULL AND requirement_id IS NULL) OR (source_type=2 AND requirement_id IS NOT NULL AND project_id IS NULL) OR (source_type=3 AND project_id IS NULL AND requirement_id IS NULL))
 );
 
 CREATE TABLE IF NOT EXISTS pms_task_owner (
@@ -899,7 +899,7 @@ VALUES
   (22, 0, 'BUG管理', 'bug', 2, '/bugs', 'BugOutlined', 10, 1, 1),
   (23, 0, '知识库', 'knowledge_base', 2, '/knowledge-base', 'BookOutlined', 14, 1, 1),
   (29, 0, '业务本体', 'business_ontology', 2, '/business-ontology', 'ApartmentOutlined', 12, 1, 1),
-  (28, 0, '数字孪生', 'digital_twin', 2, '/digital-twin', 'DeploymentUnitOutlined', 13, 1, 1),
+  (28, 0, '数字孪生', 'digital_twin', 2, '/digital-twin', 'BlockOutlined', 13, 1, 1),
   (24, 20, '调整优先级', 'requirement_priority_adjust', 3, NULL, NULL, 701, 1, 1),
   (25, 19, '调整优先级', 'project_priority_adjust', 3, NULL, NULL, 801, 1, 1),
   (26, 21, '调整优先级', 'task_priority_adjust', 3, NULL, NULL, 901, 1, 1)

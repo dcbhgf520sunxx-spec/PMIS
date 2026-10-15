@@ -15,7 +15,7 @@ const fields = {
   description: rich.nullable(), requirementType: z.number().int().min(1).max(4),
   productName: text(LIMITS.productName), ownerEmployeeNo: text(LIMITS.employeeNo), followerEmployeeNo: text(LIMITS.employeeNo),
   submitterName: text(LIMITS.submitterName), submitterDept: text(LIMITS.submitterDept), submitDate: date,
-  startDate: date.nullable(), expectedEndDate: date.nullable(),
+  startDate: date.nullable(), expectedEndDate: date,
   problemDescription: rich.refine((s) => !!s.trim(), '问题描述不能为空'),
   problemTypeCode: text(LIMITS.problemTypeCode), urgency: priority, expectedResolveDate: date,
   submitTime: date,
@@ -34,7 +34,7 @@ const statusMaps = {
   work_order: { closeDate: 'close_date', closeReason: 'close_reason', status: 'status', resolveDate: 'resolve_date', resultDescription: 'result_desc', suspendDate: 'suspend_date', suspendReason: 'suspend_reason', activationReason: 'activation_reason' },
 }
 const required = {
-  requirement: ['title', 'requirementType', 'productName', 'ownerEmployeeNo', 'submitterName', 'submitDate'],
+  requirement: ['title', 'requirementType', 'productName', 'ownerEmployeeNo', 'submitterName', 'submitDate', 'expectedEndDate'],
   work_order: ['problemDescription', 'productName', 'problemTypeCode', 'followerEmployeeNo', 'urgency', 'expectedResolveDate', 'submitterName', 'submitterDept', 'submitTime'],
 }
 const operations = ['QUERY', 'CREATE', 'UPDATE', 'CHANGE_STATUS', 'DELETE', 'ATTACHMENT_LIST', 'ATTACHMENT_UPLOAD', 'ATTACHMENT_DELETE', 'ATTACHMENT_DOWNLOAD']

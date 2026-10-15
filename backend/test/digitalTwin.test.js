@@ -149,7 +149,7 @@ test('菜单置于业务本体之后并单独授权，初始化和迁移一致',
     const root = path.resolve(__dirname, '../..');
     const read = file => fs.readFileSync(path.join(root, file), 'utf8');
     const schema = read('backend/db/init/001_schema.sql');
-    assert.match(schema, /'数字孪生',\s*'digital_twin',\s*2,\s*'\/digital-twin',\s*'DeploymentUnitOutlined',\s*13,/);
+    assert.match(schema, /'数字孪生',\s*'digital_twin',\s*2,\s*'\/digital-twin',\s*'BlockOutlined',\s*13,/);
     assert.match(schema, /'知识库',\s*'knowledge_base',\s*2,\s*'\/knowledge-base',\s*'BookOutlined',\s*14,/);
     const sidebar = read('frontend/src/layouts/AdminLayout/index.tsx');
     assert.ok(sidebar.indexOf("key: '/business-ontology'") < sidebar.indexOf("key: '/digital-twin'") && sidebar.indexOf("key: '/digital-twin'") < sidebar.indexOf("key: '/knowledge-base'"));

@@ -380,6 +380,7 @@ function buildExecutePayload(publicToolName, publicArgs, result) {
 }
 
 function validateToolPermission(definition, args, context) {
+  if (definition.name === 'business_completion_analysis') require('./completionQuery').assertPermission(args, context)
   if (definition.name === 'sidm_standard_ontology_query') require('./ontologyQuery').assertPermission(context)
   if (definition.name === 'business_period_analysis'
     && !Object.entries(BUSINESS_TYPES).some(([type, config]) => context.allowedMenuPaths?.has(config.menu)

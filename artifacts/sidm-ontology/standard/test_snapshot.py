@@ -17,6 +17,14 @@ class SnapshotTests(unittest.TestCase):
  def test_rejects_dual_task_owner(self):
   a=sample();a['tasks']=[{'id':9,'source_type':1,'project_id':3,'requirement_id':2}]
   with self.assertRaises(ValueError):map_snapshot(a)
+ def test_daily_task_has_no_project_or_requirement(self):
+  a=sample();a['tasks']=[{'id':9,'source_type':3,'owners':[{'id':1,'name':'负责人'}]}]
+  e,_=map_snapshot(a)
+  task=next(x for x in e['entities'] if x['type']=='Task')
+  self.assertEqual(task['attributes']['sourceType'],'日常任务')
+  self.assertFalse(any(r['subject']==task['id'] and r['relation'] in ('belongsToProject','belongsToRequirement') for r in e['relations']))
+  a['tasks'][0]['project_id']=3
+  with self.assertRaises(ValueError):map_snapshot(a)
  def test_missing_source_is_preserved(self):
   a=sample();a['projects'][0]['requirement_id']=None
   e,_=map_snapshot(a);self.assertNotIn('sourceRequirement',[r['relation'] for r in e['relations']])

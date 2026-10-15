@@ -2,7 +2,8 @@ import { AdminTag, CategoryTag, defineCategoryToneMap, OverdueTag, PriorityTag, 
 import type { TaskPriority, TaskStatus } from './types';
 import './TaskLevel.css';
 
-const taskSourceTypeTones = defineCategoryToneMap({ 1: 'blue', 2: 'cyan' });
+const taskSourceTypeTones = defineCategoryToneMap({ 1: 'blue', 2: 'cyan', 3: 'indigo' });
+export const taskSourceTypeOptions = [{ label: '项目', value: 1 }, { label: '需求', value: 2 }, { label: '日常任务', value: 3 }];
 const taskMainLevelTones = defineCategoryToneMap({ main: 'indigo' });
 
 export function renderTaskStatus(status: TaskStatus) {
@@ -17,8 +18,12 @@ export function renderTaskPriority(priority: TaskPriority) {
   return <PriorityTag level={priority === 2 ? 'high' : priority === 1 ? 'medium' : 'low'} text={['低', '中', '高'][priority]} />;
 }
 
-export function renderTaskSourceType(sourceType: 1 | 2) {
-  return <CategoryTag tone={taskSourceTypeTones[sourceType]}>{sourceType === 1 ? '项目' : '需求'}</CategoryTag>;
+export function taskSourceTypeLabel(sourceType: 1 | 2 | 3) {
+  return taskSourceTypeOptions.find(option => option.value === sourceType)?.label || '-';
+}
+
+export function renderTaskSourceType(sourceType: 1 | 2 | 3) {
+  return <CategoryTag tone={taskSourceTypeTones[sourceType]}>{taskSourceTypeLabel(sourceType)}</CategoryTag>;
 }
 
 export function renderTaskLevel(parentTaskId?: string) {

@@ -141,7 +141,7 @@ test('开放接口真实 HTTP/PostgreSQL：授权、并发、回滚、历史、�
       const r = await fetch(`${origin}/api/open/v1/${resource}/operate`,{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${t}`},body:JSON.stringify(body)})
       return {status:r.status,...await r.json()}
     }
-    const input = {operation:'CREATE',sourceRecordId:'external-1',operatorEmployeeNo:user.employee_no,idempotencyKey:'create-1',data:{title:'开放测试需求',requirementType:4,productName:'开放接口测试产品',ownerEmployeeNo:user.employee_no,submitterName:'张三',submitDate:'2026-09-01'}}
+    const input = {operation:'CREATE',sourceRecordId:'external-1',operatorEmployeeNo:user.employee_no,idempotencyKey:'create-1',data:{title:'开放测试需求',requirementType:4,productName:'开放接口测试产品',ownerEmployeeNo:user.employee_no,submitterName:'张三',submitDate:'2026-09-01',expectedEndDate:'2026-09-30'}}
     assert.equal((await call('requirements',input,'bad')).status,401)
     assert.equal((await call('requirements',{...input,operatorEmployeeNo:'not-exists'})).status,403)
     const simultaneous = await Promise.all([call('requirements',input),call('requirements',input)])

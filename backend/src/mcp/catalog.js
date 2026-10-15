@@ -1,4 +1,5 @@
 const { definition: ontologyDefinition, requiredMenus: ontologyMenus } = require('./ontologyQuery')
+const { definition: completionDefinition, scopeDefinition: scopeCompletionDefinition } = require('./completionQuery')
 const QUERY_TOOLS = [
   ['global_search', null],
   ['business_attachment_search', null],
@@ -41,6 +42,7 @@ const ENUMS = {
   enabled: { values: [0, 1], text: '0=停用，1=启用' },
   priority: { values: [0, 1, 2], text: '0=低，1=中，2=高' },
   sourceType: { values: [1, 2], text: '1=项目，2=需求' },
+  taskSourceType: { values: [1, 2, 3], text: '1=项目，2=需求，3=日常任务（不关联项目或需求）' },
   requirementType: { values: [1, 2, 3, 4], text: '1=上会立项，2=需求提报，3=预研，4=直接实施' },
   commonStatus: { values: [0, 1, 2, 3, 4], text: '0=未开始，1=进行中，2=已完成，3=已暂停，4=已关闭' },
   taskStatus: { values: [0, 1, 2, 3, 4], text: '0=待处理，1=处理中，2=已完成，3=已暂停，4=已关闭' },
@@ -392,7 +394,7 @@ const actionRequired = {
   project_update: ['id'],
   project_change_priority: ['id', 'priority'],
   project_change_status: ['id', 'status'], project_delete: ['id'],
-  requirement_create: ['title', 'requirement_type', 'product_id', 'owner_id', 'submitter_name', 'submit_date', 'idempotency_key'],
+  requirement_create: ['title', 'requirement_type', 'product_id', 'owner_id', 'submitter_name', 'submit_date', 'expected_end_date', 'idempotency_key'],
   requirement_update: ['id'],
   requirement_change_priority: ['id', 'priority'],
   requirement_change_status: ['id', 'status'], requirement_delete: ['id'],
@@ -526,7 +528,7 @@ function queryFieldSchema(toolName, field, fallback) {
   }
   if (field === 'priority') return enumField(ENUMS.priority, '优先级')
   if (field === 'target_type') return described({ type: 'string', enum: ['project', 'requirement', 'task'] }, FIELD_DESCRIPTIONS.target_type)
-  if (field === 'source_type') return enumField(ENUMS.sourceType, '关联类型')
+  if (field === 'source_type') return enumField(toolName.startsWith('task_') ? ENUMS.taskSourceType : ENUMS.sourceType, '关联类型')
   if (field === 'requirement_type') return enumField(ENUMS.requirementType, '需求类型')
   if (field === 'severity') return enumField(ENUMS.severity, '严重程度')
   if (field === 'urgency') return enumField(ENUMS.urgency, '紧急程度')
@@ -652,6 +654,9 @@ function actionInputSchema(name) {
           : nullableStringField)
     }
   }
+  if (['requirement_create', 'requirement_update'].includes(name)) {
+    properties.expected_end_date = withDescription('expected_end_date', { type: 'string', format: 'date' })
+  }
   const textLimits = {
     title: 200,
     submitter_name: 50,
@@ -683,7 +688,7 @@ function actionInputSchema(name) {
   }
   if ('requirement_type' in properties) properties.requirement_type = enumField(ENUMS.requirementType, '需求类型')
   if ('priority' in properties) properties.priority = enumField(ENUMS.priority, '优先级')
-  if ('source_type' in properties) properties.source_type = enumField(ENUMS.sourceType, '关联类型')
+  if ('source_type' in properties) properties.source_type = enumField(name.startsWith('task_') ? ENUMS.taskSourceType : ENUMS.sourceType, '关联类型')
   if ('severity' in properties) properties.severity = enumField(ENUMS.severity, '严重程度')
   if ('urgency' in properties) properties.urgency = enumField(ENUMS.urgency, '紧急程度')
   if ('requires_delivery_file' in properties) {
@@ -1402,6 +1407,7 @@ function baseDefinition([name, menuPath], endpointType) {
 
 const commandCatalog = [
   { ...ontologyDefinition, outputSchema: withToolErrorSchema(ontologyDefinition.outputSchema) },
+  { ...completionDefinition, outputSchema: withToolErrorSchema(completionDefinition.outputSchema) },
   ...QUERY_TOOLS.map((item) => baseDefinition(item, 'query')),
   ...ACTION_TOOLS.map((item) => baseDefinition(item, 'action')),
 ]
@@ -1615,6 +1621,7 @@ const publicToolCatalog = [
   ),
   commandDefinition('business_analyze', 'query'),
   commandDefinition('business_period_analysis', 'query'),
+  commandDefinition('business_completion_analysis', 'query'),
   ...PUBLIC_ACTION_GROUPS.map(publicActionDefinition),
 ]
 
@@ -1841,11 +1848,14 @@ function filterToolsForContext(context) {
     .map((tool) => scopeBusinessOptions(tool, context.allowedMenuPaths))
     .map((tool) => scopeBusinessAnalysis(tool, context.allowedMenuPaths))
     .map((tool) => scopeBusinessPeriodAnalysis(tool, context.allowedMenuPaths))
+    .map((tool) => tool.name === 'business_completion_analysis' ? scopeCompletionDefinition(tool, context.allowedMenuPaths) : tool)
     .filter((tool) => !['business_get', 'business_history', 'business_options', 'business_analyze'].includes(tool.name)
       || Object.values(tool.inputSchema.properties)
         .filter((property) => Array.isArray(property.enum))
         .every((property) => property.enum.length > 0))
     .filter((tool) => tool.name !== 'business_period_analysis'
+      || tool.inputSchema.properties.business_types.items.enum.length > 0)
+    .filter((tool) => tool.name !== 'business_completion_analysis'
       || tool.inputSchema.properties.business_types.items.enum.length > 0)
     .map(({ _meta, ...tool }) => tool)
 }

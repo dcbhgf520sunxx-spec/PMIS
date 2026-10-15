@@ -1,3 +1,4 @@
+import { taskSourceTypeOptions } from '../helpers';
 import { useEffect, useRef, useState } from 'react';
 import { App } from 'antd';
 import { ProForm } from '@ant-design/pro-components';
@@ -127,10 +128,10 @@ export function TaskFormPage({ mode }: { mode: Mode }) {
         <AdminProFormText name="name" label="任务名称" rules={nameRules} fieldProps={{ maxLength: 200 }} formItemProps={{ className: 'admin-template-form-page__field is-full' }} />
         <AdminProFormRichDescription name="description" label="任务描述" className="admin-template-form-page__field is-full" onUploadImage={uploadRichTextImage} />
         {subtaskMode || sourceTask?.parentTaskId ? <AdminProFormText name="parentTaskName" label="所属主任务" disabled={subtaskMode || Boolean(sourceTask?.parentTaskId)} /> : null}
-        <AdminProFormSelect name="sourceType" label="关联类型" options={[{ label: '项目', value: 1 }, { label: '需求', value: 2 }]} rules={[{ required: true, message: '请选择关联类型' }]} fieldProps={{ disabled: associationLocked }} />
+        <AdminProFormSelect name="sourceType" label="关联类型" options={taskSourceTypeOptions} rules={[{ required: true, message: '请选择关联类型' }]} fieldProps={{ disabled: associationLocked }} />
         {sourceType === 2
           ? <AdminProFormSelect name="requirementId" label="关联需求" options={requirements} rules={[{ required: true, message: '请选择关联需求' }]} fieldProps={{ disabled: associationLocked }} />
-          : <AdminProFormSelect name="projectId" label="关联项目" options={projects} rules={[{ required: true, message: '请选择关联项目' }]} fieldProps={{ disabled: associationLocked }} />}
+          : sourceType !== 3 ? <AdminProFormSelect name="projectId" label="关联项目" options={projects} rules={[{ required: true, message: '请选择关联项目' }]} fieldProps={{ disabled: associationLocked }} /> : null}
         <AdminProFormSelect name="taskType" label="任务类型" options={types} rules={[{ required: true, message: '请选择任务类型' }]} />
         <AdminProFormSelect name="priority" label="优先级" options={[{ label: '低', value: 0 }, { label: '中', value: 1 }, { label: '高', value: 2 }]} disabled />
         <BusinessAttachmentField ref={attachmentRef} apiPath="/tasks" businessId={mode === 'edit' ? params.id : undefined} />

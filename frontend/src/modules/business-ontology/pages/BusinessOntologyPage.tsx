@@ -13,7 +13,7 @@ const objectGroups = [
   { title: '持续运维', objects: ['MaintenanceContract', 'WorkOrder'] },
   { title: '参与主体', objects: ['Supplier', 'Person'] }
 ];
-const views = [{ key: 'business', title: '业务定义' }, { key: 'relations', title: '关系说明' }, { key: 'checks', title: '属性与检查' }];
+const views = [{ key: 'business', title: '业务定义' }, { key: 'relations', title: '关系说明' }, { key: 'checks', title: '属性与检查' }, { key: 'completion', title: '完成率口径' }];
 export function BusinessOntologyPage() {
   const userId = useAuthStore(state => state.user?.id);
   const [params, setParams] = useSearchParams();
@@ -21,7 +21,7 @@ export function BusinessOntologyPage() {
   const model = query.data;
   const selected = model?.classes.find(c => c.id === params.get('object')) || model?.classes.find(c => c.id === 'Product');
   const view = views.some(item => item.key === params.get('view')) ? params.get('view')! : 'business';
-  const select = (object: string) => setParams({ object }, { replace: true });
+  const select = (object: string) => setParams({ object, ...(view === 'completion' ? { view } : {}) }, { replace: true });
   const changeView = (key: string) => setParams({ object: selected?.id || 'Product', view: key }, { replace: true });
   const showRelation = (id: string) => { setParams({ object: selected?.id || 'Product', view: 'relations', open: id, focus: id }, { replace: true }); document.getElementById('bo-explanation')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); };
   const links = model?.relations.flatMap(r => r.from.flatMap(source => r.to.map(target => ({ ...r, source, target })))).filter(r => r.source === selected?.id || r.target === selected?.id) || [];
@@ -50,6 +50,13 @@ export function BusinessOntologyPage() {
       </TemplateDetailSection>} right={<div id="bo-explanation"><TemplateDetailSection title={selected.label + ' · 业务说明'}>
         <DetailSectionNavigation items={views} activeKey={view} onChange={changeView} sticky={false} ariaLabel="本体说明分类"/>
         <div className="bo-explanation">
+          {view === 'completion' ? <>
+            <h3>{selected.label}的完成判定</h3>
+            <ul>{selected.completionRules.map(rule => <li key={rule}>{rule}</li>)}</ul>
+            <h3>统一统计口径</h3>
+            <AdminCollapse items={model.completionPolicy.map(rule => ({ key: rule.label, label: rule.label, children: rule.text.split('\n').map(text => <p key={text}>{text}</p>) }))}/>
+            <p className="bo-hint">这里说明已确认的计算规则，不展示实际考核结果。数据不足时标记“待核实”。</p>
+          </> : null}
           {view === 'business' ? <><div className="bo-definition"><p>{b.meaning}</p><p>{b.connections}</p></div><h3>数量与归属</h3><ul>{b.quantities.map(t => <li key={t}>{t}</li>)}</ul><h3>人员角色</h3>{b.roles.length ? <ul>{b.roles.map(r => <li key={r.role}>{r.role}：{r.meaning}</li>)}</ul> : <p>人员参与通过相关对象的角色表达；此对象未单独定义人员角色关系。</p>}<h3>业务边界</h3><p>{b.boundary}</p><p className="bo-hint">名称和人员变更不会改变对象身份；同名记录也不自动视为同一个对象。</p></> : null}
           {view === 'relations' ? <><div className="bo-relation-toolbar"><p className="bo-hint">共{links.length}条关系，箭头从起点指向终点。</p><div className="bo-relation-actions"><AdminButton size="small" type="text" disabled={expanded.length === links.length} onClick={() => setExpanded(links.map(relationKey))}>全部展开</AdminButton><AdminButton size="small" type="text" disabled={!expanded.length} onClick={() => setExpanded([])}>全部收起</AdminButton></div></div><AdminCollapse activeKey={expanded} onChange={keys => { const next = (Array.isArray(keys) ? keys : [keys]).map(String); setExpanded(next, focusAfterExpansion(expanded, next, activeRelation)); }} items={links.map(r => ({ key: relationKey(r), className: activeRelation === relationKey(r) ? 'bo-relation-selected' : undefined, label: `${label(r.source)} → ${r.label} → ${label(r.target)}${r.inferred ? '（推导）' : ''}`, children: <div className="bo-relation"><h4>这条关系表示</h4><p>{r.meaning}</p><h4>数量与归属</h4><p>{r.quantity}</p><h4>业务边界</h4><p>{r.boundary}</p>{r.proof.length ? <><h4>推导依据</h4>{r.proof.map(t => <p key={t}>{t}</p>)}</> : null}</div> }))}/></> : null}
           {view === 'checks' ? <><h3>关键业务信息</h3><p>{b.attributes}</p>{b.states ? <><h3>状态怎么表达</h3><p>{b.states}</p></> : null}{b.earlyStates.length ? <><h3>需求类型对应的前期状态</h3><ul>{b.earlyStates.map(row => <li key={row[0]}>{row[0]}：{row[1]}</li>)}</ul></> : null}<AdminCollapse items={[{ key: 'attributes', label: `OWL中已有的属性 · ${selected.attributes.length}项`, children: <div className="bo-fields">{selected.attributes.map(a => <div className="bo-attribute" key={a.id}><strong>{a.label}</strong><span>{a.id}</span></div>)}</div> }]}/><h3>数据检查规则 <span className="bo-technical-name">SHACL</span></h3><p className="bo-hint">规定数据要满足哪些要求。这里展示的是检查规则，具体记录是否通过，需要在查询或校验时判断。</p><p className="bo-hint">未列出的业务要求，不能据此认定已经纳入自动检查。</p>{selected.checks.length || selected.rules.length ? <AdminCollapse key={selected.id} items={[

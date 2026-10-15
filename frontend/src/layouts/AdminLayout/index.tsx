@@ -1,7 +1,7 @@
 import {
   DownOutlined,
   AppstoreOutlined,
-  DeploymentUnitOutlined,
+  BlockOutlined,
   ApartmentOutlined,
   BookOutlined,
   BugOutlined,
@@ -85,7 +85,7 @@ const businessMenuItems: AdminMenuItems = [
   },
   {
     key: '/digital-twin',
-    icon: <DeploymentUnitOutlined />,
+    icon: <BlockOutlined />,
     label: '数字孪生'
   },
   {

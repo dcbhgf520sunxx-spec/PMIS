@@ -122,5 +122,8 @@ def map_snapshot(raw):
 
 def direct_parent(k,row,link):
  p,r=row.get('project_id'),row.get('requirement_id')
+ if ':Task:' in k and row.get('source_type')==3:
+  if p is not None or r is not None:raise ValueError('日常任务不能关联项目或需求')
+  return
  if (p is None)==(r is None) or row.get('source_type')!=(1 if p is not None else 2):raise ValueError('工作直接归属不明确')
  link(k,'belongsToProject' if p is not None else 'belongsToRequirement','Project' if p is not None else 'Requirement',p if p is not None else r)

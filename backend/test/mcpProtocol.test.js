@@ -536,7 +536,7 @@ test('action schemas require complete create inputs and retry-safe idempotency k
     ['project_create', { name: '项目', product_id: 1, requirement_id: 2, owner_id: 8, expected_end_date: '2026-08-31', mode: 'preview' }, ['idempotency_key']],
     ['requirement_create', {
       title: '需求', requirement_type: 1, product_id: 1, owner_id: 8,
-      submitter_name: '张三', submit_date: '2026-07-28',
+      submitter_name: '张三', submit_date: '2026-07-28', expected_end_date: '2026-08-31',
       mode: 'preview',
     }, ['idempotency_key']],
     ['task_create', {

@@ -53,7 +53,7 @@ const RECORD_QUERIES = {
   requirement: `/* period_analysis:records:requirement */
     SELECT 'requirement' business_type,r.id,r.title name,r.status,r.priority,
       product.id product_id,product.name product_name,NULL::BIGINT project_id,NULL::TEXT project_name,
-      r.id requirement_id,r.title requirement_name,r.owner_id,owner.real_name owner_name,
+      r.id requirement_id,r.title requirement_name,r.requirement_type,r.owner_id,owner.real_name owner_name,
       r.creator_id,r.updater_id,ARRAY[r.owner_id] owner_ids,
       ARRAY_REMOVE(ARRAY[r.owner_id],NULL) business_role_ids,
       ARRAY_REMOVE(ARRAY[r.owner_id,r.creator_id],NULL) person_ids,
@@ -66,7 +66,7 @@ const RECORD_QUERIES = {
     WHERE r.is_deleted=0`,
   stage_plan: `/* period_analysis:records:stage_plan */
     SELECT 'stage_plan' business_type,item.id,item.name,item.status,project.priority,
-      product.id product_id,product.name product_name,project.id project_id,project.name project_name,
+      product.id product_id,product.name product_name,project.id project_id,project.name project_name,stage.id stage_id,
       project.requirement_id,requirement.title requirement_name,item.owner_id,owner.real_name owner_name,
       item.creator_id,item.updater_id,
       ARRAY[item.owner_id] || COALESCE((SELECT ARRAY_AGG(c.user_id ORDER BY c.sort_order,c.user_id)
@@ -386,7 +386,7 @@ async function loadRecords(types, filters, database, cutoffDate, resolveNames = 
   return records.filter((record) => matchesFilters(record, filters, cutoffDate))
 }
 
-async function loadLogs(types, records, database, identityPeriod = null) {
+async function loadLogs(types, records, database, identityPeriod = null, fieldNames = null) {
   if (!types.length || !records.length) return []
   const moduleCases = types.map((type) => `WHEN '${BUSINESS_TYPES[type].module}' THEN '${type}'`).join(' ')
   const params = []
@@ -401,11 +401,12 @@ async function loadLogs(types, records, database, identityPeriod = null) {
   // period, and subsequent reopen/pause entries are needed for as-of reasoning.
   if (identityPeriod) params.push(`${identityPeriod.start_date}T00:00:00+08:00`,
     `${formatDate(addDays(parseDate(identityPeriod.end_date), 1))}T00:00:00+08:00`)
+  if (fieldNames) params.push(fieldNames)
   const sql = `/* period_analysis:logs */
     SELECT id log_id,CASE module ${moduleCases} END business_type,target_id,operation_id,user_id operator_id,action,
       ${identityPeriod ? '' : 'field_name,old_value,new_value,'}created_at
     FROM pms_op_log
-    WHERE (${scopes.join(' OR ')})${identityPeriod ? ' AND created_at>=?::timestamptz AND created_at<?::timestamptz' : ''}
+    WHERE (${scopes.join(' OR ')})${identityPeriod ? ' AND created_at>=?::timestamptz AND created_at<?::timestamptz' : ''}${fieldNames ? ' AND field_name=ANY(?::TEXT[])' : ''}
     ORDER BY created_at,id`
   return database.prepare(sql).all(...params)
 }
@@ -1486,4 +1487,10 @@ module.exports = {
   analyzeBusinessPeriod,
   resolvePeriod,
   selectPlanRecords,
+  loadRecords,
+  loadLogs,
+  buildHistories,
+  dateOnly,
+  shanghaiDate,
+  parseBusinessTimestamp,
 }

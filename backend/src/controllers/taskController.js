@@ -216,7 +216,7 @@ async function validate(res, body, exclude) {
     failField(res, 'expected_end_date', '请选择预计完成时间')
     return false
   }
-  if (![1, 2].includes(Number(body.source_type))) {
+  if (![1, 2, 3].includes(Number(body.source_type))) {
     failField(res, 'source_type', '请选择关联类型')
     return false
   }
@@ -488,7 +488,7 @@ exports.history = async (req, res) => {
       loadLookup('owner_id', 'SELECT id,real_name name FROM pms_user')
     ])
     const valueLookups = {
-      source_type: new Map([['1', '项目'], ['2', '需求']]), project_id: projects, requirement_id: requirements, parent_task_id: parents, task_type: taskTypes,
+      source_type: new Map([['1', '项目'], ['2', '需求'], ['3', '日常任务']]), project_id: projects, requirement_id: requirements, parent_task_id: parents, task_type: taskTypes,
       owner_id: owners,
       priority: new Map([['0', '低'], ['1', '中'], ['2', '高']]), status: new Map([['0', '待处理'], ['1', '处理中'], ['2', '已完成'], ['3', '已暂停'], ['4', '已关闭']]),
       is_overdue: new Map([['0', '未逾期'], ['1', '已逾期']])

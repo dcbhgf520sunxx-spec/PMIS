@@ -113,6 +113,7 @@ function mapItopsRecord(record) {
   }
   if (!common.submitDate) throw new Error(`单据“${externalCode}”单据日期为空`)
   if (category.targetType === 'requirement') {
+    if (!common.expectedEndDate) throw new Error(`单据“${externalCode}”预计解决时间为空，无法保存需求预计完成时间`)
     return {
       ...common,
       ...category,
