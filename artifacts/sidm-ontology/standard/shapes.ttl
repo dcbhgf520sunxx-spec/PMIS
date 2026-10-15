@@ -396,7 +396,8 @@ s:SupplierShape a sh:NodeShape ;
 s:TaskShape a sh:NodeShape ;
     sh:closed true ;
     sh:ignoredProperties ( rdf:type s:sourceId s:sourceEnvironment s:sourceCapturedAt s:sourceEndpoint s:sourceSnapshot s:paymentsComplete ) ;
-    sh:property [ sh:datatype xsd:string ;
+    sh:property [ sh:datatype xsd:string ; sh:maxCount 1 ; sh:in ( "项目" "需求" "日常任务" "项目"^^xsd:string "需求"^^xsd:string "日常任务"^^xsd:string ) ; sh:path s:sourceType ],
+        [ sh:datatype xsd:string ;
             sh:in ( "待处理" "处理中" "已完成" "已暂停" "待处理"^^xsd:string "处理中"^^xsd:string "已完成"^^xsd:string "已暂停"^^xsd:string "已关闭" "已关闭"^^xsd:string ) ;
             sh:maxCount 1 ;
             sh:path s:status ],
@@ -452,7 +453,9 @@ s:TaskShape a sh:NodeShape ;
                         sh:minCount 1 ;
                         sh:path s:belongsToProject ],
                     [ sh:maxCount 0 ;
-                        sh:path s:belongsToRequirement ] ] ) .
+                        sh:path s:belongsToRequirement ] ] [ sh:property [ sh:minCount 1 ; sh:in ( "日常任务" "日常任务"^^xsd:string ) ; sh:path s:sourceType ],
+                    [ sh:maxCount 0 ; sh:path s:belongsToProject ],
+                    [ sh:maxCount 0 ; sh:path s:belongsToRequirement ] ] ) .
 
 s:WorkOrderShape a sh:NodeShape ;
     sh:closed true ;
@@ -571,10 +574,21 @@ SELECT $this WHERE {
  || (BOUND(?reason) && STRLEN(STR(?reason))>0 && !BOUND(?date))
  || (?status="已终止" && !BOUND(?date)))
 }""" .
-s:TaskSource a sh:SPARQLConstraint ; sh:message "子任务必须与主任务直接归属同一个需求或项目"@zh ; sh:select """PREFIX s: <urn:sidm:ontology:>
+s:TaskSource a sh:SPARQLConstraint ; sh:message "子任务必须继承主任务的关联类型和对象；日常任务不关联项目或需求"@zh ; sh:select """PREFIX s: <urn:sidm:ontology:>
 SELECT $this WHERE { $this s:parentTask ?parent .
  { $this s:belongsToProject ?target . FILTER NOT EXISTS { ?parent s:belongsToProject ?target } }
- UNION { $this s:belongsToRequirement ?target . FILTER NOT EXISTS { ?parent s:belongsToRequirement ?target } } }""" .
+ UNION { $this s:belongsToRequirement ?target . FILTER NOT EXISTS { ?parent s:belongsToRequirement ?target } }
+ UNION { $this s:sourceType ?source . ?parent s:sourceType ?parentSource . FILTER(?source != ?parentSource) }
+ UNION { $this s:sourceType "日常任务" . ?parent s:belongsToProject|s:belongsToRequirement ?target }
+ UNION { ?parent s:sourceType "日常任务" . $this s:belongsToProject|s:belongsToRequirement ?target } }""" .
+
+s:TaskShape sh:sparql s:DailyTaskSource .
+s:DailyTaskSource a sh:SPARQLConstraint ; sh:message "任务关联类型与关联对象须一致"@zh ; sh:select """PREFIX s: <urn:sidm:ontology:>
+SELECT $this WHERE {
+ { $this s:sourceType "日常任务" ; s:belongsToProject|s:belongsToRequirement ?target }
+ UNION { $this s:sourceType "项目" . FILTER NOT EXISTS { $this s:belongsToProject ?target } }
+ UNION { $this s:sourceType "需求" . FILTER NOT EXISTS { $this s:belongsToRequirement ?target } }
+}""" .
 s:TaskDepth a sh:SPARQLConstraint ; sh:message "当前SIDM仅支持主任务与子任务两层"@zh ; sh:select """PREFIX s: <urn:sidm:ontology:>
 SELECT $this WHERE { $this s:parentTask/s:parentTask ?grandparent . }""" .
 s:TaskCompletion a sh:SPARQLConstraint ; sh:message "主任务完成时，其子任务必须均已完成"@zh ; sh:select """PREFIX s: <urn:sidm:ontology:>

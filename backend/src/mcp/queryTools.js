@@ -70,7 +70,7 @@ const RESULT_ENUMS = {
     is_overdue: { 0: '未逾期', 1: '已逾期' },
   },
   task: {
-    source_type: { 1: '项目', 2: '需求' },
+    source_type: { 1: '项目', 2: '需求', 3: '日常任务' },
     priority: { 0: '低', 1: '中', 2: '高' },
     status: { 0: '待处理', 1: '处理中', 2: '已完成', 3: '已暂停', 4: '已关闭' },
     is_overdue: { 0: '未逾期', 1: '已逾期' },
@@ -679,6 +679,7 @@ function unwrapEnvelope(envelope) {
 }
 
 async function dispatchQueryTool(name, args, context, dependencies = {}) {
+  if (name === 'business_completion_analysis') return require('../services/mcpCompletionAnalysisService').analyzeBusinessCompletion(args, context, dependencies.database, dependencies.now)
   if (name === 'sidm_standard_ontology_query') return require('./ontologyQuery').queryOntology(args, context)
   if (name === 'business_period_analysis') {
     return normalizeMcpQueryContent(decoratePeriodResult(

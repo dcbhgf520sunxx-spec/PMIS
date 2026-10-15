@@ -47,10 +47,10 @@ function createPeriodDatasetToken(value, entries = [], project = entry => entry)
   return hash.digest('hex')
 }
 
-function assertPeriodDatasetToken(query, token) {
+function assertPeriodDatasetToken(query, token, field = 'detail_query.dataset_token') {
   if (query.datasetToken && query.datasetToken !== token) {
     throw Object.assign(new Error('业务数据、人员权限或查询口径已变化，请从第一页重新获取完整明细'), {
-      code: 'MCP_DATA_CHANGED', fieldErrors: { 'detail_query.dataset_token': '数据集已变化，请重新获取第一页' },
+      code: 'MCP_DATA_CHANGED', fieldErrors: { [field]: '数据集已变化，请重新获取第一页' },
     })
   }
 }

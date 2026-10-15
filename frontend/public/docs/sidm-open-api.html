@@ -130,7 +130,7 @@ Content-Type: application/json</pre>
 <tr><td>submitterDept</td><td>提出组织</td><td>string/null</td><td>否</td><td>提出组织，最长 100 字符，允许空字符串</td></tr>
 <tr><td>submitDate</td><td>提出日期</td><td>string</td><td>是</td><td>提出日期</td></tr>
 <tr><td>startDate</td><td>启动日期</td><td>string/null</td><td>否</td><td>启动日期</td></tr>
-<tr><td>expectedEndDate</td><td>预计完成日期</td><td>string/null</td><td>否</td><td>预计完成日期</td></tr>
+<tr><td>expectedEndDate</td><td>预计完成日期</td><td>string</td><td>是</td><td>新增必填；更新时可省略以保留原日期，但不能清空</td></tr>
 </tbody></table></div>
 <p>初始优先级为低（0）；初始状态由 requirementType 决定：1→0、2→10、3→20、4→30。新增不能指定 status 或 priority。</p>
 <p>UPDATE 允许上表字段，至少传一项，只修改传入字段；未传保持不变，仅标注 null 的字段可清空。进入实施路径状态 30–37 后不允许修改需求路径，其他状态修改路径会重置到对应初始状态。状态使用专门动作；开放接口不支持修改优先级。</p>
@@ -141,7 +141,7 @@ Content-Type: application/json</pre>
   "data": {
     "title": "采购审批流程优化", "description": "&lt;p&gt;增加审批提醒。&lt;/p&gt;",
     "requirementType": 4, "productName": "示例产品", "ownerEmployeeNo": "EMP002",
-    "submitterName": "示例提出人", "submitterDept": "示例组织", "submitDate": "2026-09-07"
+    "submitterName": "示例提出人", "submitterDept": "示例组织", "submitDate": "2026-09-07", "expectedEndDate": "2026-09-30"
   }
 }</pre>
 <h3>状态</h3>

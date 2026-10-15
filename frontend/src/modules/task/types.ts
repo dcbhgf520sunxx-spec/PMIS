@@ -10,7 +10,7 @@ export type TaskRecord = {
   parentTaskName: string;
   childCount: number;
   completedChildCount: number;
-  sourceType: 1 | 2;
+  sourceType: 1 | 2 | 3;
   projectId: string;
   projectName: string;
   requirementId: string;
@@ -40,7 +40,7 @@ export type TaskFormValues = {
   name: string;
   description?: string;
   parentTaskName?: string;
-  sourceType: 1 | 2;
+  sourceType: 1 | 2 | 3;
   projectId?: string;
   requirementId?: string;
   ownerIds: string[];

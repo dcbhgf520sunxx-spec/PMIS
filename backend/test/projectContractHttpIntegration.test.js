@@ -92,7 +92,7 @@ test('项目合同和分阶段付款真实接口流程', { skip: !enabled }, asy
 
     const product = await request('/api/products', { method: 'POST', body: { name: `合同测试产品${suffix}`, owner_id: 1 } })
     assert.equal(product.response.status, 200)
-    const requirement = await request('/api/requirements', { method: 'POST', body: { title: `合同测试需求${suffix}`, requirement_type: 4, product_id: product.body.data.id, owner_id: 1, priority: 1, submitter_name: '合同集成测试', submit_date: '2026-08-07' } })
+    const requirement = await request('/api/requirements', { method: 'POST', body: { title: `合同测试需求${suffix}`, requirement_type: 4, product_id: product.body.data.id, owner_id: 1, priority: 1, submitter_name: '合同集成测试', submit_date: '2026-08-07', expected_end_date: '2026-12-31' } })
     assert.equal(requirement.response.status, 200)
     const project = await request('/api/projects', { method: 'POST', body: { name: `合同测试项目${suffix}`, product_id: product.body.data.id, requirement_id: requirement.body.data.id, owner_id: 1, expected_end_date: '2026-12-31' } })
     assert.equal(project.response.status, 200)

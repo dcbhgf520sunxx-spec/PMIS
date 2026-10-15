@@ -7,7 +7,7 @@ const { DEFAULT_PRIORITY } = require('./priorityRules')
 
 const INTEGRATION_CODE = 'i8_it_operations'
 const TASK_CODE = 'integration_sync'
-const PAYLOAD_MAPPING_VERSION = '2026-08-26-source-submitter-v5'
+const PAYLOAD_MAPPING_VERSION = '2026-10-13-requirement-date-required-v6'
 
 const payloadHash = (record, mappingVersion = PAYLOAD_MAPPING_VERSION) => crypto.createHash('sha256')
   .update(JSON.stringify({ mappingVersion, record }))

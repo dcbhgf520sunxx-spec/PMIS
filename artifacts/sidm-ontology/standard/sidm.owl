@@ -5,296 +5,40 @@
    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
    xmlns:s="urn:sidm:ontology:"
 >
-  <rdf:Description rdf:about="urn:sidm:ontology:stageContract">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
-    <rdfs:label xml:lang="zh">付款阶段归属合同</rdfs:label>
-    <rdfs:domain rdf:resource="urn:sidm:ontology:PaymentStage"/>
-    <rdfs:range rdf:resource="urn:sidm:ontology:ProjectContract"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:serviceStartOn">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">服务开始日期</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
-    <s:sourceGranularity>date</s:sourceGranularity>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:belongsToProject">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
-    <rdfs:label xml:lang="zh">直接归属项目</rdfs:label>
-    <rdfs:domain rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b36"/>
-    <rdfs:range rdf:resource="urn:sidm:ontology:Project"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b96">
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b48">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProject"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Project"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:relatedProduct">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
-    <rdfs:label xml:lang="zh">关联产品</rdfs:label>
-    <rdfs:range rdf:resource="urn:sidm:ontology:Product"/>
-    <rdfs:comment xml:lang="zh">通过直接归属追溯产品，不替代直接归属关系</rdfs:comment>
-    <owl:propertyChainAxiom rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b85"/>
-    <owl:propertyChainAxiom rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b87"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b91">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToRequirement"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Requirement"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:actualEndOn">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">实际完成日期</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
-    <s:sourceGranularity>date</s:sourceGranularity>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b109">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProject"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Project"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:itemStage">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
-    <rdfs:label xml:lang="zh">事项归属阶段</rdfs:label>
-    <rdfs:domain rdf:resource="urn:sidm:ontology:KeyItem"/>
-    <rdfs:range rdf:resource="urn:sidm:ontology:ProjectStage"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:plannedAmount">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">计划付款金额</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#decimal"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b67">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:owner"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Person"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:belongsToProduct">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
-    <rdfs:label xml:lang="zh">归属产品</rdfs:label>
-    <rdfs:domain rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b16"/>
-    <rdfs:range rdf:resource="urn:sidm:ontology:Product"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:priority">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">优先级</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:deliveryRequirement">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">交付要求</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:Task">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <rdfs:label xml:lang="zh">任务及子任务</rdfs:label>
-    <rdfs:comment xml:lang="zh">具体执行工作及其拆分；子任务仍是任务，通过父任务关系表达</rdfs:comment>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b34"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b39"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b45"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b73"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b89"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:description">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">业务说明</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:hasProject">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
-    <rdfs:label xml:lang="zh">关联项目</rdfs:label>
-    <owl:inverseOf rdf:resource="urn:sidm:ontology:sourceRequirement"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:name">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">名称</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b77">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:follower"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:submittedAt">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">提出时间</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:ProjectContract">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <rdfs:label xml:lang="zh">项目合同</rdfs:label>
-    <rdfs:comment xml:lang="zh">项目建设中的商务约定</rdfs:comment>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b46"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b47"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b55"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b56"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b36">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <owl:unionOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b37"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b40">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProject"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b21">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProduct"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Product"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:owner">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
-    <rdfs:label xml:lang="zh">负责人</rdfs:label>
-    <rdfs:domain rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b60"/>
-    <rdfs:range rdf:resource="urn:sidm:ontology:Person"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b47">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:contractProject"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b43">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:itemStage"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:ProjectStage"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b100">
-    <rdf:first rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b90"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b101"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b5">
-    <rdf:first rdf:resource="urn:sidm:ontology:ProjectStage"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b6"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b22">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProduct"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:ProjectStage">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <rdfs:label xml:lang="zh">项目阶段</rdfs:label>
-    <rdfs:comment xml:lang="zh">按需划分的项目实施过程</rdfs:comment>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b41"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b42"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:status">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">状态</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b3">
-    <rdf:first rdf:resource="urn:sidm:ontology:Requirement"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b4"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:startOn">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">开始日期</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
-    <s:sourceGranularity>date</s:sourceGranularity>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:follower">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
-    <rdfs:label xml:lang="zh">工单跟进人</rdfs:label>
-    <rdfs:domain rdf:resource="urn:sidm:ontology:WorkOrder"/>
-    <rdfs:range rdf:resource="urn:sidm:ontology:Person"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b41">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:stageProject"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Project"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b112">
-    <rdf:first rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b110"/>
-    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:contractProject">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
-    <rdfs:label xml:lang="zh">合同归属项目</rdfs:label>
-    <rdfs:domain rdf:resource="urn:sidm:ontology:ProjectContract"/>
-    <rdfs:range rdf:resource="urn:sidm:ontology:Project"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:MaintenanceContract">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <rdfs:label xml:lang="zh">产品运维合同</rdfs:label>
-    <rdfs:comment xml:lang="zh">产品持续运维服务的商务约定</rdfs:comment>
-    <rdfs:comment xml:lang="zh">运维合同录入即表示已付款；合同金额按已付款金额表达，不另设运维付款阶段和付款明细。</rdfs:comment>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b27"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b28"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b57"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b58"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b59"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:Product">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <rdfs:label xml:lang="zh">产品</rdfs:label>
-    <rdfs:comment xml:lang="zh">持续建设、使用和维护的数字化对象</rdfs:comment>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b65"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b66"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b23">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProduct"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Product"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:risk">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">风险记录</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:urgency">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">紧急程度</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b105">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProject"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">0</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:Bug">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <rdfs:label xml:lang="zh">BUG</rdfs:label>
-    <rdfs:comment xml:lang="zh">建设过程中的软件缺陷记录</rdfs:comment>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b35"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b40"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b74"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b75"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b102"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b85">
-    <rdf:first rdf:resource="urn:sidm:ontology:belongsToProject"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b86"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:recordStage">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
-    <rdfs:label xml:lang="zh">付款记录归属阶段</rdfs:label>
-    <rdfs:domain rdf:resource="urn:sidm:ontology:PaymentRecord"/>
-    <rdfs:range rdf:resource="urn:sidm:ontology:PaymentStage"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:stageContract"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:ProjectContract"/>
   </rdf:Description>
   <rdf:Description rdf:about="urn:sidm:ontology:resolution">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
     <rdfs:label xml:lang="zh">解决方案</rdfs:label>
     <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b68">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:owner"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:closedOn">
+  <rdf:Description rdf:about="urn:sidm:ontology:submittedOn">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">关闭时间</rdfs:label>
+    <rdfs:label xml:lang="zh">提出日期</rdfs:label>
     <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
   </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:order">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">排列顺序</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b82">
+    <rdf:first rdf:resource="urn:sidm:ontology:WorkOrder"/>
+    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b75">
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b61">
+    <rdf:first rdf:resource="urn:sidm:ontology:Product"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b62"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:relatedProduct">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">关联产品</rdfs:label>
+    <rdfs:range rdf:resource="urn:sidm:ontology:Product"/>
+    <rdfs:comment xml:lang="zh">通过直接归属追溯产品，不替代直接归属关系</rdfs:comment>
+    <owl:propertyChainAxiom rdf:nodeID="n5ef238332bab410f99954754c4070e85b85"/>
+    <owl:propertyChainAxiom rdf:nodeID="n5ef238332bab410f99954754c4070e85b87"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b51">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:assignee"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:recordStage"/>
     <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
   </rdf:Description>
   <rdf:Description rdf:about="urn:sidm:ontology:code">
@@ -302,49 +46,64 @@
     <rdfs:label xml:lang="zh">合同编号</rdfs:label>
     <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
   </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:amount">
+  <rdf:Description rdf:about="urn:sidm:ontology:order">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">金额</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#decimal"/>
+    <rdfs:label xml:lang="zh">排列顺序</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b44">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:itemStage"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b54">
+    <rdf:first rdf:resource="urn:sidm:ontology:MaintenanceContract"/>
+    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b69">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:owner"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Person"/>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b100">
+    <rdf:first rdf:nodeID="n5ef238332bab410f99954754c4070e85b90"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b101"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b112">
+    <rdf:first rdf:nodeID="n5ef238332bab410f99954754c4070e85b110"/>
+    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b3">
+    <rdf:first rdf:resource="urn:sidm:ontology:Requirement"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b4"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:Bug">
+    <s:completionRule xml:lang="zh">已关闭算完成；新建、已修复、被激活算未完成。BUG关闭表示缺陷处理完成，与任务、项目等取消关闭的含义不同。
+所属需求或项目关闭不参与，所属项目的来源需求关闭同样退出统计。
+没有计划完成日期，不推定到期日；按期初未关闭、本期新增或重新激活纳入，同一BUG每期只计一次，重新激活须有历史证据。</s:completionRule>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="zh">BUG</rdfs:label>
+    <rdfs:comment xml:lang="zh">建设过程中的软件缺陷记录</rdfs:comment>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b35"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b40"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b74"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b75"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b102"/>
   </rdf:Description>
   <rdf:Description rdf:about="urn:sidm:ontology:Requirement">
+    <s:completionRule xml:lang="zh">上会立项、需求提报、预研需求：按各自路径得出有效结论，通过或未通过均算完成；得出结论后，后续实施、试运行或暂停仍算完成。
+重新评估、重新审批或重新预研后，原结论不再作为完成依据，按新一轮结论重新判断；有效结论须有业务日期或历史记录支持，资料不足标记“待核实”。
+直接实施需求：已完成或已完成未使用算完成；尚未完成（包括暂停）算未完成。
+已转项目：需求转交算完成，关联项目独立统计，不据此认定项目实施已完成。
+需求已关闭不参与，其下属工作退出统计；恢复后重新筛选。</s:completionRule>
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
     <rdfs:label xml:lang="zh">需求</rdfs:label>
     <rdfs:comment xml:lang="zh">希望解决的问题或实现的改变</rdfs:comment>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b21"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b22"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b67"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b68"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b83"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b21"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b22"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b67"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b68"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b83"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b95">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <owl:intersectionOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b98"/>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b76">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:follower"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Person"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b18">
-    <rdf:first rdf:resource="urn:sidm:ontology:Project"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b19"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:progress">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">进展记录</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:sourceRequirement">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
-    <rdfs:label xml:lang="zh">来源需求</rdfs:label>
-    <rdfs:domain rdf:resource="urn:sidm:ontology:Project"/>
-    <rdfs:range rdf:resource="urn:sidm:ontology:Requirement"/>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b41">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:stageProject"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Project"/>
   </rdf:Description>
   <rdf:Description rdf:about="urn:sidm:ontology:paymentMonth">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
@@ -352,31 +111,33 @@
     <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
     <s:sourceGranularity>yearMonth</s:sourceGranularity>
   </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:submitterDepartment">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">提出部门</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  <rdf:Description rdf:about="urn:sidm:ontology:collaborator">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">事项协作人</rdfs:label>
+    <rdfs:domain rdf:resource="urn:sidm:ontology:KeyItem"/>
+    <rdfs:range rdf:resource="urn:sidm:ontology:Person"/>
   </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:resolvedOn">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">修复时间</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b66">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:owner"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b25">
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b21">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
     <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProduct"/>
     <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Product"/>
   </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:supplier">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
-    <rdfs:label xml:lang="zh">供应商</rdfs:label>
-    <rdfs:domain rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b52"/>
-    <rdfs:range rdf:resource="urn:sidm:ontology:Supplier"/>
+  <rdf:Description rdf:about="urn:sidm:ontology:Project">
+    <s:completionRule xml:lang="zh">按项目自身状态判断：已完成算完成，未开始、进行中、已暂停算未完成。
+项目已关闭或来源需求已关闭不参与；项目下属工作同样退出统计，恢复后重新筛选。</s:completionRule>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="zh">项目</rdfs:label>
+    <rdfs:comment xml:lang="zh">由需求转化而来、组织实施的建设工作</rdfs:comment>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b23"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b24"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b29"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b30"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b69"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b70"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b36">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <owl:unionOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b37"/>
   </rdf:Description>
   <rdf:Description rdf:about="urn:sidm:ontology:member">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
@@ -384,21 +145,253 @@
     <rdfs:domain rdf:resource="urn:sidm:ontology:Project"/>
     <rdfs:range rdf:resource="urn:sidm:ontology:Person"/>
   </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:problemType">
+  <rdf:Description rdf:about="urn:sidm:ontology:serviceEndOn">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">问题类型</rdfs:label>
+    <rdfs:label xml:lang="zh">服务结束日期</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
+    <s:sourceGranularity>date</s:sourceGranularity>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b9">
+    <rdf:first rdf:resource="urn:sidm:ontology:ProjectContract"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b10"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b43">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:itemStage"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:ProjectStage"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b46">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:contractProject"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Project"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b29">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:sourceRequirement"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Requirement"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b81">
+    <rdf:first rdf:resource="urn:sidm:ontology:Requirement"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b82"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:ProjectStage">
+    <s:completionRule xml:lang="zh">阶段内全部关键事项已完成才算完成；有事项尚未完成（包括暂停）算未完成。没有事项或上级关闭不参与。
+项目阶段无独立负责人及计划完成日期，仅按事项汇总判定，不自动推定个人考核归属。</s:completionRule>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="zh">项目阶段</rdfs:label>
+    <rdfs:comment xml:lang="zh">按需划分的项目实施过程</rdfs:comment>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b41"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b42"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:belongsToProject">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">直接归属项目</rdfs:label>
+    <rdfs:domain rdf:nodeID="n5ef238332bab410f99954754c4070e85b36"/>
+    <rdfs:range rdf:resource="urn:sidm:ontology:Project"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b104">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToRequirement"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Requirement"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:WorkOrder">
+    <s:completionRule xml:lang="zh">已解决算完成；待处理、处理中、已暂停、被激活算未完成；已关闭不参与。个人统计取当前跟进人，按预计解决时间归期。</s:completionRule>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="zh">运维工单</rdfs:label>
+    <rdfs:comment xml:lang="zh">产品使用中的问题处理记录</rdfs:comment>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b25"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b26"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b76"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b77"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b84"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:severity">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">严重程度</rdfs:label>
     <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
   </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:handler">
+  <rdf:Description rdf:about="urn:sidm:ontology:hasProject">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
-    <rdfs:label xml:lang="zh">付款经办人</rdfs:label>
-    <rdfs:domain rdf:resource="urn:sidm:ontology:PaymentRecord"/>
-    <rdfs:range rdf:resource="urn:sidm:ontology:Person"/>
+    <rdfs:label xml:lang="zh">关联项目</rdfs:label>
+    <owl:inverseOf rdf:resource="urn:sidm:ontology:sourceRequirement"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b51">
+  <rdf:Description rdf:about="urn:sidm:ontology">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Ontology"/>
+    <owl:versionIRI rdf:resource="urn:sidm:ontology:version:1.0.3"/>
+    <rdfs:label xml:lang="zh">SIDM业务本体</rdfs:label>
+    <owl:versionInfo>1.0.3</owl:versionInfo>
+    <rdfs:comment xml:lang="zh">正式OWL 2 DL模型；基于已确认业务骨架。缺失信息采用开放世界语义，数据完整性由SHACL检查。</rdfs:comment>
+    <s:completionFormula xml:lang="zh">完成率＝本期已完成单据数 ÷ 本期纳入统计的单据数 × 100%。按单据类别分别统计，部分完成不折算完成数量，也不平均单据进度；没有符合条件的单据时显示“—”。</s:completionFormula>
+    <s:completionScope xml:lang="zh">先排除不参与的单据，再判断完成或未完成，并按个人责任范围与考核期筛选。需求、项目或主任务关闭，其下属工作退出统计；恢复后重新筛选，记录和状态保留。暂停不退出统计。产品、供应商、项目合同、付款阶段、付款记录、产品运维合同不计算完成率。</s:completionScope>
+    <s:completionOwnership xml:lang="zh">只按当前责任角色统计：需求、项目、关键事项取当前负责人，任务取当前负责人名单，BUG取当前处理人，工单取当前跟进人。历史责任人不追溯，完成后换人也按当前责任人统计；多人负责分别计入各自个人统计。协作人、普通成员、提出人、创建人不自动计入。主子任务合为一个任务类别，个人去重规则见任务说明。</s:completionOwnership>
+    <s:completionPeriod xml:lang="zh">按最新计划完成日期归期，不使用原定日期；无计划日期不计入，BUG除外。
+当期包括本期计划完成的工作，以及期初已逾期但仍未完成的工作。遗留工作进入当期分母，完成则进入分子，未完成继续结转下一期；关闭排除规则照常适用。
+BUG当期范围为期初尚未关闭的，以及本期新增或重新激活的；同一BUG每期只计一次。
+已结束考核期按期末判断完成；未结束考核期按统计当天判断，后来完成不倒算到前期。</s:completionPeriod>
+    <s:completionEvidence xml:lang="zh">结果保留完成数、统计数及对应单据清单。历史完成结果、需求有效结论和BUG重新激活须有业务日期或历史记录支持；数据不足标记“待核实”，不以更新时间推定完成。当前状态快照与未完成工作清单不能直接代替个人历史考核统计。本体中的口径说明不表示已经实现自动计算或通过数据校验。</s:completionEvidence>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b4">
+    <rdf:first rdf:resource="urn:sidm:ontology:Project"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b5"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b30">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:recordStage"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:sourceRequirement"/>
     <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b105">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProject"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">0</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:sourceType">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">任务关联类型</rdfs:label>
+    <rdfs:domain rdf:resource="urn:sidm:ontology:Task"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:comment xml:lang="zh">项目、需求、日常任务；日常任务不关联项目或需求</rdfs:comment>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b23">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProduct"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Product"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:completionPeriod">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
+    <rdfs:label xml:lang="zh">考核期与归期</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:KeyItem">
+    <s:completionRule xml:lang="zh">已完成算完成；未开始、进行中、已暂停算未完成；上级项目或来源需求关闭不参与。个人统计取当前负责人，归期取当前计划完成日期，不使用原定日期。</s:completionRule>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="zh">关键事项</rdfs:label>
+    <rdfs:comment xml:lang="zh">阶段内需要关注的重要工作节点</rdfs:comment>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b43"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b44"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b71"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b72"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:description">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">业务说明</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:name">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">名称</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b80">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <owl:unionOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b81"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:completionEvidence">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
+    <rdfs:label xml:lang="zh">结果与证据</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b28">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProduct"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b24">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProduct"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:progress">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">进展记录</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:terminationReason">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">终止原因</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b44">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:itemStage"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b12">
+    <rdf:first rdf:resource="urn:sidm:ontology:MaintenanceContract"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b13"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b25">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProduct"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Product"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:ProjectContract">
+    <s:completionRule xml:lang="zh">项目合同不计算完成率；付款情况按合同与付款记录口径另行分析。</s:completionRule>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="zh">项目合同</rdfs:label>
+    <rdfs:comment xml:lang="zh">项目建设中的商务约定</rdfs:comment>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b46"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b47"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b55"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b56"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:PaymentStage">
+    <s:completionRule xml:lang="zh">付款阶段不计算完成率；付款阶段与项目实施阶段分别定义。</s:completionRule>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="zh">付款阶段</rdfs:label>
+    <rdfs:comment xml:lang="zh">项目合同金额的分阶段安排</rdfs:comment>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b48"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b49"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b98">
+    <rdf:first rdf:nodeID="n5ef238332bab410f99954754c4070e85b96"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b99"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b95">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <owl:intersectionOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b98"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b47">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:contractProject"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b22">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProduct"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b55">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:supplier"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Supplier"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:requirementType">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">需求类型</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:contractProject">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">合同归属项目</rdfs:label>
+    <rdfs:domain rdf:resource="urn:sidm:ontology:ProjectContract"/>
+    <rdfs:range rdf:resource="urn:sidm:ontology:Project"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b19">
+    <rdf:first rdf:resource="urn:sidm:ontology:WorkOrder"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b20"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b68">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:owner"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:bugType">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">缺陷类型</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:pauseReason">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">暂停原因</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
   </rdf:Description>
   <rdf:Description rdf:about="urn:sidm:ontology:taskOwner">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
@@ -406,52 +399,25 @@
     <rdfs:domain rdf:resource="urn:sidm:ontology:Task"/>
     <rdfs:range rdf:resource="urn:sidm:ontology:Person"/>
   </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:assignee">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
-    <rdfs:label xml:lang="zh">BUG处理人</rdfs:label>
-    <rdfs:domain rdf:resource="urn:sidm:ontology:Bug"/>
-    <rdfs:range rdf:resource="urn:sidm:ontology:Person"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b104">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToRequirement"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Requirement"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b7">
-    <rdf:first rdf:resource="urn:sidm:ontology:Task"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b8"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:sourceGranularity">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b52">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <owl:unionOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b53"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:terminationOn">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">终止日期</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b87">
-    <rdf:first rdf:resource="urn:sidm:ontology:belongsToRequirement"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b88"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b84">
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b83">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
     <owl:onProperty rdf:resource="urn:sidm:ontology:submitter"/>
     <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
   </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:Project">
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b103">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <rdfs:label xml:lang="zh">项目</rdfs:label>
-    <rdfs:comment xml:lang="zh">由需求转化而来、组织实施的建设工作</rdfs:comment>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b23"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b24"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b29"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b30"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b69"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b70"/>
+    <owl:intersectionOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b106"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:handler">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">付款经办人</rdfs:label>
+    <rdfs:domain rdf:resource="urn:sidm:ontology:PaymentRecord"/>
+    <rdfs:range rdf:resource="urn:sidm:ontology:Person"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b109">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProject"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Project"/>
   </rdf:Description>
   <rdf:Description rdf:about="urn:sidm:ontology:originalDueOn">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
@@ -459,257 +425,54 @@
     <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
     <s:sourceGranularity>date</s:sourceGranularity>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b90">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <owl:intersectionOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b93"/>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b7">
+    <rdf:first rdf:resource="urn:sidm:ontology:Task"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b8"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b72">
+  <rdf:Description rdf:about="urn:sidm:ontology:unresolvedRelations">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b69">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
     <owl:onProperty rdf:resource="urn:sidm:ontology:owner"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b86">
-    <rdf:first rdf:resource="urn:sidm:ontology:belongsToProduct"/>
-    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b107">
-    <rdf:first rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b105"/>
-    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b26">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProduct"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:previousContract">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
-    <rdfs:label xml:lang="zh">续签自</rdfs:label>
-    <rdfs:domain rdf:resource="urn:sidm:ontology:MaintenanceContract"/>
-    <rdfs:range rdf:resource="urn:sidm:ontology:MaintenanceContract"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:PaymentStage">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <rdfs:label xml:lang="zh">付款阶段</rdfs:label>
-    <rdfs:comment xml:lang="zh">项目合同金额的分阶段安排</rdfs:comment>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b48"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b49"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b93">
-    <rdf:first rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b91"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b94"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b31">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <owl:unionOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b32"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b79">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:handler"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b11">
-    <rdf:first rdf:resource="urn:sidm:ontology:PaymentRecord"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b12"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b76">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:follower"/>
     <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Person"/>
   </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Ontology"/>
-    <owl:versionIRI rdf:resource="urn:sidm:ontology:version:1.0.2"/>
-    <rdfs:label xml:lang="zh">SIDM业务本体</rdfs:label>
-    <owl:versionInfo>1.0.2</owl:versionInfo>
-    <rdfs:comment xml:lang="zh">正式OWL 2 DL模型；基于已确认业务骨架。缺失信息采用开放世界语义，数据完整性由SHACL检查。</rdfs:comment>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b73">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:taskOwner"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Person"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:parentTask">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
-    <rdfs:label xml:lang="zh">父任务</rdfs:label>
-    <rdfs:domain rdf:resource="urn:sidm:ontology:Task"/>
-    <rdfs:range rdf:resource="urn:sidm:ontology:Task"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b56">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:supplier"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b106">
-    <rdf:first rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b104"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b107"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b108">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <owl:intersectionOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b111"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:signedOn">
+  <rdf:Description rdf:about="urn:sidm:ontology:result">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">签订日期</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
-    <s:sourceGranularity>date</s:sourceGranularity>
+    <rdfs:label xml:lang="zh">处理结果</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b58">
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b45">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:supplier"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:parentTask"/>
     <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b10">
-    <rdf:first rdf:resource="urn:sidm:ontology:PaymentStage"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b11"/>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b60">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <owl:unionOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b61"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b38">
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b59">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:previousContract"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b33">
     <rdf:first rdf:resource="urn:sidm:ontology:Bug"/>
     <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
   </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:collaborator">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
-    <rdfs:label xml:lang="zh">事项协作人</rdfs:label>
-    <rdfs:domain rdf:resource="urn:sidm:ontology:KeyItem"/>
-    <rdfs:range rdf:resource="urn:sidm:ontology:Person"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b62">
-    <rdf:first rdf:resource="urn:sidm:ontology:Requirement"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b63"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:submittedOn">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">提出日期</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b14">
-    <rdf:first rdf:resource="urn:sidm:ontology:Supplier"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b15"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b1">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AllDisjointClasses"/>
-    <owl:members rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b2"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b88">
-    <rdf:first rdf:resource="urn:sidm:ontology:belongsToProduct"/>
-    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b65">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:owner"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Person"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b110">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToRequirement"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">0</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:PaymentRecord">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <rdfs:label xml:lang="zh">付款记录</rdfs:label>
-    <rdfs:comment xml:lang="zh">实际付款后登记的金额、月份及经办信息</rdfs:comment>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b50"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b51"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b78"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b79"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b37">
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b37">
     <rdf:first rdf:resource="urn:sidm:ontology:Task"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b38"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b38"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b71">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:owner"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Person"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b102">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <owl:unionOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b113"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:submitter">
+  <rdf:Description rdf:about="urn:sidm:ontology:follower">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
-    <rdfs:label xml:lang="zh">提出人</rdfs:label>
-    <rdfs:domain rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b80"/>
+    <rdfs:label xml:lang="zh">工单跟进人</rdfs:label>
+    <rdfs:domain rdf:resource="urn:sidm:ontology:WorkOrder"/>
     <rdfs:range rdf:resource="urn:sidm:ontology:Person"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b27">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProduct"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Product"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b74">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:assignee"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Person"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:serviceEndOn">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">服务结束日期</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
-    <s:sourceGranularity>date</s:sourceGranularity>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b92">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProject"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">0</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:pauseReason">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">暂停原因</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:datasetKind">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b46">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:contractProject"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Project"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b83">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:submitter"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b48">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:stageContract"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:ProjectContract"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:WorkOrder">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <rdfs:label xml:lang="zh">运维工单</rdfs:label>
-    <rdfs:comment xml:lang="zh">产品使用中的问题处理记录</rdfs:comment>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b25"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b26"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b76"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b77"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b84"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:Supplier">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <rdfs:label xml:lang="zh">供应商</rdfs:label>
-    <rdfs:comment xml:lang="zh">提供建设或运维服务的合作方</rdfs:comment>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b29">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:sourceRequirement"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Requirement"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b98">
-    <rdf:first rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b96"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b99"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b50">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:recordStage"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:PaymentStage"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:sourceEnvironment">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b2">
-    <rdf:first rdf:resource="urn:sidm:ontology:Product"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b3"/>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b93">
+    <rdf:first rdf:nodeID="n5ef238332bab410f99954754c4070e85b91"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b94"/>
   </rdf:Description>
   <rdf:Description rdf:about="urn:sidm:ontology:expectedEndOn">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
@@ -717,138 +480,306 @@
     <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
     <s:sourceGranularity>date</s:sourceGranularity>
   </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:paymentsComplete">
+  <rdf:Description rdf:about="urn:sidm:ontology:MaintenanceContract">
+    <s:completionRule xml:lang="zh">产品运维合同不计算完成率。</s:completionRule>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="zh">产品运维合同</rdfs:label>
+    <rdfs:comment xml:lang="zh">产品持续运维服务的商务约定</rdfs:comment>
+    <rdfs:comment xml:lang="zh">运维合同录入即表示已付款；合同金额按已付款金额表达，不另设运维付款阶段和付款明细。</rdfs:comment>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b27"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b28"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b57"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b58"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b59"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:itemStage">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">事项归属阶段</rdfs:label>
+    <rdfs:domain rdf:resource="urn:sidm:ontology:KeyItem"/>
+    <rdfs:range rdf:resource="urn:sidm:ontology:ProjectStage"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:sourceEndpoint">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
-    <rdfs:comment xml:lang="zh">该次样本已读取指定合同或阶段全部付款；仅凭无明细不能设置为true</rdfs:comment>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b32">
-    <rdf:first rdf:resource="urn:sidm:ontology:Task"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b33"/>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b13">
+    <rdf:first rdf:resource="urn:sidm:ontology:WorkOrder"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b14"/>
   </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:expectedResolveAt">
+  <rdf:Description rdf:about="urn:sidm:ontology:resolvedAt">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">预计解决时间</rdfs:label>
+    <rdfs:label xml:lang="zh">实际解决时间</rdfs:label>
     <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b24">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProduct"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  <rdf:Description rdf:about="urn:sidm:ontology:Supplier">
+    <s:completionRule xml:lang="zh">供应商不计算完成率。</s:completionRule>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="zh">供应商</rdfs:label>
+    <rdfs:comment xml:lang="zh">提供建设或运维服务的合作方</rdfs:comment>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b42">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:stageProject"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:sourceId">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b63">
-    <rdf:first rdf:resource="urn:sidm:ontology:Project"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b64"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b82">
-    <rdf:first rdf:resource="urn:sidm:ontology:WorkOrder"/>
-    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:currentDueOn">
+  <rdf:Description rdf:about="urn:sidm:ontology:startOn">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">当前计划日期</rdfs:label>
+    <rdfs:label xml:lang="zh">开始日期</rdfs:label>
     <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
     <s:sourceGranularity>date</s:sourceGranularity>
   </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:sourceScope">
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b40">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProject"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b11">
+    <rdf:first rdf:resource="urn:sidm:ontology:PaymentRecord"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b12"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b114">
+    <rdf:first rdf:nodeID="n5ef238332bab410f99954754c4070e85b108"/>
+    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:priority">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">优先级</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b71">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:owner"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Person"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b17">
+    <rdf:first rdf:resource="urn:sidm:ontology:Requirement"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b18"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b113">
+    <rdf:first rdf:nodeID="n5ef238332bab410f99954754c4070e85b103"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b114"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b73">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:taskOwner"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Person"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b77">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:follower"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:sourceConsistency">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b101">
-    <rdf:first rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b95"/>
-    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b89">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <owl:unionOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b100"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b111">
-    <rdf:first rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b109"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b112"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:bugType">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">缺陷类型</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b12">
-    <rdf:first rdf:resource="urn:sidm:ontology:MaintenanceContract"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b13"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:result">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">处理结果</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b59">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:previousContract"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b49">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:stageContract"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b94">
-    <rdf:first rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b92"/>
-    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b9">
-    <rdf:first rdf:resource="urn:sidm:ontology:ProjectContract"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b10"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:activationReason">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">激活原因</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:KeyItem">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <rdfs:label xml:lang="zh">关键事项</rdfs:label>
-    <rdfs:comment xml:lang="zh">阶段内需要关注的重要工作节点</rdfs:comment>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b43"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b44"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b71"/>
-    <rdfs:subClassOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b72"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:pausedAt">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">暂停时间</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b113">
-    <rdf:first rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b103"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b114"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b61">
-    <rdf:first rdf:resource="urn:sidm:ontology:Product"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b62"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:belongsToRequirement">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
-    <rdfs:label xml:lang="zh">直接归属需求</rdfs:label>
-    <rdfs:domain rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b31"/>
-    <rdfs:range rdf:resource="urn:sidm:ontology:Requirement"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b55">
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b57">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
     <owl:onProperty rdf:resource="urn:sidm:ontology:supplier"/>
     <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Supplier"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b103">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <owl:intersectionOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b106"/>
+  <rdf:Description rdf:about="urn:sidm:ontology:recordStage">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">付款记录归属阶段</rdfs:label>
+    <rdfs:domain rdf:resource="urn:sidm:ontology:PaymentRecord"/>
+    <rdfs:range rdf:resource="urn:sidm:ontology:PaymentStage"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b53">
-    <rdf:first rdf:resource="urn:sidm:ontology:ProjectContract"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b54"/>
+  <rdf:Description rdf:about="urn:sidm:ontology:stageContract">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">付款阶段归属合同</rdfs:label>
+    <rdfs:domain rdf:resource="urn:sidm:ontology:PaymentStage"/>
+    <rdfs:range rdf:resource="urn:sidm:ontology:ProjectContract"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b91">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToRequirement"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Requirement"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b110">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToRequirement"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">0</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:previousContract">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">续签自</rdfs:label>
+    <rdfs:domain rdf:resource="urn:sidm:ontology:MaintenanceContract"/>
+    <rdfs:range rdf:resource="urn:sidm:ontology:MaintenanceContract"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:serviceStartOn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">服务开始日期</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
+    <s:sourceGranularity>date</s:sourceGranularity>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b16">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <owl:unionOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b17"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:completionRule">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
+    <rdfs:label xml:lang="zh">本类单据的完成判定</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:Person">
+    <s:completionRule xml:lang="zh">人员是个人统计的归属维度，不作为单据计入完成率。仅计当前承担责任的单据，普通成员或协作身份不自动计入。</s:completionRule>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="zh">人员</rdfs:label>
+    <rdfs:comment xml:lang="zh">承担具体业务责任和参与工作的人员</rdfs:comment>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b106">
+    <rdf:first rdf:nodeID="n5ef238332bab410f99954754c4070e85b104"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b107"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:status">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">状态</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b101">
+    <rdf:first rdf:nodeID="n5ef238332bab410f99954754c4070e85b95"/>
+    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b63">
+    <rdf:first rdf:resource="urn:sidm:ontology:Project"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b64"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b50">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:recordStage"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:PaymentStage"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b10">
+    <rdf:first rdf:resource="urn:sidm:ontology:PaymentStage"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b11"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b49">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:stageContract"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b96">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProject"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Project"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:sourceCapturedAt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b74">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:assignee"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Person"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:Product">
+    <s:completionRule xml:lang="zh">产品不计算完成率。</s:completionRule>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="zh">产品</rdfs:label>
+    <rdfs:comment xml:lang="zh">持续建设、使用和维护的数字化对象</rdfs:comment>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b65"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b66"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b32">
+    <rdf:first rdf:resource="urn:sidm:ontology:Task"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b33"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:sourceRequirement">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">来源需求</rdfs:label>
+    <rdfs:domain rdf:resource="urn:sidm:ontology:Project"/>
+    <rdfs:range rdf:resource="urn:sidm:ontology:Requirement"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b56">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:supplier"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:completionScope">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
+    <rdfs:label xml:lang="zh">统计范围</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:completionFormula">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
+    <rdfs:label xml:lang="zh">计算公式</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:belongsToProduct">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">归属产品</rdfs:label>
+    <rdfs:domain rdf:nodeID="n5ef238332bab410f99954754c4070e85b16"/>
+    <rdfs:range rdf:resource="urn:sidm:ontology:Product"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b58">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:supplier"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b70">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:owner"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b107">
+    <rdf:first rdf:nodeID="n5ef238332bab410f99954754c4070e85b105"/>
+    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b31">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <owl:unionOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b32"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b94">
+    <rdf:first rdf:nodeID="n5ef238332bab410f99954754c4070e85b92"/>
+    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:PaymentRecord">
+    <s:completionRule xml:lang="zh">付款记录不计算完成率。</s:completionRule>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="zh">付款记录</rdfs:label>
+    <rdfs:comment xml:lang="zh">实际付款后登记的金额、月份及经办信息</rdfs:comment>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b50"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b51"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b78"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b79"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b75">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:assignee"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:plannedAmount">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">计划付款金额</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#decimal"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:taskType">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">任务类型</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b39">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProject"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b38">
+    <rdf:first rdf:resource="urn:sidm:ontology:Bug"/>
+    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b86">
+    <rdf:first rdf:resource="urn:sidm:ontology:belongsToProduct"/>
+    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:belongsToRequirement">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">直接归属需求</rdfs:label>
+    <rdfs:domain rdf:nodeID="n5ef238332bab410f99954754c4070e85b31"/>
+    <rdfs:range rdf:resource="urn:sidm:ontology:Requirement"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:problemType">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">问题类型</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:urgency">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">紧急程度</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b27">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProduct"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Product"/>
   </rdf:Description>
   <rdf:Description rdf:about="urn:sidm:ontology:stageProject">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
@@ -856,172 +787,305 @@
     <rdfs:domain rdf:resource="urn:sidm:ontology:ProjectStage"/>
     <rdfs:range rdf:resource="urn:sidm:ontology:Project"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b78">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:handler"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Person"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b28">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProduct"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b97">
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b97">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
     <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToRequirement"/>
     <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">0</owl:maxCardinality>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b99">
-    <rdf:first rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b97"/>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b84">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:submitter"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:Task">
+    <s:completionRule xml:lang="zh">无子任务的任务及子任务：已完成算完成，待处理、处理中、已暂停算未完成，已关闭不参与。
+有子任务的主任务：所有未关闭子任务均已完成才算完成；存在未关闭且尚未完成的子任务算未完成，不增加主任务完成确认。
+主任务关闭，或全部子任务关闭时，主任务不参与；主任务关闭，其下属子任务也退出统计。上级需求或项目关闭同样退出统计，恢复后重新筛选。
+主任务和子任务合为一个任务类别，按个人去重：只负责主任务则统计主任务；只负责子任务则统计本人负责的子任务；同时负责主任务和其中的子任务，只统计本人负责的子任务。</s:completionRule>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="zh">任务及子任务</rdfs:label>
+    <rdfs:comment xml:lang="zh">具体执行工作及其拆分；项目/需求任务关联对应对象，日常任务独立存在；子任务继承主任务的关联类型和对象</rdfs:comment>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b34"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b39"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b45"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b73"/>
+    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b89"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b87">
+    <rdf:first rdf:resource="urn:sidm:ontology:belongsToRequirement"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b88"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:closedOn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">关闭时间</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:submitter">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">提出人</rdfs:label>
+    <rdfs:domain rdf:nodeID="n5ef238332bab410f99954754c4070e85b80"/>
+    <rdfs:range rdf:resource="urn:sidm:ontology:Person"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:deliveryRequirement">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">交付要求</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b34">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToRequirement"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b108">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <owl:intersectionOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b111"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b14">
+    <rdf:first rdf:resource="urn:sidm:ontology:Supplier"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b15"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b62">
+    <rdf:first rdf:resource="urn:sidm:ontology:Requirement"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b63"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:expectedResolveAt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">预计解决时间</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:currentDueOn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">当前计划日期</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
+    <s:sourceGranularity>date</s:sourceGranularity>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:assignee">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">BUG处理人</rdfs:label>
+    <rdfs:domain rdf:resource="urn:sidm:ontology:Bug"/>
+    <rdfs:range rdf:resource="urn:sidm:ontology:Person"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:parentTask">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">父任务</rdfs:label>
+    <rdfs:domain rdf:resource="urn:sidm:ontology:Task"/>
+    <rdfs:range rdf:resource="urn:sidm:ontology:Task"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:risk">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">风险记录</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:pausedAt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">暂停时间</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:actualEndOn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">实际完成日期</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
+    <s:sourceGranularity>date</s:sourceGranularity>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b85">
+    <rdf:first rdf:resource="urn:sidm:ontology:belongsToProject"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b86"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:submitterDepartment">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">提出部门</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:amount">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">金额</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#decimal"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:signedOn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">签订日期</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
+    <s:sourceGranularity>date</s:sourceGranularity>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b53">
+    <rdf:first rdf:resource="urn:sidm:ontology:ProjectContract"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b54"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:paymentsComplete">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
+    <rdfs:comment xml:lang="zh">该次样本已读取指定合同或阶段全部付款；仅凭无明细不能设置为true</rdfs:comment>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b8">
+    <rdf:first rdf:resource="urn:sidm:ontology:Bug"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b9"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:sourceScope">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:submittedAt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">提出时间</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b20">
+    <rdf:first rdf:resource="urn:sidm:ontology:MaintenanceContract"/>
     <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
   </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:Person">
+  <rdf:Description rdf:about="urn:sidm:ontology:owner">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">负责人</rdfs:label>
+    <rdfs:domain rdf:nodeID="n5ef238332bab410f99954754c4070e85b60"/>
+    <rdfs:range rdf:resource="urn:sidm:ontology:Person"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:completionOwnership">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
+    <rdfs:label xml:lang="zh">个人归属</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b88">
+    <rdf:first rdf:resource="urn:sidm:ontology:belongsToProduct"/>
+    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b111">
+    <rdf:first rdf:nodeID="n5ef238332bab410f99954754c4070e85b109"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b112"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b5">
+    <rdf:first rdf:resource="urn:sidm:ontology:ProjectStage"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b6"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b92">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProject"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">0</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b66">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:owner"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:sourceSnapshot">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b42">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:stageProject"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b26">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProduct"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b52">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <rdfs:label xml:lang="zh">人员</rdfs:label>
-    <rdfs:comment xml:lang="zh">承担具体业务责任和参与工作的人员</rdfs:comment>
+    <owl:unionOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b53"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b102">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <owl:unionOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b113"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b2">
+    <rdf:first rdf:resource="urn:sidm:ontology:Product"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b3"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b15">
+    <rdf:first rdf:resource="urn:sidm:ontology:Person"/>
+    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:supplier">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="zh">供应商</rdfs:label>
+    <rdfs:domain rdf:nodeID="n5ef238332bab410f99954754c4070e85b52"/>
+    <rdfs:range rdf:resource="urn:sidm:ontology:Supplier"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:activationReason">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">激活原因</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
   </rdf:Description>
   <rdf:Description rdf:about="urn:sidm:ontology:submitterName">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
     <rdfs:label xml:lang="zh">提出人姓名</rdfs:label>
     <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b20">
-    <rdf:first rdf:resource="urn:sidm:ontology:MaintenanceContract"/>
-    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b78">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:handler"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Person"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b70">
+  <rdf:Description rdf:about="urn:sidm:ontology:terminationOn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">终止日期</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b79">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:handler"/>
+    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b65">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:owner"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Person"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:sourceId">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="urn:sidm:ontology:resolvedOn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="zh">修复时间</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b72">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
     <owl:onProperty rdf:resource="urn:sidm:ontology:owner"/>
     <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
   </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:sourceCapturedAt">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b35">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToRequirement"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b33">
-    <rdf:first rdf:resource="urn:sidm:ontology:Bug"/>
-    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:terminationReason">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">终止原因</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b6">
-    <rdf:first rdf:resource="urn:sidm:ontology:KeyItem"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b7"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:resolvedAt">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">实际解决时间</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b54">
-    <rdf:first rdf:resource="urn:sidm:ontology:MaintenanceContract"/>
-    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b80">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <owl:unionOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b81"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:severity">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">严重程度</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:sourceSnapshot">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b13">
-    <rdf:first rdf:resource="urn:sidm:ontology:WorkOrder"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b14"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b39">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToProject"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b57">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:supplier"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Supplier"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b16">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <owl:unionOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b17"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b4">
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b18">
     <rdf:first rdf:resource="urn:sidm:ontology:Project"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b5"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b19"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b34">
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b1">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AllDisjointClasses"/>
+    <owl:members rdf:nodeID="n5ef238332bab410f99954754c4070e85b2"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b99">
+    <rdf:first rdf:nodeID="n5ef238332bab410f99954754c4070e85b97"/>
+    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b67">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
+    <owl:onProperty rdf:resource="urn:sidm:ontology:owner"/>
+    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Person"/>
+  </rdf:Description>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b35">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
     <owl:onProperty rdf:resource="urn:sidm:ontology:belongsToRequirement"/>
     <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b81">
-    <rdf:first rdf:resource="urn:sidm:ontology:Requirement"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b82"/>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b6">
+    <rdf:first rdf:resource="urn:sidm:ontology:KeyItem"/>
+    <rdf:rest rdf:nodeID="n5ef238332bab410f99954754c4070e85b7"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b15">
-    <rdf:first rdf:resource="urn:sidm:ontology:Person"/>
-    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b89">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <owl:unionOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b100"/>
   </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:unresolvedRelations">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b90">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <owl:intersectionOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b93"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b114">
-    <rdf:first rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b108"/>
-    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b30">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:sourceRequirement"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:requirementType">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">需求类型</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b64">
+  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b64">
     <rdf:first rdf:resource="urn:sidm:ontology:KeyItem"/>
     <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
   </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:taskType">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
-    <rdfs:label xml:lang="zh">任务类型</rdfs:label>
-    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:sourceEndpoint">
+  <rdf:Description rdf:about="urn:sidm:ontology:datasetKind">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b45">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:parentTask"/>
-    <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b17">
-    <rdf:first rdf:resource="urn:sidm:ontology:Requirement"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b18"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b8">
-    <rdf:first rdf:resource="urn:sidm:ontology:Bug"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b9"/>
-  </rdf:Description>
-  <rdf:Description rdf:about="urn:sidm:ontology:sourceConsistency">
+  <rdf:Description rdf:about="urn:sidm:ontology:sourceGranularity">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
   </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b60">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
-    <owl:unionOf rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b61"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b19">
-    <rdf:first rdf:resource="urn:sidm:ontology:WorkOrder"/>
-    <rdf:rest rdf:nodeID="nf0569c97aeb3466fb298a56e668bb510b20"/>
+  <rdf:Description rdf:about="urn:sidm:ontology:sourceEnvironment">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AnnotationProperty"/>
   </rdf:Description>
 </rdf:RDF>

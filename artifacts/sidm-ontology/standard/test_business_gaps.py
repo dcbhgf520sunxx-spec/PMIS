@@ -54,4 +54,5 @@ class BusinessGapTests(unittest.TestCase):
   row=r['answers']['projectPayments'][0]
   self.assertEqual(row.get('validationStatus'),'异常待核实')
   self.assertTrue(row.get('validationIssues'))
+  self.assertTrue(any('不是个人考核分母' in text and '不以更新时间或SHACL通过推定' in text for text in r['limitations']))
 if __name__=='__main__':unittest.main()

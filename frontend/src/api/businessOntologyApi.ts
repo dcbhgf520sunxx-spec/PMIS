@@ -6,15 +6,16 @@ const businessContract = objectContract<OntologyClass['business']>(['meaning', '
   quantities: textArray, roles: arrayContract(objectContract(['role', 'meaning'])),
   earlyStates: (value: unknown): value is string[][] => Array.isArray(value) && value.every(textArray)
 });
-const classContract = objectContract<OntologyClass>(['id', 'label', 'comments', 'attributes', 'rules', 'checks', 'business'], {
-  business: businessContract, comments: textArray, rules: textArray,
+const classContract = objectContract<OntologyClass>(['id', 'label', 'comments', 'completionRules', 'attributes', 'rules', 'checks', 'business'], {
+  business: businessContract, comments: textArray, completionRules: textArray, rules: textArray,
   attributes: arrayContract(objectContract(['id', 'label', 'datatype'])), checks: arrayContract(objectContract(['label', 'text']))
 });
 const relationContract = objectContract<OntologyRelation>(['id', 'label', 'from', 'to', 'inferred', 'meaning', 'quantity', 'boundary', 'proof'], {
   from: textArray, to: textArray, proof: textArray, inferred: (value: unknown): value is boolean => typeof value === 'boolean'
 });
-const modelContract = objectContract<OntologyModel>(['version', 'sha256', 'shapesSha256', 'businessSha256', 'classes', 'relations'], {
-  classes: arrayContract(classContract), relations: arrayContract(relationContract)
+const modelContract = objectContract<OntologyModel>(['version', 'sha256', 'shapesSha256', 'businessSha256', 'classes', 'relations', 'completionPolicy'], {
+  classes: arrayContract(classContract), relations: arrayContract(relationContract),
+  completionPolicy: arrayContract(objectContract(['label', 'text']))
 });
 export function getBusinessOntology(signal?: AbortSignal) {
   return unwrap(request.get('/business-ontology', { signal }), modelContract);

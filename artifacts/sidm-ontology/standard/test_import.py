@@ -23,4 +23,19 @@ class ImportTests(unittest.TestCase):
   from rdflib import Literal
   g.set((Namespace('urn:sidm:fixture:').task,S.status,Literal('处理中',datatype=XSD.string)))
   self.assertTrue(validate(g,shacl_graph=str(root/'shapes.ttl'),ont_graph=str(root/'sidm.ttl'))[0])
+ def test_daily_task_and_child_inherit_the_same_source(self):
+  from pyshacl import validate
+  from rdflib import Graph, Literal, RDF, Namespace
+  root=Path(__file__).parent;g=Graph().parse(root/'fixtures/valid.ttl')
+  task=Namespace('urn:sidm:fixture:').task
+  g.remove((task,S.belongsToProject,None));g.remove((task,S.belongsToRequirement,None))
+  g.add((task,S.sourceType,Literal('日常任务',datatype=XSD.string)))
+  child=Namespace('urn:sidm:fixture:').child
+  g.remove((child,S.belongsToProject,None));g.remove((child,S.belongsToRequirement,None))
+  g.add((child,RDF.type,S.Task));g.add((child,S.parentTask,task))
+  g.add((child,S.sourceType,Literal('日常任务',datatype=XSD.string)))
+  g.add((child,S.taskOwner,g.value(task,S.taskOwner)))
+  self.assertTrue(validate(g,shacl_graph=str(root/'shapes.ttl'),ont_graph=str(root/'sidm.ttl'))[0])
+  g.add((child,S.belongsToProject,Namespace('urn:sidm:fixture:').project))
+  self.assertFalse(validate(g,shacl_graph=str(root/'shapes.ttl'),ont_graph=str(root/'sidm.ttl'))[0])
 if __name__=='__main__':unittest.main()

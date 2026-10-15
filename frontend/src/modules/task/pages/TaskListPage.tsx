@@ -9,7 +9,7 @@ import { getArchiveOptionsByTypeName } from '../../../api/archiveApi';
 import type { TaskRecord } from '../types';
 import { taskStatusLabels } from '../statusTransitions';
 import { TaskStatusChangeAction } from '../components/TaskStatusChangeAction';
-import { renderTaskLevel, renderTaskOverdue, renderTaskPriority, renderTaskSourceType, renderTaskStatus } from '../helpers';
+import { taskSourceTypeOptions, renderTaskLevel, renderTaskOverdue, renderTaskPriority, renderTaskSourceType, renderTaskStatus } from '../helpers';
 import { useTaskBatchActions } from './useTaskBatchActions';
 import { FollowUpRecordModal, type FollowUpTarget } from '../../follow-up/FollowUpRecordAction';
 import './TaskListPage.css';
@@ -144,7 +144,7 @@ export function TaskListPage() {
   const columns: ProColumns<TaskRecord>[] = [
     { title: '序号', width: 60, fixed: 'left', render: (_, __, index) => list.renderIndex(index) },
     { title: '任务名称', dataIndex: 'name', width: 320, fixed: 'left', sorter: true, sortOrder: sortOrder('name'), render: (_, row) => <div className={`task-name-cell${row.parentTaskId ? ' task-name-cell--subtask' : ''}`}>{row.childCount > 0 ? <><ExpandToggleButton className="task-name-cell__toggle" variant="square" expanded={expandedParentIds.has(row.id)} expandLabel={`展开 ${row.name} 的子任务`} collapseLabel={`收起 ${row.name} 的子任务`} onClick={() => toggleTaskGroup(row.id)} />{renderTaskLevel()}</> : row.parentTaskId ? renderTaskLevel(row.parentTaskId) : null}<DetailLinkCell className="task-name-cell__text" title={row.name} onClick={() => openDetail(row)}>{row.name}</DetailLinkCell>{row.isOverdue ? <span className="task-name-cell__tag">{renderTaskOverdue(true, row.overdueDays)}</span> : null}</div> },
-    { title: '关联对象', dataIndex: 'sourceName', width: 220, sorter: true, sortOrder: sortOrder('sourceName'), render: (_, row) => <div className="task-source-cell">{renderTaskSourceType(row.sourceType)}<span>{row.sourceType === 1 ? row.projectName : row.requirementName}</span></div> },
+    { title: '关联对象', dataIndex: 'sourceName', width: 220, sorter: true, sortOrder: sortOrder('sourceName'), render: (_, row) => <div className="task-source-cell">{renderTaskSourceType(row.sourceType)}{row.sourceType !== 3 && <span>{row.sourceType === 1 ? row.projectName : row.requirementName}</span>}</div> },
     { title: '负责人', dataIndex: 'ownerNames', width: 160, sorter: true, sortOrder: sortOrder('ownerNames') },
     { title: '任务类型', dataIndex: 'taskTypeName', width: 110, sorter: true, sortOrder: sortOrder('taskTypeName') },
     { title: '优先级', dataIndex: 'priority', width: 90, sorter: true, sortOrder: sortOrder('priority'), render: (_, row) => renderTaskPriority(row.priority) },
@@ -157,7 +157,7 @@ export function TaskListPage() {
 
   const items = createListFilterItems([
     { key: 'name', label: '任务名称', node: <AdminInput size="small" value={filters.draftFilters.name} onChange={(event) => filters.setDraftFilters((prev) => ({ ...prev, name: event.target.value }))} onPressEnter={() => { filters.commitFilters(); clearSelection(); }} /> },
-    { key: 'sourceType', label: '关联类型', node: <AdminSelect size="small" value={filters.draftFilters.sourceType} options={[{ label: '项目', value: 1 }, { label: '需求', value: 2 }]} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, sourceType: value, projectId: undefined, requirementId: undefined }))} /> },
+    { key: 'sourceType', label: '关联类型', node: <AdminSelect size="small" value={filters.draftFilters.sourceType} options={taskSourceTypeOptions} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, sourceType: value, projectId: undefined, requirementId: undefined }))} /> },
     { key: 'projectId', label: '关联项目', hidden: filters.draftFilters.sourceType !== 1, node: <AdminSelect size="small" value={filters.draftFilters.projectId} options={projects} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, projectId: value }))} /> },
     { key: 'requirementId', label: '关联需求', hidden: filters.draftFilters.sourceType !== 2, node: <AdminSelect size="small" value={filters.draftFilters.requirementId} options={requirements} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, requirementId: value }))} /> },
     { key: 'taskType', label: '任务类型', node: <AdminSelect size="small" value={filters.draftFilters.taskType} options={taskTypes} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, taskType: value }))} /> },
