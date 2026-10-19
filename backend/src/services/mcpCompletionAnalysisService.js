@@ -4,8 +4,7 @@ const { createPeriodDatasetToken, assertPeriodDatasetToken } = require('./mcpPer
 const { summarizeRichText } = require('../mcp/contentPolicy')
 const TYPES = { ...BUSINESS_TYPES, project_stage: { label: '项目阶段', menu: '/projects' } }
 const CLOSED = { requirement: 37, project: 4, task: 4, work_order: 3 }
-const CONCLUSIONS = { 1: [2, 3], 2: [12, 13], 3: [21, 22] }
-const EARLY = { 1: [0, 1], 2: [10, 11], 3: [20] }
+const { requirementCompletion } = require('./requirementCompletionRules')
 const STATUS_VALUES = { requirement: [0,1,2,3,10,11,12,13,20,21,22,30,31,32,33,34,35,36,37],
   project:[0,1,2,3,4], task:[0,1,2,3,4], stage_plan:[0,1,2,3], bug:[0,1,2,3], work_order:[0,1,2,3,4,5] }
 const REASONS = { completed:'已完成', unfinished:'尚未完成', self_closed:'单据取消关闭', ancestor_closed:'上级需求、项目或主任务关闭',
@@ -55,23 +54,6 @@ function statusAt(r, cutoff, history, today) {
     return {status:0,evidence:[{source:'later_completion_date',date:businessDate,log_id:null}]}
   }
   return {status:null,evidence:[]}
-}
-function requirementCompletion(r, status, cutoff, history) {
-  if (status===36) return {completed:true,reason_code:'completed'}
-  const type=Number(r.requirement_type)
-  if (type===4) return {completed:[33,34].includes(status),reason_code:[33,34].includes(status)?'completed':'unfinished'}
-  if (!CONCLUSIONS[type]) return {completed:null,reason_code:'conclusion_missing'}
-  if (CONCLUSIONS[type].includes(status)) return {completed:true,reason_code:'completed'}
-  if (EARLY[type].includes(status)) return {completed:false,reason_code:'unfinished'}
-  if (![30,31,32,33,34,35].includes(status) || history?.inconsistent) return {completed:null,reason_code:'conclusion_missing'}
-  let valid=null,proof=null
-  for(const event of [...(history?.transitions || [])].filter(e=>e.date<=cutoff).sort((a,b)=>a.date.localeCompare(b.date)||Number(a.log.log_id)-Number(b.log.log_id))) {
-    if(CONCLUSIONS[type].includes(event.previous_status)){valid=true;proof=event}
-    if(EARLY[type].includes(event.previous_status)){valid=false;proof=event}
-    if(EARLY[type].includes(event.status)){valid=false;proof=event}
-    if(CONCLUSIONS[type].includes(event.status)){valid=true;proof=event}
-  }
-  return valid===null ? {completed:null,reason_code:'conclusion_missing'} : {completed:valid,reason_code:valid?'completed':'unfinished',evidence:[{source:valid?'requirement_conclusion_history':'requirement_evaluation_history',date:proof.date,log_id:Number(proof.log.log_id)||null,record_id:r.id,business_type:r.business_type}]}
 }
 
 function evaluateCompletion({records,logs,people,types,period,today,cutoff}) {

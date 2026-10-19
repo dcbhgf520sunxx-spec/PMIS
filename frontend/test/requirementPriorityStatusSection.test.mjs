@@ -23,5 +23,5 @@ test('需求详情右侧按当前状态、优先级、逾期状态展示且基�
 });
 
 test('需求详情逾期状态为空时向模板传递普通占位符', () => {
-  assert.match(source, /row\.isOverdue===null\?'\-':renderRequirementOverdue/);
+  assert.match(source, /row\.isOverdue===null&&!row\.overduePending\?'\-':renderRequirementOverdue/);
 });

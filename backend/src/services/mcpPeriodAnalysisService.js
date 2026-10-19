@@ -1,3 +1,4 @@
+const { requirementCompletion } = require('./requirementCompletionRules')
 const { calculateOverdue, overdueSql } = require('./overdueRules')
 const db = require('../db')
 const { summarizeRichText } = require('../mcp/contentPolicy')
@@ -597,20 +598,21 @@ function historicalOverdueDates(record, history, cutoffDate) {
     const date = record.is_completed ? record.actual_date : record.is_paused ? record.pause_date : isClosedStatus(record.business_type, record.status) ? dateOnly(record.close_date) : null
     if (date) transitions = [{ date, status: record.status, previous_status: null }]
     else if (record.is_completed || record.is_paused || isClosedStatus(record.business_type, record.status)
-      || (record.business_type === 'requirement' && calculateRequirementOverdue(record.plan_date, record.status, cutoffDate) === null)) return []
+      || (record.business_type === 'requirement' && calculateRequirementOverdue(record.plan_date, record.status, cutoffDate, record) === null)) return []
   }
   transitions.sort((a, b) => a.date.localeCompare(b.date)
     || number(a.log?.log_id) - number(b.log?.log_id))
-  const eligible = (status) => !isCompletedStatus(record.business_type, status) && !isPausedStatus(record.business_type, status) && !isClosedStatus(record.business_type, status)
-    && (record.business_type !== 'requirement' || calculateRequirementOverdue(record.plan_date, status, cutoffDate) !== null)
+  const eligible = (status, date = entered, events = transitions) => record.business_type === 'requirement'
+    ? !isClosedStatus('requirement', status) && requirementCompletion(record, status, date, { ...history, transitions: events }).completed === false
+    : !isCompletedStatus(record.business_type, status) && !isPausedStatus(record.business_type, status) && !isClosedStatus(record.business_type, status)
   let status = transitions[0]?.previous_status ?? (transitions.length ? null : record.status)
   // A completion/pause dated the day after the deadline does not undo that
   // day's entry into overdue. Only a prior-day terminal state prevents entry.
   for (const transition of transitions.filter((event) => event.date < entered)) status = transition.status
-  const dates = eligible(status) ? [entered] : []
-  for (const transition of transitions) {
+  const dates = eligible(status, entered, transitions.filter(event => event.date < entered)) ? [entered] : []
+  for (const [index, transition] of transitions.entries()) {
     if (transition.date < entered || transition.date > cutoffDate) continue
-    if (!eligible(status) && eligible(transition.status)) dates.push(transition.date)
+    if (!eligible(status, transition.date, transitions.slice(0, index)) && eligible(transition.status, transition.date, transitions.slice(0, index + 1))) dates.push(transition.date)
     status = transition.status
   }
   return dates
@@ -732,11 +734,17 @@ function uniquePeriodEvents(events, period) {
 }
 
 function currentOverdue(record, cutoffDate) {
-  if (record.business_type === 'bug') return false
-  return calculateOverdue(record.business_type, {
-    date: record.plan_date, status: record.status,
+  return currentOverdueState(record, cutoffDate).is_overdue === true
+}
+
+function currentOverdueState(record, cutoffDate) {
+  if (record.business_type === 'bug') return { is_overdue: false, overdue_days: 0, overdue_pending: false }
+  const result = calculateOverdue(record.business_type, {
+    date: record.plan_date, status: record.status, requirementType: record.requirement_type, completion: record.requirement_completion,
     parentStatus: record.parent_project_paused ? 3 : undefined,
-  }, cutoffDate).isOverdue === 1
+  }, cutoffDate)
+  return { is_overdue: result.isOverdue === null ? null : result.isOverdue === 1,
+    overdue_days: result.overdueDays, overdue_pending: record.business_type === 'requirement' && record.overdue_pending === true }
 }
 
 function isRejectedRequirement(record) {
@@ -927,7 +935,7 @@ function buildGroupings(dimensions, records, events, analysisPeriod, planPeriod,
 
 function candidate(record, cutoffDate) {
   const name = summarizeRichText(record.name)
-  const overdue = currentOverdue(record, cutoffDate)
+  const overdue = currentOverdueState(record, cutoffDate)
   return {
     business_type: record.business_type,
     business_type_label: BUSINESS_TYPES[record.business_type].label,
@@ -950,8 +958,7 @@ function candidate(record, cutoffDate) {
     status: record.status,
     priority: record.priority,
     plan_date: record.plan_date,
-    is_overdue: overdue,
-    overdue_days: overdue ? calculateOverdue(record.business_type, { date: record.plan_date, status: record.status }, cutoffDate).overdueDays : 0,
+    ...overdue,
   }
 }
 
@@ -962,7 +969,7 @@ function candidateTokenFields(record, cutoffDate) {
     record.product_id, record.project_id, record.requirement_id, number(record.parent_task_id) || null,
     record.project_name || null, record.owner_name || null, record.owner_ids,
     record.creator_id, record.updater_id, record.status, record.priority, record.plan_date,
-    currentOverdue(record, cutoffDate), Object.entries(record.person_relations || {})
+    currentOverdueState(record, cutoffDate), Object.entries(record.person_relations || {})
       .map(([id, relations]) => [id, record.person_names[id] || `用户ID ${id}`, relations])]
 }
 
@@ -1317,13 +1324,15 @@ async function analyzeBusinessPeriod(args, context, database = db, now = new Dat
     componentCompleteness.financials = false
     financials = { available: false, error: '关联业务范围不完整，合同付款辅助统计不可用' }
   }
-  componentCompleteness.period_flows = needsFlows ? recordScopeComplete && (!requiresHistory || componentCompleteness.event_history) : null
-  componentCompleteness.current_stock = wants('current_stock') || needsGroupings ? recordScopeComplete : null
-  componentCompleteness.risk_candidates = wants('risk_candidates') ? recordScopeComplete : null
+  const overdueUnknownCount = records.filter(record => record.business_type === 'requirement' && record.overdue_pending === true).length
+  const overdueComplete = overdueUnknownCount === 0
+  componentCompleteness.period_flows = needsFlows ? recordScopeComplete && (!requiresHistory || (componentCompleteness.event_history && overdueComplete)) : null
+  componentCompleteness.current_stock = wants('current_stock') || needsGroupings ? recordScopeComplete && overdueComplete : null
+  componentCompleteness.risk_candidates = wants('risk_candidates') ? recordScopeComplete && overdueComplete : null
   componentCompleteness.plan_outlook = needsPlan ? recordScopeComplete && historyLoaded && planSelection.unknown.length === 0 : null
   componentCompleteness.report_people = needsPeople ? componentCompleteness.report_people && recordScopeComplete && historyLoaded : null
   if (selectedSections && wants('risk_candidates') && needsCandidatePeople) {
-    componentCompleteness.risk_candidates = recordScopeComplete && componentCompleteness.report_people
+    componentCompleteness.risk_candidates = recordScopeComplete && componentCompleteness.report_people && overdueComplete
   }
   if (needsDetailNames) componentCompleteness[detailSection] = componentCompleteness[detailSection]
     && (!needsDetailOperators || historyLoaded) && detailNamesComplete
@@ -1369,6 +1378,7 @@ async function analyzeBusinessPeriod(args, context, database = db, now = new Dat
       event_time_basis: eventTimeBasis,
       completion_cutoff: completionCutoff,
       plan_completion_unknown_count: planSelection.unknown.length,
+      requirement_overdue_unknown_count: overdueUnknownCount,
       plan_completion_complete: componentCompleteness.plan_outlook !== false,
       population_basis: 'current_non_deleted_records',
       historical_ledger_complete: false,
@@ -1384,6 +1394,7 @@ async function analyzeBusinessPeriod(args, context, database = db, now = new Dat
         'BUG 未维护计划日期；workday 仅按周一至周五计算，不包含节假日与调休工作日。',
         '系统不提供统一预计恢复日期、结构化事项依赖或全量操作权限人员名册；这些能力的缺失或相关统计零值，不代表真实业务数量为零。',
         '当前存量和风险以本次执行时点为准。',
+        ...(overdueUnknownCount ? [`${overdueUnknownCount} 个需求缺少有效完成结论证据，逾期待核实，不计入确定逾期数量；相关逾期统计不完整。`] : []),
         '过去计划区间按当前有效计划日期统计，不还原历史计划版本。',
         `计划完成情况以 ${completionCutoff} 为观察截止日；区间归属仍使用当前有效计划日期及当前暂停排除规则，不表示历史承诺快照。`,
         '完成状态结合实际业务日期及可用状态操作顺序判断；pending 包含无法确认完成状态的记录，不确定数量单独披露。',

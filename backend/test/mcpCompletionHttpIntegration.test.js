@@ -64,6 +64,24 @@ test('完成率真实HTTP/PostgreSQL验证v3身份、计算、边界、拒绝、
   }
   const client=await connect('admin'),tools=(await client.listTools()).tools
   assert.ok(tools.some(t=>t.name==='business_completion_analysis'))
+  assert.equal(tools.find(t=>t.name==='requirement_search').outputSchema.properties.items.items.properties.overdue_pending.type,'boolean')
+  const yesterday=new Date(Date.parse(today+'T12:00:00Z')-86400000).toISOString().slice(0,10)
+  for(const [title,type,status,overdue,pending] of [['已出结论',1,2,null,false],['缺少结论',1,31,null,true],['暂停未完成',4,35,1,false]]){
+   const inserted=await db.prepare("INSERT INTO pms_requirement(title,product_id,owner_id,requirement_type,status,expected_end_date,submitter_name,submit_date) VALUES(?,?,1,?,?,?,'测试提报人',?)").run(title,product.lastInsertRowid,type,status,yesterday,today)
+   const queried=await client.callTool({name:'business_get',arguments:{domain:'requirement',target_id:Number(inserted.lastInsertRowid)}})
+   assert.equal(queried.isError,undefined,JSON.stringify(queried.structuredContent))
+   assert.equal(queried.structuredContent.is_overdue,overdue,title)
+   assert.equal(queried.structuredContent.overdue_pending,pending,title)
+   if(pending)assert.equal(queried.structuredContent.is_overdue_label,'待核实')
+  }
+  const invalidRequirement=await client.callTool({name:'business_get',arguments:{domain:'requirement',target_id:'invalid'}})
+  assert.equal(invalidRequirement.structuredContent.error.code,'MCP_ARGUMENT_INVALID')
+  const requirementPeriod=await client.callTool({name:'business_period_analysis',arguments:{analysis_period:{preset:'day',anchor_date:today},business_types:['requirement'],detail_query:{source:'stock',metric:'unfinished'}}})
+  assert.equal(requirementPeriod.isError,undefined,JSON.stringify(requirementPeriod.structuredContent))
+  const unknown=requirementPeriod.structuredContent.details.items.find(item=>item.name==='缺少结论')
+  assert.equal(unknown.is_overdue,null)
+  assert.equal(unknown.overdue_pending,true)
+  assert.equal(requirementPeriod.structuredContent.coverage.statistics_complete,false)
   const args={analysis_period:{preset:'day',anchor_date:today},business_types:['task'],page_size:1}
   const response=await client.callTool({name:'business_completion_analysis',arguments:args})
   assert.equal(response.isError,undefined,JSON.stringify(response.structuredContent))
@@ -80,6 +98,8 @@ test('完成率真实HTTP/PostgreSQL验证v3身份、计算、边界、拒绝、
   await db.prepare("INSERT INTO pms_user(employee_no,real_name,password,phone,status) VALUES(?,?,?,'13900000000',1)").run('NO_COMPLETION_ACCESS','无权限测试人员','unused-fixture-hash')
   const denied=await connect('NO_COMPLETION_ACCESS')
   assert.equal((await denied.listTools()).tools.some(t=>t.name==='business_completion_analysis'),false)
+  const deniedRequirement=await denied.callTool({name:'business_get',arguments:{domain:'requirement',target_id:Number(requirement.lastInsertRowid)}})
+  assert.equal(deniedRequirement.structuredContent.error.code,'MCP_PERMISSION_DENIED')
   const rejected=await denied.callTool({name:'business_completion_analysis',arguments:args})
   assert.equal(rejected.structuredContent.error.code,'MCP_PERMISSION_DENIED')
   const audits=await db.prepare("SELECT result_status,error_code,input_summary->>'_identity_version' identity_version FROM pms_mcp_audit_log WHERE tool_name='business_completion_analysis'").all()

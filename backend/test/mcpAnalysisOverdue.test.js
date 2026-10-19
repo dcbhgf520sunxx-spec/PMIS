@@ -4,7 +4,7 @@ const { analyzeBusinessData } = require('../src/services/mcpAnalysisService')
 
 const domains = [
   { domain: 'project', plan: 'expected_end_date', excluded: [2, 3, 4] },
-  { domain: 'requirement', plan: 'expected_end_date', excluded: [3, 13, 22, 33, 34, 35, 36, 37] },
+  { domain: 'requirement', plan: 'expected_end_date', excluded: [33, 34, 36, 37] },
   { domain: 'task', plan: 'expected_end_date', excluded: [2, 3, 4] },
   { domain: 'work_order', plan: 'expected_resolve_date', excluded: [2, 3, 4] },
 ]
@@ -20,9 +20,15 @@ for (const { domain, plan, excluded } of domains) {
     assert.doesNotMatch(query, /is_overdue/)
     assert.match(query, new RegExp(`${plan}[^<]*<`))
     assert.match(query, /AT TIME ZONE 'Asia\/Shanghai'/)
-    const exclusions = /status NOT IN \(([^)]+)\)/.exec(query)
-    assert.ok(exclusions, 'terminal and paused statuses must be excluded')
-    assert.deepEqual(exclusions[1].split(',').map(Number), excluded)
+    if (domain === 'requirement') {
+      assert.match(query, /requirement_type/)
+      assert.match(query, /pms_op_log/)
+      assert.match(query, /IS DISTINCT FROM FALSE/)
+    } else {
+      const exclusions = /status NOT IN \(([^)]+)\)/.exec(query)
+      assert.ok(exclusions, 'terminal and paused statuses must be excluded')
+      assert.deepEqual(exclusions[1].split(',').map(Number), excluded)
+    }
   })
 }
 
@@ -51,7 +57,7 @@ test('PostgreSQL overdue aggregates ignore stale caches and respect date/status 
     try {
       await client.query('BEGIN READ ONLY')
       await client.query("SET LOCAL TIME ZONE 'UTC'")
-      const base = { status: 1, is_deleted: 0, is_overdue: 0,
+      const base = { id: 1, requirement_type: 4, status: 1, is_deleted: 0, is_overdue: 0,
         expected_end_date: '2026-09-07', expected_resolve_date: '2026-09-07T12:00:00+08:00',
         created_at: '2026-09-03T12:00:00Z' }
       function fixtureDatabase(domain, rows) {
@@ -59,9 +65,11 @@ test('PostgreSQL overdue aggregates ignore stale caches and respect date/status 
           const query = toPostgresSql(sql).replace(/\$(\d+)/g, (_, index) => `$${Number(index) + 1}`)
             .replace(/CURRENT_TIMESTAMP/g, "TIMESTAMPTZ '2026-09-07T16:30:00Z'")
           return { all: async (...params) => (await client.query(`WITH pms_${domain} AS (
-            SELECT * FROM jsonb_to_recordset($1::JSONB) AS fixture(status INTEGER,is_deleted INTEGER,
+            SELECT * FROM jsonb_to_recordset($1::JSONB) AS fixture(id INTEGER,requirement_type INTEGER,status INTEGER,is_deleted INTEGER,
               is_overdue INTEGER,expected_end_date DATE,expected_resolve_date TIMESTAMPTZ,created_at TIMESTAMPTZ)
-            ) ${query}`, [JSON.stringify(rows), ...params])).rows }
+            ), pms_op_log AS (SELECT 0 id,NULL::text operation_id,0 user_id,NULL::text old_value,NULL::text new_value,
+              NULL::text module,NULL::int target_id,NULL::text field_name,NULL::timestamptz created_at WHERE FALSE)
+            ${query}`, [JSON.stringify(rows), ...params])).rows }
         } }
       }
       for (const { domain, excluded } of domains) {
@@ -75,10 +83,11 @@ test('PostgreSQL overdue aggregates ignore stale caches and respect date/status 
             { ...base, is_deleted: 1, is_overdue: 1 },
             ...excluded.map(status => ({ ...base, status, is_overdue: 1 })),
             ...(domain === 'work_order' ? [{ ...base, status: 5 }] : []),
+            ...(domain === 'requirement' ? [{ ...base, status: 35 }] : []),
           ]
           const database = fixtureDatabase(domain, rows)
           const result = await analyzeBusinessData({ domain, metric: 'overdue_count' }, database)
-          assert.equal(result.results[0].value, domain === 'work_order' ? 3 : 2)
+          assert.equal(result.results[0].value, ['work_order', 'requirement'].includes(domain) ? 3 : 2)
           for (const status of excluded) {
             const filtered = await analyzeBusinessData({ domain, metric: 'overdue_count', status }, database)
             assert.equal(filtered.results[0].value, 0, `terminal status ${status}`)

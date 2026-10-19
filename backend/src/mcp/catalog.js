@@ -885,7 +885,7 @@ const SEARCH_OUTPUT_FIELDS = {
     id: outputField('需求标识'), title: outputField('需求标题'), requirement_type: outputField('需求类型代码'),
     requirement_type_label: outputField('需求类型中文名称'), priority: outputField('优先级代码'),
     priority_label: outputField('优先级中文名称'), status: outputField('需求状态代码'),
-    status_label: outputField('需求状态中文名称'), is_overdue: outputField('逾期代码；暂停或终态为空'),
+    status_label: outputField('需求状态中文名称'), is_overdue: outputField('逾期代码；按完成率结论判断，已完成、已关闭或待核实为空'), overdue_pending: { type: 'boolean', description: '需求完成结论证据不足，逾期待核实' },
     is_overdue_label: outputField('逾期状态中文名称'), product_id: outputField('所属产品标识'),
     product_name: outputField('所属产品名称'), owner_id: outputField('负责人标识'), owner_name: outputField('负责人姓名'),
     expected_end_date: outputField('预计完成日期，YYYY-MM-DD'),
@@ -1027,7 +1027,8 @@ function periodAnalysisOutputSchema() {
     owner_ids: ids, creator_id: nullableId, updater_id: nullableId,
     status: { type: 'integer' }, status_label: text,
     priority: { type: ['integer', 'null'] }, priority_label: { type: ['string', 'null'] },
-    plan_date: nullableDate, overdue_days: count, is_overdue: { type: 'boolean' },
+    plan_date: nullableDate, overdue_days: count, is_overdue: { type: ['boolean', 'null'], description: '需求已完成、已关闭、不参与或待核实时为空' },
+    overdue_pending: { type: 'boolean', description: '需求完成结论证据不足，逾期待核实' },
     people: {
       type: 'array', items: object({
         user_id: { type: 'integer', minimum: 1 }, name: text,
@@ -1094,6 +1095,7 @@ function periodAnalysisOutputSchema() {
       historical_stock_supported: { const: false }, historical_plan_versions_supported: { const: false },
       unsupported_dimensions: strings, notes: strings,
       plan_completion_unknown_count: count, plan_completion_complete: { type: 'boolean' },
+      requirement_overdue_unknown_count: described(count, '需求完成结论证据不足的数量，不能把未核实当作未逾期'),
       event_history_inconsistent_count: described(count, '当前状态与已取得事件历史不一致的事项数，相关流量不能把未取得当成0'),
       component_completeness: described(object({
         business_records: { type: ['boolean', 'null'] }, event_history: { type: ['boolean', 'null'] },

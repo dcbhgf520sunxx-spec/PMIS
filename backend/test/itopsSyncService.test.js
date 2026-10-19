@@ -67,7 +67,7 @@ test('i8 更新需求时保留 PMIS 已调整的优先级且不生成优先级�
     actualEndDate: null, completionStatus: null,
   }, { product_id: 75 }, { id: 88 }, {
     id: 102, title: '来源需求', description, requirement_type: 4, product_id: 75,
-    owner_id: 88, priority: 2, status: 31, is_overdue: 0, submitter_name: 'i8',
+    owner_id: 88, priority: 2, status: 31, is_overdue: null, submitter_name: 'i8',
     submitter_dept: 'i8', submit_date: '2026-08-24', expected_end_date: null,
     actual_end_date: null, completion_status: null,
   }, 99)
@@ -98,7 +98,7 @@ test('i8 重复写入完全相同的需求时不生成空变更历史', async ()
     actualEndDate: null, completionStatus: null,
   }, { product_id: 75 }, { id: 88 }, {
     id: 103, title: '来源需求', description, requirement_type: 4, product_id: 75,
-    owner_id: 88, priority: 1, status: 31, is_overdue: 0, submitter_name: 'i8',
+    owner_id: 88, priority: 1, status: 31, is_overdue: null, submitter_name: 'i8',
     submitter_dept: 'i8', submit_date: '2026-08-24', expected_end_date: null,
     actual_end_date: null, completion_status: null,
   }, 99)
@@ -191,7 +191,7 @@ test('i8 更新需求和工单时刷新来源提交信息并写入变更历史',
     actualEndDate: null, completionStatus: null, ...submitter,
   }, { product_id: 75 }, { id: 88 }, {
     id: 401, title: '来源需求', description: '<!-- i8-sync:start -->\n<p>来源需求</p>\n<!-- i8-sync:end -->',
-    requirement_type: 4, product_id: 75, owner_id: 88, priority: 0, status: 31, is_overdue: 0,
+    requirement_type: 4, product_id: 75, owner_id: 88, priority: 0, status: 31, is_overdue: null,
     submitter_name: 'i8', submitter_dept: 'i8', submit_date: '2026-08-24', expected_end_date: null,
     actual_end_date: null, completion_status: null,
   }, 99)

@@ -1,3 +1,4 @@
+const { completionForChange } = require('./requirementCompletionRules')
 const { calculateOverdue, POLICIES } = require('./overdueRules')
 const { validateActualBusinessDate } = require('./actualBusinessDateRules')
 const { BUSINESS_FIELD_LIMITS } = require('./businessFieldRules')
@@ -54,8 +55,12 @@ function resolveRequirementStatusFields(old, target, values = {}) {
     closeReason: Number(target) === 37 ? String(values.close_reason || '').trim() : null,
   }
 }
-function calculateRequirementOverdue(date, status, today) {
-  return calculateOverdue('requirement', { date, status }, today).isOverdue
+function calculateRequirementOverdue(date, status, today, record = {}) {
+  return calculateOverdue('requirement', { date, status, requirementType: record.requirement_type, completion: record.requirement_completion }, today).isOverdue
+}
+async function calculateRequirementOverdueForChange(database, record, status = Number(record.status)) {
+  const completion = await completionForChange(database, record, status)
+  return calculateRequirementOverdue(record.expected_end_date, status, undefined, { ...record, requirement_completion: completion })
 }
 function requirementDeleteBlocker(counts = {}) {
   if (Number(counts.project_count)) return '该需求已关联项目，无法删除'
@@ -69,4 +74,4 @@ function validateRequirementRelease(type, values = {}) {
   return validateRequirementStatusChange(Number(values.status), values)
 }
 
-module.exports = { validateRequirementRelease, TERMINAL, initialRequirementStatus, resolveRequirementTypeChange, allowedRequirementStatuses, validateRequirementStatusChange, resolveRequirementStatusFields, calculateRequirementOverdue, requirementDeleteBlocker }
+module.exports = { validateRequirementRelease, TERMINAL, initialRequirementStatus, resolveRequirementTypeChange, allowedRequirementStatuses, validateRequirementStatusChange, resolveRequirementStatusFields, calculateRequirementOverdue, calculateRequirementOverdueForChange, requirementDeleteBlocker }

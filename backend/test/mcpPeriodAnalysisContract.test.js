@@ -123,6 +123,9 @@ test('compact detail output excludes aggregate sections and validates people and
   }
   const stock = { ...compact, details: { ...compact.details, source: 'stock', metric: 'unfinished', items: [task] } }
   assert.equal(outputValid(stock).valid, true, outputValid(stock).errorMessage)
+  const unknownRequirement = { ...task, business_type: 'requirement', business_type_label: '需求',
+    is_overdue: null, overdue_pending: true }
+  assert.equal(outputValid({ ...stock, details: { ...stock.details, items: [unknownRequirement] } }).valid, true)
   assert.equal(outputValid({ ...stock, details: { ...stock.details, items: [{ ...task, status_label: 1 }] } }).valid, false)
   assert.equal(outputValid({ ...stock, details: { ...stock.details, metric: 'completed' } }).valid, false)
 })

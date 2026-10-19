@@ -95,7 +95,7 @@ async function analyzeBusinessData(args, database = db) {
     definition: metric === 'amount_sum'
       ? '有效记录金额合计'
       : metric === 'overdue_count'
-        ? '筛选范围内按当前业务状态与计划日期实时计算的逾期数量（上海当天，排除终态及暂停；日期筛选按创建时间）'
+        ? (args.domain === 'requirement' ? '按完成率的有效完成结论及最新计划日期判断需求逾期；未完成暂停继续参与，缺少结论证据不计为已逾期或未逾期；日期筛选按创建时间' : '筛选范围内按当前业务状态与计划日期实时计算的逾期数量（上海当天，排除终态及暂停；日期筛选按创建时间）')
         : metric === 'status_distribution'
           ? '有效记录按状态分组的数量'
           : '有效记录数量',
