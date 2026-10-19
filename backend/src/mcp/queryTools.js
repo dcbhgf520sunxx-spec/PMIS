@@ -100,6 +100,7 @@ function decorateObject(value, mappings) {
     const label = mappings[field]?.[String(item)]
     if (label !== undefined) decorated[`${field}_label`] = label
   }
+  if (decorated.overdue_pending) decorated.is_overdue_label = '待核实'
   return decorated
 }
 

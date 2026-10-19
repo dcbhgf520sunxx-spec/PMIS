@@ -151,7 +151,7 @@ async function saveRequirement(tx, mapped, config, owner, target, actorId) {
   }
   const title = await uniqueRequirementTitle(tx, mapped.title, mapped.externalCode, target?.id)
   const description = mergeSyncedSection(target?.description, mapped.syncedSection)
-  const overdue = calculateRequirementOverdue(mapped.expectedEndDate, mapped.status)
+  const overdue = calculateRequirementOverdue(mapped.expectedEndDate, mapped.status, undefined, { requirement_type: 4 })
   const submitterName = String(mapped.submitterName || '').trim() || 'i8'
   const submitterDept = String(mapped.submitterDept || '').trim() || 'i8'
   const nextValues = {

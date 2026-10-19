@@ -9,7 +9,7 @@ test('统一逾期按上海自然日计算，支持终态、父项目暂停及�
   }
   assert.equal(calculateOverdue('work_order',{date:'2026-09-19',status:4},'2026-09-21').isOverdue,0)
   assert.equal(calculateOverdue('work_order',{date:'2026-09-20T20:00:00Z',status:1},'2026-09-21').isOverdue,0)
-  assert.equal(calculateOverdue('requirement',{date:'2026-09-19',status:35},'2026-09-21').isOverdue,null)
+  assert.equal(calculateOverdue('requirement',{date:'2026-09-19',status:35},'2026-09-21').isOverdue,1)
   assert.equal(calculateOverdue('stage_plan',{date:'2026-09-19',status:1,parentStatus:3},'2026-09-21').isOverdue,0)
 })
 test('SQL只允许服务端字段名，不允许注入任意表达式',()=>{
@@ -26,14 +26,14 @@ test('同一套规则在SQL和对象计算中一致，包括凌晨、月末及�
     ['requirement', 31, '2026-09-20', 1, 1], ['requirement', 33, '2026-09-20', null, 0],
     ['requirement', 3, '2026-09-20', null, 0], ['requirement', 13, '2026-09-20', null, 0],
     ['requirement', 22, '2026-09-20', null, 0], ['requirement', 34, '2026-09-20', null, 0],
-    ['requirement', 35, '2026-09-20', null, 0],
+    ['requirement', 35, '2026-09-20', 1, 1],
     ['task', 1, '2026-09-20', 1, 1], ['task', 2, '2026-09-20', 0, 0],
     ['work_order', 4, '2026-09-20', 0, 0], ['work_order', 5, '2026-09-20', 1, 1],
     ['work_order', 1, '2026-09-20T20:00:00Z', 0, 0],
     ['stage_plan', 1, '2026-09-20', 1, 1], ['stage_plan', 1, '2026-09-20', 0, 0, 3],
   ]
   for (const type of ['project','requirement','task','work_order','stage_plan']) {
-    cases.push([type,1,null,0,0], [type,1,'2026-09-21',0,0], [type,1,'2026-09-22',0,0], [type,1,'2026-08-31',1,21])
+    cases.push([type,1,null,type === 'requirement' ? null : 0,0], [type,1,'2026-09-21',0,0], [type,1,'2026-09-22',0,0], [type,1,'2026-08-31',1,21])
   }
   try {
     await client.query('BEGIN READ ONLY')
@@ -41,11 +41,11 @@ test('同一套规则在SQL和对象计算中一致，包括凌晨、月末及�
     for (const [type,status,date,flag,days,parentStatus=1] of cases) {
       const expression = overdueSql(type, {alias:'r',parentAlias:'p'})
       const fields = expression.fields.replaceAll('CURRENT_TIMESTAMP', "TIMESTAMPTZ '2026-09-20T16:01:00Z'")
-      const result = await client.query(`SELECT ${fields} FROM
-        (SELECT $1::int status, $2::date expected_end_date, $2::date current_due_date,
+      const result = await client.query(`WITH pms_op_log AS (SELECT 0 id,0 target_id,NULL::text module,NULL::text field_name,NULL::text old_value,NULL::text new_value,NULL::text operation_id,0 user_id,NOW() created_at WHERE FALSE) SELECT ${fields} FROM
+        (SELECT 0 id,$5::int requirement_type,$1::int status, $2::date expected_end_date, $2::date current_due_date,
           $3::timestamptz expected_resolve_date) r CROSS JOIN (SELECT $4::int status) p`,
-      [status, date?.slice(0,10) || null, date && date.length === 10 ? `${date}T00:00:00+08:00` : date, parentStatus])
-      assert.deepEqual(result.rows[0], {is_overdue:flag, overdue_days:days}, `${type}/${status}/${date}/${parentStatus}`)
+      [status, date?.slice(0,10) || null, date && date.length === 10 ? `${date}T00:00:00+08:00` : date, parentStatus, ({ 2: 1, 3: 1, 12: 2, 13: 2, 21: 3, 22: 3 }[status] || 4)])
+      assert.deepEqual({ is_overdue: result.rows[0].is_overdue, overdue_days: result.rows[0].overdue_days }, {is_overdue:flag, overdue_days:days}, `${type}/${status}/${date}/${parentStatus}`)
       assert.deepEqual(calculateOverdue(type,{status,date,parentStatus},'2026-09-21'),{isOverdue:flag,overdueDays:days})
     }
   } finally {

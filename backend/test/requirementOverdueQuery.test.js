@@ -29,14 +29,14 @@ test('PostgreSQL 需求列表、详情、统计和相邻记录统一跨日及终
   const { toPostgresSql } = require('../src/dbSql')
   const client = await db.pool.connect()
   const fixtures = `pms_requirement AS (
-    SELECT id, status, expected_end_date::date, is_overdue, 0 is_deleted,
+    SELECT id, status, CASE WHEN status=3 THEN 1 WHEN status=13 THEN 2 WHEN status=22 THEN 3 ELSE 4 END requirement_type, expected_end_date::date, is_overdue, 0 is_deleted,
       1 product_id,1 owner_id,1 creator_id,1 updater_id,'2026-09-01'::timestamp created_at
     FROM (VALUES (1,31,'2026-09-20',0),(2,31,'2026-09-21',1),(3,31,NULL,1),
       (4,33,'2026-09-20',1),(5,35,'2026-09-20',1),(6,3,'2026-09-20',1),
       (7,13,'2026-09-20',1),(8,22,'2026-09-20',1),(9,34,'2026-09-20',1)
     ) v(id,status,expected_end_date,is_overdue)
   ), pms_product AS (SELECT 1 id,'产品' name), pms_user AS (SELECT 1 id,'负责人' real_name),
-  pms_op_log AS (SELECT NULL::text old_value, NULL::text new_value, NULL::text module,
+  pms_op_log AS (SELECT 0 id,NULL::text operation_id,0 user_id,NULL::text old_value, NULL::text new_value, NULL::text module,
     NULL::int target_id,NULL::text action,NULL::text field_name,NULL::timestamp created_at WHERE FALSE)`
   try {
     await client.query('BEGIN READ ONLY')
@@ -55,18 +55,18 @@ test('PostgreSQL 需求列表、详情、统计和相邻记录统一跨日及终
     }
     const req = (query) => ({ query, user: { id: 1 } })
     const overdue = await call('list', req({ is_overdue: 1 }))
-    assert.equal(overdue.total, 1)
-    assert.deepEqual(overdue.list.map(row => [row.id,row.is_overdue]), [[1,1]])
-    assert.deepEqual(overdue.viewCounts, { all: 1, mine: 1 })
+    assert.equal(overdue.total, 2)
+    assert.deepEqual(overdue.list.map(row => [row.id,row.is_overdue]), [[5,1],[1,1]])
+    assert.deepEqual(overdue.viewCounts, { all: 2, mine: 2 })
     const normal = await call('list', req({ is_overdue: 0 }))
-    assert.deepEqual(normal.list.map(row => row.id), [3,2])
-    for (const id of [4,5,6,7,8,9]) {
+    assert.deepEqual(normal.list.map(row => row.id), [2])
+    for (const id of [3,4,6,7,8,9]) {
       assert.equal((await call('getById', { params: { id } })).is_overdue, null)
     }
     assert.equal((await call('getById', { params: { id: 1 } })).is_overdue, 1)
     const neighbors = await call('neighbors', req({ id: 1, is_overdue: 1 }))
-    assert.equal(Number(neighbors.total), 1)
-    assert.equal(neighbors.prevId, null)
+    assert.equal(Number(neighbors.total), 2)
+    assert.equal(Number(neighbors.prevId), 5)
     assert.equal(neighbors.nextId, null)
   } finally {
     await client.query('ROLLBACK')

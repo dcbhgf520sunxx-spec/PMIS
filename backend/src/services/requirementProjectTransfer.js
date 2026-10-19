@@ -1,4 +1,4 @@
-const { validateRequirementRelease, resolveRequirementStatusFields, calculateRequirementOverdue } = require('./requirementRules')
+const { validateRequirementRelease, resolveRequirementStatusFields, calculateRequirementOverdueForChange } = require('./requirementRules')
 
 function transferError(message) {
   const error = new Error(message)
@@ -16,7 +16,7 @@ async function releaseRequirement(tx, row, values, user, ip, projectName) {
   if (error) throw transferError(error)
   const status = Number(values.status)
   const fields = resolveRequirementStatusFields(row, status, values)
-  const next = { status, actual_end_date: fields.actualEndDate, completion_status: fields.completionStatus, pause_date: fields.pauseDate, pause_reason: fields.pauseReason, close_date: fields.closeDate, close_reason: fields.closeReason, is_overdue: calculateRequirementOverdue(row.expected_end_date, status) }
+  const next = { status, actual_end_date: fields.actualEndDate, completion_status: fields.completionStatus, pause_date: fields.pauseDate, pause_reason: fields.pauseReason, close_date: fields.closeDate, close_reason: fields.closeReason, is_overdue: await calculateRequirementOverdueForChange(tx, row, status) }
   await tx.prepare('UPDATE pms_requirement SET status=?,actual_end_date=?,completion_status=?,pause_date=?,pause_reason=?,close_date=?,close_reason=?,is_overdue=?,updater_id=?,updated_at=NOW() WHERE id=?').run(...Object.values(next), user, row.id)
   await tx.writeLogs(user, '项目解除关联', '需求', row.id, [{ field: '关联项目', oldVal: projectName, newVal: null }, ...Object.entries(next).filter(([field, value]) => String(row[field] ?? '') !== String(value ?? '')).map(([field, value]) => ({ field, oldVal: row[field], newVal: value }))], ip, row.title)
 }

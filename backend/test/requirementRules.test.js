@@ -60,7 +60,7 @@ test('changing requirement path resets pre-delivery status and locks delivery st
 
 test('terminal requirement statuses do not carry overdue state', () => {
   assert.equal(calculateRequirementOverdue('2020-01-01', 33, '2026-07-12'), null)
-  assert.equal(calculateRequirementOverdue('2020-01-01', 35, '2026-07-12'), null)
+  assert.equal(calculateRequirementOverdue('2020-01-01', 35, '2026-07-12'), 1)
   assert.equal(calculateRequirementOverdue('2026-07-11', 31, '2026-07-12'), 1)
   assert.equal(calculateRequirementOverdue('2026-07-12', 31, '2026-07-12'), 0)
 })
@@ -71,6 +71,6 @@ test('需求在上海午夜立即逾期，终态及无日期保持原口径', (t
   assert.equal(calculateRequirementOverdue('2026-09-20', 31), 1)
   assert.equal(calculateRequirementOverdue('2026-09-21', 31), 0)
   assert.equal(calculateRequirementOverdue('2026-09-22', 31), 0)
-  assert.equal(calculateRequirementOverdue(null, 31), 0)
-  for (const status of [3,13,22,33,34,35]) assert.equal(calculateRequirementOverdue('2026-09-20', status), null)
+  assert.equal(calculateRequirementOverdue(null, 31), null)
+  for (const status of [3,13,22,33,34]) assert.equal(calculateRequirementOverdue('2026-09-20', status), null)
 })

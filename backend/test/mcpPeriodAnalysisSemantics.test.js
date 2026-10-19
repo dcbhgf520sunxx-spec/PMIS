@@ -87,6 +87,21 @@ async function analyze(records, logs = [], args = {}) {
   database(records, logs), NOW)
 }
 
+test('需求结论待核实在周期明细保留空逾期值，统计披露不完整且续页绑定该状态', async () => {
+  const rows = [1,2].map(id => record({ business_type: 'requirement', id, requirement_type: 1,
+    status: 31, requirement_completion: null, overdue_pending: true, is_overdue: null }))
+  const query = { source: 'stock', metric: 'unfinished', page_size: 1 }
+  const result = await analyze(rows, [], { detail_query: query })
+  assert.equal(result.details.items[0].is_overdue, null)
+  assert.equal(result.details.items[0].overdue_pending, true)
+  assert.equal(result.coverage.statistics_complete, false)
+  assert.equal(result.coverage.requirement_overdue_unknown_count, 2)
+  rows[1].requirement_completion = true
+  rows[1].overdue_pending = false
+  await assert.rejects(analyze(rows, [], { detail_query: { ...query, page: 2,
+    dataset_token: result.details.datasetToken } }), error => error.code === 'MCP_DATA_CHANGED')
+})
+
 test('完成截止日与计划归属区间独立，支持检查区间结束后的实际完成', async () => {
   const rows = [record({ status: 2, is_completed: true, actual_date: '2026-09-07' })]
   const logs = transition('task', 1, 'complete', 1, 2, '2026-09-07T04:00:00Z', 'actual_end_date', '2026-09-07')
@@ -298,4 +313,22 @@ test('进入逾期当天暂停不回溯到前一天，无日志明确暂停日�
   assert.equal(result.period_flows.total.became_overdue, 1)
   const withoutHistory = await analyze(rows, [], { analysis_period: period('2026-09-05') })
   assert.equal(withoutHistory.period_flows.total.paused, 1)
+})
+
+test('需求结论后暂停再重新评估，按重评当天重新进入逾期', async () => {
+  const rows = [record({ business_type: 'requirement', requirement_type: 1, id: 1, status: 35,
+    plan_date: '2026-10-05', requirement_completion: false, is_paused: true, pause_date: '2026-10-11' })]
+  const logs = [
+    ...transition('requirement', 1, 'conclusion', 1, 2, '2026-10-02T10:00:00+08:00'),
+    ...transition('requirement', 1, 'pause-done', 2, 35, '2026-10-03T10:00:00+08:00', 'pause_date', '2026-10-03'),
+    ...transition('requirement', 1, 're-evaluate', 35, 0, '2026-10-10T10:00:00+08:00'),
+    ...transition('requirement', 1, 'pause-open', 0, 35, '2026-10-11T10:00:00+08:00', 'pause_date', '2026-10-11'),
+  ].map((log, index) => ({ ...log, log_id: index + 1 }))
+  const result = await analyzeBusinessPeriod({ analysis_period: period('2026-10-01', '2026-10-19'),
+    business_types: ['requirement'], sections: ['period_flows', 'current_stock'],
+    metrics: ['became_overdue', 'new_overdue_unresolved'] },
+  { allowedMenuPaths: new Set(['/requirements']) }, database(rows, logs), new Date('2026-10-19T12:00:00+08:00'))
+  assert.equal(result.current_stock.total.overdue, 1)
+  assert.equal(result.period_flows.total.became_overdue, 1)
+  assert.equal(result.period_flows.total.new_overdue_unresolved, 1)
 })
