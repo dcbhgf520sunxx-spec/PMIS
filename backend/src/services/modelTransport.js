@@ -25,12 +25,12 @@ async function resolvePublicAddress(hostname, lookup = dns.lookup) {
   if (!records.length || records.some(row => !publicIp(row.address))) throw invalid();
   return records[0];
 }
-async function requestChat({ baseUrl, apiKey, model, messages, timeoutSeconds = 30 }) {
+async function requestChat({ baseUrl, apiKey, model, messages, timeoutSeconds = 30, maxTokens = 500 }) {
   const base = validateModelUrl(baseUrl);
   const hostname = base.hostname.replace(/^\[|\]$/g, '');
   const address = await resolvePublicAddress(hostname);
   const url = new URL(base.href.replace(/\/+$/, '') + '/chat/completions');
-  const payload = JSON.stringify({ model, messages, max_tokens: 500, stream: false,
+  const payload = JSON.stringify({ model, messages, max_tokens: maxTokens, stream: false,
     ...(hostname === 'api.deepseek.com' ? { thinking: { type: 'disabled' } } : {}) });
   return new Promise((resolve, reject) => {
     // Pin the checked address so a second DNS lookup cannot redirect credentials into the private network.

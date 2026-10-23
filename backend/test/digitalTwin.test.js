@@ -56,6 +56,50 @@ test('链路明细按创建时间倒序，同一时间按数值编号倒序且�
     assert.deepEqual(data, original);
     assert.equal(result.attention[0].id, '9007199254740992');
 });
+test('产品需求、项目、工单按计划日期倒序，无计划置后，不受完成情况或优先级干扰', () => {
+    const data = empty();
+    for (const kind of ['requirements', 'projects', 'orders']) {
+        const dateField = kind === 'orders' ? 'expected_resolve_date' : 'expected_end_date';
+        data[kind] = [row('1', { [dateField]: '2026-10-10', priority: 2 }),
+            row('2', { [dateField]: '2026-10-20', status: 2 }),
+            row('3', { created_at: '2026-10-23 08:00:00' }),
+            row('4', { [dateField]: '2026-10-20', created_at: '2026-10-10 08:00:00' })];
+    }
+    const before = structuredClone(data);
+    const result = buildSnapshot(data, permitted, '2026-10-23 12:00:00');
+    for (const kind of ['requirements', 'projects', 'orders'])
+        assert.deepEqual(result.records.filter(r => r.kind === kind).map(r => r.id), ['4', '2', '1', '3']);
+    assert.deepEqual(data, before);
+});
+test('产品任务、缺陷按授权业务归属连续排列，子任务归入业务来源，组内日期倒序且不排完成情况', () => {
+    const data = empty();
+    data.projects = [row('10', { name: '项目2', product_id: '1' }), row('20', { name: '项目10', product_id: '1' })];
+    data.requirements = [row('30', { name: '项目2', product_id: '1' })];
+    for (const kind of ['tasks', 'bugs']) data[kind] = [
+        row('1', { project_id: '10', expected_end_date: '2026-10-10', created_at: '2026-10-10 08:00:00' }),
+        row('2', { project_id: '20', expected_end_date: '2026-10-23', created_at: '2026-10-23 08:00:00' }),
+        row('3', { project_id: '10', expected_end_date: '2026-10-20', created_at: '2026-10-20 08:00:00', status: 2 }),
+        row('4', { project_id: '10', parent_task_id: kind === 'tasks' ? '1' : null, expected_end_date: '2026-10-15', created_at: '2026-10-15 08:00:00' }),
+        row('5', { requirement_id: '30', expected_end_date: '2026-10-23', created_at: '2026-10-23 08:00:00' }),
+        row('6', { project_id: '10', expected_end_date: null, created_at: '2026-10-22 08:00:00' })
+    ];
+    const result = buildSnapshot(data, permitted, '2026-10-23 12:00:00');
+    assert.deepEqual(result.records.filter(r => r.kind === 'tasks').map(r => r.id), ['3', '4', '1', '6', '5', '2']);
+    assert.deepEqual(result.records.filter(r => r.kind === 'bugs').map(r => r.id), ['6', '3', '4', '1', '5', '2']);
+    assert.equal(result.records.find(r => r.kind === 'tasks' && r.id === '4').parentName, '项目2');
+    const restricted = buildSnapshot(data, new Set(['/products', '/tasks', '/bugs']), '2026-10-23 12:00:00');
+    assert.deepEqual(restricted.records.filter(r => r.kind === 'tasks').map(r => r.id), ['5', '2', '3', '4', '1', '6']);
+    assert.ok(!JSON.stringify(restricted.records).includes('项目2'));
+    assert.ok(!JSON.stringify(restricted.records).includes('项目10'));
+});
+test('项目阶段、关键事项和付款阶段保留来源业务顺序，不被日期或状态覆盖', () => {
+    const data = empty();
+    for (const kind of ['planStages', 'planItems', 'paymentStages'])
+        data[kind] = [row('1', { created_at: '2026-10-01 08:00:00', status: 2 }), row('2')];
+    const result = buildSnapshot(data, permitted, '2026-10-23 12:00:00');
+    for (const kind of ['planStages', 'planItems', 'paymentStages'])
+        assert.deepEqual(result.records.filter(r => r.kind === kind).map(r => r.id), ['1', '2']);
+});
 test('任务层级和修复待验证缺陷不重复相加', () => {
     const data = empty();
     data.tasks = [row('1', { status: 2 }), row('2', { parent_task_id: '1', status: 2 }), row('3', { status: 3 }), row('4', { status: 1 })];
@@ -139,11 +183,12 @@ test('无产品权限立即拒绝，不产生业务查询', async () => {
 });
 test('未授权来源不暴露名称、ID与详情地址', () => {
     const data = empty();
-    data.tasks = [row('10', { project_id: '900', source_type: 1 })];
+    data.tasks = [row('10', { project_id: '900', source_type: 1 }), row('11', { parent_task_id: '10', project_id: '900', source_type: 1 })];
     const result = buildSnapshot(data, new Set(['/products', '/tasks']), '2026-10-09 12:00:00');
     const task = result.records.find(x => x.kind === 'tasks');
     assert.ok(!JSON.stringify(task).includes('900'));
     assert.equal(task.parentName, '来源模块未授权');
+    assert.equal(result.records.find(x => x.kind === 'tasks' && x.id === '11').parentName, '来源模块未授权');
 });
 test('菜单置于业务本体之后并单独授权，初始化和迁移一致', () => {
     const root = path.resolve(__dirname, '../..');

@@ -106,3 +106,24 @@ export function graphLayout(w: number, height: number, selected: string, view: s
     });
     return { width: w, height: h, boxes, wires };
 }
+
+export const personalEdges = ['requirement', 'project', 'work', 'plan', 'quality', 'order'].map(key => ['person', key] as const);
+export function personalGraphLayout(w: number, height: number, selected: string, heights: Record<string, number> = {}) {
+    const narrow = w < 460, pad = 12;
+    const size = Math.min(216, Math.floor((w - (narrow ? 36 : 96)) / (narrow ? 2 : 3)));
+    const step = height + 18, center = (w - size) / 2, right = w - pad - size;
+    const pos: Record<string, Point> = { person: [center, narrow ? 12 : 12 + step] };
+    const keys = narrow ? ['requirement', 'project', 'plan', 'work', 'quality', 'order'] : ['requirement', 'plan', 'project', 'quality', 'work', 'order'];
+    keys.forEach((key, index) => { pos[key] = [index % 2 ? right : pad, 12 + step * (Math.floor(index / 2) + (narrow ? 1 : 0))]; });
+    const boxes: Record<string, Box> = Object.fromEntries(Object.entries(pos).map(([key, [x, y]]) => [key, { x, y, w: size, h: heights[key] || height }]));
+    const person = boxes.person;
+    const wires = keys.map((key, index) => {
+        const box = boxes[key], isRight = index % 2 === 1;
+        const first: Point = narrow ? [w / 2, person.y + person.h] : [isRight ? person.x + person.w : person.x, person.y + person.h * (.2 + Math.floor(index / 2) * .3)];
+        const last: Point = [isRight ? box.x : box.x + box.w, box.y + box.h / 2];
+        const bend = narrow ? w / 2 : (first[0] + last[0]) / 2;
+        const path = narrow ? `M${first.join(' ')} L${bend} ${last[1]} L${last.join(' ')}` : `M${first.join(' ')} C${bend} ${first[1]} ${bend} ${last[1]} ${last.join(' ')}`;
+        return { key: `person:${key}`, a: 'person', b: key, path, lit: selected === 'person' || selected === key, service: false, opacity: 1, last, label: '', labelX: 0, labelY: 0 };
+    });
+    return { width: w, height: Math.max(...Object.values(boxes).map(box => box.y + box.h)) + 16, boxes, wires };
+}
