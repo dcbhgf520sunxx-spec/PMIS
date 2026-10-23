@@ -107,3 +107,18 @@ test('DeepSeek调用使用服务端凭据，未配置和上游错误不会泄露
   await assert.rejects(completeSummary({}, { apiKey: 'test-secret', fetchImpl: async () => ({ ok: false, status: 401 }) }), error => error.status === 502 && !error.message.includes('test-secret'));
   await assert.rejects(completeSummary({}, { apiKey: 'test-secret', fetchImpl: async () => ({ ok: true, json: async () => ({ choices: [{ finish_reason: 'length', message: { content: '截断' } }] }) }) }), { status: 502 });
 });
+
+test('真实产品证据的时间说明不进入个人周期简报流程', async () => {
+  const evidence = buildSummaryEvidence(snapshot());
+  let calls = 0;
+  const result = await completeSummary(evidence, { apiKey: 'test-secret', fetchImpl: async (_url, init) => {
+    calls++;
+    const body = JSON.parse(init.body);
+    assert.ok(body.messages[0].content.includes('recentExamples'));
+    assert.equal(body.max_tokens, 500);
+    return { ok: true, json: async () => ({ choices: [{ finish_reason: 'stop', message: { content: '推进产品检索联调。下一步验证异常分支。' } }] }) };
+  } });
+  assert.equal(calls, 1);
+  assert.equal(result.text, '推进产品检索联调。下一步验证异常分支。');
+  assert.equal(result.sections, undefined);
+});

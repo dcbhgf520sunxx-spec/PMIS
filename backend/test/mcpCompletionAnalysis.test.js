@@ -17,6 +17,37 @@ function calc(records, logs = [], options = {}) {
     types: [...new Set(records.map(r => r.business_type))], period, today, cutoff: today, ...options })
 }
 const summary = (result, type, person = 8) => result.results.find(r => r.business_type === type && r.person_id === person)
+test('正常创建后状态未变的任务和BUG可按创建证据还原；导入缺初始状态仍未知', () => {
+  const records=[row('task',101,{status:0,created_date:'2026-10-01',created_at:'2026-10-01T09:00:00+08:00',plan_date:'2026-10-20'}),
+    row('bug',102,{status:0,created_date:'2026-10-01',created_at:'2026-10-01T09:00:00+08:00'}),
+    row('task',103,{status:0,created_date:'2026-10-01',plan_date:'2026-10-20'})]
+  const logs=records.map(r=>({business_type:r.business_type,target_id:r.id,action:r.id===103?'历史导入':'新增',field_name:null,created_at:r.created_at,log_id:r.id}))
+  const result=calc(records,logs)
+  assert.equal(result.details.find(d=>d.record_id===101).included,true)
+  assert.equal(result.details.find(d=>d.record_id===102).included,true)
+  assert.equal(result.details.find(d=>d.record_id===103).included,null)
+  const childCreation={...logs[0],field_name:'parent_task_id',old_value:null,new_value:'999'}
+  assert.equal(calc([records[0]],[childCreation]).details[0].included,true)
+})
+test('创建基线不能越过后续矛盾、类型变化或无状态依据的导入', () => {
+  const r=row('task',101,{status:1,created_date:'2026-10-01',created_at:'2026-10-01T09:00:00+08:00',plan_date:'2026-10-20'})
+  const creation={business_type:'task',target_id:101,action:'新增',field_name:null,created_at:r.created_at,log_id:1}
+  assert.equal(calc([r],[creation]).details[0].included,null)
+  const imported={...creation,action:'新增（模拟导入）',field_name:'status',old_value:null,new_value:'0'}
+  const result=calc([{...r,status:0}],[imported])
+  assert.equal(result.details[0].included,true)
+})
+test('旧工单转换按迁移日期兼容，迁移后的真实关闭和其他矛盾不放行', () => {
+  const r=row('work_order',66,{status:2,created_date:'2026-07-17',plan_date:'2026-07-31',actual_date:'2026-07-17'})
+  const migration={business_type:'work_order',target_id:66,action:'系统状态迁移',field_name:'__status_migration',old_value:'3',new_value:'2',created_at:'2026-07-27T13:19:13+08:00',log_id:0}
+  const logs=[transition('work_order',66,0,1,'2026-07-17'),transition('work_order',66,1,2,'2026-07-17'),transition('work_order',66,2,3,'2026-07-17'),migration]
+  assert.equal(calc([r],logs).details[0].reason_code,'completed_before_period')
+  const later=transition('work_order',66,2,3,'2026-11-03')
+  assert.equal(calc([{...r,status:3,close_date:'2026-11-03'}],[...logs,later]).details[0].reason_code,'self_closed')
+  assert.equal(calc([r],logs.filter(l=>l!==migration)).details[0].included,null)
+  const historical=calc([r],logs,{period:{start_date:'2026-07-01',end_date:'2026-07-20'},cutoff:'2026-07-20'})
+  assert.equal(historical.details[0].reason_code,'self_closed')
+})
 test('三项任务只有一项完成，暂停参与；没有任务时比例为空而不是100%', () => {
   const result = calc([row('task', 1, {status:2, actual_date:'2026-11-03'}),row('task',2),row('task',3,{status:3})])
   assert.equal(summary(result,'task').statistic_count,3)

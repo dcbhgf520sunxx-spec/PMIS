@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ProColumns } from '@ant-design/pro-components';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getTwinProducts, getTwinSnapshot } from '../../../api/digitalTwinApi';
-import { appendReturnTo, AdminButton, AdminEmptyState, AdminSelect, AdminTextAction, TemplateDetailPage, TemplateDetailSection, TemplateDetailTableSection } from '../../../components/admin';
+import { appendReturnTo, AdminButton, AdminEmptyState, AdminSelect, AdminTextAction, AdminSegmented, TemplateDetailPage, TemplateDetailSection, TemplateDetailTableSection } from '../../../components/admin';
 import { useAuthStore } from '../../../stores/authStore';
 import { TwinGraph } from '../components/TwinGraph';
 import { TwinAiSummary } from '../components/TwinAiSummary';
@@ -13,8 +13,15 @@ import { priorityFieldLabel, renderTwinRecordPriority } from '../components/reco
 import { groupRecentUpdates } from '../components/groupRecentUpdates';
 import { kindNames, type TwinRecord, type TwinFocus } from '../types';
 import './DigitalTwinPage.css';
+import { PersonalTwinPage } from './PersonalTwinPage';
 const nodeGroups: Record<string, string> = { requirement: 'requirements', project: 'projects', work: 'tasks', quality: 'bugs', plan: 'plan', contract: 'finance', payment: 'finance', maintenance: 'maintenance', order: 'orders' };
 export function DigitalTwinPage() {
+    const [params, setParams] = useSearchParams();
+    const view = params.get('view') === 'personal' ? 'personal' : 'product';
+    const navigation = <AdminSegmented className="rb-view-switch" adminVariant="filter" aria-label="数字孪生视角" options={[{ value: 'product', label: '产品视角' }, { value: 'personal', label: '个人视角' }]} value={view} onChange={key => setParams(key === 'personal' ? { view: 'personal' } : params.get('product') ? { product: params.get('product')! } : {}, { replace: true })}/>;
+    return view === 'personal' ? <PersonalTwinPage navigation={navigation}/> : <ProductTwinPage navigation={navigation}/>;
+}
+function ProductTwinPage({ navigation }: { navigation: ReactNode }) {
     const navigate = useNavigate();
     const userId = useAuthStore(state => state.user?.id);
     const [searchParams, setSearchParams] = useSearchParams();
@@ -85,10 +92,9 @@ export function DigitalTwinPage() {
         navigate(appendReturnTo(record.url, source));
     };
     const columns: ProColumns<TwinRecord>[] = [
-        { title: '对象 / 编号', dataIndex: 'name', width: 290, fixed: 'left', render: (_, record) => <div className="rb-record-cell">{record.url ? <AdminTextAction className="rb-record-title" href={appendReturnTo(record.url, detailSource())} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); openDetail(record); } }} title={record.name}>{record.name}</AdminTextAction> : <span>{record.name}</span>}<span className="rb-record-code">{record.kind === 'tasks' && record.chain.slice(0, -1).some(link => link.kind === 'tasks') ? '子任务 · ' : ''}编号 {record.code}</span></div> },
+        { title: '对象 / 编号', dataIndex: 'name', width: 290, fixed: 'left', render: (_, record) => <div className="rb-record-cell">{record.priorityCode !== null ? <span className="rb-work-priority" title={'当前' + priorityFieldLabel(record.kind)}>{renderTwinRecordPriority(record)}</span> : null}{record.url ? <AdminTextAction className="rb-record-title" href={appendReturnTo(record.url, detailSource())} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); openDetail(record); } }} title={record.name}>{record.name}</AdminTextAction> : <span>{record.name}</span>}<span className="rb-record-code">{record.kind === 'tasks' && record.chain.slice(0, -1).some(link => link.kind === 'tasks') ? '子任务 · ' : ''}编号 {record.code}</span></div> },
         { title: '业务归属', dataIndex: 'parentName', width: 230 },
         { title: '状态', dataIndex: 'status', width: 130, render: (_, record) => renderTwinRecordStatus(record) },
-        ...(focus ? [{ title: priorityFieldLabel(kind), dataIndex: 'priorityCode', width: 95, render: (_: unknown, record: TwinRecord) => renderTwinRecordPriority(record) }] : []),
         { title: '负责人 / 金额', dataIndex: 'value', width: 170 }
     ];
     const activeKinds = Object.entries(kindNames).filter(([key]) => key !== 'products' && data?.nodes.some(item => item.available && (item.kind === key || (['planStages', 'paymentStages'].includes(key) && item.kind === 'projects'))));
@@ -96,7 +102,7 @@ export function DigitalTwinPage() {
     const refresh = () => { void productsQuery.refetch(); if (productId)
         void snapshotQuery.refetch(); };
     return <div ref={rootRef} id="rb-twin" aria-label="产品数字孪生">
-    <TemplateDetailPage title={data ? `${data.product.name} · 经营全景` : '数字孪生'} titleCode={<span className="rb-context">{data ? '负责人 ' + data.product.owner : '产品全链路'}</span>} loading={loading} error={error instanceof Error ? error.message : undefined} onRetry={refresh} titleCenter={<div className="rb-controls rb-product-controls"><span>产品</span><AdminSelect className="rb-product-select" aria-label="切换产品" allowClear={false} value={productId || undefined} options={products.map(row => ({ label: row.name, value: row.id }))} onChange={value => { setProduct(String(value)); }}/></div>}>
+    <TemplateDetailPage title={data ? `${data.product.name} · 经营全景` : '数字孪生'} titleCode={<span className="rb-context">{data ? '负责人 ' + data.product.owner : '产品全链路'}</span>} loading={loading} error={error instanceof Error ? error.message : undefined} onRetry={refresh} titleCenter={<div className="rb-view-controls"><div className="rb-controls rb-product-controls"><span>产品</span><AdminSelect className="rb-product-select" aria-label="切换产品" allowClear={false} value={productId || undefined} options={products.map(row => ({ label: row.name, value: row.id }))} onChange={value => { setProduct(String(value)); }}/></div>{navigation}</div>}>
       {!loading && !error && !products.length ? <TemplateDetailSection title="产品全景"><AdminEmptyState description="暂无产品，创建产品后可在这里查看完整链路"/></TemplateDetailSection> : null}
       {data ? <>
         <section className="rb-metrics" tabIndex={0} aria-label="产品概览">
@@ -115,7 +121,7 @@ export function DigitalTwinPage() {
             <div className="rb-week" aria-label="最近7天关键变化"><TwinAiSummary key={productId} productId={productId} userId={userId} updates={data.attention} onSync={() => snapshotQuery.refetch()}/><div className="rb-week-title">最近7天更新{data.attention.length ? <span>{data.attention.length}条</span> : null}</div>{data.attention.length ? groupRecentUpdates(data.attention, Object.keys(kindNames)).map(updateGroup => <div className="rb-update-group" role="group" aria-label={`${kindNames[updateGroup.kind]}更新`} key={updateGroup.kind}><div className="rb-update-heading"><span>{kindNames[updateGroup.kind]}</span><small aria-label={`${updateGroup.records.length} 条更新`}>{updateGroup.records.length}</small></div><div className="rb-update-records">{updateGroup.records.map(record => <AdminButton type="text" className="rb-event" title={record.name} key={record.kind + record.id} onClick={() => pickRecord(record)}><strong>{record.name}</strong><span className="rb-update-date">{record.updatedAt.slice(5, 10).replace('-', '.')}</span></AdminButton>)}</div></div>) : <div className="rb-context">最近7天暂无业务记录更新</div>}</div>
           </div></div>
         </TemplateDetailSection>
-        <TemplateDetailTableSection title="链路明细" sectionKey="chain-detail" summary={<>{records.length} 个对象{focus ? <span className="rb-focus-filter">{focusLabel(kind, focus)} · 未结束<AdminTextAction onClick={() => updateView({ ...clearedSelection })}>查看全部</AdminTextAction></span> : null}</>} extra={<div className="rb-controls"><span>对象</span><AdminSelect aria-label="明细对象" allowClear={false} value={kind} options={activeKinds.map(([value, label]) => ({ value, label }))} onChange={value => { updateView({ kind: String(value), node: data.nodes.find(item => item.kind === value)?.key || node, ...clearedSelection }); }}/></div>} pagination={{ current: resolvedPage + 1, pageSize, pageSizeOptions: [6, 12, 24], total: records.length, onChange: (current, size) => { updateView({ pageSize: String(size), page: String(size === pageSize ? current : 1) }); } }} table={{ columns, rowKey: 'id', dataSource: records.slice(resolvedPage * pageSize, (resolvedPage + 1) * pageSize), scroll: { x: focus ? 915 : 820 }, size: 'small', rowClassName: record => record.id === selectedRecord?.id && record.kind === selectedRecord.kind ? 'is-selected' : '' }}/>
+        <TemplateDetailTableSection title="链路明细" sectionKey="chain-detail" summary={<>{records.length} 个对象{focus ? <span className="rb-focus-filter">{focusLabel(kind, focus)} · 未结束<AdminTextAction onClick={() => updateView({ ...clearedSelection })}>查看全部</AdminTextAction></span> : null}</>} extra={<div className="rb-controls"><span>对象</span><AdminSelect aria-label="明细对象" allowClear={false} value={kind} options={activeKinds.map(([value, label]) => ({ value, label }))} onChange={value => { updateView({ kind: String(value), node: data.nodes.find(item => item.kind === value)?.key || node, ...clearedSelection }); }}/></div>} pagination={{ current: resolvedPage + 1, pageSize, pageSizeOptions: [6, 12, 24], total: records.length, onChange: (current, size) => { updateView({ pageSize: String(size), page: String(size === pageSize ? current : 1) }); } }} table={{ columns, rowKey: 'id', dataSource: records.slice(resolvedPage * pageSize, (resolvedPage + 1) * pageSize), scroll: { x: 820 }, size: 'small', rowClassName: record => record.id === selectedRecord?.id && record.kind === selectedRecord.kind ? 'is-selected' : '' }}/>
       </> : null}
     </TemplateDetailPage>
   </div>;

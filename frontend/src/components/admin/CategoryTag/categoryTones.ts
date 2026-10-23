@@ -1,4 +1,4 @@
-export const categoryTones = ['blue', 'cyan', 'indigo', 'violet', 'magenta'] as const;
+export const categoryTones = ['blue', 'cyan', 'indigo', 'violet', 'magenta', 'teal'] as const;
 
 export type CategoryTone = (typeof categoryTones)[number];
 

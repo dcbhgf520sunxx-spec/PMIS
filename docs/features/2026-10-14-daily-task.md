@@ -6,7 +6,7 @@
 - 不新增表、字段、索引或权限，不迁移历史业务数据。扩展任务表的关联类型与对应 CHECK 约束。
 - 新增、复制、编辑、子任务继承、筛选、详情、历史中文标签和 MCP 同步支持。
 - 日常任务仍要求任务名称、任务类型、至少一名负责人及预计完成时间；状态、逾期、跟进和附件使用原规则。
-- 不归属任何产品、项目或需求；人员工作全景的接入随个人视角另行交付。
+- 纳入人员工作全景，按已有责任和主子任务边界展示；不归属任何产品、项目或需求，不新增完成率计算。
 - BUG 的项目/需求关联规则不变。
 
 ## 组件支撑情况
@@ -21,7 +21,7 @@
 
 增量迁移：`20261014_01_add_daily_task_source.sql`。同步初始化 SQL、数据库表结构 Markdown 和原 Excel。迁移只替换关联 CHECK 约束，不改已有任务。
 
-`backend/test/taskDaily.test.js` 覆盖 MCP Schema 和真实数据库新增、复制、关联切换、子任务、历史、产品排除及 Action 预览确认执行。真实读写使用独立临时 schema，运行方式：`cd backend && RUN_DB_INTEGRATION=1 node --test test/taskDaily.test.js`。
+`backend/test/taskDaily.test.js` 覆盖 MCP Schema 和真实数据库新增、复制、关联切换、子任务、历史、个人全景、产品排除及 Action 预览确认执行。真实读写使用独立临时 schema，运行方式：`cd backend && RUN_DB_INTEGRATION=1 node --test test/taskDaily.test.js`。
 
 本体明确日常任务无项目/需求归属，扩展来源映射和 SHACL 校验，保留原项目/需求任务及 BUG 的关联约束。
 

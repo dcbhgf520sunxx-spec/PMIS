@@ -1,5 +1,5 @@
 const db = require('../db')
-const { BUSINESS_TYPES, loadRecords, loadLogs, buildHistories, dateOnly, shanghaiDate, resolvePeriod } = require('./mcpPeriodAnalysisService')
+const { BUSINESS_TYPES, loadRecords, loadLogs, buildHistories, historicalStatus, dateOnly, shanghaiDate, resolvePeriod } = require('./mcpPeriodAnalysisService')
 const { createPeriodDatasetToken, assertPeriodDatasetToken } = require('./mcpPeriodDetails')
 const { summarizeRichText } = require('../mcp/contentPolicy')
 const TYPES = { ...BUSINESS_TYPES, project_stage: { label: '项目阶段', menu: '/projects' } }
@@ -43,10 +43,14 @@ function statusAt(r, cutoff, history, today) {
   if(lastRecorded?.status===r.status&&terminal(r,r.status)&&lastRecorded.actual_date&&r.actual_date&&lastRecorded.actual_date!==r.actual_date)return {status:null,evidence:[]}
   if (transitions.length) {
     const latest=transitions.filter(event=>event.date<=cutoff).at(-1)
+    const restored=historicalStatus(history,latest,cutoff)
+    if(restored)return {status:restored.status,evidence:[restored]}
     const status=latest?.status ?? transitions[0].previous_status
     return { status, evidence:[{source:latest?.date_source || 'history_previous_status',date:latest?.date || transitions[0].date,
       log_id:Number((latest || transitions[0]).log.log_id) || null}] }
   }
+  const initial=historicalStatus(history,null,cutoff)
+  if(initial)return {status:initial.status,evidence:[initial]}
   const paused=({project:3,task:3,requirement:35,stage_plan:3,work_order:4})[r.business_type]===r.status
   const businessDate = closed(r,r.status) ? dateOnly(r.close_date) : terminal(r,r.status) ? r.actual_date : paused ? r.pause_date : null
   if (businessDate && businessDate<=cutoff) return {status:r.status,evidence:[{source:'current_business_date',date:businessDate,log_id:null}]}
@@ -195,7 +199,7 @@ function evaluateCompletion({records,logs,people,types,period,today,cutoff}) {
   return {results,details}
 }
 
-async function analyzeBusinessCompletion(args,context,database=db,now=new Date()) {
+async function analyzeBusinessCompletion(args,context,database=db,now=new Date(),includeSourceData=false) {
   const actorId=Number(context.user?.id)
   if(!Number.isSafeInteger(actorId)||actorId<1)throw error('MCP_PERMISSION_DENIED',null,'需要有效的已鉴权人员身份')
   const page=args.page??1,pageSize=args.page_size??50
@@ -245,9 +249,9 @@ async function analyzeBusinessCompletion(args,context,database=db,now=new Date()
   const token=createPeriodDatasetToken({version:'2026-10-13',period,cutoff,types,people,actor:context.user.id,menus:[...context.allowedMenuPaths].sort()},evaluated.details)
   assertPeriodDatasetToken({datasetToken:args.dataset_token},token,'dataset_token')
   const offset=(page-1)*pageSize
-  return {rule_version:'2026-10-13',period,observation_date:cutoff,data_cutoff:now.toISOString(),results:evaluated.results,
+  return {...(includeSourceData ? {sourceData:{records,logs}} : {}),rule_version:'2026-10-13',period,observation_date:cutoff,data_cutoff:now.toISOString(),results:evaluated.results,
     details:{items:evaluated.details.slice(offset,offset+pageSize),total:evaluated.details.length,page,pageSize,totalPages:Math.ceil(evaluated.details.length/pageSize),hasNextPage:offset+pageSize<evaluated.details.length,datasetToken:token},
     coverage:{statistics_complete:evaluated.results.every(r=>r.unknown_count===0),stage_completion_complete:evaluated.details.filter(d=>d.business_type==='project_stage').every(d=>d.completed!==null),authorized_business_types:types,
       notes:['按当前责任角色及最新计划完成日期统计；历史责任人、原定计划版本不追溯','已结束考核期按期末判断，未结束考核期按上海今天判断；后期完成不倒算前期','项目阶段只汇总关键事项，不推定个人归属或计划日期','待核实结果的比例为空，已知数量与明细保留；没有符合条件单据的比例也为空','跨请求读取非事务快照；明细续页校验数据集指纹，不以候选条数代替完整聚合']}}
 }
-module.exports={TYPES,analyzeBusinessCompletion,evaluateCompletion}
+module.exports={TYPES,analyzeBusinessCompletion,evaluateCompletion,statusAt,fieldAt}

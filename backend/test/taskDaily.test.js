@@ -23,7 +23,7 @@ test('MCP 日常任务可独立查询和创建，BUG仍只接受项目或需求'
   assert.equal(decorateQueryResult('task_get', { source_type: 3 }).source_type_label, '日常任务')
 })
 
-test('真实数据库：日常任务新增、复制、关联切换、子任务、历史和产品排除', { skip: !integration }, async () => {
+test('真实数据库：日常任务新增、复制、关联切换、子任务、历史和个人统计', { skip: !integration }, async () => {
   const db = require('../src/db')
   try {
     await db.pool.query(`CREATE SCHEMA ${schema}`)
@@ -60,6 +60,11 @@ test('真实数据库：日常任务新增、复制、关联切换、子任务�
     const list = await call(controller.list, {}, {}, { source_type: 3 })
     assert.equal(list.code, 0)
     assert.ok(list.data.list.some(row => String(row.id) === String(id)))
+    const personal = await require('../src/services/digitalTwinPersonalService').currentPersonalSnapshot(1)
+    const daily = personal.records.find(row => row.kind === 'tasks' && row.id === String(id))
+    assert.ok(daily, '个人工作全景应包含日常任务')
+    assert.equal(daily.parentName, '日常任务')
+    assert.equal(daily.productId, '')
     assert.ok(!JSON.stringify(await require('../src/services/digitalTwinService').currentSnapshot(1, product)).includes('每日备份检查'))
     const client = (await db.prepare("INSERT INTO pms_mcp_client(name,token_prefix,token_hash,endpoint_type,created_by) VALUES('测试Action','daily',?,'action',1)").run('d'.repeat(64))).lastInsertRowid
     const actionContext = { ...context, client: { id: client }, allowedMenuPaths: new Set(['/tasks']) }

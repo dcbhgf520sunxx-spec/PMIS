@@ -407,9 +407,19 @@ async function loadLogs(types, records, database, identityPeriod = null, fieldNa
     SELECT id log_id,CASE module ${moduleCases} END business_type,target_id,operation_id,user_id operator_id,action,
       ${identityPeriod ? '' : 'field_name,old_value,new_value,'}created_at
     FROM pms_op_log
-    WHERE (${scopes.join(' OR ')})${identityPeriod ? ' AND created_at>=?::timestamptz AND created_at<?::timestamptz' : ''}${fieldNames ? ' AND field_name=ANY(?::TEXT[])' : ''}
+    WHERE (${scopes.join(' OR ')})${identityPeriod ? ' AND created_at>=?::timestamptz AND created_at<?::timestamptz' : ''}${fieldNames ? " AND (field_name=ANY(?::TEXT[]) OR action IN ('新增','新增关键事项'))" : ''}
     ORDER BY created_at,id`
-  return database.prepare(sql).all(...params)
+  const logs = await database.prepare(sql).all(...params)
+  if (!identityPeriod && logs.some(log=>log.business_type==='work_order' && log.field_name==='status' && Number(log.new_value)===3)) {
+    const registry = await database.prepare("/* period_analysis:migration_registry */ SELECT to_regclass('pms_migrations') AS name").get()
+    if (registry?.name) {
+      const migration = await database.prepare("/* period_analysis:legacy_work_order */ SELECT applied_at FROM pms_migrations WHERE name='20260727_03_retire_work_order_closed_status.sql'").get()
+      if (migration) for (const record of records.filter(r=>r.business_type==='work_order' && parseBusinessTimestamp(r.created_at)<parseBusinessTimestamp(migration.applied_at))) {
+        logs.push({business_type:'work_order',target_id:record.id,field_name:'__status_migration',old_value:'3',new_value:'2',action:'系统状态迁移',created_at:migration.applied_at,log_id:0})
+      }
+    }
+  }
+  return logs
 }
 
 async function buildBusinessRelatedPeople(records, logs, analysisPeriod, database) {
@@ -523,7 +533,7 @@ function statusDateField(type, status) {
 
 function buildHistories(records, logs) {
   const histories = new Map(records.map((record) => [historyKey(record.business_type, record.id), {
-    record, transitions: [], fields: [], inconsistent: false,
+    record, transitions: [], fields: [], inconsistent: false, creation: null, statusMigration: null,
   }]))
   const operations = new Map()
   const orderedLogs = [...logs].sort((a, b) => parseBusinessTimestamp(a.created_at) - parseBusinessTimestamp(b.created_at)
@@ -535,13 +545,16 @@ function buildHistories(records, logs) {
   }
   for (const log of orderedLogs) {
     const history = histories.get(historyKey(log.business_type, log.target_id))
-    if (!history || String(log.old_value ?? '') === String(log.new_value ?? '')) continue
+    if (!history) continue
+    if (log.field_name==='__status_migration') { history.statusMigration=log; continue }
+    if (['新增','新增关键事项'].includes(log.action) && dateOnly(log.created_at)===history.record.created_date) history.creation=log
+    if (String(log.old_value ?? '') === String(log.new_value ?? '')) continue
     history.fields.push(log)
     if (log.field_name !== 'status') continue
     const field = statusDateField(log.business_type, log.new_value)
     const actualDate = field ? dateOnly(operations.get(operationKey(log))?.get(field)?.new_value) : null
     const previous = history.transitions.at(-1)
-    if (previous && previous.status !== Number(log.old_value)) history.inconsistent = true
+    if (previous && previous.status !== Number(log.old_value) && !legacyWorkOrderBridge(history,previous,Number(log.old_value),log.created_at)) history.inconsistent = true
     history.transitions.push({
       status: Number(log.new_value), previous_status: Number(log.old_value),
       date: actualDate || dateOnly(log.created_at), actual_date: actualDate,
@@ -559,9 +572,29 @@ function buildHistories(records, logs) {
           : record.business_type === 'bug' && last.status === 1 ? record.resolved_date : null
       if (currentDate) Object.assign(last, { date: currentDate, actual_date: currentDate, date_source: 'current_business_date' })
     }
-    if (last && last.status !== record.status) history.inconsistent = true
+    if (last && last.status !== record.status && !legacyWorkOrderBridge(history,last,record.status,null)) history.inconsistent = true
+    const initial=record.business_type==='requirement' ? ({1:0,2:10,3:20,4:30})[record.requirement_type] : 0
+    if (history.creation && !transitions.length && record.status===initial && !history.fields.some(log=>log.field_name==='requirement_type')) history.initialStatus=initial
   }
   return histories
+}
+
+function legacyWorkOrderBridge(history, previous, nextStatus, nextAt) {
+  const migration=history.statusMigration
+  return Boolean(migration && history.record.business_type==='work_order' && previous.status===3 && nextStatus===2
+    && parseBusinessTimestamp(previous.log.created_at)<parseBusinessTimestamp(migration.created_at)
+    && (!nextAt || parseBusinessTimestamp(nextAt)>=parseBusinessTimestamp(migration.created_at)))
+}
+
+function historicalStatus(history, latest, cutoff) {
+  if (!history) return null
+  if (latest && legacyWorkOrderBridge(history,latest,2,null) && dateOnly(history.statusMigration.created_at)<=cutoff) {
+    return {status:2,source:'schema_status_migration',date:dateOnly(history.statusMigration.created_at),log_id:null}
+  }
+  if (!history.transitions.length && history.initialStatus!==undefined && dateOnly(history.creation.created_at)<=cutoff) {
+    return {status:history.initialStatus,source:'creation_initial_status',date:dateOnly(history.creation.created_at),log_id:Number(history.creation.log_id)||null}
+  }
+  return null
 }
 
 function completionStateAt(record, cutoff, history, today) {
@@ -571,6 +604,8 @@ function completionStateAt(record, cutoff, history, today) {
   const atCutoff = ordered.filter((event) => event.date <= cutoff)
   const latest = atCutoff.at(-1)
   let status = latest?.status ?? ordered[0]?.previous_status ?? record.status
+  const restored=historicalStatus(history,latest,cutoff)
+  if(restored)status=restored.status
   if (cutoff === today) status = record.status
   if (history?.inconsistent && cutoff < today) return { completed: false, date: null, unknown: true }
   const complete = isCompletedStatus(record.business_type, status)
@@ -578,7 +613,7 @@ function completionStateAt(record, cutoff, history, today) {
     // Absence of a retained completion date is not evidence that an old item
     // was unfinished at a historical cutoff (completion may have been cleared).
     // Today's status, or a record not created yet at the cutoff, is direct evidence.
-    const unknown = cutoff < today && !transitions.length
+    const unknown = cutoff < today && !transitions.length && !restored
       && (!record.created_date || record.created_date <= cutoff)
     return { completed: false, date: null, unknown }
   }
@@ -1501,6 +1536,7 @@ module.exports = {
   loadRecords,
   loadLogs,
   buildHistories,
+  historicalStatus,
   dateOnly,
   shanghaiDate,
   parseBusinessTimestamp,

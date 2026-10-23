@@ -43,10 +43,10 @@ function sourceQueries(productId) {
         requirements: [scoped('pms_requirement'), [productId]], projects: [scoped('pms_project'), [productId]],
         tasks: [`SELECT t.*, COALESCE((SELECT STRING_AGG(u.real_name,'、' ORDER BY o.sort_order,u.id) FROM pms_task_owner o JOIN pms_user u ON u.id=o.user_id WHERE o.task_id=t.id),'—') AS owner_name FROM pms_task t ${source} ORDER BY t.id`, [productId, productId]],
         bugs: [`SELECT t.*, COALESCE(u.real_name,'—') AS owner_name FROM pms_bug t LEFT JOIN pms_user u ON u.id=t.assignee_id ${source} ORDER BY t.id`, [productId, productId]],
-        planStages: [`SELECT t.* FROM pms_project_plan_stage t ${projectJoin} ORDER BY t.sort_order,t.id`, [productId]],
-        planItems: [`SELECT t.*, COALESCE(u.real_name,'—') AS owner_name FROM pms_project_plan_item t ${owner} JOIN pms_project_plan_stage st ON st.id=t.stage_id AND st.is_deleted=0 JOIN pms_project p ON p.id=st.project_id AND p.is_deleted=0 WHERE t.is_deleted=0 AND p.product_id=? ORDER BY st.sort_order,t.sort_order,t.id`, [productId]],
+        planStages: [`SELECT t.* FROM pms_project_plan_stage t ${projectJoin} ORDER BY p.id,t.sort_order,t.id`, [productId]],
+        planItems: [`SELECT t.*, COALESCE(u.real_name,'—') AS owner_name FROM pms_project_plan_item t ${owner} JOIN pms_project_plan_stage st ON st.id=t.stage_id AND st.is_deleted=0 JOIN pms_project p ON p.id=st.project_id AND p.is_deleted=0 WHERE t.is_deleted=0 AND p.product_id=? ORDER BY p.id,st.sort_order,st.id,t.sort_order,t.id`, [productId]],
         contracts: [`SELECT t.*, t.contract_name AS name FROM pms_project_contract t ${projectJoin} ORDER BY t.id`, [productId]],
-        paymentStages: [`SELECT t.* FROM pms_project_payment_stage t ${contractJoin} ORDER BY t.sort_order,t.id`, [productId]],
+        paymentStages: [`SELECT t.* FROM pms_project_payment_stage t ${contractJoin} ORDER BY p.id,c.id,t.sort_order,t.id`, [productId]],
         payments: [`SELECT t.*, COALESCE(u.real_name,'—') AS owner_name FROM pms_project_payment_record t LEFT JOIN pms_user u ON u.id=t.handler_id JOIN pms_project_payment_stage st ON st.id=t.stage_id AND st.is_deleted=0 JOIN pms_project_contract c ON c.id=st.contract_id AND c.is_deleted=0 JOIN pms_project p ON p.id=c.project_id AND p.is_deleted=0 WHERE t.is_deleted=0 AND p.product_id=? ORDER BY t.payment_month,t.id`, [productId]],
         maintenance: [`SELECT t.*, t.contract_name AS name FROM pms_product_maintenance_contract t WHERE t.is_deleted=0 AND t.product_id=? ORDER BY t.service_start_date,t.id`, [productId]],
         orders: [`SELECT t.*, COALESCE(u.real_name,'—') AS owner_name FROM pms_work_order t LEFT JOIN pms_user u ON u.id=t.follower_id WHERE t.is_deleted=0 AND t.product_id=? ORDER BY t.id`, [productId]]
@@ -64,6 +64,35 @@ function newestCreatedFirst(a, b) {
     if (byCreated) return byCreated;
     const aId = BigInt(a.id), bId = BigInt(b.id);
     return aId < bId ? 1 : aId > bId ? -1 : 0;
+}
+function orderedRows(data, paths, kind) {
+    const rows = data[kind].map(row => {
+        const chain = M.chain(data, kind, row.id).filter(link => paths.has(kindPermissions[link.kind]));
+        const ancestors = chain.slice(0, -1);
+        const parent = ['tasks', 'bugs'].includes(kind)
+            ? ancestors.findLast(link => ['products', 'requirements', 'projects'].includes(link.kind))
+            : ancestors.at(-1);
+        return { row, chain, parent };
+    });
+    // 阶段和事项的来源查询已经按所属项目及手工顺序排列。
+    if (['planStages', 'planItems', 'paymentStages'].includes(kind)) return rows;
+    const dateField = ({ requirements: 'expected_end_date', projects: 'expected_end_date', tasks: 'expected_end_date', orders: 'expected_resolve_date' })[kind];
+    return rows.sort((a, b) => {
+        if (['tasks', 'bugs'].includes(kind)) {
+            if (Boolean(a.parent) !== Boolean(b.parent)) return a.parent ? -1 : 1;
+            if (a.parent && b.parent) {
+                const byParent = text(a.parent.name).localeCompare(text(b.parent.name), 'zh-CN', { numeric: true })
+                    || a.parent.kind.localeCompare(b.parent.kind)
+                    || a.parent.id.localeCompare(b.parent.id, 'en', { numeric: true });
+                if (byParent) return byParent;
+            }
+        }
+        if (dateField) {
+            const byDate = M.day(b.row[dateField]).localeCompare(M.day(a.row[dateField]));
+            if (byDate) return byDate;
+        }
+        return newestCreatedFirst(a.row, b.row);
+    });
 }
 function priorityFields(kind, row) {
     const field = ({ requirements: 'priority', projects: 'priority', tasks: 'priority', bugs: 'severity', orders: 'urgency' })[kind];
@@ -99,9 +128,7 @@ function buildSnapshot(data, paths, asOf) {
         ['order', '产品工单', x.orders.open, '项待办', `${x.orders.total} 项总量 · ${x.orders.urgent} 紧急`]
     ];
     const nodes = descriptors.map(([key, title, value, unit, note]) => ({ key, title, kind: nodeKinds[key], available: paths.has(kindPermissions[nodeKinds[key]]), value: paths.has(kindPermissions[nodeKinds[key]]) ? String(value) : '—', unit: key === 'product' ? '' : unit, note: paths.has(kindPermissions[nodeKinds[key]]) ? (key === 'product' ? unit : note) : '未获业务授权' }));
-    const records = allowedKinds.flatMap(kind => paths.has(kindPermissions[kind]) ? data[kind].slice().sort(newestCreatedFirst).map(r => {
-        const chain = M.chain(data, kind, r.id).filter(link => paths.has(kindPermissions[link.kind]));
-        const parent = chain.at(-2);
+    const records = allowedKinds.flatMap(kind => paths.has(kindPermissions[kind]) ? orderedRows(data, paths, kind).map(({ row: r, chain, parent }) => {
         const project = chain.find(link => link.kind === 'projects');
         const rootRoute = ({ products: 'products', requirements: 'requirements', projects: 'projects', tasks: 'tasks', bugs: 'bugs', orders: 'work-orders' })[kind];
         const amount = r.contract_amount ?? r.payment_amount ?? r.planned_amount;
@@ -114,7 +141,7 @@ function buildSnapshot(data, paths, asOf) {
         return { kind, id: r.id, name: text(kind === 'payments' ? `${M.day(r.payment_month).slice(0, 7)}付款 · ${money(Number(amount))}万元` : M.name(r)),
             code: r.contract_code || r.id, status: M.status(kind, r, date), statusCode, owner: r.owner_name || '—',
             value: amount == null ? (r.owner_name || '—') : money(Number(amount)) + ' 万元',
-            parentName: parent?.name || (chain.length === 1 && kind !== 'products' ? '来源模块未授权' : product.name),
+            parentName: text(parent?.name || (['tasks', 'bugs'].includes(kind) || (chain.length === 1 && kind !== 'products') ? '来源模块未授权' : product.name)),
             chain: chain.map(link => ({ ...link, name: text(link.name) })),
             description: text(r.description || r.remark || r.progress_text || r.content || ''),
             dueDate: M.day(r.current_due_date || r.expected_end_date || r.expected_resolve_date),
@@ -172,4 +199,4 @@ async function currentSnapshot(userId, productId) {
         return snapshot(userId, productId, tx);
     });
 }
-module.exports = { listProducts, currentSnapshot, snapshot, buildSnapshot, kindPermissions, allowedKinds };
+module.exports = { listProducts, currentSnapshot, snapshot, buildSnapshot, kindPermissions, allowedKinds, permissions };

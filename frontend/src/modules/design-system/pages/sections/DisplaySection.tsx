@@ -47,6 +47,7 @@ import { ComponentEntry } from '../components/ComponentEntry';
 import './DisplaySection.css';
 
 const categoryDemoTones = defineCategoryToneMap({
+  typeD: 'teal',
   typeA: 'blue',
   typeB: 'cyan',
   typeC: 'indigo'
@@ -388,6 +389,7 @@ export function DisplaySection() {
                       <CategoryTag tone={categoryDemoTones.typeA}>分类一</CategoryTag>
                       <CategoryTag tone={categoryDemoTones.typeB}>分类二</CategoryTag>
                       <CategoryTag tone={categoryDemoTones.typeC}>分类三</CategoryTag>
+                      <CategoryTag tone={categoryDemoTones.typeD}>分类四</CategoryTag>
                       <AdminTag>无需区分</AdminTag>
                     </AdminSpace>
                     <AdminSpace wrap size={18} className="design-system-page__display-badge-row">

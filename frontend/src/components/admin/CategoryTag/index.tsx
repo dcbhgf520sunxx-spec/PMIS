@@ -10,7 +10,8 @@ const categoryToneColors: Record<CategoryTone, string> = {
   cyan: 'cyan',
   indigo: 'geekblue',
   violet: 'purple',
-  magenta: 'magenta'
+  magenta: 'magenta',
+  teal: 'cyan'
 };
 
 const cyanTagStyle = {
