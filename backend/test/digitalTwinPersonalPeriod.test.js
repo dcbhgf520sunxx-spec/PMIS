@@ -72,14 +72,18 @@ test('周期预警沿用各模块逾期规则：直接实施需求暂停仍判�
  assert.equal(result.records.find(r=>r.kind==='requirements').isOverdue,true);
  assert.equal(result.records.find(r=>r.kind==='tasks').isOverdue,false);
 });
-test('前三类需求的完成依据日期是有效结论日期，不冒用后续实施完成日期',()=>{
+test('期前需求结论不重复纳入当期，跨期回看保留有效结论日期而非实施完成日期',()=>{
  const raw=buildPersonalSnapshot({id:7,real_name:'本人'},{requirements:[{id:1,title:'立项需求',requirement_type:1,status:32,expected_end_date:'2026-10-20',actual_end_date:'2026-10-20',owner_id:7,created_at:'2026-09-01',relationship:'responsible'}]},new Set(['/requirements']),'2026-10-22 10:00:00');
  const records=[{...task(1),business_type:'requirement',requirement_type:1,status:32,actual_date:'2026-10-20'}];
  const logs=[{business_type:'requirement',target_id:1,field_name:'status',old_value:'1',new_value:'2',created_at:'2026-09-15T10:00:00+08:00',log_id:1,operation_id:'decision'},{business_type:'requirement',target_id:1,field_name:'status',old_value:'2',new_value:'32',created_at:'2026-09-20T10:00:00+08:00',log_id:2,operation_id:'implementation'}];
- const result=buildPersonalPeriodSnapshot(raw,{records,logs},period);
+ const current=buildPersonalPeriodSnapshot(raw,{records,logs},period);
+ assert.equal(current.records.length,0);
+ assert.equal(current.groups.find(g=>g.kind==='requirements').completion.included,0);
+ assert.equal(require('../src/services/digitalTwinAiSummary').buildPersonalSummaryEvidence(current).work.length,0);
+ const result=buildPersonalPeriodSnapshot(raw,{records,logs},resolvePersonalPeriod({startDate:'2026-09-01',endDate:'2026-10-31'},now));
  assert.equal(result.records[0].completed,true);
  assert.equal(result.records[0].completionDate,'2026-09-15');
- assert.equal(require('../src/services/digitalTwinAiSummary').buildPersonalSummaryEvidence(result).work[0].hasProgressEvidence,false);
+ assert.equal(require('../src/services/digitalTwinAiSummary').buildPersonalSummaryEvidence(result).work[0].hasProgressEvidence,true);
 });
 test('简报先按证据资格分批，未知归期不与已确认未完成混送',()=>{
  const {summaryBatches}=require('../src/services/personalPeriodSummary');
