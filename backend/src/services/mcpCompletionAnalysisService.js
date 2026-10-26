@@ -36,7 +36,8 @@ function fieldAt(r,field,cutoff,history,today) {
 // Only current status, explicit business dates and scoped history are evidence; updated_at is never used.
 function statusAt(r, cutoff, history, today) {
   if (r.created_date && r.created_date > cutoff) return { status:null, notCreated:true, evidence:[] }
-  const transitions = [...(history?.transitions || [])].sort((a,b)=>a.date.localeCompare(b.date) || Number(a.log.log_id)-Number(b.log.log_id))
+  // Histories follow operation order; backfilled business dates must not reverse a later state change.
+  const transitions = history?.transitions || []
   if (cutoff === today) return { status:r.status, evidence:[{source:'current_status',date:today,log_id:null}] }
   if (history?.inconsistent) return { status:null, evidence:[] }
   const lastRecorded=history?.transitions?.at(-1)
@@ -138,6 +139,31 @@ function evaluateCompletion({records,logs,people,types,period,today,cutoff}) {
     cache.set(cacheKey,result)
     return result
   }
+  function reopenedInPeriod(r, seen = new Set()) {
+    if (seen.has(key(r))) return false
+    const chain = new Set([...seen, key(r)])
+    const subTasks = (children.get(r.id) || []).filter(child => !child.created_date || child.created_date <= cutoff)
+    if (r.business_type === 'task' && subTasks.length) {
+      return subTasks.some(child => judge(child, cutoff).eligible === true && reopenedInPeriod(child, chain))
+    }
+    const history = histories.get(key(r))
+    const transitions = history?.transitions || []
+    // A later backfill may establish period-opening completion after earlier in-period operations.
+    const openingIndex = transitions.findLastIndex(event => event.date < period.start_date)
+    if (transitions.some((event, index) => {
+      if (index <= openingIndex) return false
+      if (event.date < period.start_date || event.date > cutoff || closed(r, event.status)) return false
+      if (!STATUS_VALUES[r.business_type]?.includes(event.status)) return false
+      if (r.business_type === 'bug') return event.status === 3
+      if (r.business_type === 'requirement') {
+        const type = fieldAt(r, 'requirement_type', event.date, history, today)
+        return requirementCompletion({ ...r, requirement_type: type }, event.status, event.date,
+          { ...history, transitions: transitions.slice(0, index + 1) }).completed === false
+      }
+      return event.status !== 2
+    })) return true
+    return false
+  }
   const details=[]
   for(const person of people)for(const r of records.filter(r=>types.includes(r.business_type)&&r.business_type!=='project_stage')) {
     const owners=r.business_type==='task' ? r.owner_ids || [] : [r.owner_id]
@@ -150,16 +176,21 @@ function evaluateCompletion({records,logs,people,types,period,today,cutoff}) {
     if(included!==false&&r.business_type!=='bug') {
       if(!r.plan_date){included=false;reason='no_plan_date'}
       else if(r.plan_date>period.end_date){included=false;reason='outside_period'}
-      else if(r.plan_date>=period.start_date)basis='planned_in_period'
       else {
         const opening=judge(r,previousDay(period.start_date))
-        if(opening.reason_code==='not_created'){included=false;reason='outside_period'}
-        else if(opening.completed===true){included=false;reason='completed_before_period'}
+        const reopened=opening.completed===true && (judgement.completed===false || reopenedInPeriod(r))
+        if(opening.completed===true&&!reopened){
+          included=judgement.completed===null?null:false
+          reason=included===null?'carry_state_unknown':'completed_before_period'
+        }
+        else if(r.plan_date>=period.start_date)basis='planned_in_period'
+        else if(opening.reason_code==='not_created'){included=false;reason='outside_period'}
+        else if(reopened)basis='activated_in_period'
         else if(opening.eligible===null||opening.completed===null){included=null;reason='carry_state_unknown'}
         else basis='carried_over'
       }
     } else if(included!==false) {
-      const activated=(histories.get(key(r))?.transitions||[]).some(e=>e.status===3&&e.date>=period.start_date&&e.date<=cutoff)
+      const activated=reopenedInPeriod(r)
       if(r.created_date>=period.start_date&&r.created_date<=cutoff)basis='created_in_period'
       else if(activated)basis='activated_in_period'
       else {
@@ -246,10 +277,10 @@ async function analyzeBusinessCompletion(args,context,database=db,now=new Date()
     logs.push(...await loadLogs(sourceTypes(added),added,database,null,historyFields))
   }
   const evaluated=evaluateCompletion({records,logs,people,types,period,today,cutoff})
-  const token=createPeriodDatasetToken({version:'2026-10-13',period,cutoff,types,people,actor:context.user.id,menus:[...context.allowedMenuPaths].sort()},evaluated.details)
+  const token=createPeriodDatasetToken({version:'2026-10-26',period,cutoff,types,people,actor:context.user.id,menus:[...context.allowedMenuPaths].sort()},evaluated.details)
   assertPeriodDatasetToken({datasetToken:args.dataset_token},token,'dataset_token')
   const offset=(page-1)*pageSize
-  return {...(includeSourceData ? {sourceData:{records,logs}} : {}),rule_version:'2026-10-13',period,observation_date:cutoff,data_cutoff:now.toISOString(),results:evaluated.results,
+  return {...(includeSourceData ? {sourceData:{records,logs}} : {}),rule_version:'2026-10-26',period,observation_date:cutoff,data_cutoff:now.toISOString(),results:evaluated.results,
     details:{items:evaluated.details.slice(offset,offset+pageSize),total:evaluated.details.length,page,pageSize,totalPages:Math.ceil(evaluated.details.length/pageSize),hasNextPage:offset+pageSize<evaluated.details.length,datasetToken:token},
     coverage:{statistics_complete:evaluated.results.every(r=>r.unknown_count===0),stage_completion_complete:evaluated.details.filter(d=>d.business_type==='project_stage').every(d=>d.completed!==null),authorized_business_types:types,
       notes:['按当前责任角色及最新计划完成日期统计；历史责任人、原定计划版本不追溯','已结束考核期按期末判断，未结束考核期按上海今天判断；后期完成不倒算前期','项目阶段只汇总关键事项，不推定个人归属或计划日期','待核实结果的比例为空，已知数量与明细保留；没有符合条件单据的比例也为空','跨请求读取非事务快照；明细续页校验数据集指纹，不以候选条数代替完整聚合']}}

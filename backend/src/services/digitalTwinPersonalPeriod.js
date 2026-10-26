@@ -109,7 +109,7 @@ function buildPersonalPeriodSnapshot(snapshot, source, period) {
         overview:{responsible:responsible.length,participating:scoped.filter(r=>r.relationship!=='responsible'&&r.included!==false).length,
             open:responsible.filter(r=>r.isOpen).length,urgent:responsible.filter(r=>r.needsAttention).length,overdue:responsible.filter(r=>r.isOverdue).length,dueSoon:responsible.filter(r=>r.dueSoon).length,products:new Set(scoped.map(r=>r.productId).filter(Boolean)).size},
         attention:scoped.filter(r=>r.hasPeriodActivity)};
-    output.summaryRevision=createHash('sha256').update(JSON.stringify(['personal-period-v14-history-evidence',period,output.person,scoped,excluded,snapshot.events])).digest('hex');
+    output.summaryRevision=createHash('sha256').update(JSON.stringify(['personal-period-v15-period-membership',period,output.person,scoped,excluded,snapshot.events])).digest('hex');
     return output;
 }
 module.exports={resolvePersonalPeriod,buildPersonalPeriodSnapshot,typeByKind};
