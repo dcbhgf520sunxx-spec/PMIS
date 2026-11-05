@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { checkDeliveryContract } from './check-delivery-contract.mjs';
-import { resolveDeliveryChangeContext } from './delivery-change-context.mjs';
+import { readDeliveryGitOutput, resolveDeliveryChangeContext } from './delivery-change-context.mjs';
 import { getNpmCommandEnv, shouldUseArm64Node } from './npm-command-env.mjs';
 
 const rootDir = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -61,17 +61,7 @@ const commands = [
   { cwd: '.', command: 'node', args: ['scripts/check-backend-runtime-freshness.mjs'] }
 ];
 
-function gitOutput(args) {
-  try {
-    return execFileSync('git', ['-c', 'core.quotePath=false', ...args], {
-      cwd: rootDir,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore']
-    });
-  } catch {
-    return '';
-  }
-}
+const gitOutput = (args) => readDeliveryGitOutput(rootDir, args);
 
 const currentRoutes = readFileSync(join(rootDir, 'frontend/src/app/routes.tsx'), 'utf8');
 const hasGitBaseline = Boolean(gitOutput(['rev-parse', '--verify', 'HEAD']).trim());

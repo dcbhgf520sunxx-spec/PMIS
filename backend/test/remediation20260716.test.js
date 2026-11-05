@@ -86,7 +86,7 @@ test('新增档案类型生成序号时忽略业务英文编码', () => {
 
   assert.match(
     archiveTypes,
-    /SELECT MAX\(CAST\(code AS INTEGER\)\)[^\n]*WHERE is_deleted = 0 AND code ~ '\^\[0-9\]\+\$'/
+    /MAX\(CASE WHEN code ~ '\^\[0-9\]\+\$' THEN CAST\(code AS NUMERIC\) END\)[\s\S]*FROM pms_archive_type WHERE is_deleted = 0/
   )
 })
 

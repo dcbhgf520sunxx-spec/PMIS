@@ -829,6 +829,11 @@ CREATE INDEX IF NOT EXISTS idx_bug_created_at ON pms_bug(created_at DESC, id DES
 CREATE INDEX IF NOT EXISTS idx_archive_type ON pms_archive(archive_type_id, is_deleted);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_pms_archive_type_code_active ON pms_archive_type(code) WHERE is_deleted = 0;
 CREATE UNIQUE INDEX IF NOT EXISTS ux_pms_archive_type_prefix_active ON pms_archive_type(code_prefix) WHERE is_deleted = 0;
+ALTER TABLE pms_archive_type
+  DROP CONSTRAINT IF EXISTS archive_type_code_key,
+  DROP CONSTRAINT IF EXISTS archive_type_code_prefix_key,
+  DROP CONSTRAINT IF EXISTS pms_archive_type_code_key,
+  DROP CONSTRAINT IF EXISTS pms_archive_type_code_prefix_key;
 CREATE INDEX IF NOT EXISTS idx_op_log_target ON pms_op_log(module, target_id);
 CREATE INDEX IF NOT EXISTS idx_op_log_operation ON pms_op_log(operation_id);
 CREATE INDEX IF NOT EXISTS idx_op_log_module_created_at ON pms_op_log(module, created_at DESC);

@@ -65,3 +65,14 @@ test('无权限但保留禁用入口仍占位，显式隐藏优先', async () =>
   assert.equal(visibleOperationActions([disabled], []).length, 1);
   assert.equal(visibleOperationActions([h('button', { ...disabled.props, hidden: true })], []).length, 0);
 });
+
+test('空字符串和零值不占操作名额，分组中的空项同样排除', async () => {
+  const { createElement: h, Fragment } = await import('react');
+  const { visibleOperationActions } = await import('../src/components/admin/OperationColumnActions/visibleActions.ts');
+  const children = [h('button', { key: 'edit' }, '编辑'), '', 0,
+    h(Fragment, { key: 'group' }, '', h('button', null, '跟进')),
+    h('button', { key: 'delete' }, '删除')];
+  const actions = visibleOperationActions(children, []);
+  assert.equal(actions.length, 3);
+  assert.deepEqual(actions.map(action => action.props.children), ['编辑', '跟进', '删除']);
+});
