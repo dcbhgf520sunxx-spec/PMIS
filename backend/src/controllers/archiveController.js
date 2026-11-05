@@ -21,14 +21,12 @@ function withJoins(sql) {
 }
 
 /** Generate next pms_archive code: prefix + 3-digit sequence */
-async function generateCode(archiveTypeId) {
-  const typeInfo = await db.prepare('SELECT code_prefix FROM pms_archive_type WHERE id = ?').get(archiveTypeId)
-  if (!typeInfo) return null
-  const prefix = typeInfo.code_prefix
-  const maxCode = await db.prepare(
-    'SELECT MAX(CAST(SUBSTRING(code FROM ? FOR 20) AS INTEGER)) as max_seq FROM pms_archive WHERE archive_type_id = ? AND code LIKE ?'
-  ).get(prefix.length + 1, archiveTypeId, `${prefix}%`)
-  const nextSeq = (maxCode?.max_seq || 0) + 1
+async function generateCode(conn, prefix) {
+  // 编码全表唯一，必须包含其他类型及已删除档案，前缀按字面匹配。
+  const maxCode = await conn.prepare(`SELECT MAX(CASE WHEN suffix ~ '^[0-9]+$' THEN CAST(suffix AS NUMERIC) END) AS max_seq
+    FROM (SELECT SUBSTRING(code FROM CHAR_LENGTH(?) + 1) AS suffix FROM pms_archive WHERE LEFT(code, CHAR_LENGTH(?)) = ?) AS history`
+  ).get(prefix, prefix, prefix)
+  const nextSeq = BigInt(maxCode?.max_seq || 0) + 1n
   return prefix + String(nextSeq).padStart(3, '0')
 }
 
@@ -95,18 +93,21 @@ exports.create = async (req, res) => {
     if (!requireValidBody(res, req.body, archiveCreateSchema)) return
     const { archive_type_id, name } = req.body
     const operatorId = req.user.id
-    const code = await generateCode(archive_type_id)
-    if (!code) return fail(res, 400, 400, '档案类型不存在')
-
-    // Auto-calculate sort_order: max existing sort_order + 1 for this type
-    const maxSort = await db.prepare('SELECT MAX(sort_order) as max_so FROM pms_archive WHERE archive_type_id = ? AND is_deleted = 0').get(archive_type_id)
-    const sort_order = (maxSort?.max_so || 0) + 1
-
-    const result = await db.prepare(
-      'INSERT INTO pms_archive (code, name, archive_type_id, sort_order, status, creator_id, updater_id) VALUES (?, ?, ?, ?, 1, ?, ?)'
-    ).run(code, name, archive_type_id, sort_order, operatorId, operatorId)
-    await db.writeLog(operatorId, '新增', '档案', result.lastInsertRowid, null, null, JSON.stringify({ code, name, archive_type_id }), req.ip)
-    ok(res, { id: result.lastInsertRowid, code })
+    const created = await db.transaction(async (conn) => {
+      await conn.query("SELECT pg_advisory_xact_lock(hashtext('pms_archive_write'))")
+      const typeInfo = await conn.prepare('SELECT code_prefix FROM pms_archive_type WHERE id = ? AND is_deleted = 0 FOR UPDATE').get(archive_type_id)
+      if (!typeInfo) return null
+      const code = await generateCode(conn, typeInfo.code_prefix)
+      const maxSort = await conn.prepare('SELECT MAX(sort_order) as max_so FROM pms_archive WHERE archive_type_id = ? AND is_deleted = 0').get(archive_type_id)
+      const sort_order = (maxSort?.max_so || 0) + 1
+      const result = await conn.prepare(
+        'INSERT INTO pms_archive (code, name, archive_type_id, sort_order, status, creator_id, updater_id) VALUES (?, ?, ?, ?, 1, ?, ?)'
+      ).run(code, name, archive_type_id, sort_order, operatorId, operatorId)
+      await conn.writeLog(operatorId, '新增', '档案', result.lastInsertRowid, null, null, JSON.stringify({ code, name, archive_type_id }), req.ip)
+      return { id: result.lastInsertRowid, code }
+    })
+    if (!created) return fail(res, 400, 400, '档案类型不存在或已被删除')
+    ok(res, created)
   } catch (err) {
     console.error(err)
     if (err.code === '23505') return fail(res, 400, 400, '档案编码已存在')

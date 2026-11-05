@@ -1,3 +1,17 @@
+import { execFileSync } from 'node:child_process';
+
+export function readDeliveryGitOutput(cwd, args) {
+  try {
+    return execFileSync('git', ['-c', 'core.quotepath=false', ...args], {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore']
+    });
+  } catch {
+    return '';
+  }
+}
+
 const AUTHENTICATED_ONLY_PAGE_PATHS = new Set(['/release-notes']);
 
 function routeRoots(source = '') {

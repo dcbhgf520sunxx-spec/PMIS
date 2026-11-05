@@ -29,22 +29,26 @@ exports.create = async (req, res) => {
   try {
     const { code_prefix, name } = req.body
     const operatorId = req.user.id
-    // Auto-generate code: 3-digit sequence based on active records only
-    const maxSeq = await db.prepare("SELECT MAX(CAST(code AS INTEGER)) as max_seq FROM pms_archive_type WHERE is_deleted = 0 AND code ~ '^[0-9]+$'").get()
-    const nextSeq = (maxSeq?.max_seq || 0) + 1
-    const code = String(nextSeq).padStart(3, '0')
+    const created = await db.transaction(async (conn) => {
+      // 与档案新增、类型删除共用事务锁，保护编号分配及前缀复用。
+      await conn.query("SELECT pg_advisory_xact_lock(hashtext('pms_archive_write'))")
+      const existsPrefix = await conn.prepare('SELECT id FROM pms_archive_type WHERE code_prefix = ? AND is_deleted = 0').get(code_prefix)
+      if (existsPrefix) return null
 
-    const existsPrefix = await db.prepare('SELECT id FROM pms_archive_type WHERE code_prefix = ? AND is_deleted = 0').get(code_prefix)
-    if (existsPrefix) return failField(res, 'code_prefix', '编码前缀已存在')
-
-    const result = await db.prepare(
-      'INSERT INTO pms_archive_type (code, code_prefix, name, status, creator_id, updater_id) VALUES (?, ?, ?, 1, ?, ?)'
-    ).run(code, code_prefix, name, operatorId, operatorId)
-    await db.writeLog(operatorId, '新增', '档案类型', result.lastInsertRowid, null, null, JSON.stringify({ code, code_prefix, name }), req.ip)
-    res.json({ code: 0, message: 'success', data: { id: result.lastInsertRowid, code } })
+      const maxSeq = await conn.prepare(`SELECT MAX(CASE WHEN code ~ '^[0-9]+$' THEN CAST(code AS NUMERIC) END) AS max_seq
+        FROM pms_archive_type WHERE is_deleted = 0`).get()
+      const code = String(BigInt(maxSeq?.max_seq || 0) + 1n).padStart(3, '0')
+      const result = await conn.prepare(
+        'INSERT INTO pms_archive_type (code, code_prefix, name, status, creator_id, updater_id) VALUES (?, ?, ?, 1, ?, ?)'
+      ).run(code, code_prefix, name, operatorId, operatorId)
+      await conn.writeLog(operatorId, '新增', '档案类型', result.lastInsertRowid, null, null, JSON.stringify({ code, code_prefix, name }), req.ip)
+      return { id: result.lastInsertRowid, code }
+    })
+    if (!created) return failField(res, 'code_prefix', '编码前缀已存在')
+    res.json({ code: 0, message: 'success', data: created })
   } catch (err) {
     console.error(err)
-    if (err.code === '23505' && String(err.constraint || '').includes('code_prefix')) return failField(res, 'code_prefix', '编码前缀已存在')
+    if (err.code === '23505' && /code_prefix|prefix_active/.test(String(err.constraint || ''))) return failField(res, 'code_prefix', '编码前缀已存在')
     if (err.code === '23505' && String(err.constraint || '').includes('code_active')) return failField(res, 'code_prefix', '档案类型编码生成冲突，请重试')
     res.status(500).json({ code: 500, message: '创建失败', data: null })
   }
@@ -102,14 +106,20 @@ exports.checkPrefix = async (req, res) => {
 exports.remove = async (req, res) => {
   try {
     const operatorId = req.user.id
-    const archiveType = await db.prepare('SELECT id FROM pms_archive_type WHERE id = ? AND is_deleted = 0').get(req.params.id)
-    if (!archiveType) return fail(res, 404, 404, '数据不存在或已被删除')
-    const refCount = await db.prepare('SELECT COUNT(*) as cnt FROM pms_archive WHERE archive_type_id = ? AND is_deleted = 0').get(req.params.id)
-    if (refCount?.cnt > 0) {
+    const outcome = await db.transaction(async (conn) => {
+      await conn.query("SELECT pg_advisory_xact_lock(hashtext('pms_archive_write'))")
+      const archiveType = await conn.prepare('SELECT id FROM pms_archive_type WHERE id = ? AND is_deleted = 0 FOR UPDATE').get(req.params.id)
+      if (!archiveType) return 'not_found'
+      const refCount = await conn.prepare('SELECT COUNT(*) as cnt FROM pms_archive WHERE archive_type_id = ? AND is_deleted = 0').get(req.params.id)
+      if (refCount?.cnt > 0) return 'referenced'
+      await conn.prepare('UPDATE pms_archive_type SET is_deleted = 1, updater_id = ?, updated_at = NOW() WHERE id = ?').run(operatorId, req.params.id)
+      await conn.writeLog(operatorId, '删除', '档案类型', req.params.id, 'is_deleted', '0', '1', req.ip)
+      return 'deleted'
+    })
+    if (outcome === 'not_found') return fail(res, 404, 404, '数据不存在或已被删除')
+    if (outcome === 'referenced') {
       return res.status(400).json({ code: 400, message: '该类型下已有档案数据，不可删除', data: null })
     }
-    await db.prepare('UPDATE pms_archive_type SET is_deleted = 1, updater_id = ?, updated_at = NOW() WHERE id = ?').run(operatorId, req.params.id)
-    await db.writeLog(operatorId, '删除', '档案类型', req.params.id, 'is_deleted', '0', '1', req.ip)
     res.json({ code: 0, message: 'success', data: null })
   } catch (err) {
     console.error(err)

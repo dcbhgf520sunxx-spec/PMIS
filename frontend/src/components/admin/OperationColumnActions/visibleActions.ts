@@ -10,7 +10,7 @@ type VisibilityProps = {
 
 // 可见性先于折叠计算；业务状态应通过条件渲染在调用处排除。
 export function visibleOperationActions(children: ReactNode, permissions: readonly string[], prefix = ''): ReactNode[] {
-  return Children.toArray(children).flatMap((child, index) => {
+  return Children.toArray(children).filter(Boolean).flatMap((child, index) => {
     if (!isValidElement<VisibilityProps>(child)) return [child];
     const key = `${prefix}${child.key ?? index}`;
     if (child.type === Fragment) return visibleOperationActions(child.props.children, permissions, `${key}/`);
