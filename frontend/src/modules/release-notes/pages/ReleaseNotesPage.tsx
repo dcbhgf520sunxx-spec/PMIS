@@ -1,11 +1,6 @@
-import {
-  AdminCollapse,
-  AdminText,
-  CategoryTag,
-  defineCategoryToneMap,
-  TemplateDetailPage,
-  TemplateDetailSection
-} from '../../../components/admin';
+import { AdminCollapse, AdminText } from '../../../components/admin/AdminPrimitives';
+import { CategoryTag, defineCategoryToneMap } from '../../../components/admin/CategoryTag';
+import { TemplateDetailPage, TemplateDetailSection } from '../../../components/admin/TemplateDetailPage';
 import {
   currentRelease,
   releaseCategoryDefinitions,

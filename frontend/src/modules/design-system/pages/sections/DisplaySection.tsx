@@ -456,7 +456,7 @@ export function DisplaySection() {
                   <div className="design-system-page__input-panel-head">
                     <h3>树形展示</h3>
                     <ComponentEntry name="AdminTree" />
-                    <p>用于组织、权限和分类层级展示，展开层级要克制，避免占满工作区。</p>
+                    <p>用于组织、权限和分类层级展示，统一使用方框加号展开、方框减号收起。</p>
                   </div>
                   <AdminTree
                     defaultExpandAll

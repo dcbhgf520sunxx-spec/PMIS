@@ -24,6 +24,12 @@
   border-inline-end: 0 !important;
 }
 
+.admin-layout__sider .ant-menu-root {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
 .admin-layout__sider .ant-menu-item,
 .admin-layout__sider .ant-menu-submenu-title {
   height: 36px;
