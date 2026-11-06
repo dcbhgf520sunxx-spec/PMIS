@@ -12,7 +12,7 @@ const MCP_API_PATHS = new Set(['/api/mcp']);
 const AUTHENTICATED_ONLY_PAGE_PATHS = new Set(['/release-notes']);
 const DATABASE_STRUCTURE_SQL = /\b(?:CREATE\s+(?:UNIQUE\s+)?INDEX|CREATE\s+TABLE|ALTER\s+TABLE|DROP\s+(?:TABLE|INDEX))\b/i;
 const RELEASE_NOTES_PATH = 'frontend/src/modules/release-notes/release-notes.json';
-const RELEASE_RELEVANT_FILE = /^(?:backend\/src\/|backend\/db\/(?:init\/|migrations\/)|frontend\/src\/|deploy\/nginx\.conf$)/;
+const RELEASE_RELEVANT_FILE = /^(?:backend\/src\/|backend\/db\/(?:init\/|migrations\/)|frontend\/src\/|deploy\/(?:nginx\.conf|pm2\.config\.js)$)/;
 
 function stripSqlComments(source) {
   return source

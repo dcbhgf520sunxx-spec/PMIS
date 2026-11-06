@@ -12,6 +12,10 @@ export function readDeliveryGitOutput(cwd, args) {
   }
 }
 
+export function readDeliveryDiff(cwd, baseRevision) {
+  return readDeliveryGitOutput(cwd, ['diff', '--name-only', '--diff-filter=ACMRD', `${baseRevision}...HEAD`]);
+}
+
 const AUTHENTICATED_ONLY_PAGE_PATHS = new Set(['/release-notes']);
 
 function routeRoots(source = '') {

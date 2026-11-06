@@ -3,8 +3,10 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { readDeliveryGitOutput, resolveDeliveryChangeContext } from './delivery-change-context.mjs';
+import { checkDeliveryContract } from './check-delivery-contract.mjs';
+import { readDeliveryDiff, readDeliveryGitOutput, resolveDeliveryChangeContext } from './delivery-change-context.mjs';
 
 test('treats an exported project without Git history as its own baseline', () => {
   const context = resolveDeliveryChangeContext({
@@ -96,5 +98,32 @@ test('remote verification checks out history and supplies the previous revision'
   assert.match(workflow, /fetch-depth:\s*0/);
   assert.match(workflow, /DELIVERY_BASE_SHA:\s*\$\{\{ github\.event\.pull_request\.base\.sha \|\| github\.event\.before \}\}/);
   assert.match(verify, /process\.env\.DELIVERY_BASE_SHA/);
-  assert.match(verify, /'diff', '--name-only', '--diff-filter=ACMR'/);
+  assert.match(verify, /readDeliveryDiff\(rootDir, baseRevision\)/);
+});
+
+test('a committed runtime-file deletion still requires an updated release record', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'delivery-deleted-runtime-'));
+  const git = (...args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  const file = 'frontend/src/removed-feature.ts';
+  try {
+    git('init', '--quiet');
+    git('config', 'user.name', 'Delivery regression');
+    git('config', 'user.email', 'delivery-test@example.invalid');
+    mkdirSync(join(cwd, 'frontend/src'), { recursive: true });
+    writeFileSync(join(cwd, file), 'export const feature = true;');
+    git('add', '.');
+    git('commit', '--quiet', '-m', 'baseline');
+    const base = git('rev-parse', 'HEAD').trim();
+    git('rm', file);
+    git('commit', '--quiet', '-m', 'remove feature');
+    const context = resolveDeliveryChangeContext({
+      currentRoutes: '', hasGitBaseline: true, diffOutput: readDeliveryDiff(cwd, base)
+    });
+    assert.deepEqual(context.changedFiles, [file]);
+    const projectDir = fileURLToPath(new URL('..', import.meta.url));
+    const errors = checkDeliveryContract(projectDir, context);
+    assert.ok(errors.includes('产品代码已变更，但未同步更新版本发布记录'));
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
 });

@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { checkDeliveryContract } from './check-delivery-contract.mjs';
-import { readDeliveryGitOutput, resolveDeliveryChangeContext } from './delivery-change-context.mjs';
+import { readDeliveryDiff, readDeliveryGitOutput, resolveDeliveryChangeContext } from './delivery-change-context.mjs';
 import { getNpmCommandEnv, shouldUseArm64Node } from './npm-command-env.mjs';
 
 const rootDir = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -74,9 +74,9 @@ const { changedFiles, changedRouteRoots } = resolveDeliveryChangeContext({
   currentRoutes,
   baseRoutes: hasGitBaseline ? gitOutput(['show', `${baseRevision}:frontend/src/app/routes.tsx`]) : currentRoutes,
   diffOutput: hasGitBaseline && baseRevision !== 'HEAD'
-    ? gitOutput(['diff', '--name-only', '--diff-filter=ACMR', `${baseRevision}...HEAD`])
+    ? readDeliveryDiff(rootDir, baseRevision)
     : '',
-  statusOutput: hasGitBaseline ? gitOutput(['status', '--porcelain']) : '',
+  statusOutput: hasGitBaseline ? gitOutput(['status', '--porcelain', '--untracked-files=all']) : '',
   hasGitBaseline
 });
 const errors = checkDeliveryContract(rootDir, { changedFiles, changedRouteRoots });

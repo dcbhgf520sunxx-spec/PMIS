@@ -6,10 +6,17 @@ const VERSION_PATTERN = /^v(\d{4})\.(\d{2})\.(\d{2})\.(\d+)$/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const CATEGORY_KEYS = ['features', 'improvements', 'fixes', 'security'];
 
+function isValidDate(value) {
+  if (typeof value !== 'string' || !DATE_PATTERN.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
 function versionKey(version) {
   const match = VERSION_PATTERN.exec(version || '');
   if (!match) return null;
   const [, year, month, day, sequence] = match;
+  if (!isValidDate(`${year}-${month}-${day}`) || !Number.isSafeInteger(Number(sequence)) || Number(sequence) < 1) return null;
   return [Number(year), Number(month), Number(day), Number(sequence)];
 }
 
@@ -31,6 +38,10 @@ export function validateReleaseNotes(source) {
   const versionKeys = [];
   releases.forEach((release, index) => {
     const label = `第 ${index + 1} 个版本`;
+    if (!release || typeof release !== 'object' || Array.isArray(release)) {
+      errors.push(`${label}必须是版本对象`);
+      return;
+    }
     const key = versionKey(release?.version);
     if (!key) {
       errors.push(`${label}版本号必须使用 vYYYY.MM.DD.N 格式`);
@@ -39,8 +50,8 @@ export function validateReleaseNotes(source) {
     }
     if (seenVersions.has(release?.version)) errors.push(`${label}版本号重复：${release.version}`);
     seenVersions.add(release?.version);
-    if (!DATE_PATTERN.test(release?.releasedAt || '')) errors.push(`${label}发布日期格式必须为 YYYY-MM-DD`);
-    if (!String(release?.summary || '').trim()) errors.push(`${label}缺少发布摘要`);
+    if (!isValidDate(release.releasedAt)) errors.push(`${label}发布日期格式必须为 YYYY-MM-DD 且为有效日期`);
+    if (typeof release.summary !== 'string' || !release.summary.trim()) errors.push(`${label}缺少有效发布摘要`);
 
     let itemCount = 0;
     CATEGORY_KEYS.forEach((category) => {
@@ -50,7 +61,7 @@ export function validateReleaseNotes(source) {
         return;
       }
       itemCount += items.length;
-      if (items.some((item) => !String(item || '').trim())) errors.push(`${label}的 ${category} 包含空内容`);
+      if (items.some((item) => typeof item !== 'string' || !item.trim())) errors.push(`${label}的 ${category} 包含空内容或非文本内容`);
     });
     if (itemCount === 0) errors.push(`${label}至少填写一条发布内容`);
   });

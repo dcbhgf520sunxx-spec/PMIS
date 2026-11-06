@@ -3,6 +3,14 @@
   border-radius: 8px;
 }
 
+.admin-tree.ant-tree .ant-tree-switcher .ant-tree-switcher-icon svg {
+  transform: none;
+}
+
+.admin-tree.ant-tree .ant-tree-switcher-icon {
+  font-size: 16px;
+}
+
 .admin-button.ant-btn {
   border-radius: 6px;
 }

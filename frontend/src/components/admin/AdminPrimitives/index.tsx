@@ -1,5 +1,6 @@
 import { forwardRef } from 'react';
 import type { ComponentProps, ComponentRef } from 'react';
+import { MinusSquareOutlined, PlusSquareOutlined } from '@ant-design/icons';
 import {
   Alert,
   Avatar,
@@ -135,8 +136,14 @@ export function AdminAlert(props: ComponentProps<typeof Alert>) {
   return <Alert {...props} />;
 }
 
-export function AdminTree(props: ComponentProps<typeof Tree>) {
-  return <Tree {...props} />;
+export function AdminTree({ className, ...props }: Omit<ComponentProps<typeof Tree>, 'switcherIcon'>) {
+  return (
+    <Tree
+      {...props}
+      className={['admin-tree', className].filter(Boolean).join(' ')}
+      switcherIcon={({ expanded }) => expanded ? <MinusSquareOutlined /> : <PlusSquareOutlined />}
+    />
+  );
 }
 
 export function AdminPopover(props: ComponentProps<typeof Popover>) {

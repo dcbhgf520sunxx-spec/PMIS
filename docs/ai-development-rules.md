@@ -32,6 +32,7 @@
 
 | 用户常用说法 | 底座能力与调用方式 | 实际行为 | 组件工作台示例 |
 |---|---|---|---|
+| 组织树、权限树、分类树、树形目录、方框加减展开收起 | 使用 `AdminTree`，传入 `treeData`、展开和选中回调 | 非叶节点统一使用方框加号展开、方框减号收起；`showLine` 只控制连接线，开关样式由组件统一承接 | `frontend/src/modules/design-system/pages/sections/DisplaySection.tsx` 的“树形展示” |
 | 详情页 Tab、顶部页签、详情分类、锚点导航、点击定位 | `TemplateDetailPage.sectionNavigation`；参与导航的 `TemplateDetailSection`、`TemplateDetailTableSection`、`HistoryTimelineSection` 传唯一 `sectionKey` | 顶部生成分类标签，点击后定位到对应详情区域；它不是切换或隐藏内容的页面切换 Tab，窄屏时自动改为下拉定位 | `frontend/src/modules/design-system/pages/demos/DetailTemplateDemo.tsx` |
 | 详情页页面切换、详情子页面、详情路由页签 | 为 `TemplateDetailPage.sectionNavigation` 传入 `items`、`activeKey` 和 `onChange`；业务层在 `onChange` 中更新路由并只传当前页面内容 | 与导航定位使用同一套分类导航样式，点击后切换地址和页面内容，不滚动定位；窄屏时使用同一套下拉切换 | `frontend/src/modules/design-system/pages/demos/DetailTemplateDemo.tsx` |
 | 普通页面分类切换、跨页面分类页签 | 使用 `DetailSectionNavigation`；由业务层在 `onChange` 中调用 `navigate(targetPath)`，并根据当前路由或查询参数传入选中项 | 与详情分类导航保持同一套样式，点击后切换到不同页面或路由，只展示目标页面内容 | `frontend/src/modules/design-system/pages/sections/BaseSection.tsx` 的“页面分类切换”示例 |
@@ -239,11 +240,18 @@ API 接入保持统一：
 
 ## 菜单权限规则
 
+- 后台侧栏由 `AdminLayout` 统一承接根菜单独立纵向滚动，顶部标识和底部收起按钮保持固定。长菜单、短屏、末项点击和折叠态子菜单均需验证，业务页面复用该布局。
+
 - 菜单权限以包含查询参数的完整地址为键；共享同一路径的页面分类不得只按 pathname 放权。
 - 组件工作台的概览、页面样板、基础规范、布局、基础组件、输入、反馈和数据展示必须逐项独立授权，父菜单只负责分组和补齐祖先展示，不能自动放开兄弟菜单。
 - 当前一级菜单顺序固定为：首页、产品管理、需求管理、项目管理、任务管理、BUG管理、运维工单、业务本体、数字孪生、知识库、基础设置、用户权限、组件工作台。菜单顺序以 `pms_menu.sort_order` 为真实来源；新增一级菜单必须明确插入位置，并同步初始化 SQL、migration、侧栏和相关顺序测试，不能用过期的局部菜单清单覆盖现有模块。
 
 ## 验收要求
+
+版本更新模块沿用 `frontend/src/modules/release-notes/pages/ReleaseNotesPage.tsx`，使用 `TemplateDetailPage`、`TemplateDetailSection`、`CategoryTag` 和 `AdminCollapse`。分类标签和折叠行为分别对应工作台数据展示中的“标签、徽标与头像”和“折叠展示”，页面结构对应详情页样板。内容从本项目 `release-notes.json` 读取，版本维护和交付检查以 `docs/ai-delivery-flow.md` 为准。
+
+`/release-notes` 只要求登录，由头像菜单进入，进入后不高亮任一业务侧栏菜单。新增其他业务路由仍须遵守原有菜单、权限和迁移要求。
+
 
 每次业务页面变更后，必须完成：
 
