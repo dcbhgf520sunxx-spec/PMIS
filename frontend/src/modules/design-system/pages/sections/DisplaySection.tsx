@@ -483,6 +483,28 @@ export function DisplaySection() {
 
                 <section className="design-system-page__input-panel">
                   <div className="design-system-page__input-panel-head">
+                    <h3>只读授权树</h3>
+                    <ComponentEntry name="AdminTree.readOnly" />
+                    <p>保留授权勾选和半选结果，文字保持清晰，可展开收起，不能修改授权；已禁用节点保留禁用样式。</p>
+                  </div>
+                  <AdminTree
+                    readOnly
+                    checkable
+                    virtual={false}
+                    defaultExpandedKeys={['readonly-root']}
+                    checkedKeys={['readonly-selected']}
+                    treeData={[{
+                      key: 'readonly-root', title: '权限目录', children: [
+                        { key: 'readonly-selected', title: '已授权项目' },
+                        { key: 'readonly-other', title: '未授权项目' },
+                        { key: 'readonly-disabled', title: '已禁用项目', disabled: true }
+                      ]
+                    }]}
+                  />
+                </section>
+
+                <section className="design-system-page__input-panel">
+                  <div className="design-system-page__input-panel-head">
                     <h3>空状态</h3>
                     <ComponentEntry name="AdminEmptyState" />
                     <p>用于无数据场景。文案要说明当前没有什么，并在需要时提供下一步操作。</p>

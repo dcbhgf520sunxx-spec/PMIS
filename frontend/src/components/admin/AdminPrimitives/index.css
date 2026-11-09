@@ -11,6 +11,10 @@
   font-size: 16px;
 }
 
+.admin-tree.is-readonly .ant-tree-checkbox:not(.ant-tree-checkbox-disabled) {
+  pointer-events: none;
+}
+
 .admin-button.ant-btn {
   border-radius: 6px;
 }

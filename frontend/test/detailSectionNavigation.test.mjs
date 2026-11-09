@@ -54,7 +54,7 @@ test('页面模式通过整体控制切换导航定位和页面切换示例', ()
   assert.match(demoSource, /分类导航：/);
   assert.match(demoSource, /label: '导航定位'/);
   assert.match(demoSource, /label: '页面切换'/);
-  assert.match(demoSource, /sectionNavigation=\{navigationMode === 'page'/);
+  assert.match(demoSource, /sectionNavigation=\{sectionHeight === 'fill' \? false : navigationMode === 'page'/);
   assert.match(demoSource, /activePage === 'basic'/);
   assert.match(demoSource, /activePage === 'permissions'/);
   const relatedModeIndex = demoSource.indexOf('<span>关联数据：</span>');

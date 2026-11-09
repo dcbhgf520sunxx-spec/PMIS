@@ -7,6 +7,7 @@ import {
   AdminButton,
   AdminSegmented,
   AdminTextAction,
+  AdminTree,
   DetailNeighborNav,
   DetailLinkCell,
   DetailMetaList,
@@ -43,6 +44,7 @@ export function DetailTemplateDemo() {
   const [demoState, setDemoState] = useState<'normal' | 'loading' | 'error' | 'notFound'>('normal');
   const [relatedTableMode, setRelatedTableMode] = useState<RelatedTableMode>('display');
   const [navigationMode, setNavigationMode] = useState<NavigationMode>('anchor');
+  const [sectionHeight, setSectionHeight] = useState<'natural' | 'fill'>('natural');
   const [returnSourceMode, setReturnSourceMode] = useState<'module' | 'twin'>('module');
   const demoSource = returnSourceMode === 'twin' ? '/digital-twin?product=78&kind=orders&page=2' : '/work-orders?view=mine&page=2';
   const demoDetail = appendReturnTo('/work-orders/95', demoSource);
@@ -236,6 +238,15 @@ export function DetailTemplateDemo() {
             ? '导航定位：展示同一详情页的全部分组，点击顶部分类后滚动到对应区域。'
             : '页面切换：顶部分类样式保持一致，点击后更新页面地址并只展示当前页面内容。'}
         </p>
+        <div className="design-system-page__template-mode-switch">
+          <span>分组高度：</span>
+          <AdminSegmented
+            size="small"
+            value={sectionHeight}
+            options={[{ label: '自然高度', value: 'natural' }, { label: '撑满剩余高度', value: 'fill' }]}
+            onChange={(value) => setSectionHeight(value as typeof sectionHeight)}
+          />
+        </div>
       </div>
       <div className="design-system-page__template-demo is-detail">
         <TemplateDetailPage
@@ -256,7 +267,7 @@ export function DetailTemplateDemo() {
             />
           )}
           actions={<AdminButton type="primary">编辑</AdminButton>}
-          sectionNavigation={navigationMode === 'page' ? {
+          sectionNavigation={sectionHeight === 'fill' ? false : navigationMode === 'page' ? {
             items: [
               { key: 'basic', title: '基本信息页' },
               { key: 'permissions', title: '权限信息页' }
@@ -280,7 +291,26 @@ export function DetailTemplateDemo() {
             ]
           }}
         >
-          {navigationMode === 'page'
+          {sectionHeight === 'fill' ? (
+            <>
+              <TemplateDetailSection title="基本信息">
+                <DetailMetaList items={[{ label: '角色名称', value: '示例角色' }]} />
+              </TemplateDetailSection>
+              <TemplateDetailSection title="菜单权限" fill>
+                <AdminTree
+                  readOnly checkable virtual={false}
+                  defaultExpandedKeys={['fill-root']}
+                  checkedKeys={['fill-menu-1', 'fill-menu-2']}
+                  treeData={[{
+                    key: 'fill-root', title: '权限目录',
+                    children: Array.from({ length: 18 }, (_, index) => ({
+                      key: `fill-menu-${index + 1}`, title: `示例菜单 ${index + 1}`
+                    }))
+                  }]}
+                />
+              </TemplateDetailSection>
+            </>
+          ) : navigationMode === 'page'
             ? activePage === 'basic'
               ? basicPageContent
               : activePage === 'permissions'

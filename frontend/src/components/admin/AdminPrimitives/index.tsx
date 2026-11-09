@@ -136,11 +136,22 @@ export function AdminAlert(props: ComponentProps<typeof Alert>) {
   return <Alert {...props} />;
 }
 
-export function AdminTree({ className, ...props }: Omit<ComponentProps<typeof Tree>, 'switcherIcon'>) {
+export function AdminTree({ readOnly = false, className, ...props }: Omit<ComponentProps<typeof Tree>, 'switcherIcon'> & { readOnly?: boolean }) {
+  // Keep tree focus and expansion available while pinning the displayed choices.
+  const readOnlyProps = readOnly ? {
+    checkedKeys: props.checkedKeys ?? props.defaultCheckedKeys ?? [],
+    selectedKeys: props.selectedKeys ?? props.defaultSelectedKeys ?? [],
+    onCheck: undefined,
+    onSelect: undefined,
+    selectable: false,
+    draggable: false,
+    'aria-readonly': true
+  } : {};
   return (
     <Tree
       {...props}
-      className={['admin-tree', className].filter(Boolean).join(' ')}
+      {...readOnlyProps}
+      className={['admin-tree', readOnly ? 'is-readonly' : '', className].filter(Boolean).join(' ')}
       switcherIcon={({ expanded }) => expanded ? <MinusSquareOutlined /> : <PlusSquareOutlined />}
     />
   );

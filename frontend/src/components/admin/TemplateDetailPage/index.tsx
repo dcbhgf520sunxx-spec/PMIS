@@ -51,6 +51,7 @@ type TemplateDetailPageProps = {
 
 type TemplateDetailSectionProps = {
   title: string;
+  fill?: boolean;
   sectionKey?: string;
   inlineExtra?: ReactNode;
   inlineExtraPlacement?: 'after-title';
@@ -264,6 +265,7 @@ export function TemplateDetailPage({
 
 export function TemplateDetailSection({
   title,
+  fill = false,
   sectionKey,
   inlineExtra,
   inlineExtraPlacement,
@@ -274,7 +276,7 @@ export function TemplateDetailSection({
     <section
       id={sectionKey ? `detail-section-${sectionKey}` : undefined}
       data-detail-section-key={sectionKey}
-      className="admin-template-detail-page__panel"
+      className={fill ? 'admin-template-detail-page__panel is-fill' : 'admin-template-detail-page__panel'}
     >
       <SectionTitle
         title={title}
@@ -282,7 +284,7 @@ export function TemplateDetailSection({
         inlineExtraPlacement={inlineExtraPlacement}
         extra={extra}
       />
-      {children}
+      {fill ? <div className="admin-template-detail-page__panel-content">{children}</div> : children}
     </section>
   );
 }
