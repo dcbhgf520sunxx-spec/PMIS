@@ -32,7 +32,8 @@
 
 | 用户常用说法 | 底座能力与调用方式 | 实际行为 | 组件工作台示例 |
 |---|---|---|---|
-| 组织树、权限树、分类树、树形目录、方框加减展开收起 | 使用 `AdminTree`，传入 `treeData`、展开和选中回调 | 非叶节点统一使用方框加号展开、方框减号收起；`showLine` 只控制连接线，开关样式由组件统一承接 | `frontend/src/modules/design-system/pages/sections/DisplaySection.tsx` 的“树形展示” |
+| 组织树、权限树、分类树、树形目录、方框加减展开收起 | 使用 `AdminTree`，传入 `treeData`、展开和选中回调；授权详情使用 `readOnly` | 非叶节点统一使用方框加号展开、方框减号收起，`showLine` 只控制连接线；只读模式保留勾选和半选，禁止修改但仍可展开，普通文字清晰，显式禁用节点保留禁用样式 | `frontend/src/modules/design-system/pages/sections/DisplaySection.tsx` 的“树形展示”和“只读授权树” |
+| 详情底框撑满、剩余高度、权限区内部滚动 | 使用 `TemplateDetailSection.fill` | 分组占用主区剩余高度，标题固定，超出内容在框内滚动；普通分组保持自然高度 | `frontend/src/modules/design-system/pages/demos/DetailTemplateDemo.tsx` 的“分组高度 → 撑满剩余高度” |
 | 详情页 Tab、顶部页签、详情分类、锚点导航、点击定位 | `TemplateDetailPage.sectionNavigation`；参与导航的 `TemplateDetailSection`、`TemplateDetailTableSection`、`HistoryTimelineSection` 传唯一 `sectionKey` | 顶部生成分类标签，点击后定位到对应详情区域；它不是切换或隐藏内容的页面切换 Tab，窄屏时自动改为下拉定位 | `frontend/src/modules/design-system/pages/demos/DetailTemplateDemo.tsx` |
 | 详情页页面切换、详情子页面、详情路由页签 | 为 `TemplateDetailPage.sectionNavigation` 传入 `items`、`activeKey` 和 `onChange`；业务层在 `onChange` 中更新路由并只传当前页面内容 | 与导航定位使用同一套分类导航样式，点击后切换地址和页面内容，不滚动定位；窄屏时使用同一套下拉切换 | `frontend/src/modules/design-system/pages/demos/DetailTemplateDemo.tsx` |
 | 普通页面分类切换、跨页面分类页签 | 使用 `DetailSectionNavigation`；由业务层在 `onChange` 中调用 `navigate(targetPath)`，并根据当前路由或查询参数传入选中项 | 与详情分类导航保持同一套样式，点击后切换到不同页面或路由，只展示目标页面内容 | `frontend/src/modules/design-system/pages/sections/BaseSection.tsx` 的“页面分类切换”示例 |
@@ -158,6 +159,7 @@ API 接入保持统一：
 必须保持以下规则：
 
 - 详情页标题、操作区、主区/侧区和加载态由模板承接。
+- 用户、角色等权限详情通过 `AdminTree.readOnly` 展示已有授权，页面只传入真实树和勾选结果；不得用整树 `disabled` 代替只读展示。角色详情默认显示一级菜单，下级按需展开；编辑树保持既有行为。需要占满剩余空间的权限分组声明 `TemplateDetailSection.fill`，其余信息分组保持自然高度。授权数据、可见范围和业务规则由所属项目维护。
 - 右侧单据信息通过 `documentSection.items` 声明，由底座固定单列逐项展示；业务页不选择列数，也不依赖逐字段 `wide` 才能使日期占满一行。组件工作台详情样板和自动回归测试必须覆盖未设置 `wide` 的创建人、创建时间、更新时间。
 - 有状态详情必须通过 `statusSection.items` 声明全部状态类标签，模板自动把同一组非空标签按相同顺序展示在标题后和右侧当前状态区；空值、空字符串和 `-` 只保留在右侧，不在标题后展示。业务页不得另传 `titleTags`，不得通过 `statusSection.children` 自定义第二套状态样式。单据编号通过 `titleCode` 单独传入。状态操作通过 `statusAction` 紧跟在当前状态区之后；右上角 `actions` 只放编辑等页面级操作。
 - 状态变更统一使用 `StatusChangeAction` 或以它为底层的业务封装。业务状态组件必须直接渲染公共 `StatusChangeAction`，仅使用 `*StatusChangeAction` 名称但内部自行拼按钮或弹窗仍属违规。目标状态语义固定为：普通操作蓝色、正向操作绿色、危险或反向操作红色；业务页面不得直接使用 `StatusFlowModal`，不得创建自维护开关和目标状态的重复弹窗。
