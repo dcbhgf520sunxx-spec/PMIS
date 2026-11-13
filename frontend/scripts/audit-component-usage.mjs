@@ -17,7 +17,12 @@ const excludedPathParts = [
 const blockingRules = [
   { pattern: /<Button(\s|>)/g, reason: '按钮应优先使用 AdminButton / PermissionButton / 操作组件' },
   { pattern: /<Input(\s|>|\.TextArea)/g, reason: '输入框应优先使用 AdminInput / AdminTextArea' },
+  { pattern: /<InputNumber(<|\s|\/|>)/g, reason: '数值输入应使用 AdminNumberInput' },
   { pattern: /<DatePicker(\s|>|\.RangePicker)/g, reason: '日期应优先使用 AdminDatePicker / AdminRangePicker' },
+  { pattern: /<TimePicker(\s|\/|>|\.RangePicker)/g, reason: '时间应使用 AdminTimePicker' },
+  { pattern: /<Switch(\s|\/|>)/g, reason: '布尔开关应使用 AdminSwitch' },
+  { pattern: /<Checkbox(\s|\/|>|\.Group)/g, reason: '复选应使用 AdminCheckbox / AdminCheckboxGroup' },
+  { pattern: /<Radio(\s|\/|>|\.Group|\.Button)/g, reason: '单选应使用 AdminRadio / AdminRadioGroup / AdminRadioButton' },
   { pattern: /<Select(\s|>)/g, reason: '下拉应优先使用 AdminSelect' },
   { pattern: /<TreeSelect(\s|>)/g, reason: '树选择应优先使用 AdminTreeSelect' },
   { pattern: /<Tree(\s|>)/g, reason: '树组件应优先使用 AdminTree' },
@@ -27,9 +32,22 @@ const blockingRules = [
   { pattern: /<Drawer(\s|>)/g, reason: '抽屉应优先沉淀为 AdminDrawer / 业务抽屉组件' },
   { pattern: /<Empty(\s|>)/g, reason: '空状态应优先使用 AdminEmptyState / SearchTable locale' },
   { pattern: /<ProFormText(\s|>)/g, reason: '表单文本应优先使用 AdminProFormText' },
+  { pattern: /<ProFormText\.Password(<|\s|\/|>)/g, reason: '密码字段应使用 AdminFormItem 与 AdminPasswordInput' },
   { pattern: /<ProFormTextArea(\s|>)/g, reason: '表单多行文本应优先使用 AdminProFormTextArea' },
+  { pattern: /<ProFormField(<|\s|\/|>)/g, reason: '表单字段应使用 AdminProForm 系列组件，或 AdminFormItem 与底座输入控件' },
+  { pattern: /<ProFormDigit(<|\s|\/|>)/g, reason: '表单数值应使用 AdminProFormNumber / AdminProFormMoney' },
+  { pattern: /<ProFormDigitRange(<|\s|\/|>)/g, reason: '数值区间应使用 AdminFormItem 与 AdminNumberInput 组合' },
+  { pattern: /<ProFormSwitch(\s|\/|>)/g, reason: '布尔字段应使用 AdminFormItem 与 AdminSwitch，并绑定 checked' },
+  { pattern: /<ProFormCheckbox(<|\s|\/|>|\.Group)/g, reason: '复选字段应使用 AdminFormItem 与 AdminCheckbox / AdminCheckboxGroup' },
+  { pattern: /<ProFormRadio(<|\s|\/|>|\.Group|\.Button)/g, reason: '单选字段应使用 AdminFormItem 与 AdminRadioGroup / AdminRadio' },
   { pattern: /<ProFormDatePicker(\s|>)/g, reason: '表单日期应优先使用 AdminProFormDatePicker' },
+  { pattern: /<ProFormDateTimePicker(<|\s|\/|>)/g, reason: '日期时间应使用 AdminProFormDatePicker，并按需启用 showTime' },
+  { pattern: /<ProFormDateRangePicker(<|\s|\/|>)/g, reason: '日期区间应使用 AdminFormItem 与 AdminRangePicker' },
+  { pattern: /<ProFormDateTimeRangePicker(<|\s|\/|>)/g, reason: '日期时间区间应使用 AdminFormItem 与 AdminRangePicker，并按需启用 showTime' },
+  { pattern: /<ProFormTimePicker(<|\s|\/|>)/g, reason: '时间字段应使用 AdminFormItem 与 AdminTimePicker' },
   { pattern: /<ProFormSelect(\s|>)/g, reason: '表单下拉应优先使用 AdminProFormSelect' },
+  { pattern: /<ProFormTreeSelect(<|\s|\/|>)/g, reason: '树选择字段应使用 AdminFormItem 与 AdminTreeSelect' },
+  { pattern: /<ProFormCascader(<|\s|\/|>)/g, reason: '级联字段应使用 AdminFormItem 与 AdminCascader' },
   { pattern: /<ProForm\.Item(\s|>)/g, reason: '表单字段应优先使用 AdminProForm 系列组件' },
   { pattern: /<Form\.Item(\s|>)/g, reason: '弹窗和局部表单字段必须使用 AdminFormItem，统一字段布局和错误提示位置' },
   { pattern: /<ProFormList(\s|>)/g, reason: '可编辑明细应使用 AdminProFormEditableList' },
@@ -239,6 +257,29 @@ function finding(file, sourceFile, node, reason, token = jsxTagName(node, source
   };
 }
 
+function adminComponentNameResolver(sourceFile) {
+  const aliases = new Map();
+  const namespaces = new Set();
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)
+      || !/(?:^|\/)components\/admin(?:\/|$)/.test(statement.moduleSpecifier.text)) continue;
+    const clause = statement.importClause;
+    if (!clause || clause.isTypeOnly) continue;
+    const bindings = clause.namedBindings;
+    if (bindings && ts.isNamespaceImport(bindings)) namespaces.add(bindings.name.text);
+    if (bindings && ts.isNamedImports(bindings)) {
+      for (const element of bindings.elements) {
+        if (!element.isTypeOnly) aliases.set(element.name.text, element.propertyName?.text || element.name.text);
+      }
+    }
+  }
+  return (node) => {
+    const name = jsxTagName(node, sourceFile);
+    const [root, member] = name.split('.');
+    return namespaces.has(root) ? member : aliases.get(name) || name;
+  };
+}
+
 function resolveImportedComponent(file, sourceFile, componentName) {
   for (const statement of sourceFile.statements) {
     if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) continue;
@@ -327,6 +368,12 @@ function importedComponentUsesDetailTablePrimitive(file, sourceFile, componentNa
   return usesPrimitive;
 }
 
+const formFieldControls = new Set([
+  'AdminInput', 'AdminPasswordInput', 'AdminTextArea', 'AdminNumberInput', 'AdminAutoComplete',
+  'AdminSelect', 'AdminTreeSelect', 'AdminCascader', 'AdminDatePicker', 'AdminRangePicker',
+  'AdminTimePicker', 'AdminSwitch', 'AdminCheckbox', 'AdminCheckboxGroup', 'AdminRadioGroup'
+]);
+
 function collectSemanticViolations(files) {
   const successMessageActions = new Set([
     'BubbleConfirmAction',
@@ -350,23 +397,10 @@ function collectSemanticViolations(files) {
     'DeleteConfirmAction',
     'ConfirmAction'
   ]);
-  const formFieldControls = new Set([
-    'AdminInput',
-    'AdminPasswordInput',
-    'AdminTextArea',
-    'AdminSelect',
-    'AdminTreeSelect',
-    'AdminCascader',
-    'AdminDatePicker',
-    'AdminRangePicker',
-    'AdminSwitch',
-    'AdminCheckbox',
-    'AdminRadioGroup'
-  ]);
-
   return files.flatMap((file) => {
     const source = readFileSync(file, 'utf8');
     const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const componentName = adminComponentNameResolver(sourceFile);
     const violations = [];
 
     const inspectBusinessStatusAction = (node, name) => {
@@ -412,14 +446,14 @@ function collectSemanticViolations(files) {
 
     const visit = (node) => {
       if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
-        const name = jsxTagName(node, sourceFile);
+        const name = componentName(node);
         if (name === 'label') {
           let wrappedControl = '';
           const inspectLabel = (child) => {
             if (wrappedControl) return;
             if ((ts.isJsxElement(child) || ts.isJsxSelfClosingElement(child))
-              && formFieldControls.has(jsxTagName(child, sourceFile))) {
-              wrappedControl = jsxTagName(child, sourceFile);
+              && formFieldControls.has(componentName(child))) {
+              wrappedControl = componentName(child);
               return;
             }
             ts.forEachChild(child, inspectLabel);
@@ -440,7 +474,7 @@ function collectSemanticViolations(files) {
           let formContainer = '';
           while (parent && parent !== sourceFile) {
             if (ts.isJsxElement(parent)) {
-              const parentName = jsxTagName(parent, sourceFile);
+              const parentName = componentName(parent);
               if (parentName === 'AdminFormItem') hasFormItem = true;
               if (['AdminModal', 'AdminDrawer'].includes(parentName)) {
                 formContainer = parentName;
@@ -637,7 +671,12 @@ function collectLibraryAliasViolations(files) {
   const disallowedImports = new Map([
     ['Button', '按钮应优先使用 AdminButton / PermissionButton / 操作组件'],
     ['Input', '输入框应优先使用 AdminInput / AdminTextArea'],
+    ['InputNumber', '数值输入应使用 AdminNumberInput'],
     ['DatePicker', '日期应优先使用 AdminDatePicker / AdminRangePicker'],
+    ['TimePicker', '时间应使用 AdminTimePicker'],
+    ['Switch', '布尔开关应使用 AdminSwitch'],
+    ['Checkbox', '复选应使用 AdminCheckbox / AdminCheckboxGroup'],
+    ['Radio', '单选应使用 AdminRadio / AdminRadioGroup / AdminRadioButton'],
     ['Select', '下拉应优先使用 AdminSelect'],
     ['TreeSelect', '树选择应优先使用 AdminTreeSelect'],
     ['Tree', '树组件应优先使用 AdminTree'],
@@ -649,9 +688,22 @@ function collectLibraryAliasViolations(files) {
     ['Upload', '业务附件应使用 AdminAttachmentUpload 或 AdminAttachmentDragger'],
     ['ProTable', '表格应优先使用 TemplateListPage / SearchTable'],
     ['ProFormText', '表单文本应优先使用 AdminProFormText'],
+    ['ProFormText.Password', '密码字段应使用 AdminFormItem 与 AdminPasswordInput'],
     ['ProFormTextArea', '表单多行文本应优先使用 AdminProFormTextArea'],
+    ['ProFormField', '表单字段应使用 AdminProForm 系列组件，或 AdminFormItem 与底座输入控件'],
+    ['ProFormDigit', '表单数值应使用 AdminProFormNumber / AdminProFormMoney'],
+    ['ProFormDigitRange', '数值区间应使用 AdminFormItem 与 AdminNumberInput 组合'],
+    ['ProFormSwitch', '布尔字段应使用 AdminFormItem 与 AdminSwitch，并绑定 checked'],
+    ['ProFormCheckbox', '复选字段应使用 AdminFormItem 与 AdminCheckbox / AdminCheckboxGroup'],
+    ['ProFormRadio', '单选字段应使用 AdminFormItem 与 AdminRadioGroup / AdminRadio'],
     ['ProFormDatePicker', '表单日期应优先使用 AdminProFormDatePicker'],
+    ['ProFormDateTimePicker', '日期时间应使用 AdminProFormDatePicker，并按需启用 showTime'],
+    ['ProFormDateRangePicker', '日期区间应使用 AdminFormItem 与 AdminRangePicker'],
+    ['ProFormDateTimeRangePicker', '日期时间区间应使用 AdminFormItem 与 AdminRangePicker，并按需启用 showTime'],
+    ['ProFormTimePicker', '时间字段应使用 AdminFormItem 与 AdminTimePicker'],
     ['ProFormSelect', '表单下拉应优先使用 AdminProFormSelect'],
+    ['ProFormTreeSelect', '树选择字段应使用 AdminFormItem 与 AdminTreeSelect'],
+    ['ProFormCascader', '级联字段应使用 AdminFormItem 与 AdminCascader'],
     ['ProFormList', '可编辑明细应使用 AdminProFormEditableList'],
     ['EditableProTable', '可编辑明细应使用 AdminProFormEditableList'],
     ['ProCard', '卡片应优先使用页面样板或 AdminCard'],
@@ -689,18 +741,21 @@ function collectLibraryAliasViolations(files) {
     const visit = (node) => {
       if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
         const name = jsxTagName(node, sourceFile);
-        const alias = aliasedImports.get(name.split('.')[0]);
+        const [root, ...members] = name.split('.');
+        const alias = aliasedImports.get(root);
         if (alias) {
-          violations.push(finding(file, sourceFile, node, alias.reason, `${alias.importedName} as ${name}`));
+          const importedPath = [alias.importedName, ...members].join('.');
+          violations.push(finding(file, sourceFile, node, disallowedImports.get(importedPath) || alias.reason, `${importedPath} as ${name}`));
         }
-        const [namespace, importedName] = name.split('.');
-        if (namespaces.has(namespace) && disallowedImports.has(importedName)) {
+        const importedPath = members.join('.');
+        const namespaceReason = disallowedImports.get(importedPath) || disallowedImports.get(members[0]);
+        if (namespaces.has(root) && namespaceReason) {
           violations.push(finding(
             file,
             sourceFile,
             node,
-            disallowedImports.get(importedName),
-            `${namespace}.${importedName}`
+            namespaceReason,
+            name
           ));
         }
       }
@@ -718,6 +773,208 @@ function objectProperty(object, name) {
 
 function propertyText(object, name, sourceFile) {
   return objectProperty(object, name)?.initializer.getText(sourceFile) || '';
+}
+
+function unwrapStaticExpression(expression) {
+  while (expression && (ts.isParenthesizedExpression(expression) || ts.isAsExpression(expression)
+    || ts.isTypeAssertionExpression(expression) || ts.isSatisfiesExpression(expression))) {
+    expression = expression.expression;
+  }
+  return expression;
+}
+
+function effectiveAttribute(node, name) {
+  // shortcut: unknown spreads may override props; leave those contracts to runtime/browser checks.
+  for (const item of [...jsxAttributes(node)].reverse()) {
+    if (ts.isJsxSpreadAttribute(item)) return undefined;
+    if (ts.isJsxAttribute(item) && item.name.getText() === name) return item;
+  }
+  return undefined;
+}
+
+function staticAttributeExpression(node, name) {
+  const initializer = effectiveAttribute(node, name)?.initializer;
+  return unwrapStaticExpression(initializer && ts.isJsxExpression(initializer) ? initializer.expression : initializer);
+}
+
+function staticLiteral(expression) {
+  const value = unwrapStaticExpression(expression);
+  if (!value) return undefined;
+  if (ts.isStringLiteral(value) || ts.isNoSubstitutionTemplateLiteral(value)) return value.text;
+  if (ts.isNumericLiteral(value)) return Number(value.text);
+  if (value.kind === ts.SyntaxKind.TrueKeyword) return true;
+  if (value.kind === ts.SyntaxKind.FalseKeyword) return false;
+  if (ts.isPrefixUnaryExpression(value) && ts.isNumericLiteral(value.operand)
+    && [ts.SyntaxKind.MinusToken, ts.SyntaxKind.PlusToken].includes(value.operator)) {
+    return Number(value.operand.text) * (value.operator === ts.SyntaxKind.MinusToken ? -1 : 1);
+  }
+  return undefined;
+}
+
+function staticPropertyExpression(expression, name) {
+  const object = staticObjectExpression(expression);
+  if (!object) return undefined;
+  return objectProperty(object, name)?.initializer;
+}
+
+function staticObjectExpression(expression) {
+  const object = unwrapStaticExpression(expression);
+  return object && ts.isObjectLiteralExpression(object) && !object.properties.some(ts.isSpreadAssignment) ? object : undefined;
+}
+
+function collectFieldInputContractViolations(files) {
+  const textControls = new Set(['AdminInput', 'AdminPasswordInput', 'AdminTextArea', 'AdminProFormText', 'AdminProFormTextArea']);
+  const numberControls = new Set(['AdminNumberInput', 'AdminProFormNumber', 'AdminProFormMoney']);
+  const formControls = new Set([
+    'AdminProFormText', 'AdminProFormTextArea', 'AdminProFormNumber', 'AdminProFormMoney',
+    'AdminProFormSelect', 'AdminProFormDatePicker'
+  ]);
+  const inputTypes = new Map([
+    ['number', 'AdminNumberInput / AdminProFormNumber / AdminProFormMoney'],
+    ['date', 'AdminDatePicker / AdminProFormDatePicker'],
+    ['datetime-local', 'AdminDatePicker / AdminProFormDatePicker'],
+    ['month', 'AdminDatePicker / AdminProFormDatePicker'],
+    ['time', 'AdminTimePicker'], ['password', 'AdminPasswordInput'],
+    ['checkbox', 'AdminCheckbox'], ['radio', 'AdminRadio / AdminRadioGroup']
+  ]);
+  const ruleTypes = new Map([
+    ['number', inputTypes.get('number')], ['integer', inputTypes.get('number')], ['float', inputTypes.get('number')],
+    ['date', inputTypes.get('date')], ['boolean', 'AdminSwitch / AdminCheckbox'],
+    ['array', 'AdminSelect / AdminProFormSelect / AdminCheckboxGroup'], ['enum', 'AdminSelect / AdminProFormSelect / AdminRadioGroup']
+  ]);
+
+  return files.flatMap((file) => {
+    const sourceFile = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const componentName = adminComponentNameResolver(sourceFile);
+    const violations = [];
+    const checkedRequired = new Set();
+    const fieldItem = (node) => {
+      let parent = node.parent;
+      while (parent && parent !== sourceFile) {
+        if (ts.isJsxElement(parent)) {
+          if (componentName(node) === 'AdminCheckbox' && componentName(parent) === 'AdminCheckboxGroup') return undefined;
+          if (componentName(parent) === 'AdminFormItem') return parent;
+        }
+        parent = parent.parent;
+      }
+      return undefined;
+    };
+    const named = (node) => {
+      const name = staticAttributeExpression(node, 'name');
+      const value = staticLiteral(name);
+      return (typeof value === 'string' && value.length > 0) || typeof value === 'number'
+        || (name && ts.isArrayLiteralExpression(name) && name.elements.length > 0
+          && name.elements.every((element) => ['string', 'number'].includes(typeof staticLiteral(element))));
+    };
+    const rules = (node) => {
+      const expression = staticAttributeExpression(node, 'rules');
+      return expression && ts.isArrayLiteralExpression(expression) ? expression.elements : [];
+    };
+    const inspectRequired = (node) => {
+      if (checkedRequired.has(node) || !named(node)) return;
+      checkedRequired.add(node);
+      const formItemProps = staticAttributeExpression(node, 'formItemProps');
+      if (effectiveAttribute(node, 'formItemProps') && !staticObjectExpression(formItemProps)) return;
+      const itemRequired = staticPropertyExpression(formItemProps, 'required');
+      if (itemRequired && staticLiteral(itemRequired) !== true) return;
+      const required = effectiveAttribute(node, 'required');
+      const isRequired = staticLiteral(itemRequired) === true
+        || (required && (!required.initializer || staticLiteral(staticAttributeExpression(node, 'required')) === true));
+      const rulesAttribute = effectiveAttribute(node, 'rules');
+      const rulesExpression = staticAttributeExpression(node, 'rules');
+      const itemRules = unwrapStaticExpression(staticPropertyExpression(formItemProps, 'rules'));
+      if (itemRules && (!ts.isArrayLiteralExpression(itemRules) || itemRules.elements.length > 0)) return;
+      const noRules = (!rulesAttribute && !jsxAttributes(node).some(ts.isJsxSpreadAttribute))
+        || (rulesExpression && ts.isArrayLiteralExpression(rulesExpression) && rulesExpression.elements.length === 0);
+      if (isRequired && noRules) {
+        violations.push(finding(file, sourceFile, node, 'required 只展示必填星号，必须通过 rules 声明字段校验'));
+      }
+    };
+    const hasCheckedMapping = (node) => {
+      const expression = staticAttributeExpression(node, 'getValueProps');
+      if (!expression || expression.kind === ts.SyntaxKind.NullKeyword
+        || (ts.isIdentifier(expression) && expression.text === 'undefined')) return false;
+      if (!ts.isArrowFunction(expression) && !ts.isFunctionExpression(expression)) return true;
+      let result = unwrapStaticExpression(expression.body);
+      if (ts.isBlock(result)) {
+        const returns = result.statements.filter(ts.isReturnStatement);
+        if (returns.length !== 1) return true;
+        result = unwrapStaticExpression(returns[0].expression);
+      }
+      const object = staticObjectExpression(result);
+      return !object || object.properties.some((property) => property.name?.getText().replace(/^['"]|['"]$/g, '') === 'checked');
+    };
+    const inspectBounds = (node, value, numeric, length) => {
+      const min = value('min');
+      const max = value('max');
+      if (numeric && typeof min === 'number' && typeof max === 'number' && min > max) {
+        violations.push(finding(file, sourceFile, node, '字段 min 不得大于 max'));
+      }
+      if (numeric && typeof value('precision') === 'number' && value('precision') < 0) {
+        violations.push(finding(file, sourceFile, node, '字段 precision 不得为负数'));
+      }
+      if (length && typeof value('maxLength') === 'number' && value('maxLength') < 0) {
+        violations.push(finding(file, sourceFile, node, '字段 maxLength 不得为负数'));
+      }
+    };
+    const visit = (node) => {
+      if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
+        const name = componentName(node);
+        const item = formFieldControls.has(name) ? fieldItem(node) : undefined;
+        const fieldProps = staticAttributeExpression(node, 'fieldProps');
+        const fieldRules = [...rules(node), ...(item ? rules(item) : [])];
+        if (formControls.has(name)) inspectRequired(node);
+        if (item) inspectRequired(item);
+
+        if (textControls.has(name)) {
+          const type = staticLiteral(staticAttributeExpression(node, 'type'))
+            ?? staticLiteral(staticPropertyExpression(fieldProps, 'type'));
+          if (inputTypes.has(type) && !(name === 'AdminPasswordInput' && type === 'password')) {
+            violations.push(finding(file, sourceFile, node, `文本控件不得通过 type="${type}" 冒充对应字段，应使用 ${inputTypes.get(type)}`));
+          }
+          for (const rule of fieldRules) {
+            const type = staticLiteral(staticPropertyExpression(rule, 'type'));
+            if (ruleTypes.has(type)) {
+              violations.push(finding(file, sourceFile, node, `字段已声明 ${type} 校验，不得使用文本控件，应使用 ${ruleTypes.get(type)}`));
+            }
+          }
+          for (const prop of ['options', 'valueEnum']) {
+            const options = unwrapStaticExpression(staticAttributeExpression(node, prop)
+              || staticPropertyExpression(fieldProps, prop));
+            if (options && (ts.isArrayLiteralExpression(options) || ts.isObjectLiteralExpression(options))) {
+              violations.push(finding(file, sourceFile, node, `文本控件配置了 ${prop}，应使用 AdminSelect / AdminProFormSelect 等选择控件`));
+            }
+          }
+        }
+
+        const itemName = item && staticAttributeExpression(item, 'name');
+        const hasNamedBinding = itemName && itemName.kind !== ts.SyntaxKind.NullKeyword
+          && !(ts.isIdentifier(itemName) && itemName.text === 'undefined') && staticLiteral(itemName) !== '';
+        if (item && hasNamedBinding && ['AdminSwitch', 'AdminCheckbox'].includes(name)) {
+          const binding = effectiveAttribute(item, 'valuePropName');
+          const bindingValue = staticLiteral(staticAttributeExpression(item, 'valuePropName'));
+          const hasSpread = jsxAttributes(item).some(ts.isJsxSpreadAttribute);
+          if (!hasCheckedMapping(item)
+            && ((!binding && !hasSpread) || (bindingValue !== undefined && bindingValue !== 'checked'))) {
+            violations.push(finding(file, sourceFile, item, `${name} 字段必须声明 valuePropName="checked"，或通过 getValueProps 映射 checked`));
+          }
+        }
+
+        if (textControls.has(name) || numberControls.has(name)) {
+          inspectBounds(node, (prop) => staticLiteral(staticAttributeExpression(node, prop)), numberControls.has(name), textControls.has(name));
+          inspectBounds(node, (prop) => staticLiteral(staticPropertyExpression(fieldProps, prop)), numberControls.has(name), textControls.has(name));
+        }
+        if (name === 'AdminFormItem' || formControls.has(name)) {
+          for (const rule of rules(node)) {
+            inspectBounds(node, (prop) => staticLiteral(staticPropertyExpression(rule, prop)), true, false);
+          }
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(sourceFile);
+    return violations;
+  });
 }
 
 function collectListColumnContractViolations(files) {
@@ -1018,17 +1275,18 @@ const listColumnContractBlocking = collectListColumnContractViolations(files);
 const listCreationColumnBlocking = collectListCreationColumnViolations(files);
 const listViewTabContractBlocking = collectListViewTabContractViolations(files);
 const detailLongTextContractBlocking = collectDetailLongTextContractViolations(sourceFiles);
+const fieldInputContractBlocking = collectFieldInputContractViolations(files);
 const warnings = collectMatches(files, warningRules, 'WARN');
 
 console.log('组件接入审计');
 console.log(`扫描文件：${files.length}`);
-console.log(`阻断项：${blocking.length + listTemplateBlocking.length + pageTemplateBlocking.length + serverListDataBlocking.length + semanticBlocking.length + libraryAliasBlocking.length + listColumnContractBlocking.length + listCreationColumnBlocking.length + listViewTabContractBlocking.length + detailLongTextContractBlocking.length}`);
+console.log(`阻断项：${blocking.length + listTemplateBlocking.length + pageTemplateBlocking.length + serverListDataBlocking.length + semanticBlocking.length + libraryAliasBlocking.length + listColumnContractBlocking.length + listCreationColumnBlocking.length + listViewTabContractBlocking.length + detailLongTextContractBlocking.length + fieldInputContractBlocking.length}`);
 console.log(`提醒项：${warnings.length}`);
 
-for (const item of [...blocking, ...listTemplateBlocking, ...pageTemplateBlocking, ...serverListDataBlocking, ...semanticBlocking, ...libraryAliasBlocking, ...listColumnContractBlocking, ...listCreationColumnBlocking, ...listViewTabContractBlocking, ...detailLongTextContractBlocking, ...warnings]) {
+for (const item of [...blocking, ...listTemplateBlocking, ...pageTemplateBlocking, ...serverListDataBlocking, ...semanticBlocking, ...libraryAliasBlocking, ...listColumnContractBlocking, ...listCreationColumnBlocking, ...listViewTabContractBlocking, ...detailLongTextContractBlocking, ...fieldInputContractBlocking, ...warnings]) {
   console.log(`${item.level} ${item.file}:${item.line} ${item.token} ${item.reason}`);
 }
 
-if (strict && (blocking.length > 0 || listTemplateBlocking.length > 0 || pageTemplateBlocking.length > 0 || serverListDataBlocking.length > 0 || semanticBlocking.length > 0 || libraryAliasBlocking.length > 0 || listColumnContractBlocking.length > 0 || listCreationColumnBlocking.length > 0 || listViewTabContractBlocking.length > 0 || detailLongTextContractBlocking.length > 0)) {
+if (strict && (blocking.length > 0 || listTemplateBlocking.length > 0 || pageTemplateBlocking.length > 0 || serverListDataBlocking.length > 0 || semanticBlocking.length > 0 || libraryAliasBlocking.length > 0 || listColumnContractBlocking.length > 0 || listCreationColumnBlocking.length > 0 || listViewTabContractBlocking.length > 0 || detailLongTextContractBlocking.length > 0 || fieldInputContractBlocking.length > 0)) {
   process.exitCode = 1;
 }

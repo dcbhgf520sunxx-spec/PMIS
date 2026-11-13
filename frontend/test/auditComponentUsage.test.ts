@@ -973,3 +973,243 @@ test('操作列条件渲染与分组中的动作仍受统一文字动作审计',
   const valid = runStrictAudit('export function CustomerListPage() { return <OperationColumnActions>{allowed ? <AdminTextAction>编辑</AdminTextAction> : null}<><AdminTextAction>跟进</AdminTextAction></></OperationColumnActions>; }', 'CustomerListPage.tsx');
   assert.equal(valid.status, 0, valid.stdout);
 });
+
+test('字段输入审计阻断原始数值时间和选择控件及其导入别名', () => {
+  const controls = [
+    ['antd', 'InputNumber', 'AdminNumberInput'],
+    ['antd', 'TimePicker', 'AdminTimePicker'],
+    ['antd', 'Switch', 'AdminSwitch'],
+    ['antd', 'Checkbox', 'AdminCheckbox'],
+    ['antd', 'Radio', 'AdminRadio'],
+    ['@ant-design/pro-components', 'ProFormDigit', 'AdminProFormNumber'],
+    ['@ant-design/pro-components', 'ProFormSwitch', 'AdminSwitch']
+  ];
+  for (const [library, control, replacement] of controls) {
+    for (const source of [
+      `export function FieldEditor() { return <${control} />; }`,
+      `export function FieldEditor() { return <${control}/>; }`,
+      `import { ${control} as BusinessField } from '${library}'; export function FieldEditor() { return <BusinessField />; }`,
+      `import * as Fields from '${library}'; export function FieldEditor() { return <Fields.${control} />; }`
+    ]) {
+      const result = runStrictAudit(source, 'FieldEditor.tsx');
+      assert.equal(result.status, 1, source);
+      assert.match(result.stdout, new RegExp(replacement));
+    }
+  }
+});
+
+test('字段输入审计要求新增基础输入控件进入弹窗字段项', () => {
+  for (const control of ['AdminNumberInput', 'AdminTimePicker', 'AdminAutoComplete', 'AdminCheckboxGroup']) {
+    const invalid = runStrictAudit(`export function FieldEditor() { return <AdminModal><${control} /></AdminModal>; }`, 'FieldEditor.tsx');
+    const valid = runStrictAudit(`export function FieldEditor() { return <AdminDrawer><AdminFormItem name="value"><${control} /></AdminFormItem></AdminDrawer>; }`, 'FieldEditor.tsx');
+    assert.equal(invalid.status, 1, control);
+    assert.match(invalid.stdout, /AdminFormItem/);
+    assert.equal(valid.status, 0, valid.stdout);
+  }
+});
+
+test('字段输入审计阻断普通文本冒充明确的输入类型', () => {
+  for (const [type, replacement] of [
+    ['number', 'AdminNumberInput'], ['date', 'AdminDatePicker'], ['datetime-local', 'AdminDatePicker'],
+    ['month', 'AdminDatePicker'], ['time', 'AdminTimePicker'], ['password', 'AdminPasswordInput'],
+    ['checkbox', 'AdminCheckbox'], ['radio', 'AdminRadio']
+  ]) {
+    for (const field of [`<AdminInput type="${type}" />`, `<AdminProFormText name="value" fieldProps={{ type: '${type}' }} />`]) {
+      const result = runStrictAudit(`export function FieldEditor() { return ${field}; }`, 'FieldEditor.tsx');
+      assert.equal(result.status, 1, field);
+      assert.match(result.stdout, new RegExp(replacement));
+    }
+  }
+});
+
+test('字段输入审计通过显式校验类型识别错误的文本控件', () => {
+  for (const [type, replacement] of [
+    ['number', 'AdminNumberInput'], ['integer', 'AdminNumberInput'], ['float', 'AdminNumberInput'],
+    ['date', 'AdminDatePicker'], ['boolean', 'AdminSwitch'], ['array', 'AdminSelect'], ['enum', 'AdminSelect']
+  ]) {
+    const result = runStrictAudit(`export function FieldEditor() { return <AdminFormItem name="value" rules={[{ type: '${type}' }]}><AdminInput /></AdminFormItem>; }`, 'FieldEditor.tsx');
+    assert.equal(result.status, 1, type);
+    assert.match(result.stdout, new RegExp(replacement));
+  }
+  const proForm = runStrictAudit("export function FieldEditor() { return <AdminProFormText name=\"value\" rules={[{ type: 'number' }]} />; }", 'FieldEditor.tsx');
+  assert.equal(proForm.status, 1);
+  assert.match(proForm.stdout, /AdminProFormNumber/);
+});
+
+test('字段输入审计阻断文本控件配置静态选择项', () => {
+  for (const props of ["options={[{ label: '启用', value: 1 }]}", "valueEnum={{ enabled: '启用' }}", "fieldProps={{ options: [] }}"]) {
+    const result = runStrictAudit(`export function FieldEditor() { return <AdminProFormText name="value" ${props} />; }`, 'FieldEditor.tsx');
+    assert.equal(result.status, 1, props);
+    assert.match(result.stdout, /AdminProFormSelect/);
+  }
+});
+
+test('字段输入审计识别底座文本和字段项的导入别名及命名空间', () => {
+  const result = runStrictAudit(`
+    import { AdminInput as TextField } from '../../components/admin';
+    import * as Fields from '../../components/admin';
+    export function FieldEditor() {
+      return <Fields.AdminFormItem name="quantity" rules={[{ type: 'number' }]}><TextField /></Fields.AdminFormItem>;
+    }
+  `, 'FieldEditor.tsx');
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /AdminNumberInput/);
+});
+
+test('字段输入审计要求布尔字段绑定 checked', () => {
+  for (const control of ['AdminSwitch', 'AdminCheckbox']) {
+    for (const binding of ['', 'valuePropName="value"']) {
+      const result = runStrictAudit(`export function FieldEditor() { return <AdminFormItem name="enabled" ${binding}><${control} /></AdminFormItem>; }`, 'FieldEditor.tsx');
+      assert.equal(result.status, 1, `${control} ${binding}`);
+      assert.match(result.stdout, /valuePropName.*checked/);
+    }
+  }
+});
+
+test('字段输入审计检查动态字段路径和明确错误的 checked 映射', () => {
+  for (const field of [
+    '<AdminFormItem name={field.name}><AdminSwitch /></AdminFormItem>',
+    '<AdminFormItem name="enabled" getValueProps={() => ({ value: true })}><AdminCheckbox /></AdminFormItem>',
+    '<AdminFormItem name="enabled" getValueProps={undefined}><AdminSwitch /></AdminFormItem>'
+  ]) {
+    const result = runStrictAudit(`export function FieldEditor() { return ${field}; }`, 'FieldEditor.tsx');
+    assert.equal(result.status, 1, field);
+    assert.match(result.stdout, /valuePropName.*checked/);
+  }
+});
+
+test('字段输入审计保留 checked 和自定义取值映射及非字段选择控件', () => {
+  for (const field of [
+    '<AdminFormItem name="enabled" valuePropName="checked"><AdminSwitch /></AdminFormItem>',
+    '<AdminFormItem name="enabled" valuePropName={"checked"}><AdminCheckbox /></AdminFormItem>',
+    '<AdminFormItem name="enabled" getValueProps={(value) => ({ checked: value })}><AdminSwitch /></AdminFormItem>',
+    '<AdminFormItem name="enabled" getValueProps={mapChecked}><AdminCheckbox /></AdminFormItem>',
+    '<AdminFormItem name="enabled" valuePropName={binding}><AdminSwitch /></AdminFormItem>',
+    '<AdminFormItem name="tags"><AdminCheckboxGroup /></AdminFormItem>',
+    '<AdminFormItem name="tags"><AdminCheckboxGroup><AdminCheckbox value="first" /></AdminCheckboxGroup></AdminFormItem>',
+    '<AdminFormItem><AdminSwitch /></AdminFormItem>',
+    '<AdminSwitch />'
+  ]) {
+    const result = runStrictAudit(`export function FieldEditor() { return ${field}; }`, 'FieldEditor.tsx');
+    assert.equal(result.status, 0, result.stdout);
+  }
+});
+
+test('字段输入审计阻断静态上下限矛盾和负长度精度', () => {
+  for (const field of [
+    '<AdminNumberInput min={10} max={1} />',
+    '<AdminProFormNumber name="value" fieldProps={{ min: 10, max: 1 }} />',
+    '<AdminInput maxLength={-1} />',
+    '<AdminProFormTextArea name="value" fieldProps={{ maxLength: -1 }} />',
+    '<AdminNumberInput precision={-1} />',
+    '<AdminProFormMoney name="value" fieldProps={{ precision: -1 }} />',
+    '<AdminFormItem name="value" rules={[{ min: 10, max: 1 }]}><AdminTextArea /></AdminFormItem>'
+  ]) {
+    const result = runStrictAudit(`export function FieldEditor() { return ${field}; }`, 'FieldEditor.tsx');
+    assert.equal(result.status, 1, field);
+    assert.match(result.stdout, /min.*max|maxLength|precision/);
+  }
+});
+
+test('字段输入审计阻断必填星号没有任何校验规则', () => {
+  for (const field of [
+    '<AdminFormItem name="value" required><AdminInput /></AdminFormItem>',
+    '<AdminProFormText name="value" required />',
+    '<AdminProFormText name="value" required formItemProps={{ className: "field" }} />',
+    '<AdminProFormTextArea name="value" required={true} rules={[]} />',
+    '<AdminProFormNumber name="value" required />',
+    '<AdminProFormMoney name="value" required />',
+    '<AdminProFormSelect name="value" required />',
+    '<AdminProFormDatePicker name="value" required />'
+  ]) {
+    const result = runStrictAudit(`export function FieldEditor() { return ${field}; }`, 'FieldEditor.tsx');
+    assert.equal(result.status, 1, field);
+    assert.match(result.stdout, /required.*rules/);
+  }
+});
+
+test('字段输入审计保留已有必填规则自定义校验和动态规则', () => {
+  const result = runStrictAudit(`export function FieldEditor() { return <>
+    <AdminProFormText name="title" required rules={[{ required: true }]} />
+    <AdminProFormTextArea name="remark" required rules={[{ validator: validateRemark }]} />
+    <AdminProFormSelect name="kind" required rules={getRules()} />
+    <AdminProFormText name="dynamic" required formItemProps={dynamicItemProps} />
+    <AdminProFormText name="override" required formItemProps={{ required: false }} />
+    <AdminFormItem name="title" required {...unknownProps}><AdminInput /></AdminFormItem>
+    <AdminProFormNumber name="count" required={isRequired} />
+    <AdminProFormText name="optional" required={false} />
+    <AdminFormItem required><AdminInput /></AdminFormItem>
+  </>; }`, 'FieldEditor.tsx');
+  assert.equal(result.status, 0, result.stdout);
+});
+
+test('字段输入审计保留手机号编码数字枚举字符串金额和未知动态契约', () => {
+  const result = runStrictAudit(`export function FieldEditor() { return <>
+    <AdminInput name="phone" type="tel" inputMode="numeric" maxLength={11} />
+    <AdminInput name="code" defaultValue="00123" />
+    <AdminInput name="id" value="123" />
+    <AdminInput type="email" /><AdminInput type="search" /><AdminInput type="text" />
+    <AdminInput type={dynamicType} {...unknownProps} />
+    <AdminInput type="number" {...unknownProps} />
+    <AdminProFormText name="value" fieldProps={unknownProps} rules={unknownRules} options={unknownOptions} />
+    <AdminProFormText name="value" fieldProps={{ type: 'number', ...unknownProps }} />
+    <AdminInput min={1} max={10} />
+    <AdminProFormSelect name="urgency" options={[{ label: '高', value: 1 }]} rules={[{ type: 'number' }]} />
+    <AdminProFormMoney name="amount" fieldProps={{ stringMode: true, precision: 2, min: '0.01' }} />
+    <AdminNumberInput min={minimum} max={maximum} precision={precision} />
+    <AdminProFormTextArea name="remark" />
+    <AdminFormItem name="enabled" {...unknownProps}><AdminSwitch /></AdminFormItem>
+    <AdminInput readOnly disabled />
+  </>; }`, 'FieldEditor.tsx');
+  assert.equal(result.status, 0, result.stdout);
+});
+
+test('字段输入审计封闭原始 ProForm 输入家族并保留表单辅助能力', () => {
+  for (const [control, replacement] of [
+    ['ProFormField', 'AdminProForm'],
+    ['ProFormSwitch', 'AdminSwitch'],
+    ['ProFormCheckbox', 'AdminCheckbox'],
+    ['ProFormCheckbox.Group', 'AdminCheckboxGroup'],
+    ['ProFormRadio', 'AdminRadioGroup'],
+    ['ProFormRadio.Group', 'AdminRadioGroup'],
+    ['ProFormDateTimePicker', 'AdminProFormDatePicker'],
+    ['ProFormDateRangePicker', 'AdminRangePicker'],
+    ['ProFormDateTimeRangePicker', 'AdminRangePicker'],
+    ['ProFormTimePicker', 'AdminTimePicker'],
+    ['ProFormTreeSelect', 'AdminTreeSelect'],
+    ['ProFormCascader', 'AdminCascader'],
+    ['ProFormText.Password', 'AdminPasswordInput'],
+    ['ProFormDigitRange', 'AdminNumberInput']
+  ]) {
+    const [exportName, ...members] = control.split('.');
+    const suffix = members.length ? `.${members.join('.')}` : '';
+    for (const source of [
+      `export function FieldEditor() { return <${control}/>; }`,
+      `import { ${exportName} as RawField } from '@ant-design/pro-components'; export function FieldEditor() { return <RawField${suffix}/>; }`,
+      `import * as Pro from '@ant-design/pro-components'; export function FieldEditor() { return <Pro.${control}/>; }`
+    ]) {
+      const result = runStrictAudit(source, 'FieldEditor.tsx');
+      assert.equal(result.status, 1, source);
+      assert.match(result.stdout, new RegExp(replacement));
+    }
+  }
+  const helpers = runStrictAudit(`
+    import { ProForm, ProFormDependency, FieldContext } from '@ant-design/pro-components';
+    import * as Pro from '@ant-design/pro-components';
+    export function FieldEditor() {
+      const [form] = ProForm.useForm();
+      const [otherForm] = Pro.ProForm.useForm();
+      return <FieldContext.Provider value={{ form, otherForm }}>
+        <ProFormDependency name={['kind']}>{() => <AdminInput />}</ProFormDependency>
+        <Pro.FieldContext.Provider value={{ form }}>
+          <Pro.ProFormDependency name={['kind']}>{() => <AdminInput />}</Pro.ProFormDependency>
+        </Pro.FieldContext.Provider>
+      </FieldContext.Provider>;
+    }
+  `, 'FieldEditor.tsx');
+  assert.equal(helpers.status, 0, helpers.stdout);
+  const workbench = runStrictAuditFiles({
+    'design-system/FieldExamples.tsx': 'export function FieldExamples() { return <ProFormField valueType="digit" />; }'
+  });
+  assert.equal(workbench.status, 0, workbench.stdout);
+});
