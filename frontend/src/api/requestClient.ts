@@ -9,15 +9,15 @@ export const request = axios.create({
   timeout: 15000
 });
 
-function clearExpiredSession(status?: number) {
+function clearExpiredSession(status?: number, authorization?: unknown) {
   if (status !== 401) return;
   const auth = useAuthStore.getState();
-  if (auth.token) auth.clearAuth();
+  if (auth.token && authorization === `Bearer ${auth.token}`) auth.clearAuth();
 }
 
 request.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
-  if (token) {
+  if (token && !config.headers.Authorization) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -27,14 +27,14 @@ request.interceptors.response.use(
   (response) => {
     const payload = response.data as ApiResponse<unknown>;
     if (payload && typeof payload.code === 'number' && payload.code !== 0) {
-      clearExpiredSession(payload.code);
+      clearExpiredSession(payload.code, response.config.headers.Authorization);
       return Promise.reject(createApiError(payload));
     }
     return response;
   },
   (error) => {
     const payload = error?.response?.data as ApiResponse<unknown> | undefined;
-    clearExpiredSession(Number(payload?.code || error?.response?.status));
+    clearExpiredSession(Number(payload?.code || error?.response?.status), error?.config?.headers?.Authorization);
     return Promise.reject(createApiError(payload, error?.message || '请求失败'));
   }
 );

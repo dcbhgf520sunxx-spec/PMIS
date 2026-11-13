@@ -7,7 +7,25 @@ import { objectContract } from './responseContract';
 export type LoginParams = {
   account: string;
   password: string;
+  captcha_id: string;
+  captcha_code: string;
 };
+
+export type LoginCaptcha = {
+  captcha_id: string;
+  image: string;
+  expires_in: number;
+};
+
+const captchaContract = objectContract<LoginCaptcha>(['captcha_id', 'image', 'expires_in'], {
+  captcha_id: (value): value is string => typeof value === 'string' && value.length > 0,
+  image: (value): value is string => typeof value === 'string' && value.startsWith('data:image/png;base64,'),
+  expires_in: (value): value is number => typeof value === 'number' && value > 0
+});
+
+export function getLoginCaptcha() {
+  return unwrap<LoginCaptcha>(request.get('/auth/captcha'), captchaContract);
+}
 
 export type LoginResult = {
   token: string;

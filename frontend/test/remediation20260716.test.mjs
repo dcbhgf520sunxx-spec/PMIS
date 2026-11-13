@@ -35,7 +35,7 @@ test('接口返回 401 时立即清理过期登录态', () => {
   assert.match(requestClient, /function clearExpiredSession/);
   assert.match(requestClient, /status !== 401/);
   assert.match(requestClient, /auth\.clearAuth\(\)/);
-  assert.match(requestClient, /clearExpiredSession\(Number\(payload\?\.code \|\| error\?\.response\?\.status\)\)/);
+  assert.match(requestClient, /clearExpiredSession\(Number\(payload\?\.code \|\| error\?\.response\?\.status\), error\?\.config\?\.headers\?\.Authorization\)/);
   assert.match(workOrderListData, /getUserOptions\(\)\.then\(setUserOptions\)\.catch/);
 });
 

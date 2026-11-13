@@ -43,6 +43,7 @@ test('真实 HTTP、PostgreSQL 和核心业务流程', { skip: !enabled }, async
   process.env.CONTRACT_ATTACHMENT_OSS_UPLOAD_URL = `${ossOrigin}/oss/file/upload`
   process.env.CONTRACT_ATTACHMENT_OSS_FILE_ORIGIN = ossOrigin
 
+  const readCaptcha = require('../test-support/loginCaptcha').captureLoginCaptcha(t)
   const app = require('../src/app')
   const db = require('../src/db')
   const server = app.listen(0)
@@ -73,11 +74,39 @@ test('真实 HTTP、PostgreSQL 和核心业务流程', { skip: !enabled }, async
       assert.equal(result.body.data.db, 'connected')
     })
 
+    await t.test('虚假账号锁定不牵连共享出口的真实用户，限制记录持久化', async () => {
+      const account = `login-security-unknown-${process.pid}`
+      for (let i = 0; i < 5; i++) {
+        const rejected = await request('/api/auth/login', {
+          method: 'POST', auth: false,
+          body: { account, password: 'incorrect', ...await readCaptcha(baseUrl) }
+        })
+        assert.equal(rejected.response.status, 401)
+      }
+      const locked = await request('/api/auth/login', {
+        method: 'POST', auth: false,
+        body: { account, password: 'incorrect', ...await readCaptcha(baseUrl) }
+      })
+      assert.equal(locked.response.status, 429)
+      assert.ok(Number(locked.response.headers.get('retry-after')) > 0)
+      const legitimate = await request('/api/auth/login', {
+        method: 'POST', auth: false,
+        body: { account: '13800000000', password: 'vv123456', ...await readCaptcha(baseUrl) }
+      })
+      assert.equal(legitimate.response.status, 200)
+      assert.equal(legitimate.body.data.user.id, '1')
+      const events = await db.prepare('SELECT result, fail_reason, user_id FROM pms_access_log WHERE account = ? ORDER BY id').all(account)
+      assert.equal(events.length, 6)
+      assert.deepEqual(events.map(event => event.result), ['failed', 'failed', 'failed', 'failed', 'failed', 'locked'])
+      assert.equal(events[5].fail_reason, '账号登录频率限制')
+      assert.ok(events.every(event => event.user_id === null))
+    })
+
     await t.test('首次登录只能改密，改密日志不含明文', async () => {
       const login = await request('/api/auth/login', {
         method: 'POST',
         auth: false,
-        body: { account: 'admin', password: 'vv123456' }
+        body: { account: 'admin', password: 'vv123456', ...await readCaptcha(baseUrl) }
       })
       assert.equal(login.response.status, 200)
       assert.equal(login.body.data.first_login, 1)

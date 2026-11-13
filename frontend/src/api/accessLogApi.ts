@@ -149,10 +149,10 @@ export function heartbeatAccessSession(sessionId?: string) {
   return unwrap(request.post('/auth/heartbeat', { session_id: sessionId }));
 }
 
-export function logoutAccessSession(sessionId?: string, options?: { preserveLastActive?: boolean }) {
+export function logoutAccessSession(sessionId?: string, options?: { preserveLastActive?: boolean; token?: string }) {
   if (!sessionId) return Promise.resolve(null);
   return unwrap(request.post('/auth/logout', {
     session_id: sessionId,
     preserve_last_active: options?.preserveLastActive ? 1 : 0
-  }));
+  }, options?.token ? { headers: { Authorization: `Bearer ${options.token}` } } : undefined));
 }

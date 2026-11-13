@@ -29,7 +29,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'npm --prefix ../backend start',
+      command: 'node ../backend/test-support/e2eServer.js',
       url: `http://127.0.0.1:${backendPort}/api/health`,
       reuseExistingServer: false,
       timeout: 60_000,
