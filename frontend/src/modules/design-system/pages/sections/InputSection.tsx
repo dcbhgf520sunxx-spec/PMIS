@@ -4,6 +4,7 @@ import { BasicInputExamples } from './input/BasicInputExamples';
 import { ChoiceInputExamples } from './input/ChoiceInputExamples';
 import { EditableDetailListExamples } from './input/EditableDetailListExamples';
 import { SelectionInputExamples } from './input/SelectionInputExamples';
+import { FormFieldExamples } from './input/FormFieldExamples';
 
 const inputComponentSpecs = [
   { label: '高度', value: '默认 32px，同一区域控件高度必须一致' },
@@ -28,6 +29,7 @@ export function InputSection({ richText, setRichText }: InputSectionProps) {
           ))}
         </div>
       </AdminCard>
+      <FormFieldExamples />
       <BasicInputExamples />
       <SelectionInputExamples />
       <ChoiceInputExamples />

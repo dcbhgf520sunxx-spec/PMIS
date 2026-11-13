@@ -32,6 +32,8 @@
 
 | 用户常用说法 | 底座能力与调用方式 | 实际行为 | 组件工作台示例 |
 |---|---|---|---|
+| 数量、分数、整数、小数、比例、金额录入 | 普通数值使用 `AdminProFormNumber` / `AdminNumberInput`；金额使用 `AdminProFormMoney` | 根据字段声明精度、步长、上下限与单位；高精度值使用 `stringMode` 并按接口约定传字符串 | 输入分类“字段录入与校验”“数字输入”“可编辑明细表单” |
+| 输入字段禁用、字段只读、整表只读、必填错误 | `AdminProForm*` 的 `disabled`、`readonly` 与 `rules`；局部表单用 `AdminFormItem` | 禁用和只读分别验收；`required` 标记须配合校验规则；错误显示在对应字段下方 | 输入分类“字段录入与校验”的可编辑、字段禁用、字段只读、整表只读四种状态 |
 | 组织树、权限树、分类树、树形目录、方框加减展开收起 | 使用 `AdminTree`，传入 `treeData`、展开和选中回调；授权详情使用 `readOnly` | 非叶节点统一使用方框加号展开、方框减号收起，`showLine` 只控制连接线；只读模式保留勾选和半选，禁止修改但仍可展开，普通文字清晰，显式禁用节点保留禁用样式 | `frontend/src/modules/design-system/pages/sections/DisplaySection.tsx` 的“树形展示”和“只读授权树” |
 | 详情底框撑满、剩余高度、权限区内部滚动 | 使用 `TemplateDetailSection.fill` | 分组占用主区剩余高度，标题固定，超出内容在框内滚动；普通分组保持自然高度 | `frontend/src/modules/design-system/pages/demos/DetailTemplateDemo.tsx` 的“分组高度 → 撑满剩余高度” |
 | 详情页 Tab、顶部页签、详情分类、锚点导航、点击定位 | `TemplateDetailPage.sectionNavigation`；参与导航的 `TemplateDetailSection`、`TemplateDetailTableSection`、`HistoryTimelineSection` 传唯一 `sectionKey` | 顶部生成分类标签，点击后定位到对应详情区域；它不是切换或隐藏内容的页面切换 Tab，窄屏时自动改为下拉定位 | `frontend/src/modules/design-system/pages/demos/DetailTemplateDemo.tsx` |
@@ -151,6 +153,33 @@ API 接入保持统一：
 - 业务模块不得直接使用原生 `button`、`input`、`select`、`textarea`，也不得通过导入别名或命名空间改名绕过组件审计；交互入口和字段控件统一使用 `components/admin` 已沉淀能力。
 - 表单中需要新增、删除多行结构化明细时统一使用 `AdminProFormEditableList`，并且必须位于 `TemplateFormPage` 内。业务页只通过 `fields` 声明中文字段名、字段控件、校验规则以及 `compact` / `standard` / `wide` 三档受控宽度，通过 `creatorRecord` 声明新增行的业务默认值，通过 `rules` 声明整组数据校验；实际列宽、新增文案、自动序号、删除方式、最少行数、电脑端表格布局、窄屏卡片布局和保存取消由底座统一。电脑端表格按字段数量和底座宽度规格展示，不强制铺满页面；字段较多并超过可用区域时允许横向滚动，并由组件固定左侧序号列和右侧操作列。金额字段统一使用 `AdminProFormMoney`，默认保留两位小数。序号仅用于展示，不得作为业务字段提交。业务页不得直接使用 `ProFormList`、`Form.List`、`EditableProTable`，也不得向 `AdminProFormEditableList` 传入像素列宽、`columns`、`addText`、`minRows`、`maxRows`、`readonly`、`className` 或 `style` 改写公共结构。
 - 业务附件按钮入口使用 `AdminAttachmentUpload`，拖拽入口使用 `AdminAttachmentDragger`。业务方负责提供已有附件数据、上传、下载、删除回调以及确有需要的校验规则；预览必须通过 `onLoadPreview` 返回 `Blob` 文件内容，由底座统一判断格式和展示，不得自行打开窗口或复用下载动作冒充预览。已有附件提供下载时必须同时传入 `onLoadPreview`，提供预览内容时也必须同时传入 `onDownload`，不得只接其中一项。底座统一承接多附件列表、真实格式图标、上传进度、失败原因与图标重试、点击名称预览、图标下载、图标删除确认和响应式样式。图片上传明确支持 JPG、JPEG、PNG、GIF、WEBP、BMP、SVG、AVIF、HEIC；校验图片类型时必须同时兼容浏览器上报的标准类型、旧类型和缺失类型，不能因 PNG 上报 `image/x-png` 或空类型而误拦截。业务方传入文件格式、大小或数量限制后，底座必须在文件选择阶段完成校验；校验不通过时只提示原因，不得调用上传接口，也不得先把失败文件放进附件列表。图片和 PDF 在底座弹窗内预览，预览弹窗右上角提供“新窗口打开”，用于放大或长时间查看；Word、Excel、压缩包等浏览器不支持的格式统一提示“该格式暂不支持在线预览，请下载查看”，不打开空白页。附件上传区域在宽屏最大宽度统一为 `760px`，窄屏占满可用宽度。业务页面不得选择附件宽度模式，也不得通过 `className`、`style` 或页面级样式改写组件内部布局。已上传附件保持单行紧凑展示，名称过长时省略，文件大小和操作不换行；上传完成后不重复展示“上传成功”。底座不内置文件格式、附件数量和附件大小限制；业务方未传对应规则时不限制。头像、导入文件等不需要完整附件列表和管理流程的轻量场景，可以继续使用 `AdminUpload`。
+
+#### 字段选型与值契约
+
+开始新增、编辑或动态表单开发前，逐字段核对中文名称、接口字段、业务含义、值类型、默认值、空值、必填条件、可编辑状态及需要的精度、单位、范围或长度。依据已确认的接口和业务定义选控件。
+
+| 字段含义 | 表单与局部输入控件 | 值与校验要求 |
+|---|---|---|
+| 姓名、名称、编号、工号、手机、证件、关联编码 | `AdminProFormText`；局部表单用 `AdminFormItem + AdminInput` | 标识值保留字符串和前导零；长度、格式与去空白规则按字段定义声明 |
+| 整数数量、排名、次数 | `AdminProFormNumber` / `AdminNumberInput` | `precision: 0`、合适的步长；业务有上下限时同时声明控件约束和校验规则；零值有效性由业务定义 |
+| 小数、分数、时长、比例 | `AdminProFormNumber` / `AdminNumberInput` | 明确精度、范围、单位及比例口径，例如 0—1 或 0—100；控件值与提交口径一致 |
+| 金额、高精度小数 | `AdminProFormMoney` 或启用 `stringMode` 的数值控件 | 金额默认两位小数，特殊精度由项目声明；字符串金额保持十进制精度，接口转换显式处理 |
+| 日期、年月、年份、日期时间、时间、日期区间 | `AdminProFormDatePicker`；局部表单用 `AdminDatePicker` / `AdminTimePicker` / `AdminRangePicker` | 根据粒度设置 `picker` / `showTime`；表单保留 Dayjs，API 层按日期、时间点和时区约定转换；日期区间校验起止关系 |
+| 枚举、人员、组织、档案、单选、多选、层级选择 | `AdminProFormSelect`、已有业务选择器；局部表单用 `AdminSelect` / `AdminTreeSelect` / `AdminCascader` | 展示名称、提交稳定标识；单值和数组类型明确；远程选项验收加载、失败、空结果及已有记录回显；允许自由新增的字段才启用 tags |
+| 是/否、开关、勾选 | `AdminFormItem + AdminSwitch` / `AdminCheckbox`；互斥选项用 `AdminRadioGroup` | 开关和单个复选框以 `valuePropName="checked"` 绑定布尔值；false 与未填写分别处理；多选组提交数组 |
+| 说明、备注等普通多行文本 | `AdminProFormTextArea` / `AdminTextArea` | 保留手工换行；声明业务需要的最大长度及校验，计数提示与限制一致 |
+| 密码 | `AdminFormItem + AdminPasswordInput` | 遮罩显示，按账号流程设置 autocomplete 和校验；提交结果和日志避免回显密码 |
+| 富文本、附件、结构化明细 | `RichDescriptionEditor`、`AdminAttachmentUpload` / `AdminAttachmentDragger`、`AdminProFormEditableList` | 使用对应组件的内容、文件和明细契约，沿用本节已有附件、明细与错误处理规则 |
+
+- 数值字段使用数值控件，日期和选择字段使用对应控件。动态字段定义应覆盖实际使用的类型，每种类型有明确渲染分支；遇到未知类型时给出可定位的配置错误并阻止该表单提交。
+- 前端精度、范围、长度、必填和格式规则与服务端一致。控件限制输入和校验规则共同承接页面体验，服务端在写入边界再次校验。业务没有确认的上限、格式或必填条件先说明待确认。
+- `required` 只用于必填标记，必须配置对应 `rules`。自定义必填和条件必填由校验函数实现，空字符串、纯空格、空数组、零值及 false 按各自业务含义验证。
+- 清空字段后显式处理 `undefined`、`null`、空字符串和空数组。转换代码保留合法的零值与 false，默认值使用明确的空值判断。
+- 编辑回显验证原有值、历史枚举和已失效选项。选项尚未加载、加载失败时保留当前记录的值与名称；异步查询只接收最新请求的结果。
+- 普通字段使用可编辑态。业务确认禁用时使用 `disabled`，确认只读时使用 ProForm 的 `readonly` 展示态或控件支持的只读能力。选择、日期及布尔控件的只读展示要覆盖清空、弹出选择和键盘操作，允许阅读真实值。
+- `AdminProFormText` 和 `AdminProFormTextArea` 统一承接字段与整表只读，并保留 `fieldProps`、`convertValue`、`transform`、回调和样式。字段内占位配置在无顶层占位文案时生效。
+- 字段错误使用中文显示在对应字段下方，并可定位首个错误。占位文字、红星或格式提示与校验结果分别核对。密码、隐私或上传内容采用各项目已确认的保护要求。
+- 自动门禁依据明确的控件类型、静态规则和绑定检查错误接法，覆盖原始组件及别名绕过、文本冒充数值/日期/选择/布尔/密码、开关勾选绑定、仅有必填标识和静态约束矛盾。动态类型、业务精度、范围和必填条件须通过字段清单与实际验收核对。
 
 ### 详情页
 

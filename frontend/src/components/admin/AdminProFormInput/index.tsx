@@ -1,5 +1,5 @@
-import type { ComponentProps } from 'react';
-import { ProForm, ProFormDatePicker, ProFormDigit, ProFormText, ProFormTextArea } from '@ant-design/pro-components';
+import { cloneElement, isValidElement, type ComponentProps } from 'react';
+import { ProFormDatePicker, ProFormDigit, ProFormField, ProFormText, ProFormTextArea } from '@ant-design/pro-components';
 import zhCNDatePicker from 'antd/es/date-picker/locale/zh_CN';
 import { AdminInput, AdminTextArea } from '../AdminInput';
 
@@ -9,81 +9,77 @@ function resolvePlaceholder(placeholder: ComponentProps<typeof ProFormText>['pla
 }
 
 export function AdminProFormText(props: ComponentProps<typeof ProFormText>) {
-  const {
-    fieldProps,
-    formItemProps,
-    placeholder,
-    disabled,
-    name,
-    label,
-    rules,
-    className,
-    ...restProps
-  } = props;
-
   return (
-    <ProForm.Item
-      {...restProps}
-      {...formItemProps}
-      name={name}
-      label={label}
-      rules={rules}
-      className={[className, formItemProps?.className].filter(Boolean).join(' ')}
-    >
-      <AdminInput
-        {...fieldProps}
-        disabled={disabled}
-        placeholder={resolvePlaceholder(placeholder, label)}
-      />
-    </ProForm.Item>
+    <ProFormField<ComponentProps<typeof AdminInput>>
+      {...props}
+      valueType="text"
+      fieldProps={{
+        ...props.fieldProps,
+        ...(props.disabled === undefined ? {} : { disabled: props.disabled }),
+        placeholder: resolvePlaceholder(props.placeholder ?? props.fieldProps?.placeholder, props.label)
+      }}
+      renderFormItem={(_value, config) => {
+        const { mode: _mode, ...fieldProps } = config as ComponentProps<typeof AdminInput> & { mode?: string };
+        return <AdminInput {...fieldProps} />;
+      }}
+    />
   );
 }
 
-export function AdminProFormTextArea(props: ComponentProps<typeof ProFormTextArea>) {
-  const {
-    fieldProps,
-    formItemProps,
-    placeholder,
-    disabled,
-    name,
-    label,
-    rules,
-    className,
-    ...restProps
-  } = props;
+export function AdminProFormTextArea(props: Omit<ComponentProps<typeof ProFormTextArea>, 'key'>) {
+  // ProForm 的只读长文本会把字段属性传给 span，字数统计只交给编辑控件。
+  const { showCount, ...fieldProps } = props.fieldProps ?? {};
 
   return (
-    <ProForm.Item
-      {...restProps}
-      {...formItemProps}
-      name={name}
-      label={label}
-      rules={rules}
-      className={[className, formItemProps?.className].filter(Boolean).join(' ')}
-    >
-      <AdminTextArea
-        {...fieldProps}
-        disabled={disabled}
-        placeholder={resolvePlaceholder(placeholder, label)}
-      />
-    </ProForm.Item>
+    <ProFormField<ComponentProps<typeof AdminTextArea>>
+      {...props}
+      valueType="textarea"
+      fieldProps={{
+        ...fieldProps,
+        ...(props.disabled === undefined ? {} : { disabled: props.disabled }),
+        placeholder: resolvePlaceholder(props.placeholder ?? props.fieldProps?.placeholder, props.label)
+      }}
+      renderFormItem={(value, config, defaultDom) => {
+        const editConfig = { ...config, showCount };
+        if (props.renderFormItem) {
+          const editableDom = isValidElement<ComponentProps<typeof AdminTextArea>>(defaultDom)
+            ? cloneElement(defaultDom, { showCount })
+            : defaultDom;
+          return props.renderFormItem(value, editConfig, editableDom);
+        }
+        const { mode: _mode, ...inputProps } = editConfig as ComponentProps<typeof AdminTextArea> & { mode?: string };
+        return <AdminTextArea {...inputProps} />;
+      }}
+    />
+  );
+}
+
+export function AdminProFormNumber(props: ComponentProps<typeof ProFormDigit>) {
+  const className = ['admin-input', 'admin-number-input', props.fieldProps?.className].filter(Boolean).join(' ');
+
+  return (
+    <ProFormDigit
+      {...props}
+      placeholder={resolvePlaceholder(props.placeholder ?? props.fieldProps?.placeholder, props.label)}
+      fieldProps={{
+        controls: false,
+        ...props.fieldProps,
+        className,
+        style: { width: '100%', ...props.fieldProps?.style }
+      }}
+    />
   );
 }
 
 export function AdminProFormMoney(props: ComponentProps<typeof ProFormDigit>) {
-  const className = ['admin-input', props.fieldProps?.className].filter(Boolean).join(' ');
-
   return (
-    <ProFormDigit
+    <AdminProFormNumber
       {...props}
       fieldProps={{
         precision: 2,
         step: 0.01,
         stringMode: true,
-        controls: false,
-        ...props.fieldProps,
-        className,
-        style: { width: '100%', ...props.fieldProps?.style }
+        ...props.fieldProps
       }}
     />
   );
