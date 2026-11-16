@@ -64,12 +64,14 @@ export function ListTemplateDemo() {
 
   const {
     pagedRows: listTemplateRows,
+    sortState,
     pagination: listTemplatePagination,
     handleTableChange: handleListTemplateTableChange
   } = useTemplateListPageData({
     rows: mockWorkOrders,
     sorters: listTemplateSorters,
-    resetOn: [listTemplateFilterRevision]
+    resetOn: [listTemplateFilterRevision],
+    urlSync: true
   });
 
   useEffect(() => {
@@ -160,7 +162,8 @@ export function ListTemplateDemo() {
       width: 320,
       fixed: 'left',
       ellipsis: true,
-      sorter: (a, b) => a.problemDesc.localeCompare(b.problemDesc),
+      sorter: true,
+      sortOrder: sortState.field === 'problemDesc' ? sortState.order : null,
       render: (_, record) => (
         <div className="design-system-page__display-problem-cell">
           <AdminTextAction className="design-system-page__display-table-link" title={record.problemDesc}>
@@ -175,7 +178,8 @@ export function ListTemplateDemo() {
       dataIndex: 'problemType',
       width: 110,
       ellipsis: true,
-      sorter: (a, b) => problemTypeOptions.findIndex((item) => item.value === a.problemType) - problemTypeOptions.findIndex((item) => item.value === b.problemType),
+      sorter: true,
+      sortOrder: sortState.field === 'problemType' ? sortState.order : null,
       renderText: (value) => problemTypeText(value as WorkOrderRecord['problemType'])
     },
     {
@@ -183,21 +187,24 @@ export function ListTemplateDemo() {
       dataIndex: 'followerName',
       width: 100,
       ellipsis: true,
-      sorter: (a, b) => a.followerName.localeCompare(b.followerName)
+      sorter: true,
+      sortOrder: sortState.field === 'followerName' ? sortState.order : null,
     },
     {
       title: '紧急程度',
       dataIndex: 'urgency',
       width: 96,
       align: 'center',
-      sorter: (a, b) => urgencyOptions.findIndex((item) => item.value === a.urgency) - urgencyOptions.findIndex((item) => item.value === b.urgency),
+      sorter: true,
+      sortOrder: sortState.field === 'urgency' ? sortState.order : null,
       render: (_, record) => renderUrgency(record.urgency)
     },
     {
       title: '状态',
       dataIndex: 'status',
       width: 110,
-      sorter: (a, b) => statusOptions.findIndex((item) => item.value === a.status) - statusOptions.findIndex((item) => item.value === b.status),
+      sorter: true,
+      sortOrder: sortState.field === 'status' ? sortState.order : null,
       render: (_, record) => renderWorkOrderStatus(record.status)
     },
     {
@@ -205,14 +212,16 @@ export function ListTemplateDemo() {
       dataIndex: 'submitterName',
       width: 96,
       ellipsis: true,
-      sorter: (a, b) => a.submitterName.localeCompare(b.submitterName)
+      sorter: true,
+      sortOrder: sortState.field === 'submitterName' ? sortState.order : null,
     },
     {
       title: '提出时间',
       dataIndex: 'submitTime',
       width: 150,
       ellipsis: true,
-      sorter: (a, b) => a.submitTime.localeCompare(b.submitTime),
+      sorter: true,
+      sortOrder: sortState.field === 'submitTime' ? sortState.order : null,
       renderText: (value) => String(value).slice(0, 10)
     },
     {
@@ -220,7 +229,8 @@ export function ListTemplateDemo() {
       dataIndex: 'expectedResolveDate',
       width: 140,
       ellipsis: true,
-      sorter: (a, b) => a.expectedResolveDate.localeCompare(b.expectedResolveDate)
+      sorter: true,
+      sortOrder: sortState.field === 'expectedResolveDate' ? sortState.order : null,
     },
     {
       title: '操作',
@@ -234,7 +244,7 @@ export function ListTemplateDemo() {
         </OperationColumnActions>
       )
     }
-  ], []);
+  ], [sortState.field, sortState.order]);
 
   const toggleHierarchyParent = (parentId: string) => {
     setExpandedHierarchyParentIds((current) => {
@@ -310,6 +320,7 @@ export function ListTemplateDemo() {
       <div className="design-system-page__input-panel-head">
         <h3>TemplateListPage</h3>
         <ComponentEntry name="TemplateListPage / CompactFilterBar / SearchTable / TablePagination" />
+        <p>点击列头切换升降序，翻页或刷新后检查排序数据和箭头是否一致，地址会保留当前排序。</p>
         <p>列表页统一从这个入口接入。默认普通模式不带批量区；需要批量操作的页面必须声明批量模式，分页始终固定在右侧。</p>
         <div className="design-system-page__template-mode-switch">
           <AdminSegmented

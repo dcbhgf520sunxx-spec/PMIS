@@ -1,4 +1,4 @@
-const { overdueSql } = require('../services/overdueRules')
+const { overdueSql, rescheduleOverdueChanges } = require('../services/overdueRules')
 const overdue = overdueSql('project', { alias: 'p' })
 const db = require('../db')
 const { lockRequirements, releaseRequirement, transferRequirement } = require('../services/requirementProjectTransfer')
@@ -12,8 +12,8 @@ const { DEFAULT_PRIORITY, parsePriority } = require('../services/priorityRules')
 const { normalizeFollowUpHistoryAction } = require('../services/followUpRecordRules')
 const { softDeleteBusinessAttachments } = require('../services/businessAttachmentService')
 
-const DETAIL_FIELD_ORDER = ['name', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'priority', 'description', 'start_date', 'expected_end_date', 'progress_text', 'risk_text', 'status', 'is_overdue', 'actual_end_date', 'suspend_date', 'suspend_reason', 'close_date', 'close_reason', 'follow_up_content', 'contract', 'contract_code', 'contract_name', 'contract_supplier', 'contract_signed_date', 'contract_amount', 'contract_remark', 'contract_stages', 'contract_attachment', 'payment', 'payment_stage', 'payment_amount', 'payment_month', 'payment_handler', 'payment_remark']
-const HISTORY_FIELD_LABELS = { name: '项目名称', product_id: '所属产品', requirement_id: '所属需求', owner_id: '负责人', member_ids: '项目成员', priority: '优先级', description: '项目描述', start_date: '启动日期', expected_end_date: '预计完成日期', progress_text: '进度记录', risk_text: '风险记录', status: '状态', is_overdue: '逾期状态', actual_end_date: '实际完成日期', suspend_date: '暂停日期', suspend_reason: '暂停原因', close_date: '关闭时间', close_reason: '关闭原因', follow_up_content: '跟进内容', contract: '合同信息', contract_code: '合同编码', contract_name: '合同名称', contract_supplier: '供应商', contract_signed_date: '签订时间', contract_amount: '合同金额（元）', contract_remark: '备注', contract_stages: '付款阶段', contract_attachment: '合同附件', payment: '付款记录', payment_stage: '付款阶段', payment_amount: '本次付款金额（元）', payment_month: '付款时间', payment_handler: '经办人', payment_remark: '备注', is_deleted: '删除状态' }
+const DETAIL_FIELD_ORDER = ['name', 'product_id', 'requirement_id', 'owner_id', 'member_ids', 'priority', 'description', 'start_date', 'expected_end_date', 'reschedule_overdue_days', 'progress_text', 'risk_text', 'status', 'is_overdue', 'actual_end_date', 'suspend_date', 'suspend_reason', 'close_date', 'close_reason', 'follow_up_content', 'contract', 'contract_code', 'contract_name', 'contract_supplier', 'contract_signed_date', 'contract_amount', 'contract_remark', 'contract_stages', 'contract_attachment', 'payment', 'payment_stage', 'payment_amount', 'payment_month', 'payment_handler', 'payment_remark']
+const HISTORY_FIELD_LABELS = { name: '项目名称', product_id: '所属产品', requirement_id: '所属需求', owner_id: '负责人', member_ids: '项目成员', priority: '优先级', description: '项目描述', start_date: '启动日期', expected_end_date: '预计完成日期', reschedule_overdue_days: '改期前已逾期', progress_text: '进度记录', risk_text: '风险记录', status: '状态', is_overdue: '逾期状态', actual_end_date: '实际完成日期', suspend_date: '暂停日期', suspend_reason: '暂停原因', close_date: '关闭时间', close_reason: '关闭原因', follow_up_content: '跟进内容', contract: '合同信息', contract_code: '合同编码', contract_name: '合同名称', contract_supplier: '供应商', contract_signed_date: '签订时间', contract_amount: '合同金额（元）', contract_remark: '备注', contract_stages: '付款阶段', contract_attachment: '合同附件', payment: '付款记录', payment_stage: '付款阶段', payment_amount: '本次付款金额（元）', payment_month: '付款时间', payment_handler: '经办人', payment_remark: '备注', is_deleted: '删除状态' }
 const HISTORY_DATE_FIELDS = new Set(['start_date', 'expected_end_date', 'actual_end_date', 'suspend_date', 'close_date', 'contract_signed_date'])
 
 const schema = {
@@ -201,7 +201,7 @@ exports.update = async (req, res) => {
           .run(req.body.name.trim(), req.body.description || null, req.body.product_id, req.body.requirement_id, req.body.owner_id, overdue, req.body.start_date || null, req.body.expected_end_date, req.body.progress_text || null, req.body.risk_text || null, operatorId, req.params.id)
         await replaceMembers(tx, req.params.id, req.body.member_ids)
     })
-    const changes = []
+    const changes = await rescheduleOverdueChanges('project', old, req.body.expected_end_date, tx)
     for (const field of ['name', 'description', 'product_id', 'requirement_id', 'owner_id', 'start_date', 'expected_end_date', 'progress_text', 'risk_text', 'is_overdue']) {
       const next = field === 'is_overdue' ? overdue : req.body[field] || null
       if (String(old[field] ?? '') !== String(next ?? '')) changes.push({ field, oldVal: old[field], newVal: next })

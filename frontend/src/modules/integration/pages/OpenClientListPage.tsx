@@ -1,7 +1,15 @@
 import {useEffect,useState} from 'react';
 import type {ProColumns} from '@ant-design/pro-components';
-import {AdminButton,AdminInput,AdminSelect,AdminTextAction,CompactFilterBar,DetailLinkCell,OperationColumnActions,StatusConfirmAction,StatusTag,TemplateListPage,useCommittedFilters,usePageReturnNavigation,useTemplateListPageData} from '../../../components/admin';
+import {AdminButton,AdminInput,AdminSelect,AdminTextAction,CompactFilterBar,createListSorters,DetailLinkCell,listSorters,OperationColumnActions,StatusConfirmAction,StatusTag,TemplateListPage,useCommittedFilters,usePageReturnNavigation,useTemplateListPageData} from '../../../components/admin';
 import {listOpenClients,setOpenClientStatus,type OpenClient} from '../../../api/openClientApi';
+
+const openClientSorters = createListSorters<OpenClient>({
+  name: listSorters.text(row => row.name),
+  enabled: listSorters.number(row => row.enabled),
+  expiresAt: listSorters.number(row => row.expiresAt ? Date.parse(row.expiresAt) : Number.MAX_SAFE_INTEGER),
+  creatorName: listSorters.text(row => row.creatorName),
+  createdAt: listSorters.date(row => row.createdAt),
+});
 
 export function OpenClientListPage() {
   const nav = usePageReturnNavigation('/integrations');
@@ -16,14 +24,14 @@ export function OpenClientListPage() {
     listOpenClients().then((v) => {if (live) setRows(v);}).catch((e:Error) => {if (live) setError(e.message);}).finally(() => {if (live) setLoading(false);});
     return () => {live = false;};
   },[revision]);
-  const data = useTemplateListPageData({rows:rows.filter((r) => `${r.name} ${r.code}`.includes(filters.appliedFilters.keyword.trim()) && (!filters.appliedFilters.enabled || String(r.enabled) === filters.appliedFilters.enabled)),urlSync:true});
+  const data = useTemplateListPageData({rows:rows.filter((r) => `${r.name} ${r.code}`.includes(filters.appliedFilters.keyword.trim()) && (!filters.appliedFilters.enabled || String(r.enabled) === filters.appliedFilters.enabled)),sorters:openClientSorters,urlSync:true});
   const columns:ProColumns<OpenClient>[] = [
     {title:'序号',width:60,fixed:'left',render:(_,__,i) => data.renderIndex(i)},
-    {title:'系统名称',dataIndex:'name',width:240,fixed:'left',sorter:true,render:(_,r) => <DetailLinkCell onClick={() => nav.navigateWithReturn(`/integrations/clients/${r.id}`)}>{r.name}</DetailLinkCell>},
-    {title:'状态',dataIndex:'enabled',width:100,sorter:true,render:(_,r) => <StatusTag status={r.enabled ? 'enabled' : 'disabled'} />},
-    {title:'凭证有效期',dataIndex:'expiresAt',width:180,sorter:true,renderText:(v) => v ? String(v).slice(0,19).replace('T',' ') : '长期有效'},
-    {title:'创建人',dataIndex:'creatorName',width:120,sorter:true},
-    {title:'创建时间',dataIndex:'createdAt',width:180,sorter:true},
+    {title:'系统名称',dataIndex:'name',width:240,fixed:'left',sorter: true, sortOrder: data.sortState.field === 'name' ? data.sortState.order : null,render:(_,r) => <DetailLinkCell onClick={() => nav.navigateWithReturn(`/integrations/clients/${r.id}`)}>{r.name}</DetailLinkCell>},
+    {title:'状态',dataIndex:'enabled',width:100,sorter: true, sortOrder: data.sortState.field === 'enabled' ? data.sortState.order : null,render:(_,r) => <StatusTag status={r.enabled ? 'enabled' : 'disabled'} />},
+    {title:'凭证有效期',dataIndex:'expiresAt',width:180,sorter: true, sortOrder: data.sortState.field === 'expiresAt' ? data.sortState.order : null,renderText:(v) => v ? String(v).slice(0,19).replace('T',' ') : '长期有效'},
+    {title:'创建人',dataIndex:'creatorName',width:120,sorter: true, sortOrder: data.sortState.field === 'creatorName' ? data.sortState.order : null},
+    {title:'创建时间',dataIndex:'createdAt',width:180,sorter: true, sortOrder: data.sortState.field === 'createdAt' ? data.sortState.order : null},
     {title:'操作',valueType:'option',width:240,fixed:'right',render:(_,r) => <OperationColumnActions>
       <AdminTextAction onClick={() => nav.navigateWithReturn(`/integrations/clients/${r.id}/edit`)}>编辑</AdminTextAction>
       <StatusConfirmAction variant="text" action={r.enabled ? 'disable' : 'enable'} entityName="接入系统" targetName={r.name} onConfirm={async () => {await setOpenClientStatus(r.id,r.enabled ? 0 : 1);setRevision((v) => v+1);}}>{r.enabled ? '停用' : '启用'}</StatusConfirmAction>

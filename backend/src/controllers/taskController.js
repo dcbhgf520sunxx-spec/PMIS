@@ -1,4 +1,4 @@
-const { overdueSql } = require('../services/overdueRules')
+const { overdueSql, rescheduleOverdueChanges } = require('../services/overdueRules')
 const overdue = overdueSql('task', { alias: 't' })
 const db = require('../db')
 const { parsePagination, getSortDirection } = require('../utils/pagination')
@@ -9,11 +9,11 @@ const { allowedTaskStatuses, validateTaskStatusChange, resolveTaskStatusFields, 
 const { DEFAULT_PRIORITY, parsePriority } = require('../services/priorityRules')
 const { softDeleteBusinessAttachments } = require('../services/businessAttachmentService')
 
-const DETAIL_FIELD_ORDER = ['name', 'description', 'parent_task_id', 'source_type', 'project_id', 'requirement_id', 'owner_id', 'owner_ids', 'task_type', 'priority', 'status', 'is_overdue', 'start_date', 'expected_end_date', 'actual_end_date', 'suspend_date', 'suspend_reason', 'close_date', 'close_reason', 'follow_up_content']
+const DETAIL_FIELD_ORDER = ['name', 'description', 'parent_task_id', 'source_type', 'project_id', 'requirement_id', 'owner_id', 'owner_ids', 'task_type', 'priority', 'status', 'is_overdue', 'start_date', 'expected_end_date', 'reschedule_overdue_days', 'actual_end_date', 'suspend_date', 'suspend_reason', 'close_date', 'close_reason', 'follow_up_content']
 const HISTORY_FIELD_LABELS = {
   name: '任务名称', description: '任务描述', parent_task_id: '所属主任务', source_type: '关联类型', project_id: '关联项目', requirement_id: '关联需求',
   owner_id: '负责人', owner_ids: '负责人', task_type: '任务类型', priority: '优先级', status: '任务状态', is_overdue: '逾期状态',
-  start_date: '启动时间', expected_end_date: '预计完成时间', actual_end_date: '实际完成时间', suspend_date: '暂停时间', suspend_reason: '暂停原因', close_date: '关闭时间', close_reason: '关闭原因', follow_up_content: '跟进内容'
+  start_date: '启动时间', expected_end_date: '预计完成时间', reschedule_overdue_days: '改期前已逾期', actual_end_date: '实际完成时间', suspend_date: '暂停时间', suspend_reason: '暂停原因', close_date: '关闭时间', close_reason: '关闭原因', follow_up_content: '跟进内容'
 }
 const HISTORY_DATE_FIELDS = new Set(['start_date', 'expected_end_date', 'actual_end_date', 'suspend_date', 'close_date'])
 const ownerNamesSql = `(SELECT STRING_AGG(owner_user.real_name,'、' ORDER BY task_owner.sort_order,task_owner.user_id) FROM pms_task_owner task_owner JOIN pms_user owner_user ON owner_user.id=task_owner.user_id WHERE task_owner.task_id=t.id)`
@@ -65,6 +65,7 @@ function getTaskSortConfig(sortField, sortOrder) {
     priority: 't.priority',
     status: 't.status',
     expectedEndTime: 't.expected_end_date',
+    creatorName: 'creator.real_name',
     createdAt: 't.created_at'
   }
   return {
@@ -321,7 +322,7 @@ exports.update = async (req, res) => {
     const body = old.parent_task_id ? { ...requestedBody, source_type: old.source_type, project_id: old.project_id, requirement_id: old.requirement_id } : requestedBody
     if (!await validate(res, body, Number(req.params.id))) return
     const overdue = calculateTaskOverdue(body.expected_end_date, old.status)
-    const changes = []
+    const changes = await rescheduleOverdueChanges('task', old, body.expected_end_date, db)
     for (const field of ['name', 'description', 'source_type', 'project_id', 'requirement_id', 'task_type', 'is_overdue', 'start_date', 'expected_end_date']) {
       const next = field === 'is_overdue' ? overdue : (field === 'project_id' && Number(body.source_type) !== 1 ? null : field === 'requirement_id' && Number(body.source_type) !== 2 ? null : body[field])
       if (String(old[field] ?? '') !== String(next ?? '')) changes.push({ field, oldVal: old[field], newVal: next })
@@ -330,11 +331,14 @@ exports.update = async (req, res) => {
     const oldOwnerIds = oldOwners.map((owner) => Number(owner.id))
     const nextOwners = await loadUsers(db, nextOwnerIds)
     if (oldOwnerIds.join(',') !== nextOwnerIds.join(',')) changes.push({ field: 'owner_ids', oldVal: ownerNames(oldOwners), newVal: ownerNames(nextOwners) })
-    await db.transaction(async (connection) => {
-      await connection.prepare('UPDATE pms_task SET name=?,description=?,source_type=?,project_id=?,requirement_id=?,task_type=?,is_overdue=?,start_date=?,expected_end_date=?,updater_id=?,updated_at=NOW()WHERE id=?').run(body.name.trim(), body.description || null, body.source_type, Number(body.source_type) === 1 ? body.project_id : null, Number(body.source_type) === 2 ? body.requirement_id : null, body.task_type, overdue, body.start_date || null, body.expected_end_date, req.user.id, req.params.id)
+    const saved = await db.transaction(async (connection) => {
+      const result = await connection.prepare('UPDATE pms_task SET name=?,description=?,source_type=?,project_id=?,requirement_id=?,task_type=?,is_overdue=?,start_date=?,expected_end_date=?,updater_id=?,updated_at=NOW()WHERE id=? AND status=? AND expected_end_date IS NOT DISTINCT FROM ? AND updated_at IS NOT DISTINCT FROM ? AND is_deleted=0').run(body.name.trim(), body.description || null, body.source_type, Number(body.source_type) === 1 ? body.project_id : null, Number(body.source_type) === 2 ? body.requirement_id : null, body.task_type, overdue, body.start_date || null, body.expected_end_date, req.user.id, req.params.id, old.status, old.expected_end_date, old.updated_at)
+      if (result.changes === 0) return false
       await saveOwners(connection, req.params.id, nextOwnerIds)
       if (changes.length) await connection.writeLogs(req.user.id, '编辑', '任务', req.params.id, changes, req.ip, body.name.trim())
+      return true
     })
+    if (saved === false) return fail(res, 409, 409, '任务已变更，请刷新后重试')
     ok(res, null)
   } catch (error) {
     console.error(error)

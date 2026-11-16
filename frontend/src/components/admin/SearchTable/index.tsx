@@ -220,8 +220,21 @@ export function SearchTable<
     ...restProps
   } = props;
   const location = useLocation();
+  const sortKey = JSON.stringify(columns.map(column => [column.dataIndex, column.sortOrder ?? null]));
+  const [requestedSortKey, setRequestedSortKey] = useState<string>();
+  const [tableSortState, setTableSortState] = useState({ key: sortKey, revision: 0 });
+  if (tableSortState.key !== sortKey) {
+    // 外部恢复排序时重新初始化 ProTable；自身点击排序和翻页保留表格实例。
+    const requested = requestedSortKey === sortKey;
+    setTableSortState({ key: sortKey, revision: tableSortState.revision + Number(!requested) });
+    if (requested) setRequestedSortKey(undefined);
+  }
   const userId = useAuthStore((state) => state.user?.id);
-  const titledColumns = useMemo(() => columns.map(withListCellTitle), [columns]);
+  const titledColumns = useMemo(() => columns.map(column => withListCellTitle({
+    ...column,
+    // ProTable 通过 defaultSortOrder 初始化内部排序，单传 sortOrder 无法恢复箭头。
+    defaultSortOrder: column.sortOrder ?? column.defaultSortOrder
+  })), [columns]);
   const tablePreferenceKey = useMemo(
     () => `admin-table:${userId || 'anonymous'}:${preferenceKey || location.pathname}`,
     [location.pathname, preferenceKey, userId]
@@ -533,8 +546,20 @@ export function SearchTable<
     };
   };
 
+  const handleChange: NonNullable<SearchTableProps<T, P>['onChange']> = (...args) => {
+    const sorter = Array.isArray(args[2]) ? args[2][0] : args[2];
+    const nextSortKey = JSON.stringify(columns.map(column => [
+      column.dataIndex,
+      JSON.stringify(column.dataIndex) === JSON.stringify(sorter?.field) ? sorter?.order ?? null : null
+    ]));
+    // URL 更新可能晚于父组件排序状态；先记录本次点击，避免误当作历史恢复。
+    setRequestedSortKey(nextSortKey === sortKey ? undefined : nextSortKey);
+    restProps.onChange?.(...args);
+  };
+
   return (
     <ProTable<T, P>
+      key={tableSortState.revision}
       rowKey={rowKey}
       className={['admin-search-table', className].filter(Boolean).join(' ')}
       columns={tableColumns}
@@ -609,6 +634,7 @@ export function SearchTable<
       } : components}
       onRow={handleRow}
       {...restProps}
+      onChange={handleChange}
     />
   );
 }

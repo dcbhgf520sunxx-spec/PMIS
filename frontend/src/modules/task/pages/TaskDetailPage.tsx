@@ -12,7 +12,7 @@ import { getFollowUpRecords, type FollowUpRecord } from '../../../api/followUpRe
 import { FollowUpRecordSection } from '../../follow-up/FollowUpRecordSection';
 import { refreshFollowUpDetail } from '../../follow-up/refreshFollowUpDetail';
 
-const mapTaskHistoryItem = (item: any) => ({ id: String(item.id), operator: item.operator, action: item.action, time: String(item.created_at).slice(0, 19).replace('T', ' '), changes: (item.changes || []).map((change: any) => ({ field: change.field_name || '-', before: change.old_value, after: change.new_value })) });
+const mapTaskHistoryItem = (item: any) => ({ id: String(item.id), operator: item.operator, action: item.action, time: String(item.created_at).slice(0, 19).replace('T', ' '), changes: (item.changes || []).map((change: any) => ({ field: change.field_name || '-', before: change.old_value, after: change.new_value, changeMode: change.field_name === '改期前已逾期' ? 'values' as const : undefined })) });
 import { BusinessAttachmentField } from '../../../components/business/BusinessAttachmentField';
 
 export function TaskDetailPage() {

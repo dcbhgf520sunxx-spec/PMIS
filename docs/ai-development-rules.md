@@ -110,6 +110,9 @@ API 接入保持统一：
 - `ConfirmAction`、`StatusConfirmAction`、`DeleteConfirmAction` 和 `BubbleConfirmAction` 默认负责成功提示；业务页需要自定义静态文案时传 `successMessage`，需要根据接口结果动态提示时传 `successMessage={false}` 后自行提示，同一次操作不得由组件和业务页重复提示。
 - 序号使用 `renderIndex(index)`，按过滤后的全量数据位置计算。
 - 本地数据排序交给 `useTemplateListPageData`，先排序过滤后的全量数据，再分页。
+- 每个排序箭头必须有实际规则：本地列表在 `sorters` 中配置对应比较器；服务端列表的 `dataIndex → API sort_field → 后端排序白名单` 必须逐列接通，不能静默回退为默认排序。名称、人员、权限范围等按页面实际展示内容排序，聚合文本的展示和排序使用同一结果；格式化时长按秒数、日期按真实时间值排序。
+- 排序列的 `sortOrder` 必须绑定同一字段。`SearchTable` 负责把恢复的排序状态同步给表头，业务页不另写初始化补丁。工作台“基础列表样板”可验证升降序、分页、刷新及浏览器前进后退恢复，键盘排序应保持焦点。
+- 服务端列表在 `frontend/scripts/audit-list-sorting.mjs` 的 `listSortingContracts` 登记页面或数据 Hook、列定义文件、请求函数、API 字段转换函数及后端白名单位置；各项目按自身模块维护。档案等人工维护或固定业务顺序列表可登记 `rowOrderOnly`，新增列头排序后仍须配置对应比较器。新增本地比较器、字段或服务端列表时同步维护契约，运行 `npm --prefix frontend run audit:list-sorting`。`request` 回调必须显式转发 `sortField/sortOrder`，API 的 `sort_field` 必须直接使用字段转换结果；直接使用后端字段的业务 API 可显式登记 `passthrough` 及请求字段名，门禁验证其完整转发参数。静态映射校验不能替代实际排序回归；验收同时检查升降序、跨页、筛选后排序、刷新及详情上下条。
 - 服务端分页列表必须通过 `useTemplateServerListData` 请求数据，并把全部已提交筛选、当前视图和其他数据范围参数放入 `queryKey`。组件以查询上下文、分页和排序共同组成请求标识：上下文切换时立即隔离旧数据，统一输出加载和错误状态，只接收当前请求结果以避免请求乱序覆盖，并将页码原子重置为第一页。业务页面不得继续使用 `useEffect + setRows` 自行维护服务端列表，也不得只靠切换时清空数组遮盖问题。
 - 用户只切换页码时必须保留所选页码，不能被筛选重置逻辑拉回第一页；只有已提交筛选、当前视图或其他查询上下文真正变化时才重置为第一页。
 - 表格需要人工调整记录顺序时使用 `SearchTable.rowDragSort`，不得在业务页自行绑定原生行拖拽事件或复制拖动样式。底座只输出当前页的新顺序和拖动上下文；跨页顺序、排序字段写入、接口持久化以及保存失败后的数据恢复由业务模块处理。排序入口不可用时通过 `disabled` 明确展示禁用状态。

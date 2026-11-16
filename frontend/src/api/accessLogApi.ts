@@ -118,6 +118,7 @@ function toAccessLogSortField(field?: string) {
     logoutAt: 'logout_at',
     lastActiveAt: 'last_active_at',
     durationSeconds: 'duration_seconds',
+    durationText: 'duration_seconds',
     ip: 'ip',
     userAgent: 'user_agent',
     createdAt: 'created_at'

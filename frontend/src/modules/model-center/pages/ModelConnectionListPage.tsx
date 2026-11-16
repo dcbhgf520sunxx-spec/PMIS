@@ -1,26 +1,35 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ProColumns } from '@ant-design/pro-components';
-import { AdminButton, AdminInput, AdminSelect, AdminTextAction, CompactFilterBar, ConfirmAction, DetailLinkCell, OperationColumnActions, StatusConfirmAction, StatusTag, TemplateListPage, useCommittedFilters, usePageReturnNavigation, useTemplateListPageData } from '../../../components/admin';
+import { AdminButton, AdminInput, AdminSelect, AdminTextAction, CompactFilterBar, ConfirmAction, createListSorters, DetailLinkCell, listSorters, OperationColumnActions, StatusConfirmAction, StatusTag, TemplateListPage, useCommittedFilters, usePageReturnNavigation, useTemplateListPageData } from '../../../components/admin';
 import { listModelConnections, setModelConnectionStatus, setDefaultModelConnection, type ModelConnection } from '../../../api/modelConnectionApi';
 import { ModelTestDialog } from '../components/ModelTestDialog';
+const modelConnectionSorters = createListSorters<ModelConnection>({
+    name: listSorters.text(row => row.name),
+    provider: listSorters.text(row => row.provider),
+    modelName: listSorters.text(row => row.modelName),
+    isDefault: listSorters.number(row => row.isDefault),
+    enabled: listSorters.number(row => row.enabled),
+    creatorName: listSorters.text(row => row.creatorName),
+    createdAt: listSorters.date(row => row.createdAt),
+});
 export function ModelConnectionListPage() {
     const nav = usePageReturnNavigation('/model-connections');
     const cache = useQueryClient();
     const [testing, setTesting] = useState('');
     const query = useQuery({ queryKey: ['model-connections'], queryFn: ({signal}) => listModelConnections(signal), refetchOnWindowFocus: false });
     const filters = useCommittedFilters({ keyword: '', enabled: '' }, { urlSync: true });
-    const data = useTemplateListPageData({ rows: (query.data || []).filter(row => `${row.name} ${row.provider} ${row.modelName}`.includes(filters.appliedFilters.keyword.trim()) && (!filters.appliedFilters.enabled || String(row.enabled) === filters.appliedFilters.enabled)), urlSync: true });
+    const data = useTemplateListPageData({ rows: (query.data || []).filter(row => `${row.name} ${row.provider} ${row.modelName}`.includes(filters.appliedFilters.keyword.trim()) && (!filters.appliedFilters.enabled || String(row.enabled) === filters.appliedFilters.enabled)), sorters: modelConnectionSorters, urlSync: true });
     const refresh = () => { void query.refetch(); void cache.invalidateQueries({queryKey:['digital-twin','ai-summary']}); };
     const columns: ProColumns<ModelConnection>[] = [
         { title: '序号', width: 60, fixed: 'left', render: (_,__,i) => data.renderIndex(i) },
-        { title: '接入名称', dataIndex: 'name', sorter: true, width: 190, fixed: 'left', render: (_,row) => <DetailLinkCell onClick={() => nav.navigateWithReturn(`/model-connections/${row.id}`)}>{row.name}</DetailLinkCell> },
-        { title: '供应商', dataIndex: 'provider', sorter: true, width: 130 },
-        { title: '模型', dataIndex: 'modelName', sorter: true, width: 180 },
-        { title: '默认模型', dataIndex: 'isDefault', sorter: true, width: 110, renderText: value => value ? '是' : '否' },
-        { title: '状态', dataIndex: 'enabled', sorter: true, width: 100, render: (_,row) => <StatusTag status={row.enabled ? 'enabled' : 'disabled'}/> },
-        { title: '创建人', dataIndex: 'creatorName', sorter: true, width: 100 },
-        { title: '创建时间', dataIndex: 'createdAt', sorter: true, width: 170 },
+        { title: '接入名称', dataIndex: 'name', sorter: true, sortOrder: data.sortState.field === 'name' ? data.sortState.order : null, width: 190, fixed: 'left', render: (_,row) => <DetailLinkCell onClick={() => nav.navigateWithReturn(`/model-connections/${row.id}`)}>{row.name}</DetailLinkCell> },
+        { title: '供应商', dataIndex: 'provider', sorter: true, sortOrder: data.sortState.field === 'provider' ? data.sortState.order : null, width: 130 },
+        { title: '模型', dataIndex: 'modelName', sorter: true, sortOrder: data.sortState.field === 'modelName' ? data.sortState.order : null, width: 180 },
+        { title: '默认模型', dataIndex: 'isDefault', sorter: true, sortOrder: data.sortState.field === 'isDefault' ? data.sortState.order : null, width: 110, renderText: value => value ? '是' : '否' },
+        { title: '状态', dataIndex: 'enabled', sorter: true, sortOrder: data.sortState.field === 'enabled' ? data.sortState.order : null, width: 100, render: (_,row) => <StatusTag status={row.enabled ? 'enabled' : 'disabled'}/> },
+        { title: '创建人', dataIndex: 'creatorName', sorter: true, sortOrder: data.sortState.field === 'creatorName' ? data.sortState.order : null, width: 100 },
+        { title: '创建时间', dataIndex: 'createdAt', sorter: true, sortOrder: data.sortState.field === 'createdAt' ? data.sortState.order : null, width: 170 },
         { title: '操作', valueType: 'option', width: 220, fixed: 'right', render: (_,row) => <OperationColumnActions>
             <AdminTextAction onClick={() => nav.navigateWithReturn(`/model-connections/${row.id}/edit`)}>编辑</AdminTextAction>
             <AdminTextAction onClick={() => setTesting(row.id)}>测试连接</AdminTextAction>

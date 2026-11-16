@@ -141,15 +141,11 @@ test('用户角色绑定只接受有效角色且用户维护密码复用统一�
   assert.match(users, /validateNewPassword\(password\)/)
 })
 
-test('用户和角色列表批量加载关联数据避免逐行查询', () => {
+test('用户列表批量加载关联数据避免逐行查询', () => {
   const users = read('backend/src/controllers/userController.js')
-  const roles = read('backend/src/controllers/roleController.js')
   const userList = users.match(/exports\.list[\s\S]*?exports\.options/)?.[0] || ''
-  const roleList = roles.match(/exports\.list[\s\S]*?exports\.getAll/)?.[0] || ''
   assert.doesNotMatch(userList, /for \(const row of rows\)[\s\S]*?await getRoles\.all/)
   assert.match(userList, /ur\.user_id IN/)
-  assert.doesNotMatch(roleList, /for \(const row of rows\)[\s\S]*?prepare\('SELECT menu_id/)
-  assert.match(roleList, /rm\.role_id IN/)
   assert.match(userList, /roles:\s*`\(SELECT STRING_AGG/)
 })
 

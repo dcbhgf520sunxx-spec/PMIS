@@ -30,7 +30,7 @@ const mapProjectHistoryItem = (item: ProjectHistoryItem): HistoryTimelineItem =>
     changeMode: item.action === '登记付款' ? 'values' : 'diff',
     changes: item.changes
       .filter((change) => !isPaymentAction || change.field_name !== '付款阶段')
-      .map((change) => ({ field: change.field_name || '-', before: change.old_value, after: change.new_value })),
+      .map((change) => ({ field: change.field_name || '-', before: change.old_value, after: change.new_value, changeMode: change.field_name === '改期前已逾期' ? 'values' as const : undefined })),
   };
 };
 
