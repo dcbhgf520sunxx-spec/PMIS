@@ -1,4 +1,4 @@
-const { overdueSql } = require('../services/overdueRules')
+const { overdueSql, rescheduleOverdueChanges } = require('../services/overdueRules')
 const stageOverdue = overdueSql('stage_plan', { alias: 'i', parentAlias: 'p' })
 const db = require('../db')
 const fs = require('node:fs')
@@ -46,7 +46,7 @@ async function findStage(projectId, stageId) {
 }
 
 async function findItem(projectId, itemId) {
-  return db.prepare(`SELECT i.*,s.project_id,s.name stage_name,p.name project_name,u.real_name owner_name
+  return db.prepare(`SELECT i.*,s.project_id,s.name stage_name,p.name project_name,p.status parent_project_status,u.real_name owner_name
     FROM pms_project_plan_item i
     JOIN pms_project_plan_stage s ON s.id=i.stage_id AND s.is_deleted=0
     JOIN pms_project p ON p.id=s.project_id AND p.is_deleted=0
@@ -581,15 +581,22 @@ exports.createAdjustment = async (req, res) => {
     const reason = String(req.body.reason || '').trim()
     const reasonError = validatePlanAdjustmentReason(reason)
     if (reasonError) return failField(res, 'reason', reasonError)
-    await db.transaction(async (tx) => {
+    const saved = await db.transaction(async (tx) => {
+      const updated = await tx.prepare(`UPDATE pms_project_plan_item SET current_due_date=?,updater_id=?,updated_at=NOW()
+        WHERE id=? AND status=? AND current_due_date IS NOT DISTINCT FROM ? AND updated_at IS NOT DISTINCT FROM ? AND is_deleted=0
+        AND EXISTS(SELECT 1 FROM pms_project p WHERE p.id=? AND p.status=? AND p.is_deleted=0)`)
+        .run(req.body.new_due_date, req.user.id, item.id, item.status, item.current_due_date, item.updated_at, item.project_id, item.parent_project_status)
+      if (updated.changes === 0) return false
       await tx.prepare('INSERT INTO pms_project_plan_adjustment(plan_item_id,old_due_date,new_due_date,reason,operator_id)VALUES(?,?,?,?,?)')
         .run(item.id, item.current_due_date, req.body.new_due_date, reason, req.user.id)
-      await tx.prepare('UPDATE pms_project_plan_item SET current_due_date=?,updater_id=?,updated_at=NOW()WHERE id=?').run(req.body.new_due_date, req.user.id, item.id)
+      await tx.writeLogs(req.user.id, '调整计划', '项目阶段主计划', item.id, [
+        { field: 'current_due_date', oldVal: item.current_due_date, newVal: req.body.new_due_date },
+        { field: 'adjustment_reason', oldVal: null, newVal: reason },
+        ...await rescheduleOverdueChanges('stage_plan', item, req.body.new_due_date, tx),
+      ], req.ip, item.name)
+      return true
     })
-    await db.writeLogs(req.user.id, '调整计划', '项目阶段主计划', item.id, [
-      { field: 'current_due_date', oldVal: item.current_due_date, newVal: req.body.new_due_date },
-      { field: 'adjustment_reason', oldVal: null, newVal: reason },
-    ], req.ip, item.name)
+    if (saved === false) return fail(res, 409, 409, '关键事项已变更，请刷新后重试')
     ok(res, null)
   } catch (error) {
     console.error(error)

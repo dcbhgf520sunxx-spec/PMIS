@@ -63,6 +63,7 @@ test('新增工单允许使用已有有效工单的问题描述', async (t) => {
 })
 
 test('编辑工单允许改为其他有效工单已使用的问题描述', async (t) => {
+  t.mock.method(db, 'transaction', async (fn) => fn(db))
   const originalPrepare = db.prepare
   const originalWriteLogs = db.writeLogs
   t.after(() => {

@@ -1,4 +1,4 @@
-const { overdueSql } = require('../services/overdueRules')
+const { overdueSql, rescheduleOverdueChanges } = require('../services/overdueRules')
 const overdue = overdueSql('work_order', { alias: 'w' })
 const defaultDb = require('../db')
 function createWorkOrderController(db = defaultDb) {
@@ -71,7 +71,7 @@ async function validateActiveProduct(productId) {
 
 const WORK_ORDER_SORT_MAP = {
   problem_desc: 'w.problem_desc', product_id: 'p.name', problem_type: 'pt.name', urgency: 'w.urgency', status: 'w.status',
-  is_overdue: overdue.flag, follower_name: 'w.follower_id', follower_id: 'w.follower_id',
+  is_overdue: overdue.flag, follower_name: 'u3.real_name', follower_id: 'u3.real_name',
   submitter_name: 'w.submitter_name', submitter_dept: 'w.submitter_dept', submit_time: 'w.submit_time',
   expected_resolve_date: 'w.expected_resolve_date', creator_name: 'u1.real_name', created_at: 'w.created_at'
 }
@@ -252,7 +252,7 @@ exports.update = async (req, res) => {
     const safeResultDesc = result_desc === undefined ? undefined : sanitizeRichText(result_desc)
     if (!safeProblemDesc.trim()) return failField(res, 'problem_desc', '问题描述不能为空')
 
-    const old = await db.prepare('SELECT product_id, problem_type, problem_desc, result_desc, follower_id, urgency, status, is_overdue, expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time FROM pms_work_order WHERE id = ? AND is_deleted = 0').get(req.params.id)
+    const old = await db.prepare('SELECT product_id, problem_type, problem_desc, result_desc, follower_id, urgency, status, is_overdue, expected_resolve_date, resolve_date, close_date, submitter_name, submitter_dept, submit_time, updated_at FROM pms_work_order WHERE id = ? AND is_deleted = 0').get(req.params.id)
     if (!old) return fail(res, 404, 404, '数据不存在或已被删除')
 
     if (Number(product_id) !== Number(old.product_id)) {
@@ -271,7 +271,7 @@ exports.update = async (req, res) => {
       return failField(res, 'status', '请通过状态变更操作调整状态')
     }
 
-    const changes = []
+    const changes = await rescheduleOverdueChanges('work_order', old, expected_resolve_date, db)
     const trackedFields = ['problem_desc', 'product_id', 'problem_type', 'urgency', 'status', 'is_overdue', 'follower_id', 'submitter_name', 'submitter_dept', 'submit_time', 'expected_resolve_date', 'resolve_date', 'result_desc']
     // Date fields that may come as YYYY-MM-DD from frontend but stored as YYYY-MM-DD 00:00:00 in DB
     const dateFields = new Set(['expected_resolve_date', 'resolve_date', 'submit_time'])
@@ -319,12 +319,18 @@ exports.update = async (req, res) => {
 
     setParts.push('updater_id = ?', 'updated_at = NOW()')
     params.push(operatorId)
-    params.push(req.params.id)
+    params.push(req.params.id, old.status, old.expected_resolve_date, old.updated_at)
 
-    const sql = `UPDATE pms_work_order SET ${setParts.join(', ')} WHERE id = ?`
-    await db.prepare(sql).run(...params)
-
-    if (changes.length > 0) await db.writeLogs(operatorId, '编辑', '运维工单', req.params.id, changes, req.ip)
+    const sql = `UPDATE pms_work_order SET ${setParts.join(', ')} WHERE id = ? AND status = ? AND expected_resolve_date IS NOT DISTINCT FROM ? AND updated_at IS NOT DISTINCT FROM ? AND is_deleted = 0`
+    const persist = async (connection) => {
+      const result = await connection.prepare(sql).run(...params)
+      if (result.changes === 0) return false
+      if (changes.length > 0) await connection.writeLogs(operatorId, '编辑', '运维工单', req.params.id, changes, req.ip)
+      return true
+    }
+    // An injected connection is already inside the open API caller's transaction.
+    const saved = db.transaction ? await db.transaction(persist) : await persist(db)
+    if (saved === false) return fail(res, 409, 409, '工单已变更，请刷新后重试')
 
     ok(res, null)
   } catch (err) {
@@ -534,7 +540,7 @@ exports.getNeighbors = async (req, res) => {
 /** Field name mapping: database field → Chinese label */
 const FIELD_LABEL = {
   product_id: '所属产品', problem_type: '问题类型', problem_desc: '问题描述', result_desc: '处置结果', follower_id: '跟进人',
-  urgency: '紧急程度', status: '状态', is_overdue: '逾期', expected_resolve_date: '预计完成时间',
+  urgency: '紧急程度', status: '状态', is_overdue: '逾期', expected_resolve_date: '预计完成时间', reschedule_overdue_days: '改期前已逾期',
   resolve_date: '实际修复时间', close_date: '关闭时间', close_reason: '关闭原因', suspend_date: '暂停时间', suspend_reason: '暂停原因', activation_reason: '激活原因', submitter_name: '提出人', submitter_dept: '提出组织',
   submit_time: '提出时间',
 }
@@ -543,7 +549,7 @@ const FIELD_LABEL = {
 const DETAIL_FIELD_ORDER = [
   'problem_desc', 'product_id', 'problem_type', 'urgency', 'status',
   'is_overdue', 'follower_id', 'submitter_name', 'submitter_dept', 'submit_time',
-  'expected_resolve_date', 'resolve_date', 'suspend_date', 'suspend_reason', 'close_date', 'close_reason', 'result_desc', 'activation_reason',
+  'expected_resolve_date', 'reschedule_overdue_days', 'resolve_date', 'suspend_date', 'suspend_reason', 'close_date', 'close_reason', 'result_desc', 'activation_reason',
 ]
 const HISTORY_DATE_FIELDS = new Set(['expected_resolve_date', 'resolve_date', 'close_date', 'suspend_date', 'submit_time'])
 

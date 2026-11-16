@@ -229,7 +229,8 @@ export async function getWorkOrderHistory(id: string): Promise<WorkOrderHistoryI
     changes: row.details?.map((item) => ({
       field: item.field,
       before: item.oldVal,
-      after: item.newVal
+      after: item.newVal,
+      changeMode: item.field === '改期前已逾期' ? 'values' as const : undefined
     }))
   }));
 }

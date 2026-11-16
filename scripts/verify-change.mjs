@@ -53,6 +53,7 @@ const commands = [
   { cwd: 'frontend', command: 'npm', args: ['run', 'audit:components'] },
   { cwd: 'frontend', command: 'npm', args: ['run', 'audit:components:strict'] },
   { cwd: 'frontend', command: 'npm', args: ['run', 'audit:api-contracts'] },
+  { cwd: 'frontend', command: 'npm', args: ['run', 'audit:list-sorting'] },
   { cwd: 'frontend', command: 'npm', args: ['run', 'build'] },
   { cwd: 'frontend', command: 'npm', args: ['run', 'audit:build-budget'] },
   { cwd: 'backend', command: 'npm', args: ['run', 'audit:operation-history'] },

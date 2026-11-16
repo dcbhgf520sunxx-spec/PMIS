@@ -8,25 +8,12 @@ const roleFormSchema = {
   name: { required: true, label: '角色名称' }
 }
 
-function resolveRolePermissions(allMenus, roleMenuRows) {
-  const normalizedMenus = allMenus.map((menu) => ({
-    ...menu,
-    id: Number(menu.id),
-    parent_id: Number(menu.parent_id),
-  }))
-  const menuMap = {}
-  normalizedMenus.forEach((menu) => { menuMap[menu.id] = menu })
-
-  const menuIds = roleMenuRows.map((row) => Number(row.menu_id))
-  const displayIds = menuIds.filter((id) => {
-    const menu = menuMap[id]
-    if (!menu) return false
-    const hasAssignedChild = normalizedMenus.some((child) => child.parent_id === id && menuIds.includes(child.id))
-    return !hasAssignedChild
-  })
-
-  return displayIds.map((id) => menuMap[id]?.name).filter(Boolean).join('、') || '-'
-}
+const rolePermissionsSql = `(SELECT COALESCE(STRING_AGG(m.name, '、' ORDER BY m.sort_order, m.id), '-')
+  FROM pms_role_menu rm JOIN pms_menu m ON m.id = rm.menu_id
+  WHERE rm.role_id = r.id AND m.is_deleted = 0
+    AND NOT EXISTS (SELECT 1 FROM pms_role_menu child_role_menu
+      JOIN pms_menu child ON child.id = child_role_menu.menu_id
+      WHERE child_role_menu.role_id = r.id AND child.parent_id = m.id AND child.is_deleted = 0))`
 
 exports.list = async (req, res) => {
   try {
@@ -37,7 +24,7 @@ exports.list = async (req, res) => {
     if (code) { whereSql += ' AND r.code LIKE ?'; filterParams.push(`%${code}%`) }
     if (name) { whereSql += ' AND r.name LIKE ?'; filterParams.push(`%${name}%`) }
 
-    let sql = `SELECT r.*, u1.real_name as creator_name, u2.real_name as updater_name
+    let sql = `SELECT r.*, ${rolePermissionsSql} as permissions, u1.real_name as creator_name, u2.real_name as updater_name
       FROM pms_role r
       LEFT JOIN pms_user u1 ON r.creator_id = u1.id
       LEFT JOIN pms_user u2 ON r.updater_id = u2.id
@@ -46,9 +33,7 @@ exports.list = async (req, res) => {
     const sortMap = {
       code: 'r.code',
       name: 'r.name',
-      permissions: `(SELECT STRING_AGG(m.name, '、' ORDER BY m.sort_order, m.id)
-        FROM pms_role_menu rm JOIN pms_menu m ON m.id = rm.menu_id
-        WHERE rm.role_id = r.id)`,
+      permissions: 'permissions',
       description: 'r.description',
       creator_name: 'creator_name',
       created_at: 'r.created_at'
@@ -59,24 +44,6 @@ exports.list = async (req, res) => {
 
     const rows = await db.prepare(sql).all(...filterParams, pageSize, offset)
     const countRow = await db.prepare(`SELECT COUNT(*) as total FROM pms_role r${whereSql}`).get(...filterParams)
-
-    // For each role, get assigned menu names (filter out parents that have children assigned)
-    const allMenus = await db.prepare('SELECT id, parent_id, name FROM pms_menu WHERE is_deleted = 0').all()
-    const menusByRole = new Map()
-    if (rows.length > 0) {
-      const roleIds = rows.map((row) => row.id)
-      const menuRows = await db.prepare(`
-        SELECT rm.role_id, rm.menu_id
-        FROM pms_role_menu rm
-        WHERE rm.role_id IN (${roleIds.map(() => '?').join(',')})
-      `).all(...roleIds)
-      for (const menu of menuRows) {
-        const roleMenus = menusByRole.get(String(menu.role_id)) || []
-        roleMenus.push({ menu_id: menu.menu_id })
-        menusByRole.set(String(menu.role_id), roleMenus)
-      }
-    }
-    for (const row of rows) row.permissions = resolveRolePermissions(allMenus, menusByRole.get(String(row.id)) || [])
 
     res.json({ code: 0, message: 'success', data: { list: rows, total: Number(countRow?.total || 0), page, pageSize } })
   } catch (err) {
@@ -107,16 +74,13 @@ exports.options = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const sql = `SELECT r.*, u1.real_name as creator_name, u2.real_name as updater_name
+    const sql = `SELECT r.*, ${rolePermissionsSql} as permissions, u1.real_name as creator_name, u2.real_name as updater_name
       FROM pms_role r
       LEFT JOIN pms_user u1 ON r.creator_id = u1.id
       LEFT JOIN pms_user u2 ON r.updater_id = u2.id
       WHERE r.id = ? AND r.is_deleted = 0`
     const row = await db.prepare(sql).get(req.params.id)
     if (!row) return res.status(404).json({ code: 404, message: '角色不存在', data: null })
-    const allMenus = await db.prepare('SELECT id, parent_id, name FROM pms_menu WHERE is_deleted = 0').all()
-    const menuRows = await db.prepare('SELECT menu_id FROM pms_role_menu WHERE role_id = ?').all(row.id)
-    row.permissions = resolveRolePermissions(allMenus, menuRows)
     res.json({ code: 0, message: 'success', data: row })
   } catch (err) {
     console.error(err)

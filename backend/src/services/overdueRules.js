@@ -1,4 +1,4 @@
-const { requirementCompletion, requirementCompletionSql } = require('./requirementCompletionRules')
+const { requirementCompletion, requirementCompletionSql, completionForChange } = require('./requirementCompletionRules')
 const { getShanghaiDateText, businessDateText, calendarDaysBetween } = require('../utils/date')
 
 const POLICIES = Object.freeze({
@@ -47,4 +47,20 @@ function overdueSql(type, { alias = '', parentAlias } = {}) {
   const days = `(CASE WHEN ${predicate} THEN (${today} - ${date}) ELSE 0 END)`
   return { predicate, flag, days, fields: `${flag} AS is_overdue, ${days} AS overdue_days` }
 }
-module.exports = { POLICIES, calculateOverdue, overdueSql }
+async function rescheduleOverdueChanges(type, record, newDate, database, today = getShanghaiDateText()) {
+  const policy = policyFor(type)
+  const oldDate = businessDateText(record[policy.field], Boolean(policy.timestamp))
+  const nextDate = businessDateText(newDate, Boolean(policy.timestamp))
+  if (!oldDate || !nextDate || oldDate === nextDate) return []
+  const completion = type === 'requirement' ? await completionForChange(database, record) : undefined
+  const overdue = calculateOverdue(type, {
+    date: record[policy.field], status: record.status, parentStatus: record.parent_project_status,
+    requirementType: record.requirement_type, completion,
+  }, today)
+  // Persist the pre-change fact with this operation; never recalculate it when reading history.
+  return overdue.isOverdue === 1
+    ? [{ field: 'reschedule_overdue_days', oldVal: null, newVal: `${overdue.overdueDays}天` }]
+    : []
+}
+
+module.exports = { POLICIES, calculateOverdue, overdueSql, rescheduleOverdueChanges }

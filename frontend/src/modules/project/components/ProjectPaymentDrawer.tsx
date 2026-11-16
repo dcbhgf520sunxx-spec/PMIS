@@ -39,12 +39,12 @@ export function ProjectPaymentDrawer({ open, projectId, stage, revision, onClose
   useEffect(load, [load, revision]);
 
   const columns = useMemo<ProColumns<ProjectPaymentRecord>[]>(() => [
-    { title: '付款时间', dataIndex: 'paymentMonth', width: 120, fixed: 'left', sorter: true },
-    { title: '本次付款金额（元）', dataIndex: 'paymentAmount', width: 150, sorter: true, render: (_, record) => money(record.paymentAmount) },
-    { title: '经办人', dataIndex: 'handlerName', width: 130, sorter: true },
-    { title: '备注', dataIndex: 'remark', width: 240, sorter: true },
-    { title: '登记人', dataIndex: 'creatorName', width: 130, sorter: true },
-    { title: '登记时间', dataIndex: 'createdAt', width: 180, sorter: true },
+    { title: '付款时间', dataIndex: 'paymentMonth', width: 120, fixed: 'left', sorter: true, sortOrder: list.sortState.field === 'paymentMonth' ? list.sortState.order : null },
+    { title: '本次付款金额（元）', dataIndex: 'paymentAmount', width: 150, sorter: true, sortOrder: list.sortState.field === 'paymentAmount' ? list.sortState.order : null, render: (_, record) => money(record.paymentAmount) },
+    { title: '经办人', dataIndex: 'handlerName', width: 130, sorter: true, sortOrder: list.sortState.field === 'handlerName' ? list.sortState.order : null },
+    { title: '备注', dataIndex: 'remark', width: 240, sorter: true, sortOrder: list.sortState.field === 'remark' ? list.sortState.order : null },
+    { title: '登记人', dataIndex: 'creatorName', width: 130, sorter: true, sortOrder: list.sortState.field === 'creatorName' ? list.sortState.order : null },
+    { title: '登记时间', dataIndex: 'createdAt', width: 180, sorter: true, sortOrder: list.sortState.field === 'createdAt' ? list.sortState.order : null },
     {
       title: '操作', valueType: 'option', width: 130, fixed: 'right',
       render: (_, record) => (
@@ -60,7 +60,7 @@ export function ProjectPaymentDrawer({ open, projectId, stage, revision, onClose
         </OperationColumnActions>
       ),
     },
-  ], [load, onChanged, onEdit, projectId]);
+  ], [list.sortState.field, list.sortState.order, load, onChanged, onEdit, projectId]);
 
   return (
     <TemplateDrawerTable<ProjectPaymentRecord>

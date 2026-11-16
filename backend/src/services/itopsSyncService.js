@@ -1,4 +1,4 @@
-const { calculateOverdue } = require('./overdueRules')
+const { calculateOverdue, rescheduleOverdueChanges } = require('./overdueRules')
 const crypto = require('crypto')
 const db = require('../db')
 const { mapItopsRecord, mergeSyncedSection, resolveSyncWindow } = require('./itopsSyncRules')
@@ -170,12 +170,13 @@ async function saveRequirement(tx, mapped, config, owner, target, actorId) {
     completion_status: mapped.completionStatus,
   }
   if (target) {
+    const rescheduleChanges = await rescheduleOverdueChanges('requirement', target, mapped.expectedEndDate, tx)
     await tx.prepare(`UPDATE pms_requirement SET title=?,description=?,requirement_type=4,product_id=?,owner_id=?,
       status=?,is_overdue=?,submitter_name=?,submitter_dept=?,submit_date=?,expected_end_date=?,
       actual_end_date=?,completion_status=?,updater_id=?,updated_at=NOW() WHERE id=?`).run(title, description, config.product_id,
       owner.id, mapped.status, overdue, submitterName, submitterDept, mapped.submitDate, mapped.expectedEndDate,
       mapped.actualEndDate, mapped.completionStatus, actorId, target.id)
-    const changes = collectHistoryChanges(target, nextValues, ['submit_date', 'expected_end_date', 'actual_end_date'])
+    const changes = [...collectHistoryChanges(target, nextValues, ['submit_date', 'expected_end_date', 'actual_end_date']), ...rescheduleChanges]
     if (changes.length) await tx.writeLogs(actorId, 'i8同步更新', '需求', target.id, changes, null, title)
     return target.id
   }
@@ -217,7 +218,7 @@ async function saveWorkOrder(tx, mapped, config, owner, target, actorId) {
       submit_time=?,updater_id=?,updated_at=NOW() WHERE id=?`).run(config.product_id, problemType, problemDesc,
       resultDesc, owner.id, mapped.priority, mapped.status, overdue, mapped.expectedEndDate, mapped.actualEndDate,
       submitterName, submitterDept, mapped.submitDate, actorId, target.id)
-    const changes = collectHistoryChanges(target, nextValues, ['expected_resolve_date', 'resolve_date', 'submit_time'])
+    const changes = [...collectHistoryChanges(target, nextValues, ['expected_resolve_date', 'resolve_date', 'submit_time']), ...await rescheduleOverdueChanges('work_order', target, mapped.expectedEndDate, tx)]
     if (changes.length) await tx.writeLogs(actorId, 'i8同步更新', '运维工单', target.id, changes, null, mapped.problemDescription)
     return target.id
   }
@@ -238,7 +239,7 @@ async function loadTarget(tx, mapping) {
     completion_status,creator_id,is_deleted FROM pms_requirement WHERE id=? FOR UPDATE`).get(mapping.target_id)
   return tx.prepare(`SELECT id,product_id,problem_type,problem_desc,result_desc,follower_id,urgency,status,is_overdue,
     expected_resolve_date,resolve_date,submitter_name,submitter_dept,submit_time,creator_id,is_deleted
-    FROM pms_work_order WHERE id=?`).get(mapping.target_id)
+    FROM pms_work_order WHERE id=? FOR UPDATE`).get(mapping.target_id)
 }
 
 async function appendSyncRecord(tx, value) {

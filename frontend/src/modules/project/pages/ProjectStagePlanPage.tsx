@@ -52,7 +52,7 @@ const mapHistoryItem=(item:Awaited<ReturnType<typeof getProjectStagePlanHistory>
   operator:item.operator,
   action:item.action,
   time:String(item.created_at).slice(0,19).replace('T',' '),
-  changes:item.changes.map((change)=>({field:change.field_name||'-',before:change.old_value,after:change.new_value})),
+  changes:item.changes.map((change)=>({field:change.field_name||'-',before:change.old_value,after:change.new_value,changeMode:change.field_name==='改期前已逾期'?'values' as const:undefined})),
 });
 const setProjectPlanDragPreview=(event:DragEvent<HTMLElement>)=>{
   const row=event.currentTarget.closest('tr');

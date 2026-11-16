@@ -15,7 +15,8 @@
     "audit:components": "node scripts/audit-component-usage.mjs",
     "audit:components:strict": "node scripts/audit-component-usage.mjs --strict",
     "audit:api-contracts": "node scripts/audit-api-contracts.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "audit:list-sorting": "node scripts/audit-list-sorting.mjs"
   },
   "dependencies": {
     "@ant-design/icons": "^6.0.0",

@@ -271,10 +271,11 @@ export function AccessLogListPage() {
     },
     {
       title: '在线时长',
-      dataIndex: 'durationText',
+      dataIndex: 'durationSeconds',
       width: 130,
       sorter: true,
-      sortOrder: sortState.field === 'durationSeconds' ? sortState.order : null
+      sortOrder: sortState.field === 'durationSeconds' || sortState.field === 'durationText' ? sortState.order : null,
+      render: (_, record) => record.durationText
     },
     {
       title: 'IP',
