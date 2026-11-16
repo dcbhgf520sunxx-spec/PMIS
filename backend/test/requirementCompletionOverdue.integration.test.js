@@ -7,7 +7,7 @@ const enabled = process.env.RUN_DB_INTEGRATION === '1'
 const schema = `requirement_overdue_test_${crypto.randomBytes(6).toString('hex')}`
 if (enabled) process.env.DB_OPTIONS = `-c search_path=${schema} -c timezone=Asia/Shanghai`
 
-test('真实HTTP：需求完成、重评、暂停、编辑和缓存刷新与完成率一致', { skip: !enabled }, async () => {
+test('真实HTTP：需求完成、重评、暂停、编辑和缓存刷新与完成率一致', { skip: !enabled }, async (t) => {
   const db = require('../src/db')
   let server
   try {
@@ -16,11 +16,12 @@ test('真实HTTP：需求完成、重评、暂停、编辑和缓存刷新与完�
     await db.exec(fs.readFileSync(path.join(__dirname, '../db/init/001_schema.sql'), 'utf8').replace(/^ALTER (DATABASE|ROLE).*$/gm, ''))
     const bcrypt = require('bcryptjs')
     await db.prepare("UPDATE pms_user SET password=?,first_login=0 WHERE employee_no='admin'").run(await bcrypt.hash('vv123456', 4))
+    const readCaptcha = require('../test-support/loginCaptcha').captureLoginCaptcha(t)
     const app = require('../src/app')
     server = app.listen(0, '127.0.0.1')
     await new Promise(resolve => server.once('listening', resolve))
     const origin = `http://127.0.0.1:${server.address().port}`
-    const login = await fetch(origin + '/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ account: 'admin', password: 'vv123456' }) })
+    const login = await fetch(origin + '/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ account: 'admin', password: 'vv123456', ...await readCaptcha(origin) }) })
     const session = await login.json()
     assert.equal(session.code, 0)
     const request = async (endpoint, body, method = 'POST') => {

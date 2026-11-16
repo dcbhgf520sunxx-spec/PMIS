@@ -10,7 +10,7 @@ async function readJson(response) {
   return text ? JSON.parse(text) : null
 }
 
-test('项目合同和分阶段付款真实接口流程', { skip: !enabled }, async () => {
+test('项目合同和分阶段付款真实接口流程', { skip: !enabled }, async (t) => {
   assert.equal(process.env.INTEGRATION_DB_ISOLATED, '1', '真实集成测试只能连接明确标记的隔离数据库')
   const uploadedPdf = Buffer.from('%PDF-1.7 integration contract')
   let ossUploadBody = ''
@@ -52,6 +52,7 @@ test('项目合同和分阶段付款真实接口流程', { skip: !enabled }, asy
   const ossOrigin = `http://127.0.0.1:${ossServer.address().port}`
   process.env.CONTRACT_ATTACHMENT_OSS_UPLOAD_URL = `${ossOrigin}/oss/file/upload`
   process.env.CONTRACT_ATTACHMENT_OSS_FILE_ORIGIN = ossOrigin
+  const readCaptcha = require('../test-support/loginCaptcha').captureLoginCaptcha(t)
   const app = require('../src/app')
   const db = require('../src/db')
   const server = app.listen(0)
@@ -84,7 +85,7 @@ test('项目合同和分阶段付款真实接口流程', { skip: !enabled }, asy
       "INSERT INTO pms_user_role (user_id, role_id) SELECT ?, id FROM pms_role WHERE code = 'admin' AND is_deleted = 0"
     ).run(testUser.lastInsertRowid)
 
-    const login = await request('/api/auth/login', { method: 'POST', auth: false, body: { account: employeeNo, password: 'vv123456' } })
+    const login = await request('/api/auth/login', { method: 'POST', auth: false, body: { account: employeeNo, password: 'vv123456', ...await readCaptcha(baseUrl) } })
     assert.equal(login.response.status, 200)
     token = login.body.data.token
     const password = await request('/api/auth/password', { method: 'PUT', body: { old_password: 'vv123456', new_password: 'vv1234567' } })

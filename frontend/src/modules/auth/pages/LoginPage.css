@@ -232,6 +232,42 @@
   color: #8da0bc;
 }
 
+.login-captcha-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  gap: 10px;
+}
+
+.login-captcha-image.ant-btn {
+  height: 46px;
+  overflow: hidden;
+  padding: 0;
+  border-color: #d6e1f0;
+  border-radius: 6px;
+  background: #f0f5ff;
+}
+
+.login-captcha-image img {
+  display: block;
+  width: 100%;
+  height: 44px;
+}
+
+.login-captcha-help,
+.login-field-error {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.login-captcha-help {
+  color: #7a8ba5;
+}
+
+.login-field-error {
+  color: #c72b34;
+}
+
 .login-submit.ant-btn-primary {
   height: 44px;
   margin-top: 8px;

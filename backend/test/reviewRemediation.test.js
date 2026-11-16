@@ -31,13 +31,27 @@ test('Nginx 上传路径使用强前缀，避免图片正则覆盖', () => {
 })
 
 test('审查项配置和数据库优化已落地', () => {
-  const app = read('backend/src/app.js')
   const users = read('backend/src/controllers/userController.js')
   const migration = read('backend/db/migrations/20260711_optimize_review_findings.sql')
-  assert.match(app, /app\.set\('trust proxy', 1\)/)
   assert.match(users, /error\?\.code === '23505'/)
   assert.doesNotMatch(users, /172\.16\.0\.45/)
   assert.match(migration, /idx_op_log_module_created_at/)
   assert.match(migration, /appearance_mode SET DEFAULT 'light'/)
   assert.match(migration, /char_length\(description\) <= 1000/)
+})
+
+test('仅信任本机反向代理，直连客户端不能伪造来源IP', () => {
+  process.env.JWT_SECRET ||= 'test-only-review-remediation-jwt-secret'
+  const app = require('../src/app')
+  const express = require('express')
+  const requestIp = (peer, forwarded) => {
+    const req = Object.create(express.request)
+    req.app = app
+    req.socket = { remoteAddress: peer }
+    req.headers = { 'x-forwarded-for': forwarded }
+    return req.ip
+  }
+  assert.equal(requestIp('203.0.113.8', '192.0.2.3'), '203.0.113.8')
+  assert.equal(requestIp('127.0.0.1', '192.0.2.3'), '192.0.2.3')
+  assert.equal(requestIp('::ffff:127.0.0.1', '198.51.100.1, 192.0.2.3'), '192.0.2.3')
 })

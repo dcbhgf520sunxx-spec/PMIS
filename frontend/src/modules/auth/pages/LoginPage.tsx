@@ -12,14 +12,15 @@ import {
   UserOutlined
 } from '@ant-design/icons';
 import { logoutAccessSession } from '../../../api/accessLogApi';
-import { derivePermissions, exchangeWecomTicket, getUserPreference, login } from '../../../api/authApi';
+import { derivePermissions, exchangeWecomTicket, getLoginCaptcha, getUserPreference, login, type LoginCaptcha } from '../../../api/authApi';
+import { ApiError } from '../../../api/apiError';
 import { PasswordChangeModal } from '../../account/components/PasswordChangeModal';
 import { useAuthStore } from '../../../stores/authStore';
 import robotMini from '../../../assets/login/robot-mini.png';
 import { parseWecomLoginSearch } from '../wecomLogin';
 import './LoginPage.css';
 
-type FocusedField = 'account' | 'password' | null;
+type FocusedField = 'account' | 'password' | 'captcha' | null;
 
 type Ripple = {
   id: number;
@@ -40,11 +41,42 @@ export function LoginPage() {
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
+  const [captcha, setCaptcha] = useState<LoginCaptcha | null>(null);
+  const [captchaCode, setCaptchaCode] = useState('');
+  const [captchaLoading, setCaptchaLoading] = useState(true);
+  const [captchaLoadError, setCaptchaLoadError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const captchaRequest = useRef(0);
+  const submitInFlight = useRef(false);
   const [focusedField, setFocusedField] = useState<FocusedField>(null);
   const [ripples, setRipples] = useState<Ripple[]>([]);
   const [buttonPressed, setButtonPressed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const handledWecomQuery = useRef('');
+
+  const refreshCaptcha = useCallback(async () => {
+    const requestId = ++captchaRequest.current;
+    setCaptcha(null);
+    setCaptchaCode('');
+    setCaptchaLoading(true);
+    setCaptchaLoadError('');
+    try {
+      const result = await getLoginCaptcha();
+      if (requestId === captchaRequest.current) setCaptcha(result);
+    } catch (error) {
+      if (requestId === captchaRequest.current) {
+        setCaptchaLoadError(error instanceof Error ? error.message : '验证码加载失败，请重试');
+      }
+    } finally {
+      if (requestId === captchaRequest.current) setCaptchaLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const requestCounter = captchaRequest;
+    void refreshCaptcha();
+    return () => { requestCounter.current++; };
+  }, [refreshCaptcha]);
 
   const enterPreferredPage = useCallback(async () => {
     const preference = await getUserPreference();
@@ -85,11 +117,17 @@ export function LoginPage() {
       .finally(() => setSubmitting(false));
   }, [enterPreferredPage, location.search, message, navigate, setAuth]);
 
-  const handleForcedPasswordExit = async () => {
-    await logoutAccessSession(accessSessionId).catch(() => undefined);
+  const handleForcedPasswordExit = () => {
+    const token = useAuthStore.getState().token;
+    void logoutAccessSession(accessSessionId, { token }).catch(() => {
+      message.warning('退出请求未完成，已清除本地登录状态');
+    });
     clearAuth();
     setAccount('');
     setPassword('');
+    setFieldErrors({});
+    void refreshCaptcha();
+    navigate('/login', { replace: true });
   };
 
   const createRipple = (event: MouseEvent<HTMLElement>) => {
@@ -112,23 +150,25 @@ export function LoginPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submitInFlight.current || submitting) return;
     setButtonPressed(true);
     window.setTimeout(() => setButtonPressed(false), 180);
 
-    if (!account.trim()) {
-      message.error('工号或手机号不能为空');
-      return;
-    }
-    if (!password) {
-      message.error('密码不能为空');
-      return;
-    }
+    const errors: Record<string, string> = {};
+    if (!account.trim()) errors.account = '请输入账号或手机号';
+    if (!password) errors.password = '请输入密码';
+    if (!captchaCode.trim()) errors.captcha_code = '请输入验证码';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length || !captcha || captchaLoading) return;
 
+    submitInFlight.current = true;
     setSubmitting(true);
     try {
       const result = await login({
         account: account.trim(),
-        password
+        password,
+        captcha_id: captcha.captcha_id,
+        captcha_code: captchaCode.trim()
       });
       const firstLogin = result.first_login === 1;
       setAuth({
@@ -145,8 +185,14 @@ export function LoginPage() {
       }
       await enterPreferredPage();
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '登录失败');
+      if (error instanceof ApiError && error.fieldErrors?.captcha_code?.length) {
+        setFieldErrors({ captcha_code: error.fieldErrors.captcha_code[0] });
+      } else {
+        message.error(error instanceof Error ? error.message : '登录失败');
+      }
+      void refreshCaptcha();
     } finally {
+      submitInFlight.current = false;
       setSubmitting(false);
     }
   };
@@ -207,6 +253,7 @@ export function LoginPage() {
           <span className="login-title-code">SIDM</span>
         </Typography.Title>
         <form autoComplete="on" className="login-form" onSubmit={handleSubmit}>
+          <div>
           <label
             className={`login-field ${focusedField === 'account' ? 'is-focused' : ''}`}
             htmlFor="login-username"
@@ -216,13 +263,22 @@ export function LoginPage() {
               id="login-username"
               name="username"
               onBlur={() => setFocusedField(null)}
-              onChange={(event) => setAccount(event.target.value)}
+              onChange={(event) => {
+                setAccount(event.target.value);
+                setFieldErrors((errors) => ({ ...errors, account: '' }));
+              }}
               onFocus={() => setFocusedField('account')}
               placeholder="请输入账号或手机号"
               prefix={<UserOutlined />}
               value={account}
+              aria-label="账号或手机号"
+              aria-invalid={Boolean(fieldErrors.account)}
+              aria-describedby={fieldErrors.account ? 'login-account-error' : undefined}
             />
           </label>
+          {fieldErrors.account && <div className="login-field-error" id="login-account-error" role="alert">{fieldErrors.account}</div>}
+          </div>
+          <div>
           <label
             className={`login-field ${focusedField === 'password' ? 'is-focused' : ''}`}
             htmlFor="login-password"
@@ -232,17 +288,67 @@ export function LoginPage() {
               id="login-password"
               name="password"
               onBlur={() => setFocusedField(null)}
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                setFieldErrors((errors) => ({ ...errors, password: '' }));
+              }}
               onFocus={() => setFocusedField('password')}
               placeholder="请输入密码"
               prefix={<LockOutlined />}
               value={password}
+              aria-label="密码"
+              aria-invalid={Boolean(fieldErrors.password)}
+              aria-describedby={fieldErrors.password ? 'login-password-error' : undefined}
             />
           </label>
+          {fieldErrors.password && <div className="login-field-error" id="login-password-error" role="alert">{fieldErrors.password}</div>}
+          </div>
+          <div>
+            <div className="login-captcha-row">
+              <div className={`login-field ${focusedField === 'captcha' ? 'is-focused' : ''}`}>
+                <Input
+                  id="login-captcha"
+                  name="captcha_code"
+                  autoComplete="off"
+                  autoCapitalize="characters"
+                  spellCheck={false}
+                  maxLength={5}
+                  aria-label="验证码"
+                  aria-invalid={Boolean(fieldErrors.captcha_code)}
+                  aria-describedby="login-captcha-help"
+                  placeholder="请输入验证码"
+                  prefix={<SafetyCertificateOutlined />}
+                  value={captchaCode}
+                  disabled={captchaLoading || !captcha || submitting}
+                  onChange={(event) => {
+                    setCaptchaCode(event.target.value);
+                    setFieldErrors((errors) => ({ ...errors, captcha_code: '' }));
+                  }}
+                  onFocus={() => setFocusedField('captcha')}
+                  onBlur={() => setFocusedField(null)}
+                />
+              </div>
+              <Button
+                className="login-captcha-image"
+                htmlType="button"
+                aria-label={captchaLoadError ? '重试验证码' : '刷新验证码'}
+                title="点击更换验证码"
+                loading={captchaLoading}
+                disabled={submitting || captchaLoading}
+                onClick={() => { void refreshCaptcha(); }}
+              >
+                {captcha ? <img src={captcha.image} alt="图形验证码" /> : captchaLoading ? '加载中' : '点击重试'}
+              </Button>
+            </div>
+            <div id="login-captcha-help" className={fieldErrors.captcha_code || captchaLoadError ? 'login-field-error' : 'login-captcha-help'} aria-live="polite">
+              {fieldErrors.captcha_code || captchaLoadError || '不区分大小写，点击图片可换一张'}
+            </div>
+          </div>
           <Button
             className={`login-submit ${buttonPressed ? 'is-pressed' : ''}`}
             htmlType="submit"
             loading={submitting}
+            disabled={captchaLoading || !captcha}
             type="primary"
           >
             登录系统
@@ -263,7 +369,7 @@ export function LoginPage() {
       <PasswordChangeModal
         open={mustChangePassword}
         forced
-        onForcedExit={handleForcedPasswordExit}
+        onCancel={handleForcedPasswordExit}
         onSuccess={() => {
           setMustChangePassword(false);
           void enterPreferredPage();

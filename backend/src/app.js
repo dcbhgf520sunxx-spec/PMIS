@@ -37,8 +37,8 @@ const ossFileController = require('./controllers/ossFileController')
 
 const app = express()
 const { allowedOrigin } = validateRuntimeConfig()
-// 生产只经过一层本机 Nginx，避免任意客户端伪造 X-Forwarded-For。
-app.set('trust proxy', 1)
+// 仅信任本机 Nginx；直连后端时不能用伪造的转发头绕过来源限流。
+app.set('trust proxy', 'loopback')
 app.use(requestContext)
 app.use(attachResponseHelpers)
 app.use(cors({ origin: allowedOrigin, credentials: true }))
