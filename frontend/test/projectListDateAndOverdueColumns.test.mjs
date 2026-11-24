@@ -4,7 +4,11 @@ import test from 'node:test';
 
 const page = readFileSync('src/modules/project/pages/ProjectListPage.tsx', 'utf8');
 
-test('项目查询使用逾期状态名称',()=>{assert.match(page,/label: '逾期状态'/);assert.doesNotMatch(page,/label: '是否逾期'/);});
+test('项目和关键事项使用独立逾期查询条件', () => {
+  assert.match(page, /label: '项目逾期'/);
+  assert.match(page, /label: '关键事项逾期'/);
+  assert.doesNotMatch(page, /label: '是否逾期'/);
+});
 const helperPath = 'src/modules/project/helpers.tsx';
 const helper = existsSync(helperPath) ? readFileSync(helperPath, 'utf8') : '';
 const controller = readFileSync('../backend/src/controllers/projectController.js', 'utf8');

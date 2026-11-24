@@ -1,6 +1,7 @@
 const { numberListCondition } = require('../utils/listFilters')
 const { overdueSql, rescheduleOverdueChanges } = require('../services/overdueRules')
 const overdue = overdueSql('project', { alias: 'p' })
+const planItemOverdue = overdueSql('stage_plan', { alias: 'i', parentAlias: 'p' })
 const db = require('../db')
 const { lockRequirements, releaseRequirement, transferRequirement } = require('../services/requirementProjectTransfer')
 const { parsePagination, getSortDirection } = require('../utils/pagination')
@@ -35,6 +36,13 @@ const fields = `p.id, p.name, p.description, p.product_id, product.name product_
   COALESCE((SELECT json_agg(json_build_object('id', u.id, 'name', u.real_name) ORDER BY u.real_name)
     FROM pms_project_member pm JOIN pms_user u ON u.id = pm.user_id WHERE pm.project_id = p.id), '[]'::json) members`
 
+const planOverdueJoin = ` LEFT JOIN LATERAL (
+  SELECT CASE WHEN COUNT(i.id) > 0 THEN COUNT(i.id) FILTER (WHERE ${planItemOverdue.predicate})::INTEGER END AS overdue_plan_item_count
+  FROM pms_project_plan_stage s
+  JOIN pms_project_plan_item i ON i.stage_id = s.id AND i.is_deleted = 0
+  WHERE s.project_id = p.id AND s.is_deleted = 0
+) plan_summary ON TRUE`
+
 function baseSelect(extra = fields) {
   return `SELECT ${extra} FROM pms_project p
     JOIN pms_product product ON product.id = p.product_id
@@ -61,6 +69,8 @@ function where(q) {
   params.push(...status.params)
   if (q.priority !== undefined && q.priority !== '') { sql += ' AND p.priority = ?'; params.push(Number(q.priority)) }
   if (q.is_overdue !== undefined && q.is_overdue !== '') { sql += ` AND ${overdue.flag} = ?`; params.push(Number(q.is_overdue)) }
+  if (q.plan_item_overdue === '1') sql += ' AND plan_summary.overdue_plan_item_count > 0'
+  if (q.plan_item_overdue === '0') sql += ' AND plan_summary.overdue_plan_item_count = 0'
   if (q.expected_end_date_from) { sql += ' AND p.expected_end_date >= ?'; params.push(q.expected_end_date_from) }
   if (q.expected_end_date_to) { sql += ' AND p.expected_end_date <= ?'; params.push(q.expected_end_date_to) }
   if (q.creator_id) { sql += ' AND p.creator_id = ?'; params.push(Number(q.creator_id)) }
@@ -71,18 +81,25 @@ function where(q) {
 
 async function getProjectViewCount(q) {
   const condition = where(q)
-  const row = await db.prepare(`SELECT COUNT(*) total FROM pms_project p${condition.sql}`).get(...condition.params)
+  const join = q.plan_item_overdue ? planOverdueJoin : ''
+  const row = await db.prepare(`SELECT COUNT(*) total FROM pms_project p${join}${condition.sql}`).get(...condition.params)
   return Number(row?.total || 0)
 }
 
 exports.list = async (req, res) => {
   try {
+    if (req.query.plan_item_overdue !== undefined && !['', '0', '1'].includes(req.query.plan_item_overdue)) {
+      return fail(res, 400, 400, '关键事项逾期筛选条件无效')
+    }
     const { page, pageSize, offset } = parsePagination(req.query)
     const condition = where(req.query)
-    const sortMap = { name: 'p.name', productName: 'product.name', requirementName: 'requirement.title', ownerName: 'owner.real_name', priority: 'p.priority', status: 'p.status', startDate: 'p.start_date', expectedEndDate: 'p.expected_end_date', members: "COALESCE((SELECT STRING_AGG(u.real_name, '、' ORDER BY u.real_name) FROM pms_project_member pm JOIN pms_user u ON u.id = pm.user_id WHERE pm.project_id = p.id), '')", creatorName: 'creator.real_name', createdAt: 'p.created_at' }
+    const sortMap = { name: 'p.name', productName: 'product.name', requirementName: 'requirement.title', ownerName: 'owner.real_name', priority: 'p.priority', status: 'p.status', overduePlanItemCount: 'plan_summary.overdue_plan_item_count', startDate: 'p.start_date', expectedEndDate: 'p.expected_end_date', members: "COALESCE((SELECT STRING_AGG(u.real_name, '、' ORDER BY u.real_name) FROM pms_project_member pm JOIN pms_user u ON u.id = pm.user_id WHERE pm.project_id = p.id), '')", creatorName: 'creator.real_name', createdAt: 'p.created_at' }
     const sort = sortMap[req.query.sort_field] || 'p.created_at'
     const direction = getSortDirection(req.query.sort_order)
-    const rows = await db.prepare(baseSelect(`COUNT(*) OVER() total, ${fields}`) + condition.sql + ` ORDER BY ${sort} ${direction}, p.id ${direction} LIMIT ? OFFSET ?`).all(...condition.params, pageSize, offset)
+    const nulls = req.query.sort_field === 'overduePlanItemCount' ? ' NULLS LAST' : ''
+    const rows = await db.prepare(baseSelect(`COUNT(*) OVER() total, ${fields}, plan_summary.overdue_plan_item_count`)
+      + planOverdueJoin + condition.sql + ` ORDER BY ${sort} ${direction}${nulls}, p.id ${direction} LIMIT ? OFFSET ?`)
+      .all(...condition.params, pageSize, offset)
     const currentUserId = Number(req.query.current_user_id)
     const viewCounts = currentUserId ? {
       all: await getProjectViewCount({ ...req.query, owner_id: req.query.filter_owner_id, joined_user_id: undefined }),
