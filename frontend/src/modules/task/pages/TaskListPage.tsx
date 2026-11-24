@@ -22,7 +22,7 @@ const defaults = {
   requirementId: undefined as string | undefined,
   taskType: undefined as string | undefined,
   priority: undefined as number | undefined,
-  status: undefined as number | undefined,
+  status: [] as number[],
   isOverdue: undefined as number | undefined,
   ownerId: undefined as string | undefined,
   expectedEndTimeRange: [] as unknown[],
@@ -44,14 +44,14 @@ export function TaskListPage() {
   const [taskTypes, setTaskTypes] = useState<Option[]>([]);
   const [optionsError, setOptionsError] = useState('');
   const [optionsRevision, setOptionsRevision] = useState(0);
-  const filters = useCommittedFilters(defaults, { urlSync: true, codecs: { name: listRouteCodecs.string, sourceType: listRouteCodecs.number, projectId: listRouteCodecs.string, requirementId: listRouteCodecs.string, taskType: listRouteCodecs.string, priority: listRouteCodecs.number, status: listRouteCodecs.number, isOverdue: listRouteCodecs.number, ownerId: listRouteCodecs.string, expectedEndTimeRange: listRouteCodecs.dateArray, creatorId: listRouteCodecs.string, createdAtRange: listRouteCodecs.dateArray } });
+  const filters = useCommittedFilters(defaults, { urlSync: true, codecs: { name: listRouteCodecs.string, sourceType: listRouteCodecs.number, projectId: listRouteCodecs.string, requirementId: listRouteCodecs.string, taskType: listRouteCodecs.string, priority: listRouteCodecs.number, status: listRouteCodecs.numberArray, isOverdue: listRouteCodecs.number, ownerId: listRouteCodecs.string, expectedEndTimeRange: listRouteCodecs.dateArray, creatorId: listRouteCodecs.string, createdAtRange: listRouteCodecs.dateArray } });
   const list = useTemplateServerListData<TaskRecord, { viewCounts: { all: number; mine: number } }>({
     queryKey: ['tasks', filters.appliedFilters, filters.revision, view],
     request: async ({ current, pageSize, sortField, sortOrder }) => {
       const expectedRange = filters.appliedFilters.expectedEndTimeRange || [];
       const createdAtRange = filters.appliedFilters.createdAtRange || [];
       const owner = resolveListViewFilter(view, filters.appliedFilters.ownerId);
-      const result = await getTaskList({ view, name: filters.appliedFilters.name || undefined, source_type: filters.appliedFilters.sourceType, project_id: filters.appliedFilters.projectId, requirement_id: filters.appliedFilters.requirementId, task_type: filters.appliedFilters.taskType, priority: filters.appliedFilters.priority, status: filters.appliedFilters.status, is_overdue: filters.appliedFilters.isOverdue, owner_id: owner.scopeValue, filter_owner_id: owner.filterValue, expected_end_date_from: date(expectedRange[0]), expected_end_date_to: date(expectedRange[1]), creator_id: filters.appliedFilters.creatorId, created_at_from: date(createdAtRange[0]), created_at_to: date(createdAtRange[1]), sort_field: sortField, sort_order: sortOrder, page: current, pageSize });
+      const result = await getTaskList({ view, name: filters.appliedFilters.name || undefined, source_type: filters.appliedFilters.sourceType, project_id: filters.appliedFilters.projectId, requirement_id: filters.appliedFilters.requirementId, task_type: filters.appliedFilters.taskType, priority: filters.appliedFilters.priority, status: filters.appliedFilters.status.join(',') || undefined, is_overdue: filters.appliedFilters.isOverdue, owner_id: owner.scopeValue, filter_owner_id: owner.filterValue, expected_end_date_from: date(expectedRange[0]), expected_end_date_to: date(expectedRange[1]), creator_id: filters.appliedFilters.creatorId, created_at_from: date(createdAtRange[0]), created_at_to: date(createdAtRange[1]), sort_field: sortField, sort_order: sortOrder, page: current, pageSize });
       return { list: result.list, total: result.total, meta: { viewCounts: result.viewCounts } };
     },
     urlSync: true
@@ -88,7 +88,7 @@ export function TaskListPage() {
       requirement_id: filters.appliedFilters.requirementId,
       task_type: filters.appliedFilters.taskType,
       priority: filters.appliedFilters.priority,
-      status: filters.appliedFilters.status,
+      status: filters.appliedFilters.status.join(',') || undefined,
       is_overdue: filters.appliedFilters.isOverdue,
       owner_id: owner.scopeValue,
       filter_owner_id: owner.filterValue,
@@ -109,9 +109,10 @@ export function TaskListPage() {
   const sameStatus = selectedRecords.length > 0 && selectedRecords.every((row) => row.status === selectedRecords[0].status);
   const clearSelection = () => setSelectedRowKeys([]);
   const batch = useTaskBatchActions({ selectedRecords, users, clearSelection, reload: load });
+  const filterByStatus = filters.appliedFilters.status.length > 0;
   const visibleRows = useMemo(
-    () => list.pagedRows.filter((row) => !row.parentTaskId || expandedParentIds.has(row.parentTaskId)),
-    [expandedParentIds, list.pagedRows]
+    () => filterByStatus ? list.pagedRows : list.pagedRows.filter((row) => !row.parentTaskId || expandedParentIds.has(row.parentTaskId)),
+    [filterByStatus, expandedParentIds, list.pagedRows]
   );
 
   const toggleTaskGroup = (parentTaskId: string) => {
@@ -143,7 +144,7 @@ export function TaskListPage() {
 
   const columns: ProColumns<TaskRecord>[] = [
     { title: '序号', width: 60, fixed: 'left', render: (_, __, index) => list.renderIndex(index) },
-    { title: '任务名称', dataIndex: 'name', width: 320, fixed: 'left', sorter: true, sortOrder: sortOrder('name'), render: (_, row) => <div className={`task-name-cell${row.parentTaskId ? ' task-name-cell--subtask' : ''}`}>{row.childCount > 0 ? <><ExpandToggleButton className="task-name-cell__toggle" variant="square" expanded={expandedParentIds.has(row.id)} expandLabel={`展开 ${row.name} 的子任务`} collapseLabel={`收起 ${row.name} 的子任务`} onClick={() => toggleTaskGroup(row.id)} />{renderTaskLevel()}</> : row.parentTaskId ? renderTaskLevel(row.parentTaskId) : null}<DetailLinkCell className="task-name-cell__text" title={row.name} onClick={() => openDetail(row)}>{row.name}</DetailLinkCell>{row.isOverdue ? <span className="task-name-cell__tag">{renderTaskOverdue(true, row.overdueDays)}</span> : null}</div> },
+    { title: '任务名称', dataIndex: 'name', width: 320, fixed: 'left', sorter: true, sortOrder: sortOrder('name'), render: (_, row) => <div className={`task-name-cell${row.parentTaskId ? ' task-name-cell--subtask' : ''}`}>{row.childCount > 0 ? <>{!filterByStatus ? <ExpandToggleButton className="task-name-cell__toggle" variant="square" expanded={expandedParentIds.has(row.id)} expandLabel={`展开 ${row.name} 的子任务`} collapseLabel={`收起 ${row.name} 的子任务`} onClick={() => toggleTaskGroup(row.id)} /> : null}{renderTaskLevel()}</> : row.parentTaskId ? renderTaskLevel(row.parentTaskId) : null}<DetailLinkCell className="task-name-cell__text" title={row.name} onClick={() => openDetail(row)}>{row.name}</DetailLinkCell>{row.isOverdue ? <span className="task-name-cell__tag">{renderTaskOverdue(true, row.overdueDays)}</span> : null}</div> },
     { title: '关联对象', dataIndex: 'sourceName', width: 220, sorter: true, sortOrder: sortOrder('sourceName'), render: (_, row) => <div className="task-source-cell">{renderTaskSourceType(row.sourceType)}{row.sourceType !== 3 && <span>{row.sourceType === 1 ? row.projectName : row.requirementName}</span>}</div> },
     { title: '负责人', dataIndex: 'ownerNames', width: 160, sorter: true, sortOrder: sortOrder('ownerNames') },
     { title: '任务类型', dataIndex: 'taskTypeName', width: 110, sorter: true, sortOrder: sortOrder('taskTypeName') },
@@ -162,7 +163,7 @@ export function TaskListPage() {
     { key: 'requirementId', label: '关联需求', hidden: filters.draftFilters.sourceType !== 2, node: <AdminSelect size="small" value={filters.draftFilters.requirementId} options={requirements} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, requirementId: value }))} /> },
     { key: 'taskType', label: '任务类型', node: <AdminSelect size="small" value={filters.draftFilters.taskType} options={taskTypes} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, taskType: value }))} /> },
     { key: 'priority', label: '优先级', node: <AdminSelect size="small" value={filters.draftFilters.priority} options={[{ label: '低', value: 0 }, { label: '中', value: 1 }, { label: '高', value: 2 }]} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, priority: value }))} /> },
-    { key: 'status', label: '状态', node: <AdminSelect size="small" value={filters.draftFilters.status} options={Object.entries(taskStatusLabels).map(([value, label]) => ({ value: Number(value), label }))} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, status: value }))} /> },
+    { key: 'status', label: '状态', node: <AdminSelect size="small" mode="multiple" maxTagCount="responsive" value={filters.draftFilters.status} options={Object.entries(taskStatusLabels).map(([value, label]) => ({ value: Number(value), label }))} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, status: value }))} /> },
     { key: 'isOverdue', label: '逾期状态', node: <AdminSelect size="small" value={filters.draftFilters.isOverdue} options={[{ label: '已逾期', value: 1 }, { label: '未逾期', value: 0 }]} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, isOverdue: value }))} /> },
     { key: 'ownerId', label: '负责人', hidden: view !== 'all', node: <AdminSelect size="small" value={filters.draftFilters.ownerId} options={users} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, ownerId: value }))} /> },
     { key: 'expectedEndTimeRange', label: '预计完成时间', wide: true, node: <AdminRangePicker size="small" value={filters.draftFilters.expectedEndTimeRange as never} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, expectedEndTimeRange: value || [] }))} /> },

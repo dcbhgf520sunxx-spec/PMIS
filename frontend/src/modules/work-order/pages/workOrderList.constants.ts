@@ -9,7 +9,7 @@ export const defaultWorkOrderListFilters: WorkOrderListFilters = {
   productId: undefined,
   problemTypes: [],
   urgency: undefined,
-  status: undefined,
+  status: [],
   isOverdue: undefined,
   followerId: undefined,
   submitterName: '',

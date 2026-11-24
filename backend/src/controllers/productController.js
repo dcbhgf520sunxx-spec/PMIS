@@ -1,3 +1,4 @@
+const { numberListCondition } = require('../utils/listFilters')
 const db = require('../db')
 const { parsePagination, getSortDirection } = require('../utils/pagination')
 const { ok, fail } = require('../utils/response')
@@ -49,7 +50,9 @@ function where(q) {
     const ids = String(q.owner_ids).split(',').map(Number).filter(Boolean)
     if (ids.length) { sql += ` AND p.owner_id IN (${ids.map(() => '?').join(',')})`; params.push(...ids) }
   }
-  if (q.status !== undefined && q.status !== '') { sql += ' AND p.status = ?'; params.push(Number(q.status)) }
+  const status = numberListCondition('p.status', q.status)
+  sql += status.sql
+  params.push(...status.params)
   if (q.creator_id) { sql += ' AND p.creator_id = ?'; params.push(Number(q.creator_id)) }
   if (q.created_at_from) { sql += ' AND p.created_at >= ?'; params.push(q.created_at_from) }
   if (q.created_at_to) { sql += " AND p.created_at < ?::date + INTERVAL '1 day'"; params.push(q.created_at_to) }

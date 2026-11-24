@@ -1,3 +1,4 @@
+const { numberListCondition } = require('../utils/listFilters')
 const { overdueSql, rescheduleOverdueChanges } = require('../services/overdueRules')
 const overdue = overdueSql('task', { alias: 't' })
 const db = require('../db')
@@ -27,11 +28,14 @@ function base(extra = fields) {
 function where(q) {
   let sql = ' WHERE t.is_deleted=0'
   const params = []
+  const status = numberListCondition('t.status', q.status)
+  sql += status.sql
+  params.push(...status.params)
   if (q.name) {
     sql += ' AND t.name ILIKE ?'
     params.push(`%${q.name}%`)
   }
-  for (const [key, column] of Object.entries({ source_type: 't.source_type', project_id: 't.project_id', requirement_id: 't.requirement_id', task_type: 't.task_type', priority: 't.priority', status: 't.status', is_overdue: overdue.flag, creator_id: 't.creator_id' })) {
+  for (const [key, column] of Object.entries({ source_type: 't.source_type', project_id: 't.project_id', requirement_id: 't.requirement_id', task_type: 't.task_type', priority: 't.priority', is_overdue: overdue.flag, creator_id: 't.creator_id' })) {
     if (q[key] !== undefined && q[key] !== '') {
       sql += ` AND ${column}=?`
       params.push(Number(q[key]))
@@ -53,7 +57,7 @@ function where(q) {
   }
   if (q.created_at_from) { sql += ' AND t.created_at >= ?'; params.push(q.created_at_from) }
   if (q.created_at_to) { sql += " AND t.created_at < ?::date + INTERVAL '1 day'"; params.push(q.created_at_to) }
-  return { sql, params }
+  return { sql, params, hasStatusFilter: status.sql !== '' }
 }
 
 function getTaskSortConfig(sortField, sortOrder) {
@@ -86,7 +90,7 @@ exports.list = async (req, res) => {
     if (query.view === 'mine') query.owner_id = req.user.id
     const clause = where(query)
     const { sort, direction } = getTaskSortConfig(query.sort_field, query.sort_order)
-    const rows = query.mcp_flat === '1'
+    const rows = query.mcp_flat === '1' || clause.hasStatusFilter
       ? await db.prepare(`SELECT COUNT(*) OVER()::INTEGER total,${fields}${taskJoins}${clause.sql}
         ORDER BY ${sort} ${direction} NULLS LAST,t.id ${direction} LIMIT ? OFFSET ?`)
         .all(...clause.params, pageSize, offset)
@@ -105,7 +109,10 @@ exports.neighbors = async (req, res) => {
     if (query.view === 'mine') query.owner_id = req.user.id
     const clause = where(query)
     const { sort, direction } = getTaskSortConfig(query.sort_field, query.sort_order)
-    const row = await db.prepare(`WITH matched AS(SELECT t.id,COALESCE(t.parent_task_id,t.id)root_id,${sort} sort_value${taskJoins}${clause.sql}),task_groups AS(SELECT root_id,MIN(sort_value)group_sort FROM matched GROUP BY root_id),visible AS(SELECT t.id,t.parent_task_id,pg.root_id,pg.group_sort,${sort} sort_value${taskJoins} JOIN task_groups pg ON pg.root_id=COALESCE(t.parent_task_id,t.id) WHERE t.is_deleted=0 AND(t.id IN(SELECT id FROM matched)OR t.id=pg.root_id)),ranked AS(SELECT id,LAG(id)OVER(ORDER BY group_sort ${direction} NULLS LAST,root_id ${direction},CASE WHEN parent_task_id IS NULL THEN 0 ELSE 1 END,sort_value ${direction},id ${direction})prev_id,LEAD(id)OVER(ORDER BY group_sort ${direction} NULLS LAST,root_id ${direction},CASE WHEN parent_task_id IS NULL THEN 0 ELSE 1 END,sort_value ${direction},id ${direction})next_id,ROW_NUMBER()OVER(ORDER BY group_sort ${direction} NULLS LAST,root_id ${direction},CASE WHEN parent_task_id IS NULL THEN 0 ELSE 1 END,sort_value ${direction},id ${direction})ordinal,COUNT(*)OVER()total FROM visible)SELECT prev_id "prevId",next_id "nextId",ordinal,total FROM ranked WHERE id=?`).get(...clause.params, req.query.id)
+    const sql = query.mcp_flat === '1' || clause.hasStatusFilter
+      ? `WITH matched AS(SELECT t.id,${sort} sort_value${taskJoins}${clause.sql}),ranked AS(SELECT id,LAG(id)OVER(ORDER BY sort_value ${direction} NULLS LAST,id ${direction})prev_id,LEAD(id)OVER(ORDER BY sort_value ${direction} NULLS LAST,id ${direction})next_id,ROW_NUMBER()OVER(ORDER BY sort_value ${direction} NULLS LAST,id ${direction})ordinal,COUNT(*)OVER()total FROM matched)SELECT prev_id "prevId",next_id "nextId",ordinal,total FROM ranked WHERE id=?`
+      : `WITH matched AS(SELECT t.id,COALESCE(t.parent_task_id,t.id)root_id,${sort} sort_value${taskJoins}${clause.sql}),task_groups AS(SELECT root_id,MIN(sort_value)group_sort FROM matched GROUP BY root_id),visible AS(SELECT t.id,t.parent_task_id,pg.root_id,pg.group_sort,${sort} sort_value${taskJoins} JOIN task_groups pg ON pg.root_id=COALESCE(t.parent_task_id,t.id) WHERE t.is_deleted=0 AND(t.id IN(SELECT id FROM matched)OR t.id=pg.root_id)),ranked AS(SELECT id,LAG(id)OVER(ORDER BY group_sort ${direction} NULLS LAST,root_id ${direction},CASE WHEN parent_task_id IS NULL THEN 0 ELSE 1 END,sort_value ${direction},id ${direction})prev_id,LEAD(id)OVER(ORDER BY group_sort ${direction} NULLS LAST,root_id ${direction},CASE WHEN parent_task_id IS NULL THEN 0 ELSE 1 END,sort_value ${direction},id ${direction})next_id,ROW_NUMBER()OVER(ORDER BY group_sort ${direction} NULLS LAST,root_id ${direction},CASE WHEN parent_task_id IS NULL THEN 0 ELSE 1 END,sort_value ${direction},id ${direction})ordinal,COUNT(*)OVER()total FROM visible)SELECT prev_id "prevId",next_id "nextId",ordinal,total FROM ranked WHERE id=?`
+    const row = await db.prepare(sql).get(...clause.params, req.query.id)
     ok(res, row || { prevId: null, nextId: null, total: 0 })
   } catch (error) {
     console.error(error)

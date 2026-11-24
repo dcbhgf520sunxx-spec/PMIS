@@ -2,7 +2,7 @@ import type { ProColumns, ProTableProps } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import { ColumnHeightOutlined, HolderOutlined, SettingOutlined, TableOutlined, UndoOutlined } from '@ant-design/icons';
 import { Dropdown, Popover, Space } from 'antd';
-import { type DragEvent, type Key, useEffect, useMemo, useState } from 'react';
+import { cloneElement, isValidElement, type DragEvent, type Key, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../../stores/authStore';
 import { AdminIconAction } from '../AdminIconAction';
@@ -187,7 +187,13 @@ function withListCellTitle<T extends Record<string, unknown>>(column: ProColumns
 
   return {
     ...column,
-    ellipsis: column.ellipsis ?? true,
+    ellipsis: column.ellipsis ?? { showTitle: false },
+    render: column.ellipsis === undefined ? (dom) => (
+      // ProTable 的空 title 会屏蔽 td 上的完整内容提示。
+      isValidElement<{ title?: string }>(dom) && dom.props.title === ''
+        ? cloneElement(dom, { title: undefined })
+        : dom
+    ) : undefined,
     onCell: (record: T, rowIndex?: number) => {
       const originalCellProps = typeof column.onCell === 'function'
         ? column.onCell(record, rowIndex)

@@ -120,6 +120,8 @@ export function ListTemplateDemo() {
       node: (
         <AdminSelect
           size="small"
+          mode="multiple"
+          maxTagCount="responsive"
           allowClear
           optionFilterProp="label"
           options={statusOptions}

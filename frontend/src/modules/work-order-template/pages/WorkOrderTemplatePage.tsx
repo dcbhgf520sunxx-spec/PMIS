@@ -49,7 +49,7 @@ type WorkOrderFilters = {
   problemDesc: string;
   problemTypes: WorkOrderRecord['problemType'][];
   urgency?: WorkOrderRecord['urgency'];
-  status?: WorkOrderRecord['status'];
+  status: WorkOrderRecord['status'][];
   isOverdue?: boolean;
   followerId?: string;
   submitterName: string;
@@ -61,7 +61,7 @@ const defaultFilters: WorkOrderFilters = {
   problemDesc: '',
   problemTypes: [],
   urgency: undefined,
-  status: undefined,
+  status: [],
   isOverdue: undefined,
   followerId: undefined,
   submitterName: '',
@@ -106,7 +106,7 @@ export function WorkOrderTemplatePage() {
     codecs: {
       problemTypes: listRouteCodecs.stringArray,
       urgency: listRouteCodecs.number,
-      status: listRouteCodecs.number,
+      status: listRouteCodecs.numberArray,
       isOverdue: listRouteCodecs.boolean,
       followerId: listRouteCodecs.string,
       submitTimeRange: listRouteCodecs.dateArray,
@@ -131,7 +131,7 @@ export function WorkOrderTemplatePage() {
       ? appliedFilters.problemTypes.includes(row.problemType)
       : true;
     const matchUrgency = appliedFilters.urgency !== undefined ? row.urgency === appliedFilters.urgency : true;
-    const matchStatus = appliedFilters.status !== undefined ? row.status === appliedFilters.status : true;
+    const matchStatus = !appliedFilters.status.length || appliedFilters.status.includes(row.status);
     const matchOverdue = appliedFilters.isOverdue !== undefined ? row.isOverdue === appliedFilters.isOverdue : true;
     const matchFollower = viewKey === 'all' && appliedFilters.followerId ? row.followerId === appliedFilters.followerId : true;
     const matchSubmitTime = inDateRange(row.submitTime, appliedFilters.submitTimeRange);
@@ -208,6 +208,8 @@ export function WorkOrderTemplatePage() {
           <AdminSelect
             size="small"
             value={draftFilters.status}
+            mode="multiple"
+            maxTagCount="responsive"
             options={statusOptions}
             placeholder="全部"
             onChange={(value) => setDraftFilters((prev) => ({ ...prev, status: value }))}

@@ -3,11 +3,11 @@ import { request, unwrap } from './requestClient';
 import { arrayContract, objectContract } from './responseContract';
 import type { TaskFormValues, TaskPriority, TaskRecord, TaskStatus, TaskStatusUpdateResult } from '../modules/task/types';
 
-type Row = { id: number; name: string; description?: string; parent_task_id?: number; parent_task_name?: string; child_count?: number; completed_child_count?: number; source_type: 1 | 2 | 3; project_id?: number; project_name?: string; requirement_id?: number; requirement_name?: string; owners: Array<{id:number;name:string}>; owner_names: string; task_type: number; task_type_name: string; priority: number; status: number; previous_status?: number; is_overdue: number; overdue_days: number; start_date?: string; expected_end_date?: string; actual_end_date?: string; close_date?: string; close_reason?: string; suspend_date?: string; suspend_reason?: string; creator_name?: string; updater_name?: string; created_at?: string; updated_at?: string };
+type Row = { id: number; name: string; description?: string; parent_task_id?: number; parent_task_name?: string; child_count: number; completed_child_count: number; source_type: 1 | 2 | 3; project_id?: number; project_name?: string; requirement_id?: number; requirement_name?: string; owners: Array<{id:number;name:string}>; owner_names: string; task_type: number; task_type_name: string; priority: number; status: number; previous_status?: number; is_overdue: number; overdue_days: number; start_date?: string; expected_end_date?: string; actual_end_date?: string; close_date?: string; close_reason?: string; suspend_date?: string; suspend_reason?: string; creator_name?: string; updater_name?: string; created_at?: string; updated_at?: string };
 type Page = { list: Row[]; total: number; page: number; pageSize: number; viewCounts: { all: number; mine: number } };
 
 const ownerContract = objectContract<{id:number;name:string}>(['id', 'name']);
-const rowContract = objectContract<Row>(['id', 'name', 'source_type', 'owners', 'owner_names', 'task_type', 'task_type_name', 'priority', 'status', 'is_overdue','overdue_days'], { owners: arrayContract(ownerContract) });
+const rowContract = objectContract<Row>(['id', 'name', 'source_type', 'owners', 'owner_names', 'task_type', 'task_type_name', 'priority', 'status', 'is_overdue','overdue_days', 'child_count'], { owners: arrayContract(ownerContract), child_count: (value): value is number => Number.isSafeInteger(value) && Number(value) >= 0 });
 const pageContract = objectContract<Page>(['list', 'total', 'page', 'pageSize', 'viewCounts'], { list: arrayContract(rowContract) });
 const neighborsContract = objectContract<{ prevId: number | null; nextId: number | null; ordinal?: number; total?: number }>(['prevId', 'nextId']);
 const availableContract = objectContract<{ available: boolean }>(['available']);
@@ -22,7 +22,7 @@ function mapTask(row: Row): TaskRecord {
   return {
     id: String(row.id), name: row.name, description: row.description || '',
     parentTaskId: row.parent_task_id ? String(row.parent_task_id) : '', parentTaskName: row.parent_task_name || '',
-    childCount: Number(row.child_count || 0), completedChildCount: Number(row.completed_child_count || 0), sourceType: row.source_type,
+    childCount: row.child_count, completedChildCount: Number(row.completed_child_count || 0), sourceType: row.source_type,
     projectId: row.project_id ? String(row.project_id) : '', projectName: row.project_name || '-',
     requirementId: row.requirement_id ? String(row.requirement_id) : '', requirementName: row.requirement_name || '-',
     ownerIds: row.owners.map((owner) => String(owner.id)), owners: row.owners.map((owner) => ({ id: String(owner.id), name: owner.name })), ownerNames: row.owner_names, taskType: String(row.task_type), taskTypeName: row.task_type_name,

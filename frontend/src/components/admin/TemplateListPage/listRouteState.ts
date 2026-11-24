@@ -29,6 +29,11 @@ export const listRouteCodecs = {
     parse: (raw: string) => raw ? raw.split(',').filter(Boolean) : [],
     format: (value: string[]) => value.length ? value.join(',') : undefined
   } satisfies ListRouteCodec<string[]>,
+  numberArray: {
+    parse: (raw: string) => [...new Set(raw.split(',').map(value => value.trim()).filter(Boolean)
+      .map(Number).filter(Number.isSafeInteger))],
+    format: (value: number[]) => value.length ? value.join(',') : undefined
+  } satisfies ListRouteCodec<number[]>,
   dateArray: {
     parse: (raw: string) => raw ? raw.split(',').filter(Boolean).map((value) => dayjs(value)) : [],
     format: (value: unknown[]) => {

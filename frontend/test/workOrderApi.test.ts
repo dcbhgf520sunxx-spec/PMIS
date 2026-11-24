@@ -96,3 +96,9 @@ test('工单接口的空预计完成时间不转换为展示占位符', () => {
   assert.equal(normalizeOptionalWorkOrderDateText(''), '');
   assert.equal(normalizeOptionalWorkOrderDateText('2026-08-26T12:30:00'), '2026-08-26');
 });
+
+test('工单多选状态与上下条使用同一 CSV 参数，空选不筛选', () => {
+  assert.equal(buildWorkOrderQueryParams({ status: [0, 1, 5] }).status, '0,1,5');
+  assert.equal(buildWorkOrderQueryParams({ status: [] }).status, undefined);
+  assert.equal(buildWorkOrderQueryParams({ status: 0 }).status, 0);
+});

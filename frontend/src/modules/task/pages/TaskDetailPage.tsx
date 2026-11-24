@@ -43,11 +43,12 @@ export function TaskDetailPage() {
     setFollowUps([]);
     void (async () => {
       try {
-        const task = await getTask(params.id!);
-        const [items, children, followUpItems] = await Promise.all([
+        const taskRequest = getTask(params.id!);
+        const [task, items, children, followUpItems] = await Promise.all([
+          taskRequest,
           getTaskHistory(params.id!),
-          task.parentTaskId ? Promise.resolve([]) : getSubtasks(task.id),
-          getFollowUpRecords('task', task.id),
+          taskRequest.then(task => task.parentTaskId || task.childCount === 0 ? [] : getSubtasks(task.id)),
+          getFollowUpRecords('task', params.id!),
         ]);
         if (cancelled) return;
         setRow(task);
