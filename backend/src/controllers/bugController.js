@@ -1,3 +1,4 @@
+const { numberListCondition } = require('../utils/listFilters')
 const db = require('../db')
 const { parsePagination, getSortDirection } = require('../utils/pagination')
 const { ok, fail, failField } = require('../utils/response')
@@ -21,8 +22,11 @@ function base(extra = fields) {
 function where(q) {
   let sql = ' WHERE b.is_deleted=0'
   const params = []
+  const status = numberListCondition('b.status', q.status)
+  sql += status.sql
+  params.push(...status.params)
   if (q.title) { sql += ' AND b.title ILIKE ?'; params.push(`%${q.title}%`) }
-  for (const [key, column] of Object.entries({ source_type: 'b.source_type', project_id: 'b.project_id', requirement_id: 'b.requirement_id', bug_type_id: 'b.bug_type_id', severity: 'b.severity', status: 'b.status', assignee_id: 'b.assignee_id', creator_id: 'b.creator_id' })) {
+  for (const [key, column] of Object.entries({ source_type: 'b.source_type', project_id: 'b.project_id', requirement_id: 'b.requirement_id', bug_type_id: 'b.bug_type_id', severity: 'b.severity', assignee_id: 'b.assignee_id', creator_id: 'b.creator_id' })) {
     if (q[key] !== undefined && q[key] !== '') { sql += ` AND ${column}=?`; params.push(Number(q[key])) }
   }
   if (q.filter_assignee_id !== undefined && q.filter_assignee_id !== null && q.filter_assignee_id !== '') {

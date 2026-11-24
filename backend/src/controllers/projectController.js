@@ -1,3 +1,4 @@
+const { numberListCondition } = require('../utils/listFilters')
 const { overdueSql, rescheduleOverdueChanges } = require('../services/overdueRules')
 const overdue = overdueSql('project', { alias: 'p' })
 const db = require('../db')
@@ -55,7 +56,9 @@ function where(q) {
     for (const id of ids) { sql += ' AND EXISTS (SELECT 1 FROM pms_project_member pm WHERE pm.project_id = p.id AND pm.user_id = ?)'; params.push(id) }
   }
   if (q.joined_user_id) { sql += ' AND EXISTS (SELECT 1 FROM pms_project_member pm WHERE pm.project_id = p.id AND pm.user_id = ?)'; params.push(Number(q.joined_user_id)) }
-  if (q.status !== undefined && q.status !== '') { sql += ' AND p.status = ?'; params.push(Number(q.status)) }
+  const status = numberListCondition('p.status', q.status)
+  sql += status.sql
+  params.push(...status.params)
   if (q.priority !== undefined && q.priority !== '') { sql += ' AND p.priority = ?'; params.push(Number(q.priority)) }
   if (q.is_overdue !== undefined && q.is_overdue !== '') { sql += ` AND ${overdue.flag} = ?`; params.push(Number(q.is_overdue)) }
   if (q.expected_end_date_from) { sql += ' AND p.expected_end_date >= ?'; params.push(q.expected_end_date_from) }

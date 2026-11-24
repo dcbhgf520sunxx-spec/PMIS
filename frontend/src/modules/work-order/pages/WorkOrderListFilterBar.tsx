@@ -94,6 +94,8 @@ export function WorkOrderListFilterBar({
         <AdminSelect
           size="small"
           value={draftFilters.status}
+          mode="multiple"
+          maxTagCount="responsive"
           options={statusOptions}
           placeholder="全部"
           onChange={(value) => setDraftFilters((prev) => ({ ...prev, status: value }))}

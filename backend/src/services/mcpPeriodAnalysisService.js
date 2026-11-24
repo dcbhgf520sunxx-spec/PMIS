@@ -187,13 +187,15 @@ function shiftWorkday(anchor, offset) {
   return date
 }
 
+const shanghaiDateFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: SHANGHAI_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
 function shanghaiDate(now = new Date()) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: SHANGHAI_TIME_ZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(now)
+  const parts = shanghaiDateFormatter.formatToParts(now)
   const value = Object.fromEntries(parts.map((part) => [part.type, part.value]))
   return `${value.year}-${value.month}-${value.day}`
 }

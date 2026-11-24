@@ -1,3 +1,4 @@
+const { numberListCondition } = require('../utils/listFilters')
 const { overdueSql, rescheduleOverdueChanges } = require('../services/overdueRules')
 const overdue = overdueSql('work_order', { alias: 'w' })
 const defaultDb = require('../db')
@@ -104,7 +105,9 @@ function buildWhereClause(q) {
     }
   }
   if (q.urgency !== undefined && q.urgency !== '') { sql += ' AND w.urgency = ?'; params.push(q.urgency) }
-  if (q.status !== undefined && q.status !== '') { sql += ' AND w.status = ?'; params.push(q.status) }
+  const status = numberListCondition('w.status', q.status)
+  sql += status.sql
+  params.push(...status.params)
   if (q.is_overdue !== undefined && q.is_overdue !== '') { sql += ` AND ${overdue.flag} = ?`; params.push(q.is_overdue) }
   if (q.follower_id) { sql += ' AND w.follower_id = ?'; params.push(q.follower_id) }
   if (q.submitter_name) { sql += ' AND w.submitter_name LIKE ?'; params.push(`%${q.submitter_name}%`) }

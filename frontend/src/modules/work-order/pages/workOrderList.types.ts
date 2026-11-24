@@ -7,7 +7,7 @@ export type WorkOrderListFilters = {
   productId?: string;
   problemTypes: WorkOrderRecord['problemType'][];
   urgency?: WorkOrderRecord['urgency'];
-  status?: WorkOrderRecord['status'];
+  status: WorkOrderRecord['status'][];
   isOverdue?: boolean;
   followerId?: string;
   submitterName: string;

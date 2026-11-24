@@ -26,5 +26,5 @@ test('需求查询状态选项跟随需求路径并清空不兼容状态', () =>
   assert.match(source, /export function normalizeRequirementStatusForType/);
   assert.match(source, /\[\.\.\.pathStatuses\[type\],35,36,37\]/);
   assert.match(listSource, /requirementStatusesForType\(filters\.draftFilters\.requirementType[^)]*\)/);
-  assert.match(listSource, /normalizeRequirementStatusForType\(requirementType,prev\.status[^)]*\)/);
+  assert.match(listSource, /prev\.status\.filter\(status=>normalizeRequirementStatusForType\(requirementType,status/);
 });

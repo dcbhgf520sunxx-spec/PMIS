@@ -66,3 +66,16 @@ test('分页排序和视图状态可往返且默认值不污染地址', () => {
   });
   assert.equal(encodeListRouteState(search, { page: 1, pageSize: 20, view: 'all' }, { pageSize: 20, view: 'all' }), '');
 });
+
+test('状态多选往返 URL，兼容旧单值链接并保留零值', () => {
+  const defaults = { status: [] as number[] };
+  const codecs = { status: listRouteCodecs.numberArray };
+  assert.deepEqual(decodeListFilters('?q_status=0', defaults, codecs).status, [0]);
+  assert.deepEqual(decodeListFilters('?q_status=0%2C1%2C2', defaults, codecs).status, [0, 1, 2]);
+  assert.deepEqual(decodeListFilters('?q_status=', defaults, codecs).status, []);
+  assert.deepEqual(decodeListFilters('?q_status=0,,2,bad', defaults, codecs).status, [0, 2]);
+  const search = encodeListFilters('?page=3&sort=status&order=ascend', { status: [0, 2] }, defaults, codecs);
+  assert.equal(search, '?sort=status&order=ascend&q_status=0%2C2');
+  assert.deepEqual(decodeListFilters(search, defaults, codecs).status, [0, 2]);
+  assert.equal(encodeListFilters(search, defaults, defaults, codecs), '?sort=status&order=ascend');
+});

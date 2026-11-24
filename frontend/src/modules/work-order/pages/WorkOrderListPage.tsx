@@ -42,7 +42,7 @@ export function WorkOrderListPage() {
       productId: listRouteCodecs.string,
       problemTypes: listRouteCodecs.stringArray,
       urgency: listRouteCodecs.number,
-      status: listRouteCodecs.number,
+      status: listRouteCodecs.numberArray,
       isOverdue: listRouteCodecs.boolean,
       followerId: listRouteCodecs.string,
       submitTimeRange: listRouteCodecs.dateArray,

@@ -10,13 +10,13 @@ import { deleteProduct, getProductList, updateProductStatus } from '../../../api
 import { getUserOptions } from '../../../api/userApi';
 import type { ProductRecord } from '../types';
 
-const defaults = { name: '', ownerIds: [] as string[], status: undefined as number | undefined, creatorId: undefined as string | undefined, createdAtRange: [] as unknown[] };
+const defaults = { name: '', ownerIds: [] as string[], status: [] as number[], creatorId: undefined as string | undefined, createdAtRange: [] as unknown[] };
 const date = (value: any) => value?.format?.('YYYY-MM-DD');
 
 export function ProductListPage() {
   const { navigateWithReturn: navigate } = usePageReturnNavigation('/products');
   const [users, setUsers] = useState<Array<{ label: string; value: string }>>([]);
-  const filters = useCommittedFilters(defaults, { urlSync: true, codecs: { name: listRouteCodecs.string, ownerIds: listRouteCodecs.stringArray, status: listRouteCodecs.number, creatorId: listRouteCodecs.string, createdAtRange: listRouteCodecs.dateArray } });
+  const filters = useCommittedFilters(defaults, { urlSync: true, codecs: { name: listRouteCodecs.string, ownerIds: listRouteCodecs.stringArray, status: listRouteCodecs.numberArray, creatorId: listRouteCodecs.string, createdAtRange: listRouteCodecs.dateArray } });
   const list = useTemplateServerListData<ProductRecord>({
     queryKey: ['products', filters.appliedFilters, filters.revision],
     request: async ({ current, pageSize, sortField, sortOrder }) => {
@@ -24,7 +24,7 @@ export function ProductListPage() {
       return getProductList({
         name: filters.appliedFilters.name || undefined,
         owner_ids: filters.appliedFilters.ownerIds.join(',') || undefined,
-        status: filters.appliedFilters.status,
+        status: filters.appliedFilters.status.join(',') || undefined,
         creator_id: filters.appliedFilters.creatorId,
         created_at_from: date(createdAtRange[0]),
         created_at_to: date(createdAtRange[1]),
@@ -69,7 +69,7 @@ export function ProductListPage() {
       filter={<CompactFilterBar items={[
         { key: 'name', label: '产品名称', node: <AdminInput size="small" value={filters.draftFilters.name} onChange={(event) => filters.setDraftFilters((prev) => ({ ...prev, name: event.target.value }))} onPressEnter={filters.commitFilters} /> },
         { key: 'owner', label: '负责人', node: <AdminSelect size="small" mode="multiple" value={filters.draftFilters.ownerIds} options={users} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, ownerIds: value }))} /> },
-        { key: 'status', label: '状态', node: <AdminSelect size="small" value={filters.draftFilters.status} options={[{ label: '启用', value: 1 }, { label: '停用', value: 0 }]} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, status: value }))} /> },
+        { key: 'status', label: '状态', node: <AdminSelect size="small" mode="multiple" maxTagCount="responsive" value={filters.draftFilters.status} options={[{ label: '启用', value: 1 }, { label: '停用', value: 0 }]} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, status: value }))} /> },
         { key: 'creatorId', label: '创建人', node: <AdminSelect size="small" value={filters.draftFilters.creatorId} options={users} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, creatorId: value }))} /> },
         { key: 'createdAtRange', label: '创建时间', wide: true, node: <AdminRangePicker size="small" value={filters.draftFilters.createdAtRange as never} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, createdAtRange: value || [] }))} /> }
       ]} onSearch={filters.commitFilters} onReset={filters.resetFilters} />}

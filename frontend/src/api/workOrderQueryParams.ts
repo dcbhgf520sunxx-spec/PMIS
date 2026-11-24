@@ -3,7 +3,7 @@ export type WorkOrderListParams = {
   productId?: string;
   problemType?: string | string[];
   urgency?: number;
-  status?: number;
+  status?: number | number[];
   isOverdue?: boolean;
   filterFollowerId?: string;
   viewKey?: 'all' | 'mine';
@@ -47,7 +47,7 @@ export function buildWorkOrderQueryParams(params: WorkOrderListParams = {}) {
     product_id: params.productId,
     problem_type: Array.isArray(params.problemType) ? params.problemType.join(',') : params.problemType,
     urgency: params.urgency,
-    status: params.status,
+    status: Array.isArray(params.status) ? params.status.join(',') || undefined : params.status,
     is_overdue: params.isOverdue === undefined ? undefined : Number(params.isOverdue),
     filter_follower_id: params.filterFollowerId,
     view_key: params.viewKey,
