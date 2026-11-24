@@ -10,6 +10,7 @@ export type ProjectRecord = {
   actualEndDate: string; suspendDate: string; suspendReason: string; progressText: string; riskText: string;
   creatorName: string; updaterName: string; createdAt: string; updatedAt: string;
 };
+export type ProjectListRecord = ProjectRecord & { overduePlanItemCount: number | null };
 export type ProjectFormValues = { requirementRelease?: import('../requirement/components/RequirementReleaseFields').RequirementReleaseValues; name: string; productId: string; requirementId: string; ownerId: string; memberIds?: string[]; priority: ProjectPriority; startDate?: string; expectedEndDate: string; description?: string; progressText?: string; riskText?: string };
 
 export type ProjectPaymentStatus = 0 | 1 | 2;
