@@ -1,6 +1,7 @@
 const { Server } = require('@modelcontextprotocol/sdk/server/index.js')
 const {
   CallToolRequestSchema,
+  ListResourcesRequestSchema,
   ListResourceTemplatesRequestSchema,
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
@@ -74,6 +75,8 @@ function createMcpServer({
   })
 
   if (context.endpointType === 'query') {
+    // Attachments are exposed through permission-filtered templates.
+    server.setRequestHandler(ListResourcesRequestSchema, async () => ({ resources: [] }))
     server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({
       resourceTemplates: await listResourceTemplates(context),
     }))

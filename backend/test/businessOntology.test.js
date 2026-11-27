@@ -15,6 +15,14 @@ test('业务本体展示读取标准模型，覆盖对象、关系、推导依�
   assert.match(model.relations.find(r => r.id === 'sourceRequirement').quantity, /至多对应一个项目/)
   assert.equal(model.records, undefined)
 })
+test('本体展示允许历史项目未关联需求，同时说明当前新建项目仍须关联', async () => {
+  const model = await readOntologyModel(root)
+  const project = model.classes.find(c => c.id === 'Project')
+  assert.match(project.checks.find(c => c.label === '来源需求').text, /最多1项/)
+  assert.doesNotMatch(project.checks.find(c => c.label === '来源需求').text, /必须有1项|至少1项/)
+  assert.match(project.business.quantities.join('；'), /历史项目.*未关联需求/)
+  assert.match(model.relations.find(r => r.id === 'sourceRequirement').boundary, /新建项目.*关联需求/)
+})
 test('完成率说明按对象独立展示，主任务与项目阶段分别定义且不新增业务字段', async () => {
   const model = await readOntologyModel(root)
   const rules = id => model.classes.find(c => c.id === id).completionRules.join('\n')

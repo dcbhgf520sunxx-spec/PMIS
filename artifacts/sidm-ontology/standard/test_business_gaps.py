@@ -37,6 +37,16 @@ class BusinessGapTests(unittest.TestCase):
  def test_one_project_per_requirement_in_sidm(self):
   for p,o in list(self.g.predicate_objects(D.project)):self.g.add((D.secondProject,p,o))
   self.assertFalse(self.conforms())
+ def test_source_free_project_query_keeps_explicit_facts_without_issues(self):
+  raw=test_snapshot.CompletenessTests().capture();raw['projects'][0]['requirement_id']=None
+  with tempfile.TemporaryDirectory() as d:
+   p=Path(d)/'capture.json';p.write_text(json.dumps(raw));r=execute(p,1,3,Path(d)/'out')
+  self.assertTrue(r['reasoning']['consistent'])
+  self.assertTrue(r['validation']['conforms'])
+  self.assertEqual(r['issues'],[])
+  self.assertTrue(any(obj['type']=='Project' and obj['id']=='3' for obj in r['objects'].values()))
+  self.assertTrue(all('project' not in row for row in r['answers']['requirements']))
+  self.assertTrue(any('历史项目允许未关联来源需求' in text and '新建项目仍须关联需求' in text for text in r['limitations']))
  def test_one_contract_per_project_in_sidm(self):
   for p,o in list(self.g.predicate_objects(D.contract)):self.g.add((D.secondContract,p,o))
   for p,o in list(self.g.predicate_objects(D.stagePay)):self.g.add((D.secondStage,p,D.secondContract if p==S.stageContract else o))

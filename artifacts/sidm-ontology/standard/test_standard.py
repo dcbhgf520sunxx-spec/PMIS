@@ -21,8 +21,15 @@ class StandardTests(unittest.TestCase):
     self.assertTrue(labels,str(prop))
     self.assertTrue(any(any('\u3400'<=char<='\u9fff' for char in label) for label in labels),str(prop))
   self.assertTrue(self.onto.isomorphic(Graph().parse(ROOT/'sidm.owl')))
- def test_missing_source_is_shacl_violation(self):
-  self.data.remove((D.project,S.sourceRequirement,None));self.assertFalse(self.check(self.data))
+ def test_project_without_recorded_source_is_valid(self):
+  self.data.remove((D.project,S.sourceRequirement,None));self.assertTrue(self.check(self.data))
+ def test_project_source_is_optional_in_owl(self):
+  restrictions=[r for r in self.onto.objects(S.Project,RDFS.subClassOf) if self.onto.value(r,OWL.onProperty)==S.sourceRequirement]
+  self.assertFalse(any(self.onto.value(r,OWL.someValuesFrom) for r in restrictions))
+  self.assertTrue(any(self.onto.value(r,OWL.maxCardinality)==Literal(1,datatype=XSD.nonNegativeInteger) for r in restrictions))
+ def test_project_still_has_at_most_one_source(self):
+  for prop,value in list(self.data.predicate_objects(D.requirement)):self.data.add((D.secondRequirement,prop,value))
+  self.data.add((D.project,S.sourceRequirement,D.secondRequirement));self.assertFalse(self.check(self.data))
  def test_dual_task_ownership(self):
   self.data.add((D.task,S.belongsToRequirement,D.requirement));self.assertFalse(self.check(self.data))
  def test_wrong_relation_target(self):

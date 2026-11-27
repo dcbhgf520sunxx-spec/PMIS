@@ -4,6 +4,7 @@ const test = require('node:test')
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js')
 const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js')
 const { createMcpServer } = require('../src/mcp/createServer')
+const { listResourceTemplates } = require('../src/mcp/fileResources')
 const { invokeController } = require('../src/mcp/controllerAdapter')
 const { filterToolsForContext } = require('../src/mcp/catalog')
 const { createFileDownloadHandler, createMcpRateLimit, validateMcpOrigin } = require('../src/routes/mcp')
@@ -72,7 +73,8 @@ test('MCP server initializes and exposes only endpoint and menu-permitted tools'
   }
   const server = createMcpServer({
     context,
-    dispatch: async (name) => ({ name, ok: true })
+    dispatch: async (name) => ({ name, ok: true }),
+    listResourceTemplates,
   })
   const client = new Client({ name: 'test-client', version: '1.0.0' })
   t.after(async () => {
@@ -82,6 +84,11 @@ test('MCP server initializes and exposes only endpoint and menu-permitted tools'
 
   await server.connect(serverTransport)
   await client.connect(clientTransport)
+  assert.deepEqual(await client.listResources(), { resources: [] })
+  const templates = await client.listResourceTemplates()
+  assert.deepEqual(templates.resourceTemplates.map((item) => item.name), [
+    '项目合同附件', '阶段计划交付文件', '项目附件',
+  ])
   const result = await client.listTools()
   const names = result.tools.map((tool) => tool.name)
 
@@ -89,6 +96,21 @@ test('MCP server initializes and exposes only endpoint and menu-permitted tools'
   assert.equal(names.includes('business_get'), true)
   assert.equal(names.includes('task_search'), false)
   assert.equal(names.includes('project_manage'), false)
+})
+
+test('Action does not advertise or expose resource listing', async (t) => {
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
+  const server = createMcpServer({
+    context: { endpointType: 'action', allowedMenuPaths: new Set(['/projects']) },
+    dispatch: async () => ({}),
+  })
+  const client = new Client({ name: 'action-resource-test', version: '1.0.0' })
+  t.after(async () => { await client.close(); await server.close() })
+  await server.connect(serverTransport)
+  await client.connect(clientTransport)
+
+  assert.equal(client.getServerCapabilities().resources, undefined)
+  await assert.rejects(() => client.listResources(), /does not support resources|Method not found/i)
 })
 
 test('MCP tool failures expose a machine-readable error code and field errors', async (t) => {

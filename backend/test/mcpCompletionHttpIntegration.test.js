@@ -63,6 +63,8 @@ test('完成率真实HTTP/PostgreSQL验证v3身份、计算、边界、拒绝、
    clients.push(client);await client.connect(transport);return client
   }
   const client=await connect('admin'),tools=(await client.listTools()).tools
+  assert.deepEqual(await client.listResources(),{resources:[]})
+  assert.ok((await client.listResourceTemplates()).resourceTemplates.some(t=>t.name==='任务附件'))
   assert.ok(tools.some(t=>t.name==='business_completion_analysis'))
   assert.equal(tools.find(t=>t.name==='requirement_search').outputSchema.properties.items.items.properties.overdue_pending.type,'boolean')
   const yesterday=new Date(Date.parse(today+'T12:00:00Z')-86400000).toISOString().slice(0,10)
@@ -97,6 +99,8 @@ test('完成率真实HTTP/PostgreSQL验证v3身份、计算、边界、拒绝、
   assert.equal(bad.structuredContent.error.code,'MCP_ARGUMENT_INVALID')
   await db.prepare("INSERT INTO pms_user(employee_no,real_name,password,phone,status) VALUES(?,?,?,'13900000000',1)").run('NO_COMPLETION_ACCESS','无权限测试人员','unused-fixture-hash')
   const denied=await connect('NO_COMPLETION_ACCESS')
+  assert.deepEqual(await denied.listResources(),{resources:[]})
+  assert.deepEqual(await denied.listResourceTemplates(),{resourceTemplates:[]})
   assert.equal((await denied.listTools()).tools.some(t=>t.name==='business_completion_analysis'),false)
   const deniedRequirement=await denied.callTool({name:'business_get',arguments:{domain:'requirement',target_id:Number(requirement.lastInsertRowid)}})
   assert.equal(deniedRequirement.structuredContent.error.code,'MCP_PERMISSION_DENIED')
@@ -105,6 +109,9 @@ test('完成率真实HTTP/PostgreSQL验证v3身份、计算、边界、拒绝、
   const audits=await db.prepare("SELECT result_status,error_code,input_summary->>'_identity_version' identity_version FROM pms_mcp_audit_log WHERE tool_name='business_completion_analysis'").all()
   assert.ok(audits.some(a=>a.result_status==='success'&&a.identity_version==='v3'))
   assert.ok(audits.some(a=>a.error_code==='MCP_PERMISSION_DENIED'))
+  const resourceAudits=await db.prepare("SELECT result_status,input_summary->>'_identity_version' identity_version FROM pms_mcp_audit_log WHERE protocol_method='resources/list'").all()
+  assert.equal(resourceAudits.length,2)
+  assert.ok(resourceAudits.every(a=>a.result_status==='success'&&a.identity_version==='v3'))
  }finally{
   for(const client of clients)await client.close().catch(()=>{})
   if(server)await new Promise(resolve=>server.close(resolve))
