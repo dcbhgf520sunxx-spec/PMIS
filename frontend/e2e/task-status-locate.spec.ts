@@ -48,15 +48,46 @@ test('真实任务状态变更：同状态最近更新优先，跨页定位、�
     }, auth);
     const rows = page.locator('tbody tr.ant-table-row');
     const row = (index: number) => rows.locator(`:scope[data-row-key="${tasks[index].id}"]`);
-    const changeToProcessing = async (index: number) => {
+    const changeToProcessing = async (index: number, waitForClose = true) => {
       await row(index).getByRole('button', { name: '状态变更', exact: true }).click();
       const dialog = page.getByRole('dialog', { name: '状态变更' });
       await dialog.getByRole('combobox').click();
       await page.locator('.ant-select-dropdown:visible .ant-select-item-option').filter({ hasText: '处理中' }).click();
       await dialog.getByRole('button', { name: /^确\s*认$/ }).click();
-      await expect(dialog).not.toBeVisible();
+      if (waitForClose) await expect(dialog).not.toBeVisible();
     };
-    await page.goto(`/tasks?view=mine&q_name=${prefix}&sort=status&order=ascend&pageSize=2`);
+    const listUrl = `/tasks?view=mine&q_name=${prefix}&sort=status&order=ascend&pageSize=2`;
+    // 保存响应变慢时通过浏览器后退离开列表，旧定位回调不得重新导航回来。
+    await page.goto('/home');
+    await page.getByRole('menuitem', { name: /任务管理/ }).click();
+    await page.evaluate(path => {
+      history.replaceState(history.state, '', path);
+      dispatchEvent(new PopStateEvent('popstate', { state: history.state }));
+    }, listUrl);
+    await expect(rows.first()).toContainText(tasks[0].name);
+    let releaseResponse!: () => void;
+    let responseReady!: () => void;
+    const responseGate = new Promise<void>(resolve => { releaseResponse = resolve; });
+    const saved = new Promise<void>(resolve => { responseReady = resolve; });
+    const writeUrl = `**/api/tasks/${tasks[0].id}/status`;
+    await page.route(writeUrl, async route => {
+      const response = await route.fetch();
+      responseReady();
+      await responseGate;
+      await route.fulfill({ response });
+    });
+    await changeToProcessing(0, false);
+    await saved;
+    await page.goBack();
+    await expect(page).toHaveURL(/\/home$/);
+    const staleLocate = page.waitForRequest(request => new URL(request.url()).pathname === '/api/tasks/neighbors', { timeout: 2000 }).then(() => true, () => false);
+    releaseResponse();
+    expect(await staleLocate).toBe(false);
+    await expect(page).toHaveURL(/\/home$/);
+    expect((await db.query('SELECT status FROM pms_task WHERE id=$1', [tasks[0].id])).rows[0].status).toBe(1);
+    await page.unroute(writeUrl);
+    await db.query('UPDATE pms_task SET status=0,updated_at=$1 WHERE id=$2', ['2026-02-01', tasks[0].id]);
+    await page.goto(listUrl);
     await expect(rows.first()).toContainText(tasks[0].name);
     await changeToProcessing(0);
     await expect(page).toHaveURL(/page=2/);
