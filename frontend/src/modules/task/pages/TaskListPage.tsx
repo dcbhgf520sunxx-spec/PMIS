@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Key } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
 import { App } from 'antd';
 import { ActionBar, AdminButton, AdminInput, AdminRangePicker, AdminSelect, AdminTextAction, CompactFilterBar, createDetailNeighborContext, createListFilterItems, DeleteConfirmAction, DetailLinkCell, ExpandToggleButton, OperationColumnActions, PermissionButton, PriorityChangeAction, resolveListViewFilter, saveDetailNeighborContext, TemplateListPage, useCommittedFilters, useTemplateServerListData, ViewTabs , listRouteCodecs, useListViewState, usePageReturnNavigation } from '../../../components/admin';
-import { deleteTask, getTaskList, getTaskProjectOptions, getTaskRequirementOptions, updateTaskPriority, updateTaskStatus } from '../../../api/taskApi';
+import { deleteTask, getTaskList, getTaskNeighbors, getTaskProjectOptions, getTaskRequirementOptions, updateTaskPriority, updateTaskStatus } from '../../../api/taskApi';
 import { getUserOptions } from '../../../api/userApi';
 import { getArchiveOptionsByTypeName } from '../../../api/archiveApi';
 import type { TaskRecord } from '../types';
@@ -38,6 +38,9 @@ export function TaskListPage() {
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
   const [followUpTarget, setFollowUpTarget] = useState<FollowUpTarget>();
   const [expandedParentIds, setExpandedParentIds] = useState<Set<string>>(() => new Set());
+  const [pendingFocus, setPendingFocus] = useState<{ id: string; page: number; context: string }>();
+  const [highlightedTaskId, setHighlightedTaskId] = useState<string>();
+  const focusRequest = useRef(0);
   const [projects, setProjects] = useState<Option[]>([]);
   const [requirements, setRequirements] = useState<Option[]>([]);
   const [users, setUsers] = useState<Option[]>([]);
@@ -114,6 +117,60 @@ export function TaskListPage() {
     () => filterByStatus ? list.pagedRows : list.pagedRows.filter((row) => !row.parentTaskId || expandedParentIds.has(row.parentTaskId)),
     [filterByStatus, expandedParentIds, list.pagedRows]
   );
+  const focusContext = JSON.stringify({ ...buildQuery(), pageSize: list.pageSize });
+  const latestFocusContext = useRef(focusContext);
+  latestFocusContext.current = focusContext;
+
+  useEffect(() => {
+    setPendingFocus(undefined);
+    setHighlightedTaskId(undefined);
+  }, [focusContext]);
+  useEffect(() => () => { focusRequest.current++; }, []);
+  useEffect(() => {
+    if (!highlightedTaskId) return;
+    const timer = window.setTimeout(() => setHighlightedTaskId(undefined), 5000);
+    return () => window.clearTimeout(timer);
+  }, [highlightedTaskId]);
+  useEffect(() => {
+    if (!pendingFocus || pendingFocus.context !== focusContext || list.loading || list.currentPage !== pendingFocus.page) return;
+    if (list.error) {
+      setPendingFocus(undefined);
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      const row = document.querySelector<HTMLTableRowElement>(`.task-list-table tr[data-row-key="${CSS.escape(pendingFocus.id)}"]`);
+      if (row) {
+        row.scrollIntoView({ block: 'center', inline: 'nearest' });
+        setHighlightedTaskId(pendingFocus.id);
+      } else if (!list.error) {
+        message.info('任务已更新，当前列表已发生变化，请按任务名称查询');
+      }
+      setPendingFocus(undefined);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [pendingFocus, focusContext, list.loading, list.currentPage, list.error, visibleRows, message]);
+
+  const reloadAndLocateTask = async (task: TaskRecord) => {
+    const requestId = ++focusRequest.current;
+    const context = focusContext;
+    const query = { ...buildQuery(), pageSize: list.pageSize };
+    setPendingFocus(undefined);
+    setHighlightedTaskId(undefined);
+    try {
+      await load();
+      const position = await getTaskNeighbors(task.id, query);
+      if (requestId !== focusRequest.current || context !== latestFocusContext.current) return;
+      if (!position.page) {
+        message.info('任务状态已更新，已不符合当前筛选条件');
+        return;
+      }
+      if (task.parentTaskId) setExpandedParentIds(current => new Set(current).add(task.parentTaskId));
+      list.setCurrentPage(position.page);
+      setPendingFocus({ id: task.id, page: position.page, context });
+    } catch {
+      message.warning('任务状态已更新，列表定位失败，请刷新后查询');
+    }
+  };
 
   const toggleTaskGroup = (parentTaskId: string) => {
     const nextExpanded = !expandedParentIds.has(parentTaskId);
@@ -153,7 +210,7 @@ export function TaskListPage() {
     { title: '预计完成时间', dataIndex: 'expectedEndTime', width: 140, sorter: true, sortOrder: sortOrder('expectedEndTime'), render: (_, row) => row.expectedEndTime || '-' },
     { title: '创建人', dataIndex: 'creatorName', width: 100, sorter: true, sortOrder: sortOrder('creatorName') },
     { title: '创建时间', dataIndex: 'createdAt', width: 170, sorter: true, sortOrder: sortOrder('createdAt') },
-    { title: '操作', valueType: 'option', width: 190, fixed: 'right', render: (_, row) => <OperationColumnActions><AdminTextAction onClick={() => navigate(`/tasks/${row.id}/edit`)}>编辑</AdminTextAction><TaskStatusChangeAction variant="text" task={row} onConfirm={async (status, values) => { const result = await updateTaskStatus(row.id, status, status === 2 ? { actual_end_date: date(values.actualEndTime) } : status === 4 ? { close_date: date(values.closeDate), close_reason: values.closeReason } : status === 3 ? { suspend_date: date(values.suspendTime), suspend_reason: values.suspendReason } : {}); message.success('状态更新成功'); await load(); if (result.allSubtasksCompleted) promptParentCompletion(result.parentTaskId); }}>状态变更</TaskStatusChangeAction>{!row.parentTaskId ? <AdminTextAction onClick={() => navigate(`/tasks/${row.id}/subtasks/new`)}>新增子任务</AdminTextAction> : null}<PriorityChangeAction variant="text" permission="task_priority_adjust" current={row.priority} onConfirm={async (priority) => { await updateTaskPriority(row.id, priority); message.success('优先级调整成功'); await load(); }} /><AdminTextAction onClick={() => setFollowUpTarget({ type: 'task', id: row.id, name: row.name })}>跟进记录</AdminTextAction><AdminTextAction onClick={() => navigate(`/tasks/${row.id}/copy`)}>复制</AdminTextAction><DeleteConfirmAction variant="text" entityName="任务" targetName={row.name} onConfirm={async () => { await deleteTask(row.id); await load(); }}>删除</DeleteConfirmAction></OperationColumnActions> }
+    { title: '操作', valueType: 'option', width: 190, fixed: 'right', render: (_, row) => <OperationColumnActions><AdminTextAction onClick={() => navigate(`/tasks/${row.id}/edit`)}>编辑</AdminTextAction><TaskStatusChangeAction variant="text" task={row} onConfirm={async (status, values) => { const requestId = focusRequest.current; const result = await updateTaskStatus(row.id, status, status === 2 ? { actual_end_date: date(values.actualEndTime) } : status === 4 ? { close_date: date(values.closeDate), close_reason: values.closeReason } : status === 3 ? { suspend_date: date(values.suspendTime), suspend_reason: values.suspendReason } : {}); if (requestId !== focusRequest.current) return; message.success('状态更新成功'); await reloadAndLocateTask(row); if (result.allSubtasksCompleted) promptParentCompletion(result.parentTaskId); }}>状态变更</TaskStatusChangeAction>{!row.parentTaskId ? <AdminTextAction onClick={() => navigate(`/tasks/${row.id}/subtasks/new`)}>新增子任务</AdminTextAction> : null}<PriorityChangeAction variant="text" permission="task_priority_adjust" current={row.priority} onConfirm={async (priority) => { await updateTaskPriority(row.id, priority); message.success('优先级调整成功'); await load(); }} /><AdminTextAction onClick={() => setFollowUpTarget({ type: 'task', id: row.id, name: row.name })}>跟进记录</AdminTextAction><AdminTextAction onClick={() => navigate(`/tasks/${row.id}/copy`)}>复制</AdminTextAction><DeleteConfirmAction variant="text" entityName="任务" targetName={row.name} onConfirm={async () => { await deleteTask(row.id); await load(); }}>删除</DeleteConfirmAction></OperationColumnActions> }
   ];
 
   const items = createListFilterItems([
@@ -185,7 +242,7 @@ export function TaskListPage() {
       titleExtra={<ViewTabs showCounts value={view} onChange={handleViewChange} items={[{ label: '全部任务', value: 'all', count: counts.all }, { label: '我的任务', value: 'mine', count: counts.mine }]} />}
       actions={<ActionBar><PermissionButton permission="task" type="primary" onClick={() => navigate('/tasks/new')}>新增任务</PermissionButton></ActionBar>}
       filter={<CompactFilterBar visibleCount={4} items={items} onSearch={handleSearch} onReset={handleReset} />}
-      table={{ columns, dataSource: visibleRows, loading: list.loading, pagination: false, search: false, rowSelection: { selectedRowKeys, onChange: setSelectedRowKeys }, tableAlertRender: false, onChange: list.handleTableChange, scroll: { x: 1650 } }}
+      table={{ columns, className: 'task-list-table', rowClassName: row => row.id === highlightedTaskId ? 'task-list-row--updated' : '', dataSource: visibleRows, loading: list.loading, pagination: false, search: false, rowSelection: { selectedRowKeys, onChange: setSelectedRowKeys }, tableAlertRender: false, onChange: list.handleTableChange, scroll: { x: 1650 } }}
       batch={{
         selectedCount: selectedRecords.length,
         actions: <>
