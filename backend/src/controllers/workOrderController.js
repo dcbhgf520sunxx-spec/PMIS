@@ -1,4 +1,5 @@
 const { numberListCondition } = require('../utils/listFilters')
+const { parseNeighborIds, neighborPosition } = require('../utils/recordNeighbors')
 const { overdueSql, rescheduleOverdueChanges } = require('../services/overdueRules')
 const overdue = overdueSql('work_order', { alias: 'w' })
 const defaultDb = require('../db')
@@ -166,7 +167,7 @@ exports.list = async (req, res) => {
         sortDir = getSortDirection(q.sort_order)
       }
     }
-    sql += ` ORDER BY ${sortCol} ${sortDir}, w.id ${sortDir} LIMIT ? OFFSET ?`
+    sql += ` ORDER BY ${sortCol} ${sortDir}, ${q.sort_field === 'status' ? 'w.updated_at DESC, ' : ''}w.id ${sortDir} LIMIT ? OFFSET ?`
     params.push(pageSize, offset)
 
     const rows = await db.prepare(sql).all(...params)
@@ -490,8 +491,9 @@ exports.remove = async (req, res) => {
 /** 获取上一条、下一条工单的 ID（支持筛选条件和排序） */
 exports.getNeighbors = async (req, res) => {
   try {
-    const { id } = req.query
-    if (!id) return res.status(400).json({ code: 400, message: '缺少 id 参数', data: null })
+    const ids = parseNeighborIds(req.query)
+    if (!ids) return fail(res, 400, 400, 'id 或 ids 必须为正整数')
+    const { pageSize } = parsePagination(req.query)
 
     const q = { ...req.query }
     const { filters, views, viewKey } = buildWorkOrderViewContext(q)
@@ -508,7 +510,7 @@ exports.getNeighbors = async (req, res) => {
       }
     }
 
-    const orderClause = `ORDER BY ${sortCol} ${sortDir}, w.id ${sortDir}`
+    const orderClause = `ORDER BY ${sortCol} ${sortDir}, ${q.sort_field === 'status' ? 'w.updated_at DESC, ' : ''}w.id ${sortDir}`
     const neighborSql = `
       WITH ordered AS (
         ${withJoins(`w.id,
@@ -518,22 +520,11 @@ exports.getNeighbors = async (req, res) => {
           COUNT(*) OVER() AS total`)}
         ${whereSql}
       )
-      SELECT prev_id, next_id, total, ordinal
+      SELECT id, prev_id "prevId", next_id "nextId", total, ordinal
       FROM ordered
-      WHERE id = ?`
-    const neighbor = await db.prepare(neighborSql).get(...whereParams, id)
-    if (!neighbor) return res.json({ code: 0, data: { prevId: null, nextId: null } })
-
-    res.json({
-      code: 0,
-      message: 'success',
-      data: {
-        prevId: neighbor.prev_id ?? null,
-        nextId: neighbor.next_id ?? null,
-        total: Number(neighbor.total),
-        ordinal: Number(neighbor.ordinal)
-      }
-    })
+      WHERE id IN (${ids.map(() => '?').join(',')}) ORDER BY ordinal LIMIT 1`
+    const neighbor = await db.prepare(neighborSql).get(...whereParams, ...ids)
+    ok(res, neighborPosition(neighbor, pageSize))
   } catch (err) {
     console.error(err)
     res.status(500).json({ code: 500, message: '查询失败', data: null })

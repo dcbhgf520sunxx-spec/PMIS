@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
 import { App } from 'antd';
 import { useParams } from 'react-router-dom';
-import { AdminTextAction, DeleteConfirmAction, DetailLinkCell, DetailMetaList, DetailNeighborNav, HistoryTimelineSection, OperationColumnActions, PermissionButton, PriorityChangeAction, RichTextViewer, TemplateDetailPage, TemplateDetailSection, TemplateDetailTableSection, useDetailNeighbors, usePageReturnNavigation } from '../../../components/admin';
+import { AdminTextAction, DeleteConfirmAction, DetailLinkCell, DetailMetaList, DetailNeighborNav, HistoryTimelineSection, OperationColumnActions, PermissionButton, PriorityChangeAction, RichTextViewer, TemplateDetailPage, TemplateDetailSection, TemplateDetailTableSection, useDetailNeighbors, useDetailRecordFocus, useLocalRecordFocus, usePageReturnNavigation } from '../../../components/admin';
 import { deleteTask, getSubtasks, getTask, getTaskHistory, getTaskNeighbors, updateTaskPriority, updateTaskStatus } from '../../../api/taskApi';
 import type { TaskRecord } from '../types';
 import { TaskStatusChangeAction } from '../components/TaskStatusChangeAction';
@@ -18,6 +18,7 @@ import { BusinessAttachmentField } from '../../../components/business/BusinessAt
 export function TaskDetailPage() {
  const businessDay = useBusinessDay();
   const { navigateWithReturn, returnTarget, returnToSource, backText } = usePageReturnNavigation('/tasks');
+  const recordFocus = useDetailRecordFocus({ listPath: '/tasks', returnTarget });
   const returnsToTaskDetail = /^\/tasks\/[^/?#]+(?:[?#]|$)/.test(returnTarget);
   const params = useParams();
   const { message, modal } = App.useApp();
@@ -29,6 +30,7 @@ export function TaskDetailPage() {
   const [error, setError] = useState('');
   const [notFound, setNotFound] = useState(false);
   const [revision, setRevision] = useState(0);
+  const subtaskFocus = useLocalRecordFocus({ rows: subtasks, loading, error });
   const neighbors = useDetailNeighbors({ id: params.id, moduleKey: 'task', routeBase: '/tasks', fetchNeighbors: getTaskNeighbors });
 
   useEffect(() => {
@@ -84,10 +86,13 @@ export function TaskDetailPage() {
     onOk: () => navigateWithReturn(`/tasks/${parentTaskId}`)
   });
   const changeStatus = async (task: TaskRecord, status: number, values: any) => {
-    const result = await updateTaskStatus(task.id, status as TaskRecord['status'], status === 2 ? { actual_end_date: date(values.actualEndTime) } : status === 4 ? { close_date: date(values.closeDate), close_reason: values.closeReason } : status === 3 ? { suspend_date: date(values.suspendTime), suspend_reason: values.suspendReason } : {});
-    message.success('状态更新成功');
-    setRevision((value) => value + 1);
-    if (result.allSubtasksCompleted) promptParentCompletion(result.parentTaskId);
+    const result = await recordFocus.run([task.id], () => updateTaskStatus(task.id, status as TaskRecord['status'], status === 2 ? { actual_end_date: date(values.actualEndTime) } : status === 4 ? { close_date: date(values.closeDate), close_reason: values.closeReason } : status === 3 ? { suspend_date: date(values.suspendTime), suspend_reason: values.suspendReason } : {}), () => {
+      neighbors.reload();
+      message.success('状态更新成功');
+      setRevision((value) => value + 1);
+      if (task.id !== row?.id) subtaskFocus.highlight([task.id]);
+    });
+    if (result?.allSubtasksCompleted) promptParentCompletion(result.parentTaskId);
   };
 
   const subtaskColumns: ProColumns<TaskRecord>[] = [
@@ -118,7 +123,7 @@ export function TaskDetailPage() {
     {row ? <>
       <TemplateDetailSection title="基本信息"><DetailMetaList items={[{ label: '任务名称', value: row.name, wide: true }, { label: '任务描述', value: <RichTextViewer value={row.description} />, wide: true }, ...(row.parentTaskId ? [{ label: '所属主任务', value: <span className="task-parent-link">{renderTaskLevel()}<DetailLinkCell title={row.parentTaskName} onClick={() => navigateWithReturn(`/tasks/${row.parentTaskId}`)}>{row.parentTaskName}</DetailLinkCell></span> }] : []), { label: '关联类型', value: taskSourceTypeLabel(row.sourceType) }, { label: '关联对象', value: row.sourceType === 1 ? row.projectName : row.sourceType === 2 ? row.requirementName : '-' }, { label: '任务类型', value: row.taskTypeName }, { label: '附件', value: <BusinessAttachmentField readOnly apiPath="/tasks" businessId={row.id} />, wide: true }]} /></TemplateDetailSection>
       <TemplateDetailSection title="处理信息"><DetailMetaList items={[{ label: '负责人', value: row.ownerNames }, { label: '启动时间', value: row.startTime || '-' }, { label: '预计完成时间', value: row.expectedEndTime || '-' }, { label: '实际完成时间', value: row.actualEndTime || '-' }, { label: '暂停时间', value: row.suspendTime || '-', startRow: true }, { label: '暂停原因', value: row.suspendReason || '-', span: 3, longText: true }, { label: '关闭时间', value: row.closeDate || '-', startRow: true }, { label: '关闭原因', value: row.closeReason || '-', span: 3, longText: true }]} /></TemplateDetailSection>
-      {!row.parentTaskId ? <TemplateDetailTableSection<TaskRecord> title="子任务" summary={`已完成 ${row.completedChildCount} / 共 ${row.childCount}`} extra={<PermissionButton permission="task" size="small" type="primary" onClick={() => navigateWithReturn(`/tasks/${row.id}/subtasks/new`)}>新增子任务</PermissionButton>} table={{ rowKey: 'id', columns: subtaskColumns, dataSource: subtasks, scroll: { x: 1100 } }} /> : null}
+      {!row.parentTaskId ? <TemplateDetailTableSection<TaskRecord> title="子任务" summary={`已完成 ${row.completedChildCount} / 共 ${row.childCount}`} extra={<PermissionButton permission="task" size="small" type="primary" onClick={() => navigateWithReturn(`/tasks/${row.id}/subtasks/new`)}>新增子任务</PermissionButton>} table={{ ...subtaskFocus.tableProps, rowKey: 'id', columns: subtaskColumns, dataSource: subtasks, scroll: { x: 1100 } }} /> : null}
       <FollowUpRecordSection target={{ type: 'task', id: row.id, name: row.name }} records={followUps} onChanged={refreshFollowUpSections} />
       <HistoryTimelineSection items={history} />
     </> : null}

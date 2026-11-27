@@ -1,4 +1,5 @@
 const { numberListCondition } = require('../utils/listFilters')
+const { parseNeighborIds, neighborPosition } = require('../utils/recordNeighbors')
 const db = require('../db')
 const { parsePagination, getSortDirection } = require('../utils/pagination')
 const { ok, fail, failField } = require('../utils/response')
@@ -58,7 +59,7 @@ exports.list = async (req, res) => {
     if (query.view === 'mine') query.assignee_id = req.user.id
     const clause = where(query)
     const { sort, direction } = getBugSortConfig(query.sort_field, query.sort_order)
-    const rows = await db.prepare(base(`COUNT(*) OVER() total,${fields}`) + clause.sql + ` ORDER BY ${sort} ${direction},b.id ${direction} LIMIT ? OFFSET ?`).all(...clause.params, pageSize, offset)
+    const rows = await db.prepare(base(`COUNT(*) OVER() total,${fields}`) + clause.sql + ` ORDER BY ${sort} ${direction},${query.sort_field === 'status' ? 'b.updated_at DESC,' : ''}b.id ${direction} LIMIT ? OFFSET ?`).all(...clause.params, pageSize, offset)
     const common = { ...req.query, view: undefined, assignee_id: req.query.filter_assignee_id }
     ok(res, { list: rows, total: Number(rows[0]?.total || 0), page, pageSize, viewCounts: { all: await count(common), mine: await count({ ...common, assignee_id: req.user.id }) } })
   } catch (error) { console.error(error); fail(res, 500, 500, '查询失败') }
@@ -66,12 +67,16 @@ exports.list = async (req, res) => {
 
 exports.neighbors = async (req, res) => {
   try {
+    const ids = parseNeighborIds(req.query)
+    if (!ids) return fail(res, 400, 400, 'id 或 ids 必须为正整数')
     const query = { ...req.query }
     if (query.view === 'mine') query.assignee_id = req.user.id
     const clause = where(query)
+    const { pageSize } = parsePagination(query)
     const { sort, direction } = getBugSortConfig(query.sort_field, query.sort_order)
-    const row = await db.prepare(`WITH ranked AS(SELECT b.id,LAG(b.id)OVER(ORDER BY ${sort} ${direction},b.id ${direction})prev_id,LEAD(b.id)OVER(ORDER BY ${sort} ${direction},b.id ${direction})next_id,ROW_NUMBER()OVER(ORDER BY ${sort} ${direction},b.id ${direction})ordinal,COUNT(*)OVER()total FROM pms_bug b LEFT JOIN pms_user assignee ON assignee.id=b.assignee_id LEFT JOIN pms_user creator ON creator.id=b.creator_id LEFT JOIN pms_project project ON project.id=b.project_id LEFT JOIN pms_requirement requirement ON requirement.id=b.requirement_id LEFT JOIN pms_archive bug_type ON bug_type.id=b.bug_type_id${clause.sql})SELECT prev_id "prevId",next_id "nextId",ordinal,total FROM ranked WHERE id=?`).get(...clause.params, req.query.id)
-    ok(res, row || { prevId: null, nextId: null, total: 0 })
+    const order = `${sort} ${direction},${query.sort_field === 'status' ? 'b.updated_at DESC,' : ''}b.id ${direction}`
+    const row = await db.prepare(`WITH ranked AS(${base(`b.id,LAG(b.id)OVER(ORDER BY ${order})"prevId",LEAD(b.id)OVER(ORDER BY ${order})"nextId",ROW_NUMBER()OVER(ORDER BY ${order})ordinal,COUNT(*)OVER()total`)}${clause.sql})SELECT id,"prevId","nextId",ordinal,total FROM ranked WHERE id IN (${ids.map(() => '?').join(',')}) ORDER BY ordinal LIMIT 1`).get(...clause.params, ...ids)
+    ok(res, neighborPosition(row, pageSize, false))
   } catch (error) { console.error(error); fail(res, 500, 500, '查询失败') }
 }
 

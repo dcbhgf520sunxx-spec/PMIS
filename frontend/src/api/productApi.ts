@@ -15,6 +15,11 @@ const historyContract = arrayContract(historyItemContract);
 const dt=(v?:string)=>String(v||'').slice(0,19).replace('T',' ');
 const map=(r:Row):ProductRecord=>({id:String(r.id),name:r.name,description:r.description||'',ownerId:String(r.owner_id),ownerName:r.owner_name||'-',status:Number(r.status) as ProductStatus,creatorName:r.creator_name||'-',updaterName:r.updater_name||'-',createdAt:dt(r.created_at),updatedAt:dt(r.updated_at)});
 export async function getProductList(params:Record<string,unknown>={}):Promise<PageResult<ProductRecord>>{const r=await unwrap<{list:Row[];total:number;page:number;pageSize:number}>(request.get('/products',{params}),pageContract);return{...r,list:r.list.map(map)}}
+const neighborsContract = objectContract<{ id: number | null; prevId: number | string | null; nextId: number | string | null; ordinal?: number; total: number; page: number }>(['id', 'prevId', 'nextId', 'total', 'page'], { id: (value): value is number | null => value === null || (typeof value === 'number' && Number.isSafeInteger(value) && value > 0), page: (value): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value > 0 });
+export async function getProductNeighbors(id: string, params: Record<string, unknown> = {}) {
+  const result = await unwrap<{ id: number | null; prevId: number | string | null; nextId: number | string | null; ordinal?: number; total: number; page: number }>(request.get('/products/neighbors', { params: { ...params, id } }), neighborsContract);
+  return { id: result.id === null ? null : String(result.id), prevId: result.prevId === null ? null : String(result.prevId), nextId: result.nextId === null ? null : String(result.nextId), ordinal: result.ordinal, total: result.total, page: result.page };
+}
 export async function getProduct(id:string){return map(await unwrap<Row>(request.get(`/products/${id}`),rowContract))}
 export async function getProductOptions(){const rows=await unwrap<Array<{id:number;name:string;status:number}>>(request.get('/products/options'),optionsContract);return rows.map(r=>({label:r.name,value:String(r.id),status:Number(r.status) as ProductStatus}))}
 const payload=(v:ProductFormValues)=>({name:v.name,owner_id:Number(v.ownerId),description:v.description||null,status:v.status});

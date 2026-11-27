@@ -9,7 +9,7 @@ type Page = { list: Row[]; total: number; page: number; pageSize: number; viewCo
 const ownerContract = objectContract<{id:number;name:string}>(['id', 'name']);
 const rowContract = objectContract<Row>(['id', 'name', 'source_type', 'owners', 'owner_names', 'task_type', 'task_type_name', 'priority', 'status', 'is_overdue','overdue_days', 'child_count'], { owners: arrayContract(ownerContract), child_count: (value): value is number => Number.isSafeInteger(value) && Number(value) >= 0 });
 const pageContract = objectContract<Page>(['list', 'total', 'page', 'pageSize', 'viewCounts'], { list: arrayContract(rowContract) });
-const neighborsContract = objectContract<{ prevId: number | null; nextId: number | null; ordinal?: number; total?: number; page?: number }>(['prevId', 'nextId'], { page: (value): value is number | undefined => value === undefined || (Number.isSafeInteger(value) && Number(value) > 0) });
+const neighborsContract = objectContract<{ id: number | null; prevId: number | string | null; nextId: number | string | null; ordinal?: number | string; total: number | string; page: number }>(['id', 'prevId', 'nextId', 'total', 'page'], { id: (value): value is number | null => value === null || (typeof value === 'number' && Number.isSafeInteger(value) && value > 0), page: (value): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value > 0 });
 const availableContract = objectContract<{ available: boolean }>(['available']);
 const batchResultContract = objectContract<{ updated: number; requested: number }>(['updated', 'requested']);
 const statusResultContract = objectContract<{ allSubtasksCompleted: boolean; parentTaskId: number | null }>(['allSubtasksCompleted', 'parentTaskId']);
@@ -44,8 +44,8 @@ export async function getTask(id: string) {
 }
 
 export async function getTaskNeighbors(id: string, params: Record<string, unknown> = {}) {
-  const result = await unwrap<{ prevId: number | null; nextId: number | null; ordinal?: number; total?: number; page?: number }>(request.get('/tasks/neighbors', { params: { ...params, id } }), neighborsContract);
-  return { prevId: result.prevId === null ? null : String(result.prevId), nextId: result.nextId === null ? null : String(result.nextId), ordinal: result.ordinal, total: result.total, page: result.page };
+  const result = await unwrap<{ id: number | null; prevId: number | string | null; nextId: number | string | null; ordinal?: number | string; total: number | string; page: number }>(request.get('/tasks/neighbors', { params: { ...params, id } }), neighborsContract);
+  return { id: result.id === null ? null : String(result.id), prevId: result.prevId === null ? null : String(result.prevId), nextId: result.nextId === null ? null : String(result.nextId), ordinal: result.ordinal === undefined ? undefined : Number(result.ordinal), total: Number(result.total), page: result.page };
 }
 
 export async function getTaskProjectOptions() {

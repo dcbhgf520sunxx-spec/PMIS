@@ -33,6 +33,7 @@ const uploadStatusDelivery = (req, res, next) => upload.array('files')(req, res,
 router.post('/rich-text-images', uploadRichTextImage, richTextImage.upload)
 router.get('/', ctrl.list)
 router.get('/options', ctrl.options)
+router.get('/neighbors', ctrl.neighbors)
 router.get('/requirement-options', ctrl.requirementOptions)
 router.get('/:id/attachments', attachment.list)
 router.post('/:id/attachments', uploadBusinessAttachment, attachment.upload)

@@ -17,6 +17,7 @@ const uploadContractAttachments = (req, res, next) => upload.array('files', 10)(
   return fail(res, 400, 400, '附件上传失败')
 })
 router.get('/options', ctrl.options)
+router.get('/neighbors', ctrl.neighbors)
 router.get('/', ctrl.list)
 router.get('/:id/maintenance-contracts', contractCtrl.list)
 router.post('/:id/maintenance-contracts', uploadContractAttachments, contractCtrl.create)

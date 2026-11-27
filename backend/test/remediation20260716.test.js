@@ -195,6 +195,7 @@ test('工单相邻记录由 PostgreSQL 计算且只向 Node 返回当前一行',
   assert.match(neighbors, /LEAD\(w\.id\) OVER/)
   assert.match(neighbors, /ROW_NUMBER\(\) OVER/)
   assert.match(neighbors, /COUNT\(\*\) OVER\(\)/)
-  assert.match(neighbors, /\.get\(\.\.\.whereParams, id\)/)
+  assert.match(neighbors, /\.get\(\.\.\.whereParams, \.\.\.ids\)/)
+  assert.match(neighbors, /ORDER BY ordinal LIMIT 1/)
   assert.doesNotMatch(neighbors, /allRows|findIndex/)
 })

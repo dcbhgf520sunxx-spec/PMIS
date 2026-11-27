@@ -1,4 +1,5 @@
 const { numberListCondition } = require('../utils/listFilters')
+const { parseNeighborIds, neighborPosition } = require('../utils/recordNeighbors')
 const db = require('../db')
 const { parsePagination, getSortDirection } = require('../utils/pagination')
 const { ok, fail } = require('../utils/response')
@@ -59,17 +60,35 @@ function where(q) {
   return { sql, params }
 }
 
+function orderBy(q) {
+  const sortMap = { name: 'p.name', ownerName: 'owner.real_name', description: 'p.description', status: 'p.status', creatorName: 'creator.real_name', createdAt: 'p.created_at' }
+  const sort = sortMap[q.sort_field] || 'p.created_at'
+  const direction = getSortDirection(q.sort_order)
+  return `${sort} ${direction}, ${q.sort_field === 'status' ? 'p.updated_at DESC, ' : ''}p.id ${direction}`
+}
+
 exports.list = async (req, res) => {
   try {
     const { page, pageSize, offset } = parsePagination(req.query)
     const condition = where(req.query)
-    const sortMap = { name: 'p.name', ownerName: 'owner.real_name', description: 'p.description', status: 'p.status', creatorName: 'creator.real_name', createdAt: 'p.created_at' }
-    const sort = sortMap[req.query.sort_field] || 'p.created_at'
-    const direction = getSortDirection(req.query.sort_order)
     const sql = joins('COUNT(*) OVER() total, p.id, p.name, p.description, p.owner_id, p.status, p.creator_id, p.updater_id, p.created_at, p.updated_at')
-      + condition.sql + ` ORDER BY ${sort} ${direction}, p.id ${direction} LIMIT ? OFFSET ?`
+      + condition.sql + ` ORDER BY ${orderBy(req.query)} LIMIT ? OFFSET ?`
     const rows = await db.prepare(sql).all(...condition.params, pageSize, offset)
     ok(res, { list: rows, total: Number(rows[0]?.total || 0), page, pageSize })
+  } catch (error) { console.error(error); fail(res, 500, 500, '查询失败') }
+}
+
+exports.neighbors = async (req, res) => {
+  try {
+    const ids = parseNeighborIds(req.query)
+    if (!ids) return fail(res, 400, 400, 'id 或 ids 必须为正整数')
+    const { pageSize } = parsePagination(req.query)
+    const condition = where(req.query)
+    const order = orderBy(req.query)
+    const row = await db.prepare(`WITH ranked AS (
+      ${joins(`p.id, LAG(p.id) OVER(ORDER BY ${order}) "prevId", LEAD(p.id) OVER(ORDER BY ${order}) "nextId", ROW_NUMBER() OVER(ORDER BY ${order}) ordinal, COUNT(*) OVER() total`)}${condition.sql}
+    ) SELECT id,"prevId","nextId",ordinal,total FROM ranked WHERE id IN (${ids.map(() => '?').join(',')}) ORDER BY ordinal LIMIT 1`).get(...condition.params, ...ids)
+    ok(res, neighborPosition(row, pageSize))
   } catch (error) { console.error(error); fail(res, 500, 500, '查询失败') }
 }
 

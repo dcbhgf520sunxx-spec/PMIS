@@ -72,3 +72,4 @@ export * from './DetailNeighborNav/useDetailNeighbors';
 export * from './PageNavigation';
 export * from './AdminMessageCenter';
 export * from './AdminFloatingAssistant';
+export * from './ListRecordFocus';

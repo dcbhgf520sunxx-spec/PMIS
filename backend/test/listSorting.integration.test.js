@@ -76,7 +76,7 @@ test('真实HTTP/PostgreSQL：任务、跟进人、权限范围按展示内容�
       const filtered = await get('/tasks', { ...query, status: '1' })
       assert.deepEqual(filtered.list.map(row => Number(row.id)), [records[5], records[4]])
       assert.equal(Number((await get('/tasks/neighbors', { ...query, status: '1', id: records[3] })).page), 2)
-      assert.equal((await get('/tasks/neighbors', { ...query, status: '0', id: records[5] })).page, undefined)
+      assert.equal((await get('/tasks/neighbors', { ...query, status: '0', id: records[5] })).id, null)
       const descending = await get('/tasks', { ...query, sort_order: 'descend' })
       assert.deepEqual(descending.list.map(row => Number(row.id)), [records[5], records[4]])
       // 子任务更新只改变所在组的位置，保留主任务在子任务前的顺序。

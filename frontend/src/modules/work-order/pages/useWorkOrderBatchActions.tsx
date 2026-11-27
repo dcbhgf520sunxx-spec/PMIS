@@ -6,7 +6,8 @@ import {
   AdminButton,
   AdminModal,
   AdminSearchDropdown,
-  DeleteConfirmAction
+  DeleteConfirmAction,
+  type RunRecordChange
 } from '../../../components/admin';
 import { batchAssignWorkOrders, deleteWorkOrder, updateWorkOrderStatus } from '../../../api/workOrderApi';
 import { WorkOrderStatusChangeAction } from '../components/WorkOrderStatusChangeAction';
@@ -22,6 +23,7 @@ type UseWorkOrderBatchActionsParams = {
   clearSelection: () => void;
   setSelectedRowKeys: (keys: Key[]) => void;
   reload: () => Promise<void>;
+  runStatusChange: RunRecordChange;
 };
 
 export function useWorkOrderBatchActions({
@@ -29,6 +31,7 @@ export function useWorkOrderBatchActions({
   userOptions,
   clearSelection,
   setSelectedRowKeys,
+  runStatusChange,
   reload
 }: UseWorkOrderBatchActionsParams) {
   const { message } = App.useApp();
@@ -76,10 +79,10 @@ export function useWorkOrderBatchActions({
             workOrder={selectedRecords[0]}
             statusOptions={batchStatusOptions}
             onConfirm={async (target, values) => {
-              await Promise.all(selectedRecords.map((row) => updateWorkOrderStatus(row.id, buildStatusPayload(target, values))));
-              await reload();
-              message.success(`成功变更 ${selectedRecords.length} 项工单状态`);
-              setSelectedRowKeys([]);
+              await runStatusChange(selectedRecords.map(row => row.id), () => Promise.all(selectedRecords.map((row) => updateWorkOrderStatus(row.id, buildStatusPayload(target, values)))), () => {
+                message.success(`成功变更 ${selectedRecords.length} 项工单状态`);
+                setSelectedRowKeys([]);
+              });
             }}
           >
             批量状态变更

@@ -1,4 +1,5 @@
 const { numberListCondition } = require('../utils/listFilters')
+const { parseNeighborIds, neighborPosition } = require('../utils/recordNeighbors')
 const { overdueSql, rescheduleOverdueChanges } = require('../services/overdueRules')
 const overdue = overdueSql('task', { alias: 't' })
 const db = require('../db')
@@ -118,6 +119,8 @@ exports.list = async (req, res) => {
 
 exports.neighbors = async (req, res) => {
   try {
+    const ids = parseNeighborIds(req.query)
+    if (!ids) return fail(res, 400, 400, 'id 或 ids 必须为正整数')
     const query = { ...req.query }
     if (query.view === 'mine') query.owner_id = req.user.id
     const clause = where(query)
@@ -133,7 +136,7 @@ exports.neighbors = async (req, res) => {
         ),ranked AS(
           SELECT id,LAG(id)OVER(ORDER BY ${flatOrder})prev_id,LEAD(id)OVER(ORDER BY ${flatOrder})next_id,
             ROW_NUMBER()OVER(ORDER BY ${flatOrder})ordinal,ROW_NUMBER()OVER(ORDER BY ${flatOrder})page_ordinal,COUNT(*)OVER()total FROM matched
-        ) SELECT prev_id "prevId",next_id "nextId",ordinal,page_ordinal,total FROM ranked WHERE id=?`
+        ) SELECT id,prev_id "prevId",next_id "nextId",ordinal,page_ordinal,total FROM ranked WHERE id IN (${ids.map(() => '?').join(',')}) ORDER BY ordinal LIMIT 1`
       : `WITH matched AS(
           SELECT t.id,COALESCE(t.parent_task_id,t.id)root_id,${sort} sort_value,t.updated_at${taskJoins}${clause.sql}
         ),task_groups AS(
@@ -145,11 +148,9 @@ exports.neighbors = async (req, res) => {
         ),ranked AS(
           SELECT id,LAG(id)OVER(ORDER BY ${groupedOrder})prev_id,LEAD(id)OVER(ORDER BY ${groupedOrder})next_id,
             ROW_NUMBER()OVER(ORDER BY ${groupedOrder})ordinal,DENSE_RANK()OVER(ORDER BY ${groupOrder})page_ordinal,COUNT(*)OVER()total FROM visible
-        ) SELECT prev_id "prevId",next_id "nextId",ordinal,page_ordinal,total FROM ranked WHERE id=?`
-    const row = await db.prepare(sql).get(...clause.params, req.query.id)
-    if (!row) return ok(res, { prevId: null, nextId: null, total: 0 })
-    const { page_ordinal, ...position } = row
-    ok(res, { ...position, page: Math.ceil(Number(page_ordinal) / pageSize) })
+        ) SELECT id,prev_id "prevId",next_id "nextId",ordinal,page_ordinal,total FROM ranked WHERE id IN (${ids.map(() => '?').join(',')}) ORDER BY ordinal LIMIT 1`
+    const row = await db.prepare(sql).get(...clause.params, ...ids)
+    ok(res, neighborPosition(row, pageSize, false))
   } catch (error) {
     console.error(error)
     fail(res, 500, 500, '查询失败')

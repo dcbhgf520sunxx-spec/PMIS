@@ -12,6 +12,7 @@ import {
   TemplateDetailPage,
   TemplateDetailSection,
   useDetailNeighbors,
+  useDetailRecordFocus,
   usePageReturnNavigation
 } from '../../../components/admin';
 import { WorkOrderStatusChangeAction } from '../components/WorkOrderStatusChangeAction';
@@ -32,7 +33,8 @@ import { BusinessAttachmentField } from '../../../components/business/BusinessAt
 export function WorkOrderDetailPage() {
  const businessDay = useBusinessDay();
   const { message } = App.useApp();
-  const { navigateWithReturn, returnToSource, backText } = usePageReturnNavigation('/work-orders');
+  const { navigateWithReturn, returnTarget, returnToSource, backText } = usePageReturnNavigation('/work-orders');
+  const recordFocus = useDetailRecordFocus({ listPath: '/work-orders', returnTarget });
   const params = useParams();
   const [detail, setDetail] = useState<WorkOrderRecord>();
   const [history, setHistory] = useState<WorkOrderHistoryItem[]>([]);
@@ -136,9 +138,11 @@ export function WorkOrderDetailPage() {
           workOrder={detail}
           statusOptions={nextStatuses}
           onConfirm={async (target, values) => {
-            await updateWorkOrderStatus(detail.id, buildStatusPayload(target, values));
-            await loadDetail();
-            message.success(`状态已更新为 ${statusText(target)}`);
+            await recordFocus.run([detail.id], () => updateWorkOrderStatus(detail.id, buildStatusPayload(target, values)), async () => {
+              neighbors.reload();
+              await loadDetail();
+              message.success(`状态已更新为 ${statusText(target)}`);
+            });
           }}
         >
           状态变更

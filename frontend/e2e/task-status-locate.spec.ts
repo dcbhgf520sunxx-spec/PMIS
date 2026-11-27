@@ -91,7 +91,7 @@ test('真实任务状态变更：同状态最近更新优先，跨页定位、�
     await expect(rows.first()).toContainText(tasks[0].name);
     await changeToProcessing(0);
     await expect(page).toHaveURL(/page=2/);
-    await expect(row(0)).toHaveClass(/task-list-row--updated/);
+    await expect(row(0)).toHaveClass(/admin-record-row--updated/);
     await expect(row(0)).toContainText('处理中');
     await expect(row(0)).toBeInViewport();
     // 固定操作列必须使用不透明底色，不能透出被它覆盖的创建人等字段。
@@ -127,24 +127,24 @@ test('真实任务状态变更：同状态最近更新优先，跨页定位、�
     await page.getByRole('button', { name: `展开 ${tasks[2].name} 的子任务`, exact: true }).click();
     await changeToProcessing(3);
     await expect(page).not.toHaveURL(/page=2/);
-    await expect(row(3)).toHaveClass(/task-list-row--updated/);
+    await expect(row(3)).toHaveClass(/admin-record-row--updated/);
     await expect(row(3)).toBeInViewport();
     await expect(rows.first()).toContainText(tasks[2].name);
     await expect(rows.nth(1)).toContainText(tasks[3].name);
     const screenshot = process.env.TASK_FOCUS_SCREENSHOT;
     if (screenshot) await page.screenshot({ path: screenshot, animations: 'disabled' });
-    await expect(row(3)).not.toHaveClass(/task-list-row--updated/, { timeout: 7000 });
+    await expect(row(3)).not.toHaveClass(/admin-record-row--updated/, { timeout: 7000 });
     // 当前状态筛选会排除刚修改的记录，保留筛选并解释去向。
     await page.goto(`/tasks?view=mine&q_name=${prefix}&q_status=0&sort=status&order=ascend&pageSize=2`);
     await changeToProcessing(1);
-    await expect(page.getByText('任务状态已更新，已不符合当前筛选条件', { exact: true })).toBeVisible();
+    await expect(page.getByText('状态已更新，已不符合当前筛选条件', { exact: true })).toBeVisible();
     await expect(row(1)).toHaveCount(0);
     await expect(page).toHaveURL(/q_status=0/);
-    await expect(page.locator('.task-list-row--updated')).toHaveCount(0);
+    await expect(page.locator('.admin-record-row--updated')).toHaveCount(0);
     // 定位服务异常不应把已保存的变更报成失败，也不能重复执行写入。
     await page.route('**/api/tasks/neighbors?**', route => route.fulfill({ status: 500, json: { code: 500, message: '定位测试失败' } }));
     await changeToProcessing(4);
-    await expect(page.getByText('任务状态已更新，列表定位失败，请刷新后查询', { exact: true })).toBeVisible();
+    await expect(page.getByText('状态已更新，列表定位失败，请刷新后查询', { exact: true })).toBeVisible();
     expect((await db.query('SELECT status FROM pms_task WHERE id=$1', [tasks[4].id])).rows[0].status).toBe(1);
     expect(errors).toEqual([]);
   } finally {

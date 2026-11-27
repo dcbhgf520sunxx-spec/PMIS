@@ -130,30 +130,34 @@ export async function getWorkOrderList(params: WorkOrderListParams = {}): Promis
 }
 
 const workOrderNeighborsContract = objectContract<{
-  prevId: number | null;
-  nextId: number | null;
+  id: number | null;
+  prevId: number | string | null;
+  nextId: number | string | null;
   ordinal?: number;
-  total?: number;
-}>(['prevId', 'nextId']);
+  total: number;
+  page: number;
+}>(['id', 'prevId', 'nextId', 'total', 'page'], {
+  id: (value): value is number | null => value === null || (typeof value === 'number' && Number.isSafeInteger(value) && value > 0),
+  page: (value): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value > 0,
+});
 
 export async function getWorkOrderNeighbors(id: string, params: Record<string, unknown> = {}) {
   const result = await unwrap<{
-    prevId: number | null;
-    nextId: number | null;
+    id: number | null;
+    prevId: number | string | null;
+    nextId: number | string | null;
     ordinal?: number;
-    total?: number;
-  }>(request.get('/work-orders/neighbors', {
-    params: {
-      ...params,
-      id
-    }
-  }), workOrderNeighborsContract);
+    total: number;
+    page: number;
+  }>(request.get('/work-orders/neighbors', { params: { ...params, id } }), workOrderNeighborsContract);
 
   return {
+    id: result.id === null ? null : String(result.id),
     prevId: result.prevId === null ? null : String(result.prevId),
     nextId: result.nextId === null ? null : String(result.nextId),
     ordinal: result.ordinal,
-    total: result.total
+    total: result.total,
+    page: result.page,
   };
 }
 
