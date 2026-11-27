@@ -38,7 +38,7 @@ def main():
  inferred.serialize(reports/'demo-inferred.ttl',format='turtle');manifest['demoQueries']=query_all(inferred,reports)
  assert (D.task,S.relatedProduct,D.product) in inferred and (D.requirement,S.hasProject,D.project) in inferred
  missing=Graph()+data;missing.remove((D.project,S.sourceRequirement,None));missing.serialize(ROOT/'fixtures/missing-source.ttl',format='turtle')
- r,_=reason(missing,reports/'missing-source-hermit.log');v=validate_data(missing,reports/'missing-source-shacl');assert r['consistent'] and not v['conforms'];manifest['openWorldComparison']={'reasoning':r,'validation':v}
+ r,_=reason(missing,reports/'missing-source-hermit.log');v=validate_data(missing,reports/'missing-source-shacl');assert r['consistent'] and v['conforms'];manifest['optionalSourceCompatibility']={'reasoning':r,'validation':v}
  contradiction=Graph()+data;contradiction.add((D.stagePay,RDF.type,S.ProjectStage));contradiction.serialize(ROOT/'fixtures/contradiction.ttl',format='turtle');r,_=reason(contradiction,reports/'contradiction-hermit.log');assert not r['consistent'];manifest['contradiction']=r
  # Previously authorized, archived export graphs. Missing samples are reported, never treated as passes.
  local=ROOT/'local-output';local.mkdir(exist_ok=True,mode=0o700);local.chmod(0o700);manifest['archivedSamples']=[]

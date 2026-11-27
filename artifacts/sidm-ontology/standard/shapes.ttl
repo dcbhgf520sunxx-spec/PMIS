@@ -271,7 +271,6 @@ s:ProjectShape a sh:NodeShape ;
             sh:path s:member ],
         [ sh:class s:Requirement ;
             sh:maxCount 1 ;
-            sh:minCount 1 ;
             sh:path s:sourceRequirement ],
         [ sh:datatype xsd:string ;
             sh:maxCount 1 ;

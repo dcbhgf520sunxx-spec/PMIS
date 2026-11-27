@@ -127,10 +127,9 @@
 项目已关闭或来源需求已关闭不参与；项目下属工作同样退出统计，恢复后重新筛选。</s:completionRule>
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
     <rdfs:label xml:lang="zh">项目</rdfs:label>
-    <rdfs:comment xml:lang="zh">由需求转化而来、组织实施的建设工作</rdfs:comment>
+    <rdfs:comment xml:lang="zh">组织实施的建设工作；当前新建项目由需求转化，历史项目可未关联来源需求</rdfs:comment>
     <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b23"/>
     <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b24"/>
-    <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b29"/>
     <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b30"/>
     <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b69"/>
     <rdfs:subClassOf rdf:nodeID="n5ef238332bab410f99954754c4070e85b70"/>
@@ -164,11 +163,6 @@
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
     <owl:onProperty rdf:resource="urn:sidm:ontology:contractProject"/>
     <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Project"/>
-  </rdf:Description>
-  <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b29">
-    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Restriction"/>
-    <owl:onProperty rdf:resource="urn:sidm:ontology:sourceRequirement"/>
-    <owl:someValuesFrom rdf:resource="urn:sidm:ontology:Requirement"/>
   </rdf:Description>
   <rdf:Description rdf:nodeID="n5ef238332bab410f99954754c4070e85b81">
     <rdf:first rdf:resource="urn:sidm:ontology:Requirement"/>
@@ -217,9 +211,9 @@
   </rdf:Description>
   <rdf:Description rdf:about="urn:sidm:ontology">
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Ontology"/>
-    <owl:versionIRI rdf:resource="urn:sidm:ontology:version:1.0.3"/>
+    <owl:versionIRI rdf:resource="urn:sidm:ontology:version:1.0.4"/>
     <rdfs:label xml:lang="zh">SIDM业务本体</rdfs:label>
-    <owl:versionInfo>1.0.3</owl:versionInfo>
+    <owl:versionInfo>1.0.4</owl:versionInfo>
     <rdfs:comment xml:lang="zh">正式OWL 2 DL模型；基于已确认业务骨架。缺失信息采用开放世界语义，数据完整性由SHACL检查。</rdfs:comment>
     <s:completionFormula xml:lang="zh">完成率＝本期已完成单据数 ÷ 本期纳入统计的单据数 × 100%。按单据类别分别统计，部分完成不折算完成数量，也不平均单据进度；没有符合条件的单据时显示“—”。</s:completionFormula>
     <s:completionScope xml:lang="zh">先排除不参与的单据，再判断完成或未完成，并按个人责任范围与考核期筛选。需求、项目或主任务关闭，其下属工作退出统计；恢复后重新筛选，记录和状态保留。暂停不退出统计。产品、供应商、项目合同、付款阶段、付款记录、产品运维合同不计算完成率。</s:completionScope>

@@ -2,6 +2,8 @@
 
 本目录沿标准本体技术路径建设：**OWL 2 DL → RDF实例 → HermiT推理 → SHACL校验 → SPARQL查询**。唯一权威OWL语义定义在 `sidm.ttl`，不再由上级JSON模型或JavaScript规则计算器定义执行结果。
 
+本体1.0.4兼容旧流程项目未关联来源需求：项目可有0或1条来源需求，空值不作为校验错误，也不补造关联；有关联时仍校验需求类型、同产品及一对一数量。当前新建项目仍由现有业务接口强制关联需求，本次不修改业务数据或数据库结构。
+
 2026-10-09已接入本地原有Query MCP，并以当前员工身份通过SDK真实数据调用及审计回读；平台HTTP凭据握手和线上部署尚未验证。真实业务样本与对应验证报告仅保留在本机，不随Git交付；仓库保留标准定义、执行代码和虚构测试样例。
 
 ## 文件是什么
@@ -12,7 +14,7 @@
 | sidm.owl | 同一模型的RDF/XML序列化，验证入口生成并核对两者等价 |
 | shapes.ttl | SHACL Core和SHACL-SPARQL约束；检查具体实例的完整性及业务数据规则 |
 | fixtures/valid.ttl | 明确虚构的完整业务样例，含全部14类对象与20种原始关系 |
-| fixtures/missing-source.ttl | 缺来源需求对照：OWL开放世界下不矛盾，SHACL报缺项 |
+| fixtures/missing-source.ttl | 历史项目未关联来源需求的兼容样例：OWL逻辑一致，SHACL通过，不补造来源关系 |
 | fixtures/contradiction.ttl | 矛盾对照：同一对象同时属于两类互斥阶段，HermiT必须拒绝 |
 | queries/*.rq | 直接在RDF图上执行的SPARQL查询 |
 | reports/ | 虚构样例的标准验证报告、推理后RDF、查询结果及工具版本 |

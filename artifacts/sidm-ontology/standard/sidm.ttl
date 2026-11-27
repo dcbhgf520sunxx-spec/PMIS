@@ -6,8 +6,8 @@
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 
 
-<urn:sidm:ontology> a owl:Ontology ; owl:versionIRI <urn:sidm:ontology:version:1.0.3> ;
- rdfs:label "SIDM业务本体"@zh ; owl:versionInfo "1.0.3" ;
+<urn:sidm:ontology> a owl:Ontology ; owl:versionIRI <urn:sidm:ontology:version:1.0.4> ;
+ rdfs:label "SIDM业务本体"@zh ; owl:versionInfo "1.0.4" ;
  rdfs:comment "正式OWL 2 DL模型；基于已确认业务骨架。缺失信息采用开放世界语义，数据完整性由SHACL检查。"@zh .
 
 # 已确认的个人考核口径；注释定义不新增业务字段，也不改变业务状态或SHACL写入约束。
@@ -59,7 +59,7 @@ s:Product a owl:Class ; rdfs:label "产品"@zh ; rdfs:comment "持续建设、�
 
 s:Requirement a owl:Class ; rdfs:label "需求"@zh ; rdfs:comment "希望解决的问题或实现的改变"@zh .
 
-s:Project a owl:Class ; rdfs:label "项目"@zh ; rdfs:comment "由需求转化而来、组织实施的建设工作"@zh .
+s:Project a owl:Class ; rdfs:label "项目"@zh ; rdfs:comment "组织实施的建设工作；当前新建项目由需求转化，历史项目可未关联来源需求"@zh .
 
 s:ProjectStage a owl:Class ; rdfs:label "项目阶段"@zh ; rdfs:comment "按需划分的项目实施过程"@zh .
 
@@ -106,8 +106,6 @@ s:MaintenanceContract rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:bel
 s:MaintenanceContract rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:belongsToProduct ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
 
 s:sourceRequirement a owl:ObjectProperty ; rdfs:label "来源需求"@zh ; rdfs:domain s:Project ; rdfs:range s:Requirement .
-
-s:Project rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:sourceRequirement ; owl:someValuesFrom s:Requirement ] .
 
 s:Project rdfs:subClassOf [ a owl:Restriction ; owl:onProperty s:sourceRequirement ; owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
 
