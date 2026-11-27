@@ -46,6 +46,45 @@ test('真实HTTP/PostgreSQL：任务、跟进人、权限范围按展示内容�
     }
     const child = await db.prepare('INSERT INTO pms_task(name,parent_task_id,source_type,task_type,creator_id,updater_id)VALUES(?,?,3,?,?,1)').run('sorting-task-child', tasks[1], archive.id, users[1])
     const childId = Number(child.lastInsertRowid)
+    await t.test('任务状态优先、同状态最近更新优先，定位页按父子组而非行数计算', async () => {
+      const records = []
+      for (const [index, status, parentIndex, updated] of [
+        [0, 0, null, '2026-01-01'], [1, 0, 0, '2026-01-01'],
+        [2, 0, 0, '2026-01-01'], [3, 1, null, '2026-01-02'],
+        [4, 1, null, '2026-01-03'], [5, 0, null, '2026-01-01']
+      ]) {
+        const result = await db.prepare('INSERT INTO pms_task(name,status,parent_task_id,source_type,task_type,creator_id,updated_at)VALUES(?,?,?,3,?,1,?)')
+          .run(`recent-status-${index}`, status, parentIndex === null ? null : records[parentIndex], archive.id, updated)
+        records.push(Number(result.lastInsertRowid))
+      }
+      const query = { name: 'recent-status-', sort_field: 'status', sort_order: 'ascend', pageSize: 2 }
+      const page2 = await get('/tasks', { ...query, page: 2 })
+      assert.deepEqual(page2.list.map(row => Number(row.id)), [records[4], records[3]])
+      const position = await get('/tasks/neighbors', { ...query, id: records[4] })
+      assert.equal(Number(position.ordinal), 5)
+      assert.equal(Number(position.page), 2)
+      const changed = await (await fetch(origin + `/api/tasks/${records[5]}/status`, {
+        method: 'PUT', headers: { authorization: 'Bearer ' + session.data.token, 'content-type': 'application/json' }, body: JSON.stringify({ status: 1 })
+      })).json()
+      assert.equal(changed.code, 0)
+      const after = await get('/tasks', { ...query, page: 1 })
+      assert.deepEqual(after.list.map(row => Number(row.id)), [...records.slice(0, 3), records[5]])
+      const target = await get('/tasks/neighbors', { ...query, id: records[5] })
+      assert.equal(Number(target.page), 1)
+      assert.equal(Number(target.prevId), records[2])
+      assert.equal(Number(target.nextId), records[4])
+      const filtered = await get('/tasks', { ...query, status: '1' })
+      assert.deepEqual(filtered.list.map(row => Number(row.id)), [records[5], records[4]])
+      assert.equal(Number((await get('/tasks/neighbors', { ...query, status: '1', id: records[3] })).page), 2)
+      assert.equal((await get('/tasks/neighbors', { ...query, status: '0', id: records[5] })).page, undefined)
+      const descending = await get('/tasks', { ...query, sort_order: 'descend' })
+      assert.deepEqual(descending.list.map(row => Number(row.id)), [records[5], records[4]])
+      // 子任务更新只改变所在组的位置，保留主任务在子任务前的顺序。
+      await db.prepare('UPDATE pms_task SET updated_at=NOW() WHERE id=?').run(records[2])
+      const firstGroup = await get('/tasks', { ...query, pageSize: 1 })
+      assert.deepEqual(firstGroup.list.map(row => Number(row.id)), [records[0], records[2], records[1]])
+      assert.equal(Number((await get('/tasks/neighbors', { ...query, pageSize: 1, id: records[2] })).page), 1)
+    })
     const product = await db.prepare('INSERT INTO pms_product(name,owner_id,creator_id,updater_id)VALUES(?,1,1,1)').run('sorting-product')
     const workOrders = []
     for (const [index, follower] of users.entries()) {

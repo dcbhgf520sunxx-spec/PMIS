@@ -19,6 +19,8 @@ export default defineConfig(({ mode }) => {
   const buildTime = env.VITE_BUILD_TIME || new Date().toISOString();
 
   return {
+    // 本地开发与浏览器验收并行启动时不能共用依赖预构建缓存。
+    cacheDir: `node_modules/.vite-${port}`,
     plugins: [react()],
     define: {
       __APP_GIT_COMMIT__: JSON.stringify(gitCommit),

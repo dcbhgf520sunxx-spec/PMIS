@@ -73,3 +73,23 @@
   color: var(--app-text-secondary);
   line-height: 1.7;
 }
+
+.task-list-table .ant-table-tbody > tr.task-list-row--updated {
+  --task-updated-border: #8ba9d1;
+  --task-updated-bg: color-mix(in srgb, var(--app-primary) 3.5%, var(--app-surface));
+}
+
+.task-list-table .ant-table-tbody > tr.task-list-row--updated > td.ant-table-cell {
+  background: var(--task-updated-bg) !important;
+  box-shadow: inset 0 1px var(--task-updated-border), inset 0 -1px var(--task-updated-border);
+}
+
+.task-list-table .ant-table-tbody > tr.task-list-row--updated > td.ant-table-cell:first-child {
+  border-radius: 4px 0 0 4px;
+  box-shadow: inset 4px 0 var(--app-primary), inset 0 1px var(--task-updated-border), inset 0 -1px var(--task-updated-border);
+}
+
+.task-list-table .ant-table-tbody > tr.task-list-row--updated > td.ant-table-cell:last-child {
+  border-radius: 0 4px 4px 0;
+  box-shadow: inset -1px 0 var(--task-updated-border), inset 0 1px var(--task-updated-border), inset 0 -1px var(--task-updated-border);
+}

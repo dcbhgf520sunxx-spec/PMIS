@@ -74,7 +74,8 @@ function getTaskSortConfig(sortField, sortOrder) {
   }
   return {
     sort: sortMap[sortField] || 't.created_at',
-    direction: getSortDirection(sortOrder)
+    direction: getSortDirection(sortOrder),
+    latestFirst: sortField === 'status'
   }
 }
 
@@ -89,12 +90,24 @@ exports.list = async (req, res) => {
     const query = { ...req.query }
     if (query.view === 'mine') query.owner_id = req.user.id
     const clause = where(query)
-    const { sort, direction } = getTaskSortConfig(query.sort_field, query.sort_order)
+    const { sort, direction, latestFirst } = getTaskSortConfig(query.sort_field, query.sort_order)
+    const updatedOrder = latestFirst ? 't.updated_at DESC NULLS LAST,' : ''
+    const groupOrder = `group_sort ${direction} NULLS LAST,${latestFirst ? 'group_updated_at DESC NULLS LAST,' : ''}root_id ${direction}`
     const rows = query.mcp_flat === '1' || clause.hasStatusFilter
       ? await db.prepare(`SELECT COUNT(*) OVER()::INTEGER total,${fields}${taskJoins}${clause.sql}
-        ORDER BY ${sort} ${direction} NULLS LAST,t.id ${direction} LIMIT ? OFFSET ?`)
+        ORDER BY ${sort} ${direction} NULLS LAST,${updatedOrder}t.id ${direction} LIMIT ? OFFSET ?`)
         .all(...clause.params, pageSize, offset)
-      : await db.prepare(`WITH matched AS(SELECT t.id,COALESCE(t.parent_task_id,t.id)root_id,${sort} sort_value${taskJoins}${clause.sql}),task_groups AS(SELECT root_id,MIN(sort_value)group_sort FROM matched GROUP BY root_id),paged_groups AS(SELECT root_id,group_sort FROM task_groups ORDER BY group_sort ${direction} NULLS LAST,root_id ${direction} LIMIT ? OFFSET ?)SELECT(SELECT COUNT(*) FROM task_groups)::INTEGER total,${fields}${taskJoins} JOIN paged_groups pg ON pg.root_id=COALESCE(t.parent_task_id,t.id) WHERE t.is_deleted=0 AND(t.id IN (SELECT id FROM matched) OR t.id=pg.root_id) ORDER BY pg.group_sort ${direction} NULLS LAST,pg.root_id ${direction},CASE WHEN t.parent_task_id IS NULL THEN 0 ELSE 1 END,${sort} ${direction},t.id ${direction}`).all(...clause.params, pageSize, offset)
+      : await db.prepare(`WITH matched AS(
+          SELECT t.id,COALESCE(t.parent_task_id,t.id)root_id,${sort} sort_value,t.updated_at${taskJoins}${clause.sql}
+        ),task_groups AS(
+          SELECT root_id,MIN(sort_value)group_sort,MAX(updated_at)group_updated_at FROM matched GROUP BY root_id
+        ),paged_groups AS(
+          SELECT * FROM task_groups ORDER BY ${groupOrder} LIMIT ? OFFSET ?
+        ) SELECT(SELECT COUNT(*) FROM task_groups)::INTEGER total,${fields}${taskJoins}
+          JOIN paged_groups pg ON pg.root_id=COALESCE(t.parent_task_id,t.id)
+          WHERE t.is_deleted=0 AND(t.id IN (SELECT id FROM matched) OR t.id=pg.root_id)
+          ORDER BY ${groupOrder},CASE WHEN t.parent_task_id IS NULL THEN 0 ELSE 1 END,${sort} ${direction},${updatedOrder}t.id ${direction}`)
+          .all(...clause.params, pageSize, offset)
     const common = { ...req.query, view: undefined, owner_id: req.query.filter_owner_id }
     ok(res, { list: rows, total: Number(rows[0]?.total || 0), page, pageSize, viewCounts: { all: await count(common), mine: await count({ ...common, owner_id: req.user.id }) } })
   } catch (error) {
@@ -108,12 +121,35 @@ exports.neighbors = async (req, res) => {
     const query = { ...req.query }
     if (query.view === 'mine') query.owner_id = req.user.id
     const clause = where(query)
-    const { sort, direction } = getTaskSortConfig(query.sort_field, query.sort_order)
+    const { pageSize } = parsePagination(query)
+    const { sort, direction, latestFirst } = getTaskSortConfig(query.sort_field, query.sort_order)
+    const updatedOrder = latestFirst ? 'updated_at DESC NULLS LAST,' : ''
+    const groupOrder = `group_sort ${direction} NULLS LAST,${latestFirst ? 'group_updated_at DESC NULLS LAST,' : ''}root_id ${direction}`
+    const flatOrder = `sort_value ${direction} NULLS LAST,${updatedOrder}id ${direction}`
+    const groupedOrder = `${groupOrder},CASE WHEN parent_task_id IS NULL THEN 0 ELSE 1 END,sort_value ${direction},${updatedOrder}id ${direction}`
     const sql = query.mcp_flat === '1' || clause.hasStatusFilter
-      ? `WITH matched AS(SELECT t.id,${sort} sort_value${taskJoins}${clause.sql}),ranked AS(SELECT id,LAG(id)OVER(ORDER BY sort_value ${direction} NULLS LAST,id ${direction})prev_id,LEAD(id)OVER(ORDER BY sort_value ${direction} NULLS LAST,id ${direction})next_id,ROW_NUMBER()OVER(ORDER BY sort_value ${direction} NULLS LAST,id ${direction})ordinal,COUNT(*)OVER()total FROM matched)SELECT prev_id "prevId",next_id "nextId",ordinal,total FROM ranked WHERE id=?`
-      : `WITH matched AS(SELECT t.id,COALESCE(t.parent_task_id,t.id)root_id,${sort} sort_value${taskJoins}${clause.sql}),task_groups AS(SELECT root_id,MIN(sort_value)group_sort FROM matched GROUP BY root_id),visible AS(SELECT t.id,t.parent_task_id,pg.root_id,pg.group_sort,${sort} sort_value${taskJoins} JOIN task_groups pg ON pg.root_id=COALESCE(t.parent_task_id,t.id) WHERE t.is_deleted=0 AND(t.id IN(SELECT id FROM matched)OR t.id=pg.root_id)),ranked AS(SELECT id,LAG(id)OVER(ORDER BY group_sort ${direction} NULLS LAST,root_id ${direction},CASE WHEN parent_task_id IS NULL THEN 0 ELSE 1 END,sort_value ${direction},id ${direction})prev_id,LEAD(id)OVER(ORDER BY group_sort ${direction} NULLS LAST,root_id ${direction},CASE WHEN parent_task_id IS NULL THEN 0 ELSE 1 END,sort_value ${direction},id ${direction})next_id,ROW_NUMBER()OVER(ORDER BY group_sort ${direction} NULLS LAST,root_id ${direction},CASE WHEN parent_task_id IS NULL THEN 0 ELSE 1 END,sort_value ${direction},id ${direction})ordinal,COUNT(*)OVER()total FROM visible)SELECT prev_id "prevId",next_id "nextId",ordinal,total FROM ranked WHERE id=?`
+      ? `WITH matched AS(
+          SELECT t.id,${sort} sort_value,t.updated_at${taskJoins}${clause.sql}
+        ),ranked AS(
+          SELECT id,LAG(id)OVER(ORDER BY ${flatOrder})prev_id,LEAD(id)OVER(ORDER BY ${flatOrder})next_id,
+            ROW_NUMBER()OVER(ORDER BY ${flatOrder})ordinal,ROW_NUMBER()OVER(ORDER BY ${flatOrder})page_ordinal,COUNT(*)OVER()total FROM matched
+        ) SELECT prev_id "prevId",next_id "nextId",ordinal,page_ordinal,total FROM ranked WHERE id=?`
+      : `WITH matched AS(
+          SELECT t.id,COALESCE(t.parent_task_id,t.id)root_id,${sort} sort_value,t.updated_at${taskJoins}${clause.sql}
+        ),task_groups AS(
+          SELECT root_id,MIN(sort_value)group_sort,MAX(updated_at)group_updated_at FROM matched GROUP BY root_id
+        ),visible AS(
+          SELECT t.id,t.parent_task_id,pg.root_id,pg.group_sort,pg.group_updated_at,${sort} sort_value,t.updated_at${taskJoins}
+          JOIN task_groups pg ON pg.root_id=COALESCE(t.parent_task_id,t.id)
+          WHERE t.is_deleted=0 AND(t.id IN(SELECT id FROM matched)OR t.id=pg.root_id)
+        ),ranked AS(
+          SELECT id,LAG(id)OVER(ORDER BY ${groupedOrder})prev_id,LEAD(id)OVER(ORDER BY ${groupedOrder})next_id,
+            ROW_NUMBER()OVER(ORDER BY ${groupedOrder})ordinal,DENSE_RANK()OVER(ORDER BY ${groupOrder})page_ordinal,COUNT(*)OVER()total FROM visible
+        ) SELECT prev_id "prevId",next_id "nextId",ordinal,page_ordinal,total FROM ranked WHERE id=?`
     const row = await db.prepare(sql).get(...clause.params, req.query.id)
-    ok(res, row || { prevId: null, nextId: null, total: 0 })
+    if (!row) return ok(res, { prevId: null, nextId: null, total: 0 })
+    const { page_ordinal, ...position } = row
+    ok(res, { ...position, page: Math.ceil(Number(page_ordinal) / pageSize) })
   } catch (error) {
     console.error(error)
     fail(res, 500, 500, '查询失败')
