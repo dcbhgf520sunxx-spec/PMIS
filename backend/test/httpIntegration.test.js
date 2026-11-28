@@ -243,10 +243,12 @@ test('真实 HTTP、PostgreSQL 和核心业务流程', { skip: !enabled }, async
       )
       assert.equal(neighbors.response.status, 200)
       assert.deepEqual(neighbors.body.data, {
+        id: Number(neighborIds[1]),
         prevId: neighborIds[2],
         nextId: neighborIds[0],
         total: 3,
-        ordinal: 2
+        ordinal: 2,
+        page: 1
       })
 
       const directResolved = await request(`/api/work-orders/${neighborIds[1]}/status`, {

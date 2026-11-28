@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { App } from 'antd';
 import { useParams } from 'react-router-dom';
-import { DeleteConfirmAction, DetailMetaList, DetailNeighborNav, HistoryTimelineSection, PermissionButton, RichTextViewer, TemplateDetailPage, TemplateDetailSection, useDetailNeighbors , usePageReturnNavigation } from '../../../components/admin';
+import { DeleteConfirmAction, DetailMetaList, DetailNeighborNav, HistoryTimelineSection, PermissionButton, RichTextViewer, TemplateDetailPage, TemplateDetailSection, useDetailNeighbors, useDetailRecordFocus, usePageReturnNavigation } from '../../../components/admin';
 import { deleteBug, getBug, getBugHistory, getBugNeighbors, updateBugStatus } from '../../../api/bugApi';
 import { getArchiveOptionsByTypeName } from '../../../api/archiveApi';
 import { getUserOptions } from '../../../api/userApi';
@@ -12,7 +12,8 @@ import { BusinessAttachmentField } from '../../../components/business/BusinessAt
 
 type Option = { label: string; value: string };
 export function BugDetailPage() {
-  const { navigateWithReturn, returnToSource, backText } = usePageReturnNavigation('/bugs'); const params = useParams(); const { message } = App.useApp();
+  const { navigateWithReturn, returnToSource, returnTarget, backText } = usePageReturnNavigation('/bugs'); const params = useParams(); const { message } = App.useApp();
+  const recordFocus = useDetailRecordFocus({ listPath: '/bugs', returnTarget });
   const [row, setRow] = useState<BugRecord>(); const [history, setHistory] = useState<any[]>([]); const [resolutions, setResolutions] = useState<Option[]>([]); const [users, setUsers] = useState<Option[]>([]);
   const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [notFound, setNotFound] = useState(false); const [revision, setRevision] = useState(0);
   const neighbors = useDetailNeighbors({ id: params.id, moduleKey: 'bug', routeBase: '/bugs', fetchNeighbors: getBugNeighbors });
@@ -39,7 +40,7 @@ export function BugDetailPage() {
     titleCenter={<DetailNeighborNav placement="title" loading={neighbors.loading} prevId={neighbors.prevId} nextId={neighbors.nextId} ordinal={neighbors.ordinal} total={neighbors.total} onNavigate={neighbors.navigateNeighbor} />}
     actions={row ? <><PermissionButton permission="bug" type="primary" onClick={() => navigateWithReturn(`/bugs/${row.id}/edit`)}>编辑</PermissionButton><PermissionButton permission="bug" onClick={() => navigateWithReturn(`/bugs/${row.id}/copy`)}>复制</PermissionButton><DeleteConfirmAction entityName="BUG" targetName={row.title} onConfirm={async () => { await deleteBug(row.id); returnToSource(); }}>删除</DeleteConfirmAction></> : null}
     statusSection={row ? { items: [{ label: 'Bug状态', value: renderBugStatus(row.status), wide: true }, { label: '严重程度', value: renderBugSeverity(row.severity), wide: true }] } : null}
-    statusAction={row ? <BugStatusChangeAction block type="primary" bug={row} resolutionOptions={resolutions} userOptions={users} defaultAssigneeId={row.creatorId} onConfirm={async (status, values) => { await updateBugStatus(row.id, status, { resolvedTime: date(values.resolvedTime), closedTime: date(values.closedTime), resolutionId: values.resolutionId as string | undefined, activationReason: values.activationReason as string | undefined, assigneeId: values.assigneeId as string | undefined }); message.success('状态更新成功'); setRevision((value) => value + 1); }} /> : null}
+    statusAction={row ? <BugStatusChangeAction block type="primary" bug={row} resolutionOptions={resolutions} userOptions={users} defaultAssigneeId={row.creatorId} onConfirm={async (status, values) => { await recordFocus.run([row.id], () => updateBugStatus(row.id, status, { resolvedTime: date(values.resolvedTime), closedTime: date(values.closedTime), resolutionId: values.resolutionId as string | undefined, activationReason: values.activationReason as string | undefined, assigneeId: values.assigneeId as string | undefined }), () => { neighbors.reload(); message.success('状态更新成功'); setRevision((value) => value + 1); }); }} /> : null}
     documentSection={row ? { items: [{ label: '创建人', value: row.creatorName }, { label: '创建时间', value: row.createdAt, wide: true }, { label: '更新人', value: row.updaterName }, { label: '更新时间', value: row.updatedAt, wide: true }] } : null}
   >{row ? <>
     <TemplateDetailSection title="基本信息"><DetailMetaList items={[{ label: 'Bug标题', value: row.title, wide: true }, { label: 'Bug描述', value: <RichTextViewer value={row.description} />, wide: true }, { label: '关联类型', value: row.sourceType === 1 ? '项目' : '需求' }, { label: '关联对象', value: row.sourceType === 1 ? row.projectName : row.requirementName }, { label: 'Bug类型', value: row.bugTypeName }, { label: '附件', value: <BusinessAttachmentField readOnly apiPath="/bugs" businessId={row.id} />, wide: true }]} /></TemplateDetailSection>

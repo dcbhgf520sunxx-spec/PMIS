@@ -3,7 +3,7 @@ import { useBusinessDay } from '../../../hooks/useBusinessDay';
 import { useEffect, useState } from 'react';
 import { App } from 'antd';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { RichTextViewer, DetailMetaList, HistoryTimelineSection, PermissionButton, PriorityChangeAction, TemplateDetailPage, TemplateDetailSection, usePageReturnNavigation } from '../../../components/admin';
+import { RichTextViewer, DetailMetaList, HistoryTimelineSection, PermissionButton, PriorityChangeAction, TemplateDetailPage, TemplateDetailSection, useDetailRecordFocus, usePageReturnNavigation } from '../../../components/admin';
 import type { HistoryTimelineItem } from '../../../components/admin';
 import { getProject, getProjectHistory, updateProjectPriority, updateProjectStatus } from '../../../api/projectApi';
 import type { ProjectHistoryItem } from '../../../api/projectApi';
@@ -36,7 +36,8 @@ const mapProjectHistoryItem = (item: ProjectHistoryItem): HistoryTimelineItem =>
 
 export function ProjectDetailPage() {
  const businessDay = useBusinessDay();
-  const { navigateWithReturn, returnToSource, backText } = usePageReturnNavigation('/projects');
+  const { navigateWithReturn, returnToSource, returnTarget, backText } = usePageReturnNavigation('/projects');
+  const recordFocus = useDetailRecordFocus({ listPath: '/projects', returnTarget });
   const params = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -110,9 +111,10 @@ export function ProjectDetailPage() {
         { label: '逾期状态', value: renderProjectOverdue(row.isOverdue, row.overdueDays), wide: true },
       ] } : null}
       statusAction={row ? <ProjectStatusChangeAction block type="primary" project={row} onConfirm={async (status, values) => {
-        await updateProjectStatus(row.id, status, status === 2 ? { actual_end_date: dateValue(values.actualEndDate) } : status === 4 ? { close_date: dateValue(values.closeDate), close_reason: values.closeReason } : status === 3 ? { suspend_date: dateValue(values.suspendDate), suspend_reason: values.suspendReason } : {});
-        message.success('状态更新成功');
-        load();
+        await recordFocus.run([row.id], () => updateProjectStatus(row.id, status, status === 2 ? { actual_end_date: dateValue(values.actualEndDate) } : status === 4 ? { close_date: dateValue(values.closeDate), close_reason: values.closeReason } : status === 3 ? { suspend_date: dateValue(values.suspendDate), suspend_reason: values.suspendReason } : {}), () => {
+          message.success('状态更新成功');
+          load();
+        });
       }} /> : null}
       documentSection={row ? { items: [
         { label: '创建人', value: row.creatorName }, { label: '创建时间', value: row.createdAt, wide: true },

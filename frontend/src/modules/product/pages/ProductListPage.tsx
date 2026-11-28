@@ -4,9 +4,9 @@ import {
   ActionBar, AdminInput, AdminRangePicker, AdminSelect, AdminTextAction, CompactFilterBar,
   DeleteConfirmAction, DetailLinkCell, OperationColumnActions, PermissionButton,
   StatusConfirmAction, StatusTag, TemplateListPage, listRouteCodecs, useCommittedFilters,
-  usePageReturnNavigation, useTemplateServerListData
+  useListRecordFocus, usePageReturnNavigation, useTemplateServerListData
 } from '../../../components/admin';
-import { deleteProduct, getProductList, updateProductStatus } from '../../../api/productApi';
+import { deleteProduct, getProductList, getProductNeighbors, updateProductStatus } from '../../../api/productApi';
 import { getUserOptions } from '../../../api/userApi';
 import type { ProductRecord } from '../types';
 
@@ -17,26 +17,26 @@ export function ProductListPage() {
   const { navigateWithReturn: navigate } = usePageReturnNavigation('/products');
   const [users, setUsers] = useState<Array<{ label: string; value: string }>>([]);
   const filters = useCommittedFilters(defaults, { urlSync: true, codecs: { name: listRouteCodecs.string, ownerIds: listRouteCodecs.stringArray, status: listRouteCodecs.numberArray, creatorId: listRouteCodecs.string, createdAtRange: listRouteCodecs.dateArray } });
+  const buildQuery = (sortField?: string, sortOrder?: 'ascend' | 'descend') => {
+    const createdAtRange = filters.appliedFilters.createdAtRange || [];
+    return {
+      name: filters.appliedFilters.name || undefined,
+      owner_ids: filters.appliedFilters.ownerIds.join(',') || undefined,
+      status: filters.appliedFilters.status.join(',') || undefined,
+      creator_id: filters.appliedFilters.creatorId,
+      created_at_from: date(createdAtRange[0]),
+      created_at_to: date(createdAtRange[1]),
+      sort_field: sortField,
+      sort_order: sortOrder
+    };
+  };
   const list = useTemplateServerListData<ProductRecord>({
     queryKey: ['products', filters.appliedFilters, filters.revision],
-    request: async ({ current, pageSize, sortField, sortOrder }) => {
-      const createdAtRange = filters.appliedFilters.createdAtRange || [];
-      return getProductList({
-        name: filters.appliedFilters.name || undefined,
-        owner_ids: filters.appliedFilters.ownerIds.join(',') || undefined,
-        status: filters.appliedFilters.status.join(',') || undefined,
-        creator_id: filters.appliedFilters.creatorId,
-        created_at_from: date(createdAtRange[0]),
-        created_at_to: date(createdAtRange[1]),
-        page: current,
-        pageSize,
-        sort_field: sortField,
-        sort_order: sortOrder
-      });
-    },
+    request: ({ current, pageSize, sortField, sortOrder }) => getProductList({ ...buildQuery(sortField, sortOrder), page: current, pageSize, sort_field: sortField, sort_order: sortOrder }),
     urlSync: true
   });
   const load = list.reload;
+  const recordFocus = useListRecordFocus({ list, reload: load, params: buildQuery(list.sortState.field, list.sortState.order), resolvePosition: (ids, params) => getProductNeighbors(ids[0], { ...params, ids: ids.join(',') }) });
 
   useEffect(() => { getUserOptions().then(setUsers); }, []);
 
@@ -53,7 +53,7 @@ export function ProductListPage() {
       render: (_, row) => (
         <OperationColumnActions>
           <AdminTextAction onClick={() => navigate(`/products/${row.id}/edit`)}>编辑</AdminTextAction>
-          <StatusConfirmAction variant="text" action={row.status === 1 ? 'disable' : 'enable'} entityName="产品" targetName={row.name} onConfirm={async () => { await updateProductStatus(row.id, row.status === 1 ? 0 : 1); await load(); }}>{row.status === 1 ? '停用' : '启用'}</StatusConfirmAction>
+          <StatusConfirmAction variant="text" action={row.status === 1 ? 'disable' : 'enable'} entityName="产品" targetName={row.name} onConfirm={async () => { await recordFocus.run([row.id], () => updateProductStatus(row.id, row.status === 1 ? 0 : 1)); }}>{row.status === 1 ? '停用' : '启用'}</StatusConfirmAction>
           <DeleteConfirmAction variant="text" entityName="产品" targetName={row.name} successMessage="删除成功" onConfirm={async () => { await deleteProduct(row.id); await load(); }}>删除</DeleteConfirmAction>
         </OperationColumnActions>
       )
@@ -73,7 +73,7 @@ export function ProductListPage() {
         { key: 'creatorId', label: '创建人', node: <AdminSelect size="small" value={filters.draftFilters.creatorId} options={users} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, creatorId: value }))} /> },
         { key: 'createdAtRange', label: '创建时间', wide: true, node: <AdminRangePicker size="small" value={filters.draftFilters.createdAtRange as never} onChange={(value) => filters.setDraftFilters((prev) => ({ ...prev, createdAtRange: value || [] }))} /> }
       ]} onSearch={filters.commitFilters} onReset={filters.resetFilters} />}
-      table={{ columns, dataSource: list.pagedRows, loading: list.loading, pagination: false, search: false, onChange: list.handleTableChange, tableAlertRender: false, scroll: { x: 1240 } }}
+      table={{ ...recordFocus.tableProps, columns, dataSource: list.pagedRows, loading: list.loading, pagination: false, search: false, onChange: list.handleTableChange, tableAlertRender: false, scroll: { x: 1240 } }}
       pagination={list.pagination}
     />
   );

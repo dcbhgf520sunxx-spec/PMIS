@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { AdminAlert, AdminAttachmentUpload, DeleteConfirmAction, DetailMetaList, PermissionButton, TemplateDetailPage, TemplateDetailSection, usePageReturnNavigation, type AdminAttachment } from '../../../components/admin';
+import { AdminAlert, AdminAttachmentUpload, DeleteConfirmAction, DetailMetaList, PermissionButton, TemplateDetailPage, TemplateDetailSection, usePageReturnNavigation, useDetailRecordFocus, type AdminAttachment } from '../../../components/admin';
 import { deleteProductMaintenanceContract, downloadProductMaintenanceContractAttachment, getProductMaintenanceContract, loadProductMaintenanceContractAttachmentPreview, terminateProductMaintenanceContract } from '../../../api/productApi';
 import { ProductMaintenanceContractStatusChangeAction } from '../components/ProductMaintenanceContractStatusChangeAction';
 import { renderMaintenanceContractStatus } from '../maintenanceContractStatus';
@@ -12,7 +12,8 @@ const money = (value: number) => value.toLocaleString('zh-CN', { minimumFraction
 export function ProductMaintenanceContractDetailPage() {
   const params = useParams();
   const fallback = params.id ? `/products/${params.id}` : '/products';
-  const { navigateWithReturn, returnToSource, backText } = usePageReturnNavigation(fallback);
+  const { navigateWithReturn, returnTarget, returnToSource, backText } = usePageReturnNavigation(fallback);
+  const recordFocus = useDetailRecordFocus({ listPath: fallback, returnTarget });
   const [contract, setContract] = useState<ProductMaintenanceContract>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -39,7 +40,7 @@ export function ProductMaintenanceContractDetailPage() {
       {!contract.hasSuccessor ? <DeleteConfirmAction entityName="运维合同" targetName={contract.contractName} successMessage="删除成功" onConfirm={async () => { await deleteProductMaintenanceContract(contract.productId, contract.id); returnToSource(); }}>删除</DeleteConfirmAction> : null}
     </> : null}
     statusSection={contract ? { items: [{ label: '状态', value: renderMaintenanceContractStatus(contract.status), wide: true }] } : null}
-    statusAction={contract && !contract.hasSuccessor && contract.status !== 'terminated' ? <ProductMaintenanceContractStatusChangeAction contract={contract} block onTerminated={async (values) => { await terminateProductMaintenanceContract(contract.productId, contract.id, values); setRevision((value) => value + 1); }} /> : null}
+    statusAction={contract && !contract.hasSuccessor && contract.status !== 'terminated' ? <ProductMaintenanceContractStatusChangeAction contract={contract} block onTerminated={async (values) => { await recordFocus.run([contract.id], () => terminateProductMaintenanceContract(contract.productId, contract.id, values), () => { setRevision((value) => value + 1); }); }} /> : null}
     documentSection={contract ? { items: [{ label: '创建人', value: contract.creatorName }, { label: '创建时间', value: contract.createdAt, wide: true }, { label: '更新人', value: contract.updaterName }, { label: '更新时间', value: contract.updatedAt, wide: true }] } : null}
   >
     {contract ? <>

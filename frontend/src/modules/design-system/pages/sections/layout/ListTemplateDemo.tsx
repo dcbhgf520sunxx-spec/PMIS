@@ -1,4 +1,4 @@
-import { type Key, useEffect, useMemo, useState } from 'react';
+import { type Key, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
 import {
   AdminButton,
@@ -12,7 +12,9 @@ import {
   HierarchyListCell,
   listSorters,
   OperationColumnActions,
+  StatusChangeAction,
   TemplateListPage,
+  useListRecordFocus,
   useTemplateListPageData
 } from '../../../../../components/admin';
 import { mockWorkOrders, workOrderUsers } from '../../../../work-order/mock';
@@ -55,6 +57,8 @@ const hierarchyTemplateRows: HierarchyWorkOrderRecord[] = [
 const hierarchyTemplateParentCount = hierarchyTemplateRows.filter((row) => !row.hierarchyParentId).length;
 
 export function ListTemplateDemo() {
+  const [demoRows, setDemoRows] = useState(mockWorkOrders);
+  const demoRowsRef = useRef(demoRows);
   const [listTemplateMode, setListTemplateMode] = useState<'standard' | 'batch' | 'hierarchy'>('standard');
   const [listTemplateFilterExpanded, setListTemplateFilterExpanded] = useState(false);
   const [listTemplateSelectedRowKeys, setListTemplateSelectedRowKeys] = useState<Key[]>([]);
@@ -62,17 +66,44 @@ export function ListTemplateDemo() {
   const [expandedHierarchyParentIds, setExpandedHierarchyParentIds] = useState<Set<string>>(() => new Set());
   const [listTemplateFilterRevision, setListTemplateFilterRevision] = useState(0);
 
+  const list = useTemplateListPageData({
+    rows: demoRows,
+    sorters: listTemplateSorters,
+    resetOn: [listTemplateFilterRevision],
+    urlSync: true
+  });
   const {
     pagedRows: listTemplateRows,
     sortState,
     pagination: listTemplatePagination,
     handleTableChange: handleListTemplateTableChange
-  } = useTemplateListPageData({
-    rows: mockWorkOrders,
-    sorters: listTemplateSorters,
-    resetOn: [listTemplateFilterRevision],
-    urlSync: true
+  } = list;
+  const recordFocus = useListRecordFocus({
+    list: { ...list, loading: false, error: '' },
+    reload: async () => undefined,
+    params: { ...sortState, pageSize: list.pageSize },
+    resolvePosition: async (ids, params) => {
+      const sorted = [...demoRowsRef.current];
+      const sorter = typeof params.field === 'string' ? listTemplateSorters[params.field] : undefined;
+      if (sorter && params.order) sorted.sort((a, b) => sorter(a, b) * (params.order === 'ascend' ? 1 : -1));
+      const index = sorted.findIndex((row) => ids.includes(row.id));
+      return { id: sorted[index]?.id ?? null, page: Math.floor(index / Number(params.pageSize)) + 1 };
+    }
   });
+  const runFocus = recordFocus.run;
+  const changeDemoStatus = useCallback((rows: WorkOrderRecord[], status: WorkOrderRecord['status']) => runFocus(
+    rows.map((row) => row.id),
+    async () => {
+      const ids = new Set(rows.map((row) => row.id));
+      const next = demoRowsRef.current.map((row) => ids.has(row.id) ? { ...row, status } : row);
+      demoRowsRef.current = next;
+      setDemoRows(next);
+    },
+    () => {
+      setListTemplateSelectedRowKeys([]);
+      setListTemplateSelectedRows([]);
+    }
+  ), [runFocus]);
 
   useEffect(() => {
     if (listTemplateMode !== 'batch') {
@@ -239,14 +270,20 @@ export function ListTemplateDemo() {
       valueType: 'option',
       width: 180,
       fixed: 'right',
-      render: () => (
+      render: (_, row) => (
         <OperationColumnActions>
           <AdminTextAction className="design-system-page__display-table-link">编辑</AdminTextAction>
-          <AdminTextAction className="design-system-page__display-table-link">状态变更</AdminTextAction>
+          {listTemplateMode === 'hierarchy' ? <AdminTextAction>状态变更</AdminTextAction> : <StatusChangeAction
+            variant="text"
+            current={row.status}
+            currentValue={renderWorkOrderStatus(row.status)}
+            options={statusOptions.filter((option) => option.value !== row.status).map((option) => ({ ...option, tone: 'normal' as const }))}
+            onConfirm={(status) => changeDemoStatus([row], status)}
+          >状态变更</StatusChangeAction>}
         </OperationColumnActions>
       )
     }
-  ], [sortState.field, sortState.order]);
+  ], [sortState.field, sortState.order, listTemplateMode, changeDemoStatus]);
 
   const toggleHierarchyParent = (parentId: string) => {
     setExpandedHierarchyParentIds((current) => {
@@ -307,6 +344,7 @@ export function ListTemplateDemo() {
     />
   );
   const listTemplateTableBase = {
+    ...recordFocus.tableProps,
     columns: displayTableColumns,
     dataSource: listTemplateRows,
     options: false as const,
@@ -321,9 +359,10 @@ export function ListTemplateDemo() {
     <div className="design-system-page__layout-pattern-template">
       <div className="design-system-page__input-panel-head">
         <h3>TemplateListPage</h3>
-        <ComponentEntry name="TemplateListPage / CompactFilterBar / SearchTable / TablePagination" />
+        <ComponentEntry name="TemplateListPage / CompactFilterBar / SearchTable / TablePagination / useListRecordFocus" />
         <p>点击列头切换升降序，翻页或刷新后检查排序数据和箭头是否一致，地址会保留当前排序。</p>
         <p>列表页统一从这个入口接入。默认普通模式不带批量区；需要批量操作的页面必须声明批量模式，分页始终固定在右侧。</p>
+        <p>状态变更后按当前排序重新定位记录，跨页时自动翻到新位置，蓝色细条与极浅底色持续 5 秒；批量模式会标记本页全部已变更记录。</p>
         <div className="design-system-page__template-mode-switch">
           <AdminSegmented
             size="small"
@@ -364,7 +403,13 @@ export function ListTemplateDemo() {
               actions: (
                 <>
                   <AdminButton size="small" disabled={listTemplateSelectedRows.length === 0}>批量指派</AdminButton>
-                  <AdminButton size="small" disabled={listTemplateSelectedRows.length === 0}>批量状态变更</AdminButton>
+                  <StatusChangeAction
+                    size="small"
+                    disabled={listTemplateSelectedRows.length === 0}
+                    currentValue={listTemplateSelectedRows.length ? '已选择记录' : '未选择记录'}
+                    options={statusOptions.map((option) => ({ ...option, tone: 'normal' as const }))}
+                    onConfirm={(status) => changeDemoStatus(listTemplateSelectedRows, status)}
+                  >批量状态变更</StatusChangeAction>
                   <AdminButton danger size="small" disabled={listTemplateSelectedRows.length === 0}>批量删除</AdminButton>
                 </>
               )
@@ -380,6 +425,8 @@ export function ListTemplateDemo() {
             table={{
               ...listTemplateTableBase,
               columns: hierarchyDisplayColumns,
+              className: undefined,
+              rowClassName: undefined,
               dataSource: visibleHierarchyTemplateRows,
               onChange: undefined
             }}

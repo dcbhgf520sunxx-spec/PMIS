@@ -1,5 +1,5 @@
 import { useBusinessDay } from '../../../hooks/useBusinessDay';
-import { useEffect, useMemo, useState, type DragEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
 import dayjs from 'dayjs';
 import { App, Form } from 'antd';
@@ -9,7 +9,7 @@ import {
   ActionBar, AdminAttachmentUpload, AdminButton, AdminDatePicker, AdminDrawer, AdminEmptyState, AdminIconAction, AdminInput, AdminModal, AdminSelect,
   AdminFormItem, AdminStepNavigation, AdminSwitch, AdminTextAction, AdminTextArea, DeleteConfirmAction,
   ExpandToggleButton, HistoryTimelineSection, OperationColumnActions, PermissionButton, StatusTag, TemplateDetailPage,
-  TemplateDetailTableSection, usePageReturnNavigation, type AdminAttachment, type HistoryTimelineItem,
+  TemplateDetailTableSection, usePageReturnNavigation, useLocalRecordFocus, type AdminAttachment, type HistoryTimelineItem,
 } from '../../../components/admin';
 import { COMMON_ATTACHMENT_ACCEPT, COMMON_ATTACHMENT_MAX_SIZE } from '../../../components/business/businessAttachmentRules';
 import {
@@ -106,12 +106,12 @@ export function ProjectStagePlanPage(){
   const [templateSubmitting,setTemplateSubmitting]=useState(false);
   const [templateAttempted,setTemplateAttempted]=useState(false);
 
-  const load=()=>{
+  const load=useCallback(async()=>{
     if(!params.id)return;
     setLoading(true);setError('');
-    Promise.all([getProjectStagePlan(params.id),getUserOptions(),getProjectStagePlanHistory(params.id)]).then(([result,options,historyRows])=>{setPlan(result);setUsers(options);setHistory(historyRows.map(mapHistoryItem));}).catch((cause)=>setError(cause instanceof Error?cause.message:'加载失败')).finally(()=>setLoading(false));
-  };
-  useEffect(load,[params.id,revision,businessDay]);
+    await Promise.all([getProjectStagePlan(params.id),getUserOptions(),getProjectStagePlanHistory(params.id)]).then(([result,options,historyRows])=>{setPlan(result);setUsers(options);setHistory(historyRows.map(mapHistoryItem));}).catch((cause)=>setError(cause instanceof Error?cause.message:'加载失败')).finally(()=>setLoading(false));
+  },[params.id]);
+  useEffect(()=>{void load();},[load,revision,businessDay]);
   const refresh=()=>setRevision((value)=>value+1);
 
   const visibleStages=useMemo(()=>plan?.stages||[],[plan]);
@@ -226,6 +226,7 @@ export function ProjectStagePlanPage(){
     {key:`stage-${stage.id}`,kind:'stage' as const,stage},
     ...(collapsed.has(stage.id)?[]:stage.items.map((item)=>({key:`item-${item.id}`,kind:'item' as const,stage,item}))),
   ]),[visibleStages,collapsed]);
+  const recordFocus = useLocalRecordFocus({ rows, loading, error, getId: (row) => row.key });
 
   const saveNewItems=async()=>{
     if(!params.id||!createDrawer)return;
@@ -302,7 +303,7 @@ export function ProjectStagePlanPage(){
     {title:'操作',valueType:'option',width:230,fixed:'right',render:(_,row)=>{
       if(row.kind==='stage')return <OperationColumnActions><AdminTextAction onClick={()=>{setCreateDrawer({stage:row.stage,items:[emptyItem(row.stage.id)]});setCreateAttempted(false);setCollapsed((current)=>{const next=new Set(current);next.delete(row.stage.id);return next;});}}>新增关键事项</AdminTextAction><AdminTextAction onClick={()=>{stageForm.setFieldsValue({name:row.stage.name});setStageModal({stage:row.stage});}}>编辑阶段</AdminTextAction><DeleteConfirmAction variant="text" entityName="阶段" targetName={row.stage.name} onConfirm={async()=>{await deleteProjectPlanStage(params.id!,row.stage.id);refresh();}}>删除</DeleteConfirmAction></OperationColumnActions>;
       const item=row.item!;
-      return <OperationColumnActions><AdminTextAction onClick={()=>setItemModal({item,pendingAttachments:[],values:{stageId:item.stageId,name:item.name,ownerId:item.ownerId,collaboratorIds:item.collaborators.map((person)=>person.id),requiresDeliveryFile:item.requiresDeliveryFile,deliveryRequirement:item.deliveryRequirement,remark:item.remark}})}>编辑</AdminTextAction><ProjectPlanStatusChangeAction variant="text" item={item} onConfirm={async(target,values)=>{await changeProjectPlanItemStatus(params.id!,item.id,target,{actual_end_date:(values.actualEndDate as any)?.format?.('YYYY-MM-DD'),pause_reason:values.pauseReason,completionFiles:(values.completionFiles as Array<{rawFile?:File}>|undefined)?.map((attachment)=>attachment.rawFile).filter((file):file is File=>Boolean(file))});message.success('状态更新成功');refresh();}}>状态变更</ProjectPlanStatusChangeAction><AdminTextAction onClick={()=>setAdjustModal({item,date:'',reason:'',attempted:false})}>调整计划</AdminTextAction><DeleteConfirmAction variant="text" entityName="关键事项" targetName={item.name} onConfirm={async()=>{await deleteProjectPlanItem(params.id!,item.id);refresh();}}>删除</DeleteConfirmAction></OperationColumnActions>;
+      return <OperationColumnActions><AdminTextAction onClick={()=>setItemModal({item,pendingAttachments:[],values:{stageId:item.stageId,name:item.name,ownerId:item.ownerId,collaboratorIds:item.collaborators.map((person)=>person.id),requiresDeliveryFile:item.requiresDeliveryFile,deliveryRequirement:item.deliveryRequirement,remark:item.remark}})}>编辑</AdminTextAction><ProjectPlanStatusChangeAction variant="text" item={item} onConfirm={async(target,values)=>{await recordFocus.run([`item-${item.id}`], () => changeProjectPlanItemStatus(params.id!,item.id,target,{actual_end_date:(values.actualEndDate as any)?.format?.('YYYY-MM-DD'),pause_reason:values.pauseReason,completionFiles:(values.completionFiles as Array<{rawFile?:File}>|undefined)?.map((attachment)=>attachment.rawFile).filter((file):file is File=>Boolean(file))}), async () => {message.success('状态更新成功');setCollapsed(current=>{const next=new Set(current);next.delete(row.stage.id);return next;});await load();});}}>状态变更</ProjectPlanStatusChangeAction><AdminTextAction onClick={()=>setAdjustModal({item,date:'',reason:'',attempted:false})}>调整计划</AdminTextAction><DeleteConfirmAction variant="text" entityName="关键事项" targetName={item.name} onConfirm={async()=>{await deleteProjectPlanItem(params.id!,item.id);refresh();}}>删除</DeleteConfirmAction></OperationColumnActions>;
     }},
   ];
 
@@ -315,7 +316,7 @@ export function ProjectStagePlanPage(){
         <PermissionButton permission="project" onClick={()=>void openTemplate()}>套用模板</PermissionButton>
         <PermissionButton permission="project" type="primary" onClick={()=>{stageForm.setFieldsValue({name:''});setStageModal({});}}>新增阶段</PermissionButton>
       </>}>
-      <TemplateDetailTableSection<TableRow> title="阶段主计划" sectionKey="stage-plan-table" summary={`共 ${visibleStages.length} 个阶段`} table={{rowKey:'key',columns,dataSource:rows,scroll:{x:1280},onRow:(row)=>({className:[`project-plan-row is-${row.kind}`,draggingRow?.key===row.key?'is-project-plan-dragging':'',dragOverRow?.key===row.key?dropPosition(row):''].filter(Boolean).join(' '),onDragEnter:()=>{if(canDropRow(row))setDragOverRow(row);},onDragOver:(event)=>{if(!canDropRow(row))return;event.preventDefault();event.dataTransfer.dropEffect='move';setDragOverRow(row);},onDragLeave:(event)=>{if(!event.currentTarget.contains(event.relatedTarget as Node|null))setDragOverRow(undefined);},onDrop:(event)=>{if(!canDropRow(row))return;event.preventDefault();void handleDrop(row);}})}}/>
+      <TemplateDetailTableSection<TableRow> title="阶段主计划" sectionKey="stage-plan-table" summary={`共 ${visibleStages.length} 个阶段`} table={{...recordFocus.tableProps,rowKey:'key',columns,dataSource:rows,scroll:{x:1280},onRow:(row)=>({className:[`project-plan-row is-${row.kind}`,draggingRow?.key===row.key?'is-project-plan-dragging':'',dragOverRow?.key===row.key?dropPosition(row):''].filter(Boolean).join(' '),onDragEnter:()=>{if(canDropRow(row))setDragOverRow(row);},onDragOver:(event)=>{if(!canDropRow(row))return;event.preventDefault();event.dataTransfer.dropEffect='move';setDragOverRow(row);},onDragLeave:(event)=>{if(!event.currentTarget.contains(event.relatedTarget as Node|null))setDragOverRow(undefined);},onDrop:(event)=>{if(!canDropRow(row))return;event.preventDefault();void handleDrop(row);}})}}/>
       <HistoryTimelineSection items={history} sectionKey="stage-plan-history"/>
     </TemplateDetailPage>
     <AdminDrawer

@@ -10,10 +10,11 @@ import {
   TemplateListPage,
   useCommittedFilters,
   useListViewState,
+  useListRecordFocus,
   usePageReturnNavigation,
   ViewTabs
 } from '../../../components/admin';
-import { deleteWorkOrder, updateWorkOrderStatus } from '../../../api/workOrderApi';
+import { deleteWorkOrder, getWorkOrderNeighbors, updateWorkOrderStatus } from '../../../api/workOrderApi';
 import { buildWorkOrderQueryParams } from '../../../api/workOrderQueryParams';
 import { useAuthStore } from '../../../stores/authStore';
 import type { WorkOrderRecord } from '../types';
@@ -77,15 +78,14 @@ export function WorkOrderListPage() {
   }, [selectedRowKeys, listData.sortedRows]);
 
   const clearSelection = () => setSelectedRowKeys([]);
-  const openDetail = useCallback((record: WorkOrderRecord) => {
+  const buildQuery = useCallback(() => {
     const submitTimeRange = appliedFilters.submitTimeRange || [];
     const expectedRange = appliedFilters.expectedResolveDateRange || [];
     const createdAtRange = appliedFilters.createdAtRange || [];
-    const params = buildWorkOrderQueryParams({
+    return buildWorkOrderQueryParams({
       problemDesc: appliedFilters.problemDesc || undefined,
       productId: appliedFilters.productId || undefined,
       problemType: appliedFilters.problemTypes,
-      current: currentPage,
       pageSize,
       urgency: appliedFilters.urgency,
       status: appliedFilters.status,
@@ -104,6 +104,13 @@ export function WorkOrderListPage() {
       sortField: listData.sortState.field,
       sortOrder: listData.sortState.order || undefined
     });
+  }, [appliedFilters, currentFollowerId, listData.sortState.field, listData.sortState.order, pageSize, viewKey]);
+  const recordFocus = useListRecordFocus({
+    list: listData, reload, params: buildQuery(),
+    resolvePosition: (ids, params) => getWorkOrderNeighbors(ids[0], { ...params, ids: ids.join(',') })
+  });
+  const openDetail = useCallback((record: WorkOrderRecord) => {
+    const params = { ...buildQuery(), page: currentPage };
     saveDetailNeighborContext(createDetailNeighborContext({
       moduleKey: 'work-order',
       routeBase: '/work-orders',
@@ -111,7 +118,7 @@ export function WorkOrderListPage() {
       sourcePath: currentPath
     }));
     navigateWithReturn(`/work-orders/${record.id}`);
-  }, [appliedFilters, currentFollowerId, currentPage, currentPath, listData.sortState.field, listData.sortState.order, navigateWithReturn, pageSize, viewKey]);
+  }, [buildQuery, currentPage, currentPath, navigateWithReturn]);
 
   const columns = useMemo(() => createWorkOrderColumns({
     navigate: navigateWithReturn,
@@ -123,22 +130,23 @@ export function WorkOrderListPage() {
     viewKey,
     onOpenDetail: openDetail,
     onStatusChange: async (record, target, values) => {
-      await updateWorkOrderStatus(record.id, buildStatusPayload(target, values));
-      await reload();
-      message.success(`状态已更新为 ${statusText(target)}`);
+      await recordFocus.run([record.id], () => updateWorkOrderStatus(record.id, buildStatusPayload(target, values)), () => {
+        message.success(`状态已更新为 ${statusText(target)}`);
+      });
     },
     onDelete: async (record) => {
       await deleteWorkOrder(record.id);
       await reload();
       message.success('工单已删除');
     }
-  }), [listData.renderIndex, listData.sortState, message, navigateWithReturn, openDetail, problemTypeOptions, productOptions, reload, userOptions, viewKey]);
+  }), [listData.renderIndex, listData.sortState, message, navigateWithReturn, openDetail, problemTypeOptions, productOptions, reload, userOptions, viewKey, recordFocus]);
 
   const batch = useWorkOrderBatchActions({
     selectedRecords,
     userOptions,
     clearSelection,
     setSelectedRowKeys,
+    runStatusChange: recordFocus.run,
     reload
   });
 
@@ -195,6 +203,7 @@ export function WorkOrderListPage() {
           />
         )}
         table={{
+          ...recordFocus.tableProps,
           columns,
           dataSource: listData.pagedRows,
           loading: listData.loading,

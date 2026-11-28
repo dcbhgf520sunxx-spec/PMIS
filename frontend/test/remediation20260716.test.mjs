@@ -94,7 +94,7 @@ test('前端 lint 门禁不允许遗留任何警告', () => {
 test('工单详情相邻记录上下文保留当前分页', () => {
   const page = read('../src/modules/work-order/pages/WorkOrderListPage.tsx');
 
-  assert.match(page, /current:\s*currentPage/);
+  assert.match(page, /const params = \{ \.\.\.buildQuery\(\), page: currentPage \}/);
   assert.match(page, /pageSize,/);
 });
 

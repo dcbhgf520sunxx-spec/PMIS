@@ -1,5 +1,5 @@
 import { useBusinessDay } from '../../../hooks/useBusinessDay';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   buildDetailNeighborPath,
@@ -36,6 +36,8 @@ export function useDetailNeighbors({
     nextId: null
   });
   const [loading, setLoading] = useState(false);
+  const [revision, setRevision] = useState(0);
+  const reload = useCallback(() => setRevision(value => value + 1), []);
 
   useEffect(() => {
     if (!id) return;
@@ -59,7 +61,7 @@ export function useDetailNeighbors({
     return () => {
       cancelled = true;
     };
-  }, [fetchNeighbors, id, moduleKey, returnTo, businessDay]);
+  }, [fetchNeighbors, id, moduleKey, returnTo, businessDay, revision]);
 
   const context = returnTo ? loadDetailNeighborContext(moduleKey, returnTo) : null;
   const activeRouteBase = context?.routeBase || routeBase;
@@ -67,6 +69,7 @@ export function useDetailNeighbors({
   return {
     ...neighbors,
     loading,
+    reload,
     navigateNeighbor: (targetId: string | number) => {
       navigate(buildDetailNeighborPath(activeRouteBase, targetId, location.search), { replace: true });
     }

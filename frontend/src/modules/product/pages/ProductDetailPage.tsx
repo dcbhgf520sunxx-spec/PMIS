@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { DeleteConfirmAction, DetailMetaList, HistoryTimelineSection, PermissionButton, StatusConfirmAction, StatusTag, TemplateDetailPage, TemplateDetailSection, usePageReturnNavigation } from '../../../components/admin';
+import { DeleteConfirmAction, DetailMetaList, HistoryTimelineSection, PermissionButton, StatusConfirmAction, StatusTag, TemplateDetailPage, TemplateDetailSection, useDetailRecordFocus, usePageReturnNavigation } from '../../../components/admin';
 import { deleteProduct, getProduct, getProductHistory, updateProductStatus } from '../../../api/productApi';
 import type { ProductRecord } from '../types';
 
 export function ProductDetailPage() {
-  const { navigateWithReturn, returnToSource, backText } = usePageReturnNavigation('/products');
+  const { navigateWithReturn, returnToSource, returnTarget, backText } = usePageReturnNavigation('/products');
+  const recordFocus = useDetailRecordFocus({ listPath: '/products', returnTarget });
   const params = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -51,7 +52,7 @@ export function ProductDetailPage() {
       }}
       actions={row ? <><PermissionButton permission="product" type="primary" onClick={() => navigateWithReturn(`/products/${row.id}/edit`)}>编辑</PermissionButton><DeleteConfirmAction entityName="产品" targetName={row.name} successMessage="删除成功" onConfirm={async () => { await deleteProduct(row.id); returnToSource(); }}>删除</DeleteConfirmAction></> : null}
       statusSection={row ? { items: [{ label: '状态', value: <StatusTag status={row.status === 1 ? 'enabled' : 'disabled'} />, wide: true }] } : null}
-      statusAction={row ? <StatusConfirmAction block type="primary" action={row.status === 1 ? 'disable' : 'enable'} entityName="产品" targetName={row.name} successMessage={row.status === 1 ? '停用成功' : '启用成功'} onConfirm={async () => { const status = row.status === 1 ? 0 : 1; await updateProductStatus(row.id, status); setRow({ ...row, status }); }}>{row.status === 1 ? '停用产品' : '启用产品'}</StatusConfirmAction> : null}
+      statusAction={row ? <StatusConfirmAction block type="primary" action={row.status === 1 ? 'disable' : 'enable'} entityName="产品" targetName={row.name} successMessage={row.status === 1 ? '停用成功' : '启用成功'} onConfirm={async () => { const status = row.status === 1 ? 0 : 1; await recordFocus.run([row.id], () => updateProductStatus(row.id, status), () => { setRevision(value => value + 1); }); }}>{row.status === 1 ? '停用产品' : '启用产品'}</StatusConfirmAction> : null}
       documentSection={row ? { items: [{ label: '创建人', value: row.creatorName }, { label: '创建时间', value: row.createdAt, wide: true }, { label: '更新人', value: row.updaterName }, { label: '更新时间', value: row.updatedAt, wide: true }] } : null}
     >
       {row ? <><TemplateDetailSection title="基本信息" sectionKey="product-basic"><DetailMetaList items={[

@@ -8,7 +8,7 @@ type Page = { list: Row[]; total: number; page: number; pageSize: number; viewCo
 
 const rowContract = objectContract<Row>(['id', 'title', 'source_type', 'bug_type_id', 'bug_type_name', 'severity', 'status', 'assignee_id', 'assignee_name']);
 const pageContract = objectContract<Page>(['list', 'total', 'page', 'pageSize', 'viewCounts'], { list: arrayContract(rowContract) });
-const neighborsContract = objectContract<{ prevId: number | null; nextId: number | null; ordinal?: number; total?: number }>(['prevId', 'nextId']);
+const neighborsContract = objectContract<{ id: number | null; prevId: number | string | null; nextId: number | string | null; ordinal?: number | string; total: number | string; page: number }>(['id', 'prevId', 'nextId', 'total', 'page'], { id: (value): value is number | null => value === null || (typeof value === 'number' && Number.isSafeInteger(value) && value > 0), page: (value): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value > 0 });
 const projectOptionContract = objectContract<{ id: number; name: string }>(['id', 'name']);
 const requirementOptionContract = objectContract<{ id: number; title: string }>(['id', 'title']);
 const availableContract = objectContract<{ available: boolean }>(['available']);
@@ -37,8 +37,8 @@ export async function getBugList(params: Record<string, unknown> = {}) {
 export async function getBug(id: string) { return mapBug(await unwrap<Row>(request.get(`/bugs/${id}`), rowContract)); }
 
 export async function getBugNeighbors(id: string, params: Record<string, unknown> = {}) {
-  const result = await unwrap<{ prevId: number | null; nextId: number | null; ordinal?: number; total?: number }>(request.get('/bugs/neighbors', { params: { ...params, id } }), neighborsContract);
-  return { prevId: result.prevId === null ? null : String(result.prevId), nextId: result.nextId === null ? null : String(result.nextId), ordinal: result.ordinal, total: result.total };
+  const result = await unwrap<{ id: number | null; prevId: number | string | null; nextId: number | string | null; ordinal?: number | string; total: number | string; page: number }>(request.get('/bugs/neighbors', { params: { ...params, id } }), neighborsContract);
+  return { id: result.id === null ? null : String(result.id), prevId: result.prevId === null ? null : String(result.prevId), nextId: result.nextId === null ? null : String(result.nextId), ordinal: result.ordinal === undefined ? undefined : Number(result.ordinal), total: Number(result.total), page: result.page };
 }
 
 export async function getBugProjectOptions() {

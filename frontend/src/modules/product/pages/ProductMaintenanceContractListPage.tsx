@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ProColumns } from '@ant-design/pro-components';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { AdminTextAction, DeleteConfirmAction, DetailLinkCell, OperationColumnActions, PermissionButton, TemplateDetailPage, TemplateDetailTableSection, usePageReturnNavigation } from '../../../components/admin';
+import { AdminTextAction, DeleteConfirmAction, DetailLinkCell, OperationColumnActions, PermissionButton, TemplateDetailPage, TemplateDetailTableSection, usePageReturnNavigation, useLocalRecordFocus } from '../../../components/admin';
 import { deleteProductMaintenanceContract, getProduct, getProductMaintenanceContracts, terminateProductMaintenanceContract } from '../../../api/productApi';
 import { ProductMaintenanceContractStatusChangeAction } from '../components/ProductMaintenanceContractStatusChangeAction';
 import { renderMaintenanceContractStatus } from '../maintenanceContractStatus';
@@ -33,6 +33,8 @@ export function ProductMaintenanceContractListPage() {
     }).finally(() => setLoading(false));
   }, [params.id, revision]);
 
+  const recordFocus = useLocalRecordFocus({ rows: contracts, loading, error });
+
   const columns: ProColumns<ProductMaintenanceContract>[] = [
     { title: '合同编号', dataIndex: 'contractCode', width: 150, fixed: 'left', render: (_, contract) => <DetailLinkCell onClick={() => navigateWithReturn(`/products/${contract.productId}/maintenance-contracts/${contract.id}`)}>{contract.contractCode}</DetailLinkCell> },
     { title: '合同名称', dataIndex: 'contractName', width: 210, ellipsis: true },
@@ -44,7 +46,7 @@ export function ProductMaintenanceContractListPage() {
     { title: '操作', valueType: 'option', width: 220, fixed: 'right', render: (_, contract) => <OperationColumnActions>
       <AdminTextAction onClick={() => navigateWithReturn(`/products/${contract.productId}/maintenance-contracts/${contract.id}/edit`)}>编辑</AdminTextAction>
       {!contract.hasSuccessor ? <AdminTextAction onClick={() => navigateWithReturn(`/products/${contract.productId}/maintenance-contracts/new`)}>续签</AdminTextAction> : null}
-      {!contract.hasSuccessor && contract.status !== 'terminated' ? <ProductMaintenanceContractStatusChangeAction contract={contract} variant="text" onTerminated={async (values) => { await terminateProductMaintenanceContract(contract.productId, contract.id, values); setRevision((value) => value + 1); }} /> : null}
+      {!contract.hasSuccessor && contract.status !== 'terminated' ? <ProductMaintenanceContractStatusChangeAction contract={contract} variant="text" onTerminated={async (values) => { await recordFocus.run([contract.id], () => terminateProductMaintenanceContract(contract.productId, contract.id, values), () => { setRevision((value) => value + 1); }); }} /> : null}
       {!contract.hasSuccessor ? <DeleteConfirmAction variant="text" entityName="运维合同" targetName={contract.contractName} successMessage="删除成功" onConfirm={async () => { await deleteProductMaintenanceContract(contract.productId, contract.id); setRevision((value) => value + 1); }}>删除</DeleteConfirmAction> : null}
     </OperationColumnActions> },
   ];
@@ -72,7 +74,7 @@ export function ProductMaintenanceContractListPage() {
       title="运维合同"
       sectionKey="product-contracts"
       summary={`共 ${contracts.length} 份`}
-      table={{ columns, dataSource: contracts, rowKey: 'id', scroll: { x: 1280 } }}
+      table={{ ...recordFocus.tableProps, columns, dataSource: contracts, rowKey: 'id', scroll: { x: 1280 } }}
     />
   </TemplateDetailPage>;
 }

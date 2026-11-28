@@ -1,0 +1,16 @@
+.admin-record-focus-table .ant-table-tbody > tr.admin-record-row--updated {
+  --record-updated-border: #8ba9d1;
+  --record-updated-bg: color-mix(in srgb, var(--app-primary) 3.5%, var(--app-surface));
+}
+.admin-record-focus-table .ant-table-tbody > tr.admin-record-row--updated > td.ant-table-cell {
+  background: var(--record-updated-bg) !important;
+  box-shadow: inset 0 1px var(--record-updated-border), inset 0 -1px var(--record-updated-border);
+}
+.admin-record-focus-table .ant-table-tbody > tr.admin-record-row--updated > td.ant-table-cell:first-child {
+  border-radius: 4px 0 0 4px;
+  box-shadow: inset 4px 0 var(--app-primary), inset 0 1px var(--record-updated-border), inset 0 -1px var(--record-updated-border);
+}
+.admin-record-focus-table .ant-table-tbody > tr.admin-record-row--updated > td.ant-table-cell:last-child {
+  border-radius: 0 4px 4px 0;
+  box-shadow: inset -1px 0 var(--record-updated-border), inset 0 1px var(--record-updated-border), inset 0 -1px var(--record-updated-border);
+}

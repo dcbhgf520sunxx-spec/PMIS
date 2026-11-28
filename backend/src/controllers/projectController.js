@@ -1,4 +1,5 @@
 const { numberListCondition } = require('../utils/listFilters')
+const { parseNeighborIds, neighborPosition } = require('../utils/recordNeighbors')
 const { overdueSql, rescheduleOverdueChanges } = require('../services/overdueRules')
 const overdue = overdueSql('project', { alias: 'p' })
 const planItemOverdue = overdueSql('stage_plan', { alias: 'i', parentAlias: 'p' })
@@ -86,6 +87,14 @@ async function getProjectViewCount(q) {
   return Number(row?.total || 0)
 }
 
+function orderBy(q) {
+  const sortMap = { name: 'p.name', productName: 'product.name', requirementName: 'requirement.title', ownerName: 'owner.real_name', priority: 'p.priority', status: 'p.status', overduePlanItemCount: 'plan_summary.overdue_plan_item_count', startDate: 'p.start_date', expectedEndDate: 'p.expected_end_date', members: "COALESCE((SELECT STRING_AGG(u.real_name, '、' ORDER BY u.real_name) FROM pms_project_member pm JOIN pms_user u ON u.id = pm.user_id WHERE pm.project_id = p.id), '')", creatorName: 'creator.real_name', createdAt: 'p.created_at' }
+  const sort = sortMap[q.sort_field] || 'p.created_at'
+  const direction = getSortDirection(q.sort_order)
+  const nulls = q.sort_field === 'overduePlanItemCount' ? ' NULLS LAST' : ''
+  return `${sort} ${direction}${nulls}, ${q.sort_field === 'status' ? 'p.updated_at DESC, ' : ''}p.id ${direction}`
+}
+
 exports.list = async (req, res) => {
   try {
     if (req.query.plan_item_overdue !== undefined && !['', '0', '1'].includes(req.query.plan_item_overdue)) {
@@ -93,12 +102,8 @@ exports.list = async (req, res) => {
     }
     const { page, pageSize, offset } = parsePagination(req.query)
     const condition = where(req.query)
-    const sortMap = { name: 'p.name', productName: 'product.name', requirementName: 'requirement.title', ownerName: 'owner.real_name', priority: 'p.priority', status: 'p.status', overduePlanItemCount: 'plan_summary.overdue_plan_item_count', startDate: 'p.start_date', expectedEndDate: 'p.expected_end_date', members: "COALESCE((SELECT STRING_AGG(u.real_name, '、' ORDER BY u.real_name) FROM pms_project_member pm JOIN pms_user u ON u.id = pm.user_id WHERE pm.project_id = p.id), '')", creatorName: 'creator.real_name', createdAt: 'p.created_at' }
-    const sort = sortMap[req.query.sort_field] || 'p.created_at'
-    const direction = getSortDirection(req.query.sort_order)
-    const nulls = req.query.sort_field === 'overduePlanItemCount' ? ' NULLS LAST' : ''
     const rows = await db.prepare(baseSelect(`COUNT(*) OVER() total, ${fields}, plan_summary.overdue_plan_item_count`)
-      + planOverdueJoin + condition.sql + ` ORDER BY ${sort} ${direction}${nulls}, p.id ${direction} LIMIT ? OFFSET ?`)
+      + planOverdueJoin + condition.sql + ` ORDER BY ${orderBy(req.query)} LIMIT ? OFFSET ?`)
       .all(...condition.params, pageSize, offset)
     const currentUserId = Number(req.query.current_user_id)
     const viewCounts = currentUserId ? {
@@ -107,6 +112,21 @@ exports.list = async (req, res) => {
       joined: await getProjectViewCount({ ...req.query, owner_id: req.query.filter_owner_id, joined_user_id: currentUserId })
     } : { all: 0, mine: 0, joined: 0 }
     ok(res, { list: rows, total: Number(rows[0]?.total || 0), page, pageSize, viewCounts })
+  } catch (error) { console.error(error); fail(res, 500, 500, '查询失败') }
+}
+
+exports.neighbors = async (req, res) => {
+  try {
+    if (req.query.plan_item_overdue !== undefined && !['', '0', '1'].includes(req.query.plan_item_overdue)) return fail(res, 400, 400, '关键事项逾期筛选条件无效')
+    const ids = parseNeighborIds(req.query)
+    if (!ids) return fail(res, 400, 400, 'id 或 ids 必须为正整数')
+    const { pageSize } = parsePagination(req.query)
+    const condition = where(req.query)
+    const order = orderBy(req.query)
+    const row = await db.prepare(`WITH ranked AS (
+      ${baseSelect(`p.id, LAG(p.id) OVER(ORDER BY ${order}) "prevId", LEAD(p.id) OVER(ORDER BY ${order}) "nextId", ROW_NUMBER() OVER(ORDER BY ${order}) ordinal, COUNT(*) OVER() total`)}${planOverdueJoin}${condition.sql}
+    ) SELECT id,"prevId","nextId",ordinal,total FROM ranked WHERE id IN (${ids.map(() => '?').join(',')}) ORDER BY ordinal LIMIT 1`).get(...condition.params, ...ids)
+    ok(res, neighborPosition(row, pageSize))
   } catch (error) { console.error(error); fail(res, 500, 500, '查询失败') }
 }
 
