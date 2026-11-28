@@ -16,8 +16,9 @@ test('个人数字孪生真实数据库及HTTP：本人限定、责任去重、�
         const user = await db.prepare('SELECT id,employee_no,real_name FROM pms_user WHERE id=1').get();
         await db.prepare('UPDATE pms_user SET first_login=0 WHERE id=?').run(user.id);
         const other = (await db.prepare("INSERT INTO pms_user(employee_no,real_name,phone,password,status,first_login) VALUES('personal-other','其他人员','13800009999','unused',1,0)").run()).lastInsertRowid;
+        // 本月快照的排序验收始终使用本月计划日期，避免月底的 +N 天跨期。
         const product = (await db.prepare("INSERT INTO pms_product(name,owner_id,status) VALUES('个人测试产品',?,1)").run(other)).lastInsertRowid;
-        const project = (await db.prepare("INSERT INTO pms_project(name,product_id,owner_id,status,expected_end_date) VALUES('参与项目',?,?,1,CURRENT_DATE+2)").run(product, other)).lastInsertRowid;
+        const project = (await db.prepare("INSERT INTO pms_project(name,product_id,owner_id,status,expected_end_date) VALUES('参与项目',?,?,1,(DATE_TRUNC('month',CURRENT_DATE)::date+2))").run(product, other)).lastInsertRowid;
         await db.prepare('INSERT INTO pms_project_member(project_id,user_id) VALUES(?,?)').run(project, user.id);
         const archive = await db.prepare('SELECT id FROM pms_archive WHERE is_deleted=0 ORDER BY id LIMIT 1').get();
         const createTask = async (name, owner, parent) => {
@@ -32,11 +33,11 @@ test('个人数字孪生真实数据库及HTTP：本人限定、责任去重、�
         await db.prepare("UPDATE pms_task SET status=4,close_date=CURRENT_DATE,close_reason='测试关闭' WHERE id=?").run(parent);
         const child = await createTask('上级关闭子任务', user.id, parent);
         const stage = (await db.prepare("INSERT INTO pms_project_plan_stage(project_id,name,sort_order) VALUES(?,'测试阶段',20)").run(project)).lastInsertRowid;
-        const item = (await db.prepare("INSERT INTO pms_project_plan_item(stage_id,name,owner_id,status,original_due_date,current_due_date,sort_order) VALUES(?,'协作事项',?,1,CURRENT_DATE+2,CURRENT_DATE+2,20)").run(stage, other)).lastInsertRowid;
+        const item = (await db.prepare("INSERT INTO pms_project_plan_item(stage_id,name,owner_id,status,original_due_date,current_due_date,sort_order) VALUES(?,'协作事项',?,1,(DATE_TRUNC('month',CURRENT_DATE)::date+2),(DATE_TRUNC('month',CURRENT_DATE)::date+2),20)").run(stage, other)).lastInsertRowid;
         await db.prepare('INSERT INTO pms_project_plan_item_collaborator(plan_item_id,user_id) VALUES(?,?) RETURNING plan_item_id').run(item, user.id);
         const earlierStage = (await db.prepare("INSERT INTO pms_project_plan_stage(project_id,name,sort_order) VALUES(?,'先行阶段',10)").run(project)).lastInsertRowid;
-        const earlierItem = (await db.prepare("INSERT INTO pms_project_plan_item(stage_id,name,owner_id,status,original_due_date,current_due_date,sort_order) VALUES(?,'先行事项',?,1,CURRENT_DATE+1,CURRENT_DATE+1,10)").run(earlierStage, other)).lastInsertRowid;
-        const laterItem = (await db.prepare("INSERT INTO pms_project_plan_item(stage_id,name,owner_id,status,original_due_date,current_due_date,sort_order) VALUES(?,'阶段内前置事项',?,1,CURRENT_DATE+3,CURRENT_DATE+3,10)").run(stage, other)).lastInsertRowid;
+        const earlierItem = (await db.prepare("INSERT INTO pms_project_plan_item(stage_id,name,owner_id,status,original_due_date,current_due_date,sort_order) VALUES(?,'先行事项',?,1,(DATE_TRUNC('month',CURRENT_DATE)::date+1),(DATE_TRUNC('month',CURRENT_DATE)::date+1),10)").run(earlierStage, other)).lastInsertRowid;
+        const laterItem = (await db.prepare("INSERT INTO pms_project_plan_item(stage_id,name,owner_id,status,original_due_date,current_due_date,sort_order) VALUES(?,'阶段内前置事项',?,1,(DATE_TRUNC('month',CURRENT_DATE)::date+3),(DATE_TRUNC('month',CURRENT_DATE)::date+3),10)").run(stage, other)).lastInsertRowid;
         for (const id of [earlierItem,laterItem]) await db.prepare('INSERT INTO pms_project_plan_item_collaborator(plan_item_id,user_id) VALUES(?,?) RETURNING plan_item_id').run(id,user.id);
         const operation = crypto.randomUUID();
         for (const [field, value] of [['description', '不返回原始描述'], ['status', '2']]) await db.prepare("INSERT INTO pms_op_log(user_id,action,module,target_id,operation_id,field_name,new_value) VALUES(?,'状态变更','任务',?,?,?,?)").run(user.id, mine, operation, field, value);
@@ -64,9 +65,9 @@ test('个人数字孪生真实数据库及HTTP：本人限定、责任去重、�
         await db.prepare("UPDATE pms_follow_up_record SET content='已补齐异常分支测试',updated_at=NOW() WHERE task_id=? AND creator_id=?").run(mine, user.id);
         assert.notEqual((await currentPersonalSnapshot(user.id)).summaryRevision, snapshot.summaryRevision);
         // 产品视角必须保留项目边界、阶段及事项的手工顺序，不能跨项目按 sort_order 混排。
-        const secondProject = (await db.prepare("INSERT INTO pms_project(name,product_id,owner_id,status,expected_end_date) VALUES('另一项目',?,?,1,CURRENT_DATE+5)").run(product, other)).lastInsertRowid;
+        const secondProject = (await db.prepare("INSERT INTO pms_project(name,product_id,owner_id,status,expected_end_date) VALUES('另一项目',?,?,1,(DATE_TRUNC('month',CURRENT_DATE)::date+5))").run(product, other)).lastInsertRowid;
         const secondStage = (await db.prepare("INSERT INTO pms_project_plan_stage(project_id,name,sort_order) VALUES(?,'另项目阶段',0)").run(secondProject)).lastInsertRowid;
-        const secondItem = (await db.prepare("INSERT INTO pms_project_plan_item(stage_id,name,owner_id,status,original_due_date,current_due_date,sort_order) VALUES(?,'另项目事项',?,0,CURRENT_DATE+5,CURRENT_DATE+5,0)").run(secondStage, other)).lastInsertRowid;
+        const secondItem = (await db.prepare("INSERT INTO pms_project_plan_item(stage_id,name,owner_id,status,original_due_date,current_due_date,sort_order) VALUES(?,'另项目事项',?,0,(DATE_TRUNC('month',CURRENT_DATE)::date+5),(DATE_TRUNC('month',CURRENT_DATE)::date+5),0)").run(secondStage, other)).lastInsertRowid;
         const contracts = [];
         for (const projectId of [project, secondProject]) {
             contracts.push((await db.prepare("INSERT INTO pms_project_contract(project_id,contract_code,contract_name,supplier_id,signed_date,contract_amount) VALUES(?,?,'排序合同',1,CURRENT_DATE,100)").run(projectId, `order-test-${projectId}`)).lastInsertRowid);
